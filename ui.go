@@ -136,7 +136,7 @@ func (m model) View() string {
 	buf.WriteString("   Seq - A sequencer for your cli\n")
 	buf.WriteString("  ┌────────────────────────────────────\n")
 	for i, line := range m.lines {
-		buf.WriteString(Line(i, line, m))
+		buf.WriteString(line.View(i, m))
 	}
 	buf.WriteString(m.help.View(m.keys))
 	buf.WriteString("\n")
@@ -145,7 +145,7 @@ func (m model) View() string {
 
 var altSeqColor = lipgloss.NewStyle().Background(lipgloss.Color("#222222"))
 
-func Line(lineNumber int, line line, m model) string {
+func (line line) View(lineNumber int, m model) string {
 	var buf strings.Builder
 	buf.WriteString(fmt.Sprintf("%d │", lineNumber))
 
