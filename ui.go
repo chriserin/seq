@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -38,12 +39,19 @@ var zeroRune rune
 
 type line []rune
 
+type CursorPosition struct {
+	lineNumber int
+	beat       int
+}
+
 type model struct {
-	keys  keymap
-	beats int
-	tempo int
-	help  help.Model
-	lines []line
+	keys      keymap
+	beats     int
+	tempo     int
+	help      help.Model
+	lines     []line
+	cursorPos CursorPosition
+	cursor    cursor.Model
 }
 
 func InitSeq(lineNumber int, beatNumber int) []line {
@@ -56,12 +64,17 @@ func InitSeq(lineNumber int, beatNumber int) []line {
 }
 
 func InitModel() model {
+	newCursor := cursor.New()
+	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
+
 	return model{
-		keys:  keys,
-		beats: 32,
-		tempo: 240,
-		help:  help.New(),
-		lines: InitSeq(8, 32),
+		keys:      keys,
+		beats:     32,
+		tempo:     240,
+		help:      help.New(),
+		lines:     InitSeq(8, 32),
+		cursorPos: CursorPosition{lineNumber: 0, beat: 0},
+		cursor:    newCursor,
 	}
 }
 
@@ -71,7 +84,7 @@ func RunProgram() *tea.Program {
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return func() tea.Msg { return tea.FocusMsg{} }
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -83,7 +96,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	}
-	return m, nil
+	var cmd tea.Cmd
+	cursor, cmd := m.cursor.Update(msg)
+	m.cursor = cursor
+	return m, cmd
 }
 
 func (m model) View() string {
@@ -112,10 +128,10 @@ func Line(lineNumber int, line line, m model) string {
 		} else {
 			char = string(line[i])
 		}
-		// if m.cursorPos.lineNumber == lineNumber && m.cursorPos.beat == i {
-		// 	m.cursor.SetChar(char)
-		// 	char = m.cursor.View()
-		// }
+		if m.cursorPos.lineNumber == lineNumber && m.cursorPos.beat == i {
+			m.cursor.SetChar(char)
+			char = m.cursor.View()
+		}
 
 		if i%8 > 3 {
 			buf.WriteString(altSeqColor.Render(char))
