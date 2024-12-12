@@ -12,13 +12,25 @@ import (
 )
 
 type keymap struct {
-	Quit key.Binding
-	Help key.Binding
+	Quit        key.Binding
+	Help        key.Binding
+	CursorUp    key.Binding
+	CursorDown  key.Binding
+	CursorLeft  key.Binding
+	CursorRight key.Binding
+}
+
+func Key(keyboardKey string, help string) key.Binding {
+	return key.NewBinding(key.WithKeys(keyboardKey), key.WithHelp(keyboardKey, help))
 }
 
 var keys = keymap{
-	Quit: key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "Quit")),
-	Help: key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "Expand Help")),
+	Quit:        Key("q", "Quit"),
+	Help:        Key("?", "Expand Help"),
+	CursorUp:    Key("k", "Up"),
+	CursorDown:  Key("j", "Down"),
+	CursorLeft:  Key("h", "Left"),
+	CursorRight: Key("l", "Right"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -30,6 +42,7 @@ func (k keymap) ShortHelp() []key.Binding {
 func (k keymap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Help, k.Quit},
+		{k.CursorUp, k.CursorDown, k.CursorLeft, k.CursorRight},
 	}
 }
 
@@ -91,9 +104,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q":
+		switch {
+		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
+		case key.Matches(msg, m.keys.CursorDown):
+			m.cursorPos.lineNumber++
+		case key.Matches(msg, m.keys.CursorUp):
+			m.cursorPos.lineNumber--
+		case key.Matches(msg, m.keys.CursorLeft):
+			m.cursorPos.beat--
+		case key.Matches(msg, m.keys.CursorRight):
+			m.cursorPos.beat++
 		}
 	}
 	var cmd tea.Cmd
