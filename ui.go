@@ -108,13 +108,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
 		case key.Matches(msg, m.keys.CursorDown):
-			m.cursorPos.lineNumber++
+			if m.cursorPos.lineNumber < len(m.lines)-1 {
+				m.cursorPos.lineNumber++
+			}
 		case key.Matches(msg, m.keys.CursorUp):
-			m.cursorPos.lineNumber--
+			if m.cursorPos.lineNumber > 0 {
+				m.cursorPos.lineNumber--
+			}
 		case key.Matches(msg, m.keys.CursorLeft):
-			m.cursorPos.beat--
+			if m.cursorPos.beat > 0 {
+				m.cursorPos.beat--
+			}
 		case key.Matches(msg, m.keys.CursorRight):
-			m.cursorPos.beat++
+			if m.cursorPos.beat < m.beats-1 {
+				m.cursorPos.beat++
+			}
 		}
 	}
 	var cmd tea.Cmd
