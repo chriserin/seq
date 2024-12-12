@@ -16,7 +16,13 @@ func main() {
 		Long:  "A sequencer for your cli",
 		Args:  cobra.MinimumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			println("seq")
+			p := RunProgram()
+			_, err := p.Run()
+			if err != nil {
+				log.Fatal("Program Failure")
+			} else {
+				return
+			}
 		},
 	}
 
