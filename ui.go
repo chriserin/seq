@@ -12,12 +12,14 @@ import (
 )
 
 type keymap struct {
-	Quit        key.Binding
-	Help        key.Binding
-	CursorUp    key.Binding
-	CursorDown  key.Binding
-	CursorLeft  key.Binding
-	CursorRight key.Binding
+	Quit          key.Binding
+	Help          key.Binding
+	CursorUp      key.Binding
+	CursorDown    key.Binding
+	CursorLeft    key.Binding
+	CursorRight   key.Binding
+	TriggerAdd    key.Binding
+	TriggerRemove key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -25,12 +27,14 @@ func Key(keyboardKey string, help string) key.Binding {
 }
 
 var keys = keymap{
-	Quit:        Key("q", "Quit"),
-	Help:        Key("?", "Expand Help"),
-	CursorUp:    Key("k", "Up"),
-	CursorDown:  Key("j", "Down"),
-	CursorLeft:  Key("h", "Left"),
-	CursorRight: Key("l", "Right"),
+	Quit:          Key("q", "Quit"),
+	Help:          Key("?", "Expand Help"),
+	CursorUp:      Key("k", "Up"),
+	CursorDown:    Key("j", "Down"),
+	CursorLeft:    Key("h", "Left"),
+	CursorRight:   Key("l", "Right"),
+	TriggerAdd:    Key("f", "Add Trigger"),
+	TriggerRemove: Key("d", "Remove Trigger"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -43,10 +47,12 @@ func (k keymap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Help, k.Quit},
 		{k.CursorUp, k.CursorDown, k.CursorLeft, k.CursorRight},
+		{k.TriggerAdd, k.TriggerRemove},
 	}
 }
 
 const BLANK = " "
+const TRIGGER = '■'
 
 var zeroRune rune
 
@@ -65,6 +71,14 @@ type model struct {
 	lines     []line
 	cursorPos CursorPosition
 	cursor    cursor.Model
+}
+
+func (m *model) AddTrigger() {
+	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = TRIGGER
+}
+
+func (m *model) RemoveTrigger() {
+	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = zeroRune
 }
 
 func InitSeq(lineNumber int, beatNumber int) []line {
@@ -100,29 +114,37 @@ func (m model) Init() tea.Cmd {
 	return func() tea.Msg { return tea.FocusMsg{} }
 }
 
+func Is(msg tea.KeyMsg, k key.Binding) bool {
+	return key.Matches(msg, k)
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, m.keys.Quit):
+		case Is(msg, m.keys.Quit):
 			return m, tea.Quit
-		case key.Matches(msg, m.keys.CursorDown):
+		case Is(msg, m.keys.CursorDown):
 			if m.cursorPos.lineNumber < len(m.lines)-1 {
 				m.cursorPos.lineNumber++
 			}
-		case key.Matches(msg, m.keys.CursorUp):
+		case Is(msg, m.keys.CursorUp):
 			if m.cursorPos.lineNumber > 0 {
 				m.cursorPos.lineNumber--
 			}
-		case key.Matches(msg, m.keys.CursorLeft):
+		case Is(msg, m.keys.CursorLeft):
 			if m.cursorPos.beat > 0 {
 				m.cursorPos.beat--
 			}
-		case key.Matches(msg, m.keys.CursorRight):
+		case Is(msg, m.keys.CursorRight):
 			if m.cursorPos.beat < m.beats-1 {
 				m.cursorPos.beat++
 			}
+		case Is(msg, m.keys.TriggerAdd):
+			m.AddTrigger()
+		case Is(msg, m.keys.TriggerRemove):
+			m.RemoveTrigger()
 		}
 	}
 	var cmd tea.Cmd
