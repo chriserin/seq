@@ -216,12 +216,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.playTime = time.Now()
 			if m.playing {
 				m.totalBeats = 0
+				m.currentBeat = 0
 				sendFn, err := midi.SendTo(m.outport)
 				if err != nil {
 					panic("sendFn is broken")
 				}
 				return m, tea.Batch(PlayBeat(m.lines, m.currentBeat, sendFn), BeatTick(m.playTime, m.totalBeats, m.tempo))
 			}
+		}
+		if msg.String() >= "1" && msg.String() <= "9" {
+			beatInterval, _ := strconv.Atoi(msg.String())
+			m.lines[m.cursorPos.lineNumber] = fill(m.lines[m.cursorPos.lineNumber], m.cursorPos.beat, beatInterval)
 		}
 	case beatMsg:
 		if m.playing {
@@ -238,6 +243,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
 	return m, cmd
+}
+
+func fill(beatline line, start int, every int) line {
+	for i := range beatline[start:] {
+		if i%every == 0 {
+			if beatline[start+i] == TRIGGER {
+				beatline[start+i] = zeroRune
+			} else {
+				beatline[start+i] = TRIGGER
+			}
+		}
+	}
+	return beatline
 }
 
 func (m model) View() string {
