@@ -27,6 +27,8 @@ type keymap struct {
 	TriggerAdd    key.Binding
 	TriggerRemove key.Binding
 	PlayStop      key.Binding
+	ClearLine     key.Binding
+	ClearSeq      key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -42,6 +44,8 @@ var keys = keymap{
 	CursorRight:   Key("l", "Right"),
 	TriggerAdd:    Key("f", "Add Trigger"),
 	TriggerRemove: Key("d", "Remove Trigger"),
+	ClearLine:     Key("c", "Clear Line"),
+	ClearSeq:      Key("C", "Clear Seq"),
 	PlayStop:      Key(" ", "Play/Stop"),
 }
 
@@ -199,6 +203,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.AddTrigger()
 		case Is(msg, m.keys.TriggerRemove):
 			m.RemoveTrigger()
+		case Is(msg, m.keys.ClearLine):
+			zeroLine(m.lines[m.cursorPos.lineNumber])
+		case Is(msg, m.keys.ClearSeq):
+			m.lines = InitSeq(8, 32)
 
 		case Is(msg, m.keys.PlayStop):
 			if !m.playing && !m.outport.IsOpen() {
@@ -245,6 +253,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func zeroLine(beatline line) {
+	for i := range beatline {
+		beatline[i] = zeroRune
+	}
+}
+
 func fill(beatline line, start int, every int) line {
 	for i := range beatline[start:] {
 		if i%every == 0 {
@@ -266,12 +280,11 @@ func (m model) View() string {
 		buf.WriteString(line.View(i, m))
 	}
 	if m.playing {
-		buf.WriteString(fmt.Sprintf("Open %v", m.outport.IsOpen()))
-		buf.WriteString("Playing " + strconv.Itoa(m.currentBeat))
-		buf.WriteString("\n")
+		buf.WriteString(fmt.Sprintf("   %*s%s", m.currentBeat, "", "█"))
 	}
-	buf.WriteString(m.help.View(m.keys))
 	buf.WriteString("\n")
+	// buf.WriteString(m.help.View(m.keys))
+	// buf.WriteString("\n")
 	return buf.String()
 }
 
