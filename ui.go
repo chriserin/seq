@@ -2,13 +2,19 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"gitlab.com/gomidi/midi/v2"
+	"gitlab.com/gomidi/midi/v2/drivers"
+
+	_ "gitlab.com/gomidi/midi/v2/drivers/portmididrv"
 )
 
 type keymap struct {
@@ -20,6 +26,7 @@ type keymap struct {
 	CursorRight   key.Binding
 	TriggerAdd    key.Binding
 	TriggerRemove key.Binding
+	PlayStop      key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -35,6 +42,7 @@ var keys = keymap{
 	CursorRight:   Key("l", "Right"),
 	TriggerAdd:    Key("f", "Add Trigger"),
 	TriggerRemove: Key("d", "Remove Trigger"),
+	PlayStop:      Key(" ", "Play/Stop"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -51,6 +59,7 @@ func (k keymap) FullHelp() [][]key.Binding {
 	}
 }
 
+const C1 = 36
 const BLANK = " "
 const TRIGGER = '■'
 
@@ -64,13 +73,52 @@ type CursorPosition struct {
 }
 
 type model struct {
-	keys      keymap
-	beats     int
-	tempo     int
-	help      help.Model
-	lines     []line
-	cursorPos CursorPosition
-	cursor    cursor.Model
+	keys        keymap
+	beats       int
+	tempo       int
+	help        help.Model
+	lines       []line
+	cursorPos   CursorPosition
+	cursor      cursor.Model
+	outport     drivers.Out
+	playing     bool
+	playTime    time.Time
+	totalBeats  int
+	currentBeat int
+}
+
+type beatMsg struct{}
+
+func BeatTick(playTime time.Time, totalBeats int, tempo int) tea.Cmd {
+	adjuster := time.Since(playTime) - (time.Duration(totalBeats) * (time.Minute / time.Duration(tempo)))
+	next := time.Minute/time.Duration(tempo) - adjuster
+	return tea.Tick(
+		next,
+		func(t time.Time) tea.Msg { return beatMsg{} },
+	)
+}
+
+func PlayBeat(lines []line, currentBeat int, sendFn func(msg midi.Message) error) tea.Cmd {
+	return func() tea.Msg {
+		Play(lines, currentBeat, sendFn)
+		return nil
+	}
+}
+
+func Play(lines []line, currentBeat int, sendFn func(msg midi.Message) error) {
+	for i, line := range lines {
+		spot := line[currentBeat]
+		if spot != zeroRune {
+			err := sendFn(midi.NoteOn(10, C1+uint8(i), 100))
+			if err != nil {
+				panic("note on failed")
+			}
+			err = sendFn(midi.NoteOff(10, C1+uint8(i)))
+			if err != nil {
+				panic("note off failed")
+			}
+		}
+	}
 }
 
 func (m *model) AddTrigger() {
@@ -94,6 +142,11 @@ func InitModel() model {
 	newCursor := cursor.New()
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
+	outport, err := midi.OutPort(0)
+	if err != nil {
+		panic("Did not get midi outport")
+	}
+
 	return model{
 		keys:      keys,
 		beats:     32,
@@ -102,6 +155,7 @@ func InitModel() model {
 		lines:     InitSeq(8, 32),
 		cursorPos: CursorPosition{lineNumber: 0, beat: 0},
 		cursor:    newCursor,
+		outport:   outport,
 	}
 }
 
@@ -145,6 +199,39 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.AddTrigger()
 		case Is(msg, m.keys.TriggerRemove):
 			m.RemoveTrigger()
+
+		case Is(msg, m.keys.PlayStop):
+			if !m.playing && !m.outport.IsOpen() {
+				err := m.outport.Open()
+				if err != nil {
+					panic("It's not open!")
+				}
+			}
+
+			if m.playing && m.outport.IsOpen() {
+				m.outport.Close()
+			}
+
+			m.playing = !m.playing
+			m.playTime = time.Now()
+			if m.playing {
+				m.totalBeats = 0
+				sendFn, err := midi.SendTo(m.outport)
+				if err != nil {
+					panic("sendFn is broken")
+				}
+				return m, tea.Batch(PlayBeat(m.lines, m.currentBeat, sendFn), BeatTick(m.playTime, m.totalBeats, m.tempo))
+			}
+		}
+	case beatMsg:
+		if m.playing {
+			m.currentBeat = (m.currentBeat + 1) % m.beats
+			m.totalBeats++
+			sendFn, err := midi.SendTo(m.outport)
+			if err != nil {
+				panic("sendFn is broken")
+			}
+			return m, tea.Batch(PlayBeat(m.lines, m.currentBeat, sendFn), BeatTick(m.playTime, m.totalBeats, m.tempo))
 		}
 	}
 	var cmd tea.Cmd
@@ -159,6 +246,11 @@ func (m model) View() string {
 	buf.WriteString("  ┌────────────────────────────────────\n")
 	for i, line := range m.lines {
 		buf.WriteString(line.View(i, m))
+	}
+	if m.playing {
+		buf.WriteString(fmt.Sprintf("Open %v", m.outport.IsOpen()))
+		buf.WriteString("Playing " + strconv.Itoa(m.currentBeat))
+		buf.WriteString("\n")
 	}
 	buf.WriteString(m.help.View(m.keys))
 	buf.WriteString("\n")
