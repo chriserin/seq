@@ -102,8 +102,9 @@ type model struct {
 type beatMsg struct{}
 
 func BeatTick(playTime time.Time, totalBeats int, tempo int, subdivisions int) tea.Cmd {
-	adjuster := time.Since(playTime) - (time.Duration(totalBeats) * (time.Minute / time.Duration(tempo*subdivisions)))
-	next := time.Minute/time.Duration(tempo) - adjuster
+	tickInterval := time.Minute / time.Duration(tempo*subdivisions)
+	adjuster := time.Since(playTime) - (time.Duration(totalBeats) * tickInterval)
+	next := tickInterval - adjuster
 	return tea.Tick(
 		next,
 		func(t time.Time) tea.Msg { return beatMsg{} },
