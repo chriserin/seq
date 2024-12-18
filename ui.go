@@ -101,8 +101,8 @@ type model struct {
 
 type beatMsg struct{}
 
-func BeatTick(playTime time.Time, totalBeats int, tempo int) tea.Cmd {
-	adjuster := time.Since(playTime) - (time.Duration(totalBeats) * (time.Minute / time.Duration(tempo)))
+func BeatTick(playTime time.Time, totalBeats int, tempo int, subdivisions int) tea.Cmd {
+	adjuster := time.Since(playTime) - (time.Duration(totalBeats) * (time.Minute / time.Duration(tempo*subdivisions)))
 	next := time.Minute/time.Duration(tempo) - adjuster
 	return tea.Tick(
 		next,
@@ -238,7 +238,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if err != nil {
 					panic("sendFn is broken")
 				}
-				return m, tea.Batch(PlayBeat(m.lines, m.currentBeat, sendFn), BeatTick(m.playTime, m.totalBeats, m.tempo))
+				return m, tea.Batch(PlayBeat(m.lines, m.currentBeat, sendFn), BeatTick(m.playTime, m.totalBeats, m.tempo, m.subdivisions))
 			}
 		case Is(msg, m.keys.TempoInputSwitch):
 			m.tempoSelectionIndicator = (m.tempoSelectionIndicator + 1) % 3
@@ -275,7 +275,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err != nil {
 				panic("sendFn is broken")
 			}
-			return m, tea.Batch(PlayBeat(m.lines, m.currentBeat, sendFn), BeatTick(m.playTime, m.totalBeats, m.tempo))
+			return m, tea.Batch(PlayBeat(m.lines, m.currentBeat, sendFn), BeatTick(m.playTime, m.totalBeats, m.tempo, m.subdivisions))
 		}
 	}
 	var cmd tea.Cmd
