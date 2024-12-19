@@ -32,6 +32,7 @@ type keymap struct {
 	TempoInputSwitch key.Binding
 	TempoIncrease    key.Binding
 	TempoDecrease    key.Binding
+	ToggleAccentMode key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -53,6 +54,7 @@ var keys = keymap{
 	TempoInputSwitch: Key("T", "Select Tempo Indicator"),
 	TempoIncrease:    Key("+", "Tempo Increase"),
 	TempoDecrease:    Key("-", "Tempo Decrease"),
+	ToggleAccentMode: Key("A", "Toggle Accent Mode"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -118,6 +120,7 @@ type model struct {
 	totalBeats              int
 	currentBeat             int
 	tempoSelectionIndicator uint8
+	accentMode              bool
 }
 
 type beatMsg struct{}
@@ -284,10 +287,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.subdivisions--
 				}
 			}
+		case Is(msg, m.keys.ToggleAccentMode):
+			m.accentMode = !m.accentMode
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			beatInterval, _ := strconv.Atoi(msg.String())
-			m.lines[m.cursorPos.lineNumber] = fill(m.lines[m.cursorPos.lineNumber], m.cursorPos.beat, beatInterval)
+			if m.accentMode {
+				m.lines[m.cursorPos.lineNumber] = incrementAccent(m.lines[m.cursorPos.lineNumber], m.cursorPos.beat, beatInterval, 1)
+			} else {
+				m.lines[m.cursorPos.lineNumber] = fill(m.lines[m.cursorPos.lineNumber], m.cursorPos.beat, beatInterval)
+			}
 		}
 	case beatMsg:
 		if m.playing {
@@ -319,6 +328,21 @@ func fill(beatline line, start int, every int) line {
 				beatline[start+i] = zeronote
 			} else {
 				beatline[start+i] = note{5, 0}
+			}
+		}
+	}
+	return beatline
+}
+
+func incrementAccent(beatline line, start int, every int, modifier int) line {
+	for i := range beatline[start:] {
+		if i%every == 0 {
+			if beatline[start+i] != zeronote {
+				currentAccentIndex := beatline[start+i].accentIndex
+				nextAccentIndex := uint8(int(currentAccentIndex) - (1 * modifier))
+				if nextAccentIndex >= 1 && nextAccentIndex < uint8(len(accents)) {
+					beatline[start+i].accentIndex = nextAccentIndex
+				}
 			}
 		}
 	}
@@ -374,10 +398,16 @@ func AccentKeyView() string {
 	return buf.String()
 }
 
+var accentModeStyle = lipgloss.NewStyle().Background(accents[1].color).Foreground(lipgloss.Color("#000000"))
+
 func (m model) ViewTriggerSeq() string {
 	var buf strings.Builder
-	buf.WriteString("   Seq - A sequencer for your cli\n")
-	buf.WriteString("  ┌────────────────────────────────────\n")
+	if m.accentMode {
+		buf.WriteString(fmt.Sprintf("   Seq - %s\n", accentModeStyle.Render(" Accent Mode ")))
+	} else {
+		buf.WriteString("   Seq - A sequencer for your cli\n")
+	}
+	buf.WriteString("  ┌─────────────────────────────────\n")
 	for i, line := range m.lines {
 		buf.WriteString(line.View(i, m))
 	}
