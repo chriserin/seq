@@ -69,6 +69,24 @@ func (k keymap) FullHelp() [][]key.Binding {
 	}
 }
 
+type Accent struct {
+	shape rune
+	color string
+	value int
+}
+
+var accents = []Accent{
+	{' ', "#000000", 0},
+	{'✤', "#ed3902", 120},
+	{'⎈', "#f564a9", 105},
+	{'⚙', "#f8730e", 90},
+	{'⊚', "#fcc05c", 75},
+	{'✦', "#5cdffb", 60},
+	{'❖', "#1e89ef", 45},
+	{'✥', "#164de5", 30},
+	{'❄', "#0246a7", 15},
+}
+
 const C1 = 36
 const BLANK = " "
 const TRIGGER = '■'
@@ -338,7 +356,18 @@ func (m model) TempoView() string {
 
 func (m model) View() string {
 	var buf strings.Builder
-	buf.WriteString(lipgloss.JoinHorizontal(0, m.TempoView(), "  ", m.ViewTriggerSeq()))
+	buf.WriteString(lipgloss.JoinHorizontal(0, m.TempoView(), "  ", m.ViewTriggerSeq(), " ", AccentKeyView()))
+	return buf.String()
+}
+
+func AccentKeyView() string {
+	var buf strings.Builder
+	buf.WriteString("      ACCENTS\n")
+	buf.WriteString("  ----------------\n")
+	for _, accent := range accents[1:] {
+		style := lipgloss.NewStyle().Foreground(lipgloss.Color(accent.color))
+		buf.WriteString(fmt.Sprintf("  %s  \n", style.Render(string(accent.shape))))
+	}
 	return buf.String()
 }
 
