@@ -93,7 +93,14 @@ const TRIGGER = '■'
 
 var zeroRune rune
 
-type line []rune
+type note struct {
+	accentIndex uint8
+	rachetIndex uint8
+}
+
+var zeronote note
+
+type line []note
 
 type CursorPosition struct {
 	lineNumber int
@@ -139,7 +146,7 @@ func PlayBeat(lines []line, currentBeat int, sendFn func(msg midi.Message) error
 func Play(lines []line, currentBeat int, sendFn func(msg midi.Message) error) {
 	for i, line := range lines {
 		spot := line[currentBeat]
-		if spot != zeroRune {
+		if spot != zeronote {
 			err := sendFn(midi.NoteOn(10, C1+uint8(i), 100))
 			if err != nil {
 				panic("note on failed")
@@ -153,18 +160,18 @@ func Play(lines []line, currentBeat int, sendFn func(msg midi.Message) error) {
 }
 
 func (m *model) AddTrigger() {
-	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = TRIGGER
+	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = note{5, 0}
 }
 
 func (m *model) RemoveTrigger() {
-	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = zeroRune
+	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = zeronote
 }
 
 func InitSeq(lineNumber int, beatNumber int) []line {
 	var lines = make([]line, 0, lineNumber)
 
 	for i := 0; i < lineNumber; i++ {
-		lines = append(lines, make([]rune, beatNumber))
+		lines = append(lines, make([]note, beatNumber))
 	}
 	return lines
 }
@@ -305,17 +312,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func zeroLine(beatline line) {
 	for i := range beatline {
-		beatline[i] = zeroRune
+		beatline[i] = zeronote
 	}
 }
 
 func fill(beatline line, start int, every int) line {
 	for i := range beatline[start:] {
 		if i%every == 0 {
-			if beatline[start+i] == TRIGGER {
-				beatline[start+i] = zeroRune
+			if beatline[start+i] != zeronote {
+				beatline[start+i] = zeronote
 			} else {
-				beatline[start+i] = TRIGGER
+				beatline[start+i] = note{5, 0}
 			}
 		}
 	}
@@ -396,10 +403,10 @@ func (line line) View(lineNumber int, m model) string {
 	for i := 0; i < m.beats; i++ {
 
 		var char string
-		if line[i] == zeroRune {
+		if line[i] == zeronote {
 			char = BLANK
 		} else {
-			char = string(line[i])
+			char = string(accents[line[i].accentIndex].shape)
 		}
 		if m.cursorPos.lineNumber == lineNumber && m.cursorPos.beat == i {
 			m.cursor.SetChar(char)
