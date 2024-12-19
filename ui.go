@@ -71,7 +71,7 @@ func (k keymap) FullHelp() [][]key.Binding {
 
 type Accent struct {
 	shape rune
-	color string
+	color lipgloss.Color
 	value int
 }
 
@@ -88,10 +88,6 @@ var accents = []Accent{
 }
 
 const C1 = 36
-const BLANK = " "
-const TRIGGER = '■'
-
-var zeroRune rune
 
 type note struct {
 	accentIndex uint8
@@ -394,29 +390,33 @@ func (m model) ViewTriggerSeq() string {
 	return buf.String()
 }
 
-var altSeqColor = lipgloss.NewStyle().Background(lipgloss.Color("#222222"))
+var altSeqColor = lipgloss.Color("#222222")
+var seqColor = lipgloss.Color("#000000")
 
 func (line line) View(lineNumber int, m model) string {
 	var buf strings.Builder
 	buf.WriteString(fmt.Sprintf("%d │", lineNumber))
 
+	var backgroundSeqColor lipgloss.Color
+
 	for i := 0; i < m.beats; i++ {
+		if i%8 > 3 {
+			backgroundSeqColor = altSeqColor
+		} else {
+			backgroundSeqColor = seqColor
+		}
 
 		var char string
-		if line[i] == zeronote {
-			char = BLANK
-		} else {
-			char = string(accents[line[i].accentIndex].shape)
-		}
+		currentNote := line[i]
+		currentAccent := accents[currentNote.accentIndex]
+		char = string(currentAccent.shape)
 		if m.cursorPos.lineNumber == lineNumber && m.cursorPos.beat == i {
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
-		}
-
-		if i%8 > 3 {
-			buf.WriteString(altSeqColor.Render(char))
+			buf.WriteString(lipgloss.NewStyle().Background(backgroundSeqColor).Render(char))
 		} else {
-			buf.WriteString(char)
+			style := lipgloss.NewStyle().Background(backgroundSeqColor).Foreground(currentAccent.color)
+			buf.WriteString(style.Render(char))
 		}
 	}
 
