@@ -18,21 +18,22 @@ import (
 )
 
 type keymap struct {
-	Quit             key.Binding
-	Help             key.Binding
-	CursorUp         key.Binding
-	CursorDown       key.Binding
-	CursorLeft       key.Binding
-	CursorRight      key.Binding
-	TriggerAdd       key.Binding
-	TriggerRemove    key.Binding
-	PlayStop         key.Binding
-	ClearLine        key.Binding
-	ClearSeq         key.Binding
-	TempoInputSwitch key.Binding
-	TempoIncrease    key.Binding
-	TempoDecrease    key.Binding
-	ToggleAccentMode key.Binding
+	Quit                 key.Binding
+	Help                 key.Binding
+	CursorUp             key.Binding
+	CursorDown           key.Binding
+	CursorLeft           key.Binding
+	CursorRight          key.Binding
+	TriggerAdd           key.Binding
+	TriggerRemove        key.Binding
+	PlayStop             key.Binding
+	ClearLine            key.Binding
+	ClearSeq             key.Binding
+	TempoInputSwitch     key.Binding
+	TempoIncrease        key.Binding
+	TempoDecrease        key.Binding
+	ToggleAccentMode     key.Binding
+	ToggleAccentModifier key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -40,21 +41,22 @@ func Key(keyboardKey string, help string) key.Binding {
 }
 
 var keys = keymap{
-	Quit:             Key("q", "Quit"),
-	Help:             Key("?", "Expand Help"),
-	CursorUp:         Key("k", "Up"),
-	CursorDown:       Key("j", "Down"),
-	CursorLeft:       Key("h", "Left"),
-	CursorRight:      Key("l", "Right"),
-	TriggerAdd:       Key("f", "Add Trigger"),
-	TriggerRemove:    Key("d", "Remove Trigger"),
-	ClearLine:        Key("c", "Clear Line"),
-	ClearSeq:         Key("C", "Clear Seq"),
-	PlayStop:         Key(" ", "Play/Stop"),
-	TempoInputSwitch: Key("T", "Select Tempo Indicator"),
-	TempoIncrease:    Key("+", "Tempo Increase"),
-	TempoDecrease:    Key("-", "Tempo Decrease"),
-	ToggleAccentMode: Key("A", "Toggle Accent Mode"),
+	Quit:                 Key("q", "Quit"),
+	Help:                 Key("?", "Expand Help"),
+	CursorUp:             Key("k", "Up"),
+	CursorDown:           Key("j", "Down"),
+	CursorLeft:           Key("h", "Left"),
+	CursorRight:          Key("l", "Right"),
+	TriggerAdd:           Key("f", "Add Trigger"),
+	TriggerRemove:        Key("d", "Remove Trigger"),
+	ClearLine:            Key("c", "Clear Line"),
+	ClearSeq:             Key("C", "Clear Seq"),
+	PlayStop:             Key(" ", "Play/Stop"),
+	TempoInputSwitch:     Key("T", "Select Tempo Indicator"),
+	TempoIncrease:        Key("+", "Tempo Increase"),
+	TempoDecrease:        Key("-", "Tempo Decrease"),
+	ToggleAccentMode:     Key("A", "Toggle Accent Mode"),
+	ToggleAccentModifier: Key("a", "Toggle Accent Modifier"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -121,6 +123,7 @@ type model struct {
 	currentBeat             int
 	tempoSelectionIndicator uint8
 	accentMode              bool
+	accentModifier          int8
 }
 
 type beatMsg struct{}
@@ -185,15 +188,16 @@ func InitModel() model {
 	}
 
 	return model{
-		keys:         keys,
-		beats:        32,
-		tempo:        120,
-		subdivisions: 2,
-		help:         help.New(),
-		lines:        InitSeq(8, 32),
-		cursorPos:    CursorPosition{lineNumber: 0, beat: 0},
-		cursor:       newCursor,
-		outport:      outport,
+		keys:           keys,
+		beats:          32,
+		tempo:          120,
+		subdivisions:   2,
+		help:           help.New(),
+		lines:          InitSeq(8, 32),
+		cursorPos:      CursorPosition{lineNumber: 0, beat: 0},
+		cursor:         newCursor,
+		outport:        outport,
+		accentModifier: 1,
 	}
 }
 
@@ -289,13 +293,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case Is(msg, m.keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
+		case Is(msg, m.keys.ToggleAccentModifier):
+			m.accentModifier = -1 * m.accentModifier
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			beatInterval, _ := strconv.Atoi(msg.String())
+			line := m.lines[m.cursorPos.lineNumber]
 			if m.accentMode {
-				m.lines[m.cursorPos.lineNumber] = incrementAccent(m.lines[m.cursorPos.lineNumber], m.cursorPos.beat, beatInterval, 1)
+				m.lines[m.cursorPos.lineNumber] = incrementAccent(line, m.cursorPos.beat, beatInterval, m.accentModifier)
 			} else {
-				m.lines[m.cursorPos.lineNumber] = fill(m.lines[m.cursorPos.lineNumber], m.cursorPos.beat, beatInterval)
+				m.lines[m.cursorPos.lineNumber] = fill(line, m.cursorPos.beat, beatInterval)
 			}
 		}
 	case beatMsg:
@@ -334,12 +341,12 @@ func fill(beatline line, start int, every int) line {
 	return beatline
 }
 
-func incrementAccent(beatline line, start int, every int, modifier int) line {
+func incrementAccent(beatline line, start int, every int, modifier int8) line {
 	for i := range beatline[start:] {
 		if i%every == 0 {
 			if beatline[start+i] != zeronote {
 				currentAccentIndex := beatline[start+i].accentIndex
-				nextAccentIndex := uint8(int(currentAccentIndex) - (1 * modifier))
+				nextAccentIndex := uint8(currentAccentIndex - uint8(1*modifier))
 				if nextAccentIndex >= 1 && nextAccentIndex < uint8(len(accents)) {
 					beatline[start+i].accentIndex = nextAccentIndex
 				}
@@ -403,7 +410,13 @@ var accentModeStyle = lipgloss.NewStyle().Background(accents[1].color).Foregroun
 func (m model) ViewTriggerSeq() string {
 	var buf strings.Builder
 	if m.accentMode {
-		buf.WriteString(fmt.Sprintf("   Seq - %s\n", accentModeStyle.Render(" Accent Mode ")))
+		var accentModeTitle string
+		if m.accentModifier > 0 {
+			accentModeTitle = " Accent Mode \u2191 "
+		} else {
+			accentModeTitle = " Accent Mode \u2193 "
+		}
+		buf.WriteString(fmt.Sprintf("   Seq - %s\n", accentModeStyle.Render(accentModeTitle)))
 	} else {
 		buf.WriteString("   Seq - A sequencer for your cli\n")
 	}
