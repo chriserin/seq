@@ -34,6 +34,8 @@ type keymap struct {
 	TempoDecrease        key.Binding
 	ToggleAccentMode     key.Binding
 	ToggleAccentModifier key.Binding
+	RatchetIncrease      key.Binding
+	RatchetDecrease      key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -57,6 +59,8 @@ var keys = keymap{
 	TempoDecrease:        Key("-", "Tempo Decrease"),
 	ToggleAccentMode:     Key("A", "Toggle Accent Mode"),
 	ToggleAccentModifier: Key("a", "Toggle Accent Modifier"),
+	RatchetIncrease:      Key("R", "Increase Ratchet"),
+	RatchetDecrease:      Key("r", "Decrease Ratchet"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -96,6 +100,19 @@ const C1 = 36
 type note struct {
 	accentIndex uint8
 	rachetIndex uint8
+}
+
+type ratchet string
+
+var ratchets = []ratchet{
+	"\u034F",
+	"\u0307",
+	"\u030A",
+	"\u030B",
+	"\u030C",
+	"\u0312",
+	"\u0313",
+	"\u0344",
 }
 
 var zeronote note
@@ -167,6 +184,21 @@ func (m *model) AddTrigger() {
 
 func (m *model) RemoveTrigger() {
 	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = zeronote
+}
+
+func (m *model) IncreaseRatchet() {
+	ratchetIndex := m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].rachetIndex
+	if ratchetIndex+1 < uint8(len(ratchets)) {
+		m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].rachetIndex++
+	}
+}
+
+func (m *model) DecreaseRatchet() {
+	ratchetIndex := m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].rachetIndex
+
+	if ratchetIndex > 0 {
+		m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].rachetIndex--
+	}
 }
 
 func InitSeq(lineNumber int, beatNumber int) []line {
@@ -295,6 +327,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.accentMode = !m.accentMode
 		case Is(msg, m.keys.ToggleAccentModifier):
 			m.accentModifier = -1 * m.accentModifier
+		case Is(msg, m.keys.RatchetIncrease):
+			m.IncreaseRatchet()
+		case Is(msg, m.keys.RatchetDecrease):
+			m.DecreaseRatchet()
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			beatInterval, _ := strconv.Atoi(msg.String())
@@ -452,7 +488,7 @@ func (line line) View(lineNumber int, m model) string {
 		var char string
 		currentNote := line[i]
 		currentAccent := accents[currentNote.accentIndex]
-		char = string(currentAccent.shape)
+		char = string(currentAccent.shape) + string(ratchets[currentNote.rachetIndex])
 		if m.cursorPos.lineNumber == lineNumber && m.cursorPos.beat == i {
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
