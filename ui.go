@@ -179,13 +179,13 @@ func InitSeq(lineNumber int, beatNumber int) []line {
 }
 
 func InitModel() model {
-	newCursor := cursor.New()
-	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
-
 	outport, err := midi.OutPort(0)
 	if err != nil {
 		panic("Did not get midi outport")
 	}
+
+	newCursor := cursor.New()
+	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
 	return model{
 		keys:           keys,
