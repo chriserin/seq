@@ -76,7 +76,7 @@ func (k keymap) FullHelp() [][]key.Binding {
 type Accent struct {
 	shape rune
 	color lipgloss.Color
-	value int
+	value uint8
 }
 
 var accents = []Accent{
@@ -149,7 +149,7 @@ func Play(lines []line, currentBeat int, sendFn func(msg midi.Message) error) {
 	for i, line := range lines {
 		spot := line[currentBeat]
 		if spot != zeronote {
-			err := sendFn(midi.NoteOn(10, C1+uint8(i), 100))
+			err := sendFn(midi.NoteOn(10, C1+uint8(i), accents[spot.accentIndex].value))
 			if err != nil {
 				panic("note on failed")
 			}
