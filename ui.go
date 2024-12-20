@@ -98,8 +98,8 @@ var accents = []Accent{
 const C1 = 36
 
 type note struct {
-	accentIndex uint8
-	rachetIndex uint8
+	accentIndex  uint8
+	ratchetIndex uint8
 }
 
 type ratchet string
@@ -145,37 +145,66 @@ type model struct {
 
 type beatMsg struct{}
 
-func BeatTick(playTime time.Time, totalBeats int, tempo int, subdivisions int) tea.Cmd {
-	tickInterval := time.Minute / time.Duration(tempo*subdivisions)
-	adjuster := time.Since(playTime) - (time.Duration(totalBeats) * tickInterval)
-	next := tickInterval - adjuster
+func BeatTick(beatInterval time.Duration) tea.Cmd {
 	return tea.Tick(
-		next,
+		beatInterval,
 		func(t time.Time) tea.Msg { return beatMsg{} },
 	)
 }
 
-func PlayBeat(lines []line, currentBeat int, sendFn func(msg midi.Message) error) tea.Cmd {
+func (m model) BeatInterval() time.Duration {
+	tickInterval := time.Minute / time.Duration(m.tempo*m.subdivisions)
+	adjuster := time.Since(m.playTime) - (time.Duration(m.totalBeats) * tickInterval)
+	next := tickInterval - adjuster
+	return next
+}
+
+func PlayBeat(beatInterval time.Duration, lines []line, currentBeat int, sendFn SendFunc) tea.Cmd {
 	return func() tea.Msg {
-		Play(lines, currentBeat, sendFn)
+		Play(beatInterval, lines, currentBeat, sendFn)
 		return nil
 	}
 }
 
-func Play(lines []line, currentBeat int, sendFn func(msg midi.Message) error) {
+type SendFunc func(msg midi.Message) error
+
+func Play(beatInterval time.Duration, lines []line, currentBeat int, sendFn SendFunc) {
 	for i, line := range lines {
 		spot := line[currentBeat]
 		if spot != zeronote {
-			err := sendFn(midi.NoteOn(10, C1+uint8(i), accents[spot.accentIndex].value))
+			onMessage := midi.NoteOn(10, C1+uint8(i), accents[spot.accentIndex].value)
+			offMessage := midi.NoteOff(10, C1+uint8(i))
+			err := sendFn(onMessage)
 			if err != nil {
 				panic("note on failed")
 			}
-			err = sendFn(midi.NoteOff(10, C1+uint8(i)))
+			err = sendFn(offMessage)
 			if err != nil {
 				panic("note off failed")
 			}
+			if spot.ratchetIndex > 0 {
+				ratchetInterval := beatInterval / time.Duration(spot.ratchetIndex+1)
+				PlayRatchet(spot.ratchetIndex-1, ratchetInterval, onMessage, offMessage, sendFn)
+			}
 		}
 	}
+}
+
+func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage midi.Message, sendFn SendFunc) {
+	fn := func() {
+		err := sendFn(onMessage)
+		if err != nil {
+			panic("ratchet note on failed")
+		}
+		err = sendFn(offMessage)
+		if err != nil {
+			panic("ratchet note off failed")
+		}
+		if number > 0 {
+			PlayRatchet(number-1, timeInterval, onMessage, offMessage, sendFn)
+		}
+	}
+	time.AfterFunc(timeInterval, fn)
 }
 
 func (m *model) AddTrigger() {
@@ -187,17 +216,17 @@ func (m *model) RemoveTrigger() {
 }
 
 func (m *model) IncreaseRatchet() {
-	ratchetIndex := m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].rachetIndex
+	ratchetIndex := m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].ratchetIndex
 	if ratchetIndex+1 < uint8(len(ratchets)) {
-		m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].rachetIndex++
+		m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].ratchetIndex++
 	}
 }
 
 func (m *model) DecreaseRatchet() {
-	ratchetIndex := m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].rachetIndex
+	ratchetIndex := m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].ratchetIndex
 
 	if ratchetIndex > 0 {
-		m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].rachetIndex--
+		m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].ratchetIndex--
 	}
 }
 
@@ -299,7 +328,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if err != nil {
 					panic("sendFn is broken")
 				}
-				return m, tea.Batch(PlayBeat(m.lines, m.currentBeat, sendFn), BeatTick(m.playTime, m.totalBeats, m.tempo, m.subdivisions))
+				beatInterval := m.BeatInterval()
+				return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.currentBeat, sendFn), BeatTick(beatInterval))
 			}
 		case Is(msg, m.keys.TempoInputSwitch):
 			m.tempoSelectionIndicator = (m.tempoSelectionIndicator + 1) % 3
@@ -349,7 +379,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err != nil {
 				panic("sendFn is broken")
 			}
-			return m, tea.Batch(PlayBeat(m.lines, m.currentBeat, sendFn), BeatTick(m.playTime, m.totalBeats, m.tempo, m.subdivisions))
+			beatInterval := m.BeatInterval()
+			return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.currentBeat, sendFn), BeatTick(beatInterval))
 		}
 	}
 	var cmd tea.Cmd
@@ -488,7 +519,7 @@ func (line line) View(lineNumber int, m model) string {
 		var char string
 		currentNote := line[i]
 		currentAccent := accents[currentNote.accentIndex]
-		char = string(currentAccent.shape) + string(ratchets[currentNote.rachetIndex])
+		char = string(currentAccent.shape) + string(ratchets[currentNote.ratchetIndex])
 		if m.cursorPos.lineNumber == lineNumber && m.cursorPos.beat == i {
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
