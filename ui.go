@@ -137,6 +137,7 @@ type model struct {
 	outport                 drivers.Out
 	playing                 bool
 	playTime                time.Time
+	trackTime               time.Duration
 	totalBeats              int
 	currentBeat             int
 	tempoSelectionIndicator uint8
@@ -156,9 +157,11 @@ func BeatTick(beatInterval time.Duration) tea.Cmd {
 	)
 }
 
-func (m model) BeatInterval() time.Duration {
+func (m *model) BeatInterval() time.Duration {
 	tickInterval := time.Minute / time.Duration(m.tempo*m.subdivisions)
-	adjuster := time.Since(m.playTime) - (time.Duration(m.totalBeats) * tickInterval)
+	// TODO:  Keep track of total beats & tempo together to calculate where the time _should_ be
+	adjuster := time.Since(m.playTime) - m.trackTime
+	m.trackTime = m.trackTime + tickInterval
 	next := tickInterval - adjuster
 	return next
 }
@@ -354,6 +357,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.playing {
 				m.totalBeats = 0
 				m.currentBeat = 0
+				m.trackTime = time.Duration(0)
 				sendFn, err := midi.SendTo(m.outport)
 				if err != nil {
 					panic("sendFn is broken")
