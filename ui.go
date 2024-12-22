@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -141,14 +142,17 @@ type model struct {
 	tempoSelectionIndicator uint8
 	accentMode              bool
 	accentModifier          int8
+	logFile                 *os.File
 }
 
-type beatMsg struct{}
+type beatMsg struct {
+	interval time.Duration
+}
 
 func BeatTick(beatInterval time.Duration) tea.Cmd {
 	return tea.Tick(
 		beatInterval,
-		func(t time.Time) tea.Msg { return beatMsg{} },
+		func(t time.Time) tea.Msg { return beatMsg{beatInterval} },
 	)
 }
 
@@ -244,6 +248,10 @@ func InitModel() model {
 	if err != nil {
 		panic("Did not get midi outport")
 	}
+	logFile, err := tea.LogToFile("debug.log", "debug")
+	if err != nil {
+		panic("could not open log file")
+	}
 
 	newCursor := cursor.New()
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
@@ -259,6 +267,25 @@ func InitModel() model {
 		cursor:         newCursor,
 		outport:        outport,
 		accentModifier: 1,
+		logFile:        logFile,
+	}
+}
+
+func (m model) LogTeaMsg(msg tea.Msg) {
+	switch msg := msg.(type) {
+	case beatMsg:
+		m.LogString(fmt.Sprintf("beatMsg %d %d %d\n", msg.interval, m.totalBeats, m.tempo))
+	case tea.KeyMsg:
+		m.LogString(fmt.Sprintf("keyMsg %s\n", msg.String()))
+	default:
+		m.LogString(fmt.Sprintf("%T\n", msg))
+	}
+}
+
+func (m model) LogString(message string) {
+	_, err := m.logFile.WriteString(message)
+	if err != nil {
+		panic("could not write to log file")
 	}
 }
 
@@ -277,10 +304,13 @@ func Is(msg tea.KeyMsg, k key.Binding) bool {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
+	m.LogTeaMsg(msg)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case Is(msg, m.keys.Quit):
+			m.logFile.Close()
 			return m, tea.Quit
 		case Is(msg, m.keys.CursorDown):
 			if m.cursorPos.lineNumber < len(m.lines)-1 {
