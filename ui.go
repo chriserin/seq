@@ -37,6 +37,7 @@ type keymap struct {
 	ToggleAccentModifier key.Binding
 	RatchetIncrease      key.Binding
 	RatchetDecrease      key.Binding
+	ActionAddLineReset   key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -62,6 +63,7 @@ var keys = keymap{
 	ToggleAccentModifier: Key("a", "Toggle Accent Modifier"),
 	RatchetIncrease:      Key("R", "Increase Ratchet"),
 	RatchetDecrease:      Key("r", "Decrease Ratchet"),
+	ActionAddLineReset:   Key("s", "Add Line Reset Action"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -101,12 +103,31 @@ const C1 = 36
 type note struct {
 	accentIndex  uint8
 	ratchetIndex uint8
+	actionIndex  uint8
 }
+
+type action uint8
+
+type lineaction struct {
+	shape rune
+	color lipgloss.Color
+	value action
+}
+
+var lineactions = []lineaction{
+	{' ', "#000000", ACTION_NOTHING},
+	{'↔', "#cf142b", ACTION_LINE_RESET},
+}
+
+const (
+	ACTION_NOTHING action = iota
+	ACTION_LINE_RESET
+)
 
 type ratchet string
 
 var ratchets = []ratchet{
-	"\u034F",
+	"",
 	"\u0307",
 	"\u030A",
 	"\u030B",
@@ -139,7 +160,7 @@ type model struct {
 	playTime                time.Time
 	trackTime               time.Duration
 	totalBeats              int
-	currentBeat             int
+	currentBeat             []int
 	tempoSelectionIndicator uint8
 	accentMode              bool
 	accentModifier          int8
@@ -159,14 +180,13 @@ func BeatTick(beatInterval time.Duration) tea.Cmd {
 
 func (m *model) BeatInterval() time.Duration {
 	tickInterval := time.Minute / time.Duration(m.tempo*m.subdivisions)
-	// TODO:  Keep track of total beats & tempo together to calculate where the time _should_ be
 	adjuster := time.Since(m.playTime) - m.trackTime
 	m.trackTime = m.trackTime + tickInterval
 	next := tickInterval - adjuster
 	return next
 }
 
-func PlayBeat(beatInterval time.Duration, lines []line, currentBeat int, sendFn SendFunc) tea.Cmd {
+func PlayBeat(beatInterval time.Duration, lines []line, currentBeat []int, sendFn SendFunc) tea.Cmd {
 	return func() tea.Msg {
 		Play(beatInterval, lines, currentBeat, sendFn)
 		return nil
@@ -175,9 +195,9 @@ func PlayBeat(beatInterval time.Duration, lines []line, currentBeat int, sendFn 
 
 type SendFunc func(msg midi.Message) error
 
-func Play(beatInterval time.Duration, lines []line, currentBeat int, sendFn SendFunc) {
+func Play(beatInterval time.Duration, lines []line, currentBeat []int, sendFn SendFunc) {
 	for i, line := range lines {
-		spot := line[currentBeat]
+		spot := line[currentBeat[i]]
 		if spot != zeronote {
 			onMessage := midi.NoteOn(10, C1+uint8(i), accents[spot.accentIndex].value)
 			offMessage := midi.NoteOff(10, C1+uint8(i))
@@ -215,7 +235,11 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 }
 
 func (m *model) AddTrigger() {
-	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = note{5, 0}
+	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = note{5, 0, 0}
+}
+
+func (m *model) AddAction(act action) {
+	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = note{0, 0, uint8(act)}
 }
 
 func (m *model) RemoveTrigger() {
@@ -307,7 +331,7 @@ func Is(msg tea.KeyMsg, k key.Binding) bool {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	m.LogTeaMsg(msg)
+	//m.LogTeaMsg(msg)
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -356,7 +380,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.playTime = time.Now()
 			if m.playing {
 				m.totalBeats = 0
-				m.currentBeat = 0
+				m.currentBeat = make([]int, len(m.lines))
 				m.trackTime = time.Duration(0)
 				sendFn, err := midi.SendTo(m.outport)
 				if err != nil {
@@ -395,6 +419,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.IncreaseRatchet()
 		case Is(msg, m.keys.RatchetDecrease):
 			m.DecreaseRatchet()
+		case Is(msg, m.keys.ActionAddLineReset):
+			m.AddAction(ACTION_LINE_RESET)
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			beatInterval, _ := strconv.Atoi(msg.String())
@@ -407,7 +433,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case beatMsg:
 		if m.playing {
-			m.currentBeat = (m.currentBeat + 1) % m.beats
+			m.advanceCurrentBeat()
 			m.totalBeats++
 			sendFn, err := midi.SendTo(m.outport)
 			if err != nil {
@@ -423,6 +449,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m *model) advanceCurrentBeat() {
+	for i, v := range m.currentBeat {
+		advancedBeat := (v + 1) % m.beats
+		m.currentBeat[i] = advancedBeat
+		if m.lines[i][advancedBeat].actionIndex == 1 {
+			m.currentBeat[i] = 0
+		}
+	}
+}
+
 func zeroLine(beatline line) {
 	for i := range beatline {
 		beatline[i] = zeronote
@@ -435,7 +471,7 @@ func fill(beatline line, start int, every int) line {
 			if beatline[start+i] != zeronote {
 				beatline[start+i] = zeronote
 			} else {
-				beatline[start+i] = note{5, 0}
+				beatline[start+i] = note{5, 0, 0}
 			}
 		}
 	}
@@ -526,7 +562,7 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(line.View(i, m))
 	}
 	if m.playing {
-		buf.WriteString(fmt.Sprintf("   %*s%s", m.currentBeat, "", "█"))
+		buf.WriteString(fmt.Sprintf("   %*s%s", m.currentBeat[0], "", "█"))
 	}
 	buf.WriteString("\n")
 	// buf.WriteString(m.help.View(m.keys))
@@ -536,6 +572,7 @@ func (m model) ViewTriggerSeq() string {
 
 var altSeqColor = lipgloss.Color("#222222")
 var seqColor = lipgloss.Color("#000000")
+var seqCursorColor = lipgloss.Color("#444444")
 
 func (line line) View(lineNumber int, m model) string {
 	var buf strings.Builder
@@ -549,17 +586,30 @@ func (line line) View(lineNumber int, m model) string {
 		} else {
 			backgroundSeqColor = seqColor
 		}
+		if m.playing && m.currentBeat[lineNumber] == i {
+			backgroundSeqColor = seqCursorColor
+		}
 
 		var char string
+		var foregroundColor lipgloss.Color
 		currentNote := line[i]
 		currentAccent := accents[currentNote.accentIndex]
-		char = string(currentAccent.shape) + string(ratchets[currentNote.ratchetIndex])
+		currentAction := lineactions[currentNote.actionIndex]
+
+		if currentAction.value == ACTION_NOTHING {
+			char = string(currentAccent.shape) + string(ratchets[currentNote.ratchetIndex])
+			foregroundColor = currentAccent.color
+		} else {
+			char = string(currentAction.shape)
+			foregroundColor = currentAction.color
+		}
+
 		if m.cursorPos.lineNumber == lineNumber && m.cursorPos.beat == i {
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
 			buf.WriteString(lipgloss.NewStyle().Background(backgroundSeqColor).Render(char))
 		} else {
-			style := lipgloss.NewStyle().Background(backgroundSeqColor).Foreground(currentAccent.color)
+			style := lipgloss.NewStyle().Background(backgroundSeqColor).Foreground(foregroundColor)
 			buf.WriteString(style.Render(char))
 		}
 	}
