@@ -581,13 +581,12 @@ func (line line) View(lineNumber int, m model) string {
 	var backgroundSeqColor lipgloss.Color
 
 	for i := 0; i < m.beats; i++ {
-		if i%8 > 3 {
+		if m.playing && m.currentBeat[lineNumber] == i {
+			backgroundSeqColor = seqCursorColor
+		} else if i%8 > 3 {
 			backgroundSeqColor = altSeqColor
 		} else {
 			backgroundSeqColor = seqColor
-		}
-		if m.playing && m.currentBeat[lineNumber] == i {
-			backgroundSeqColor = seqCursorColor
 		}
 
 		var char string
