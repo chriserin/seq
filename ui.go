@@ -113,15 +113,15 @@ type lineaction struct {
 	color lipgloss.Color
 }
 
-var lineactions = map[action]lineaction{
-	ACTION_NOTHING:    {' ', "#000000"},
-	ACTION_LINE_RESET: {'↔', "#cf142b"},
-}
-
 const (
 	ACTION_NOTHING action = iota
 	ACTION_LINE_RESET
 )
+
+var lineactions = map[action]lineaction{
+	ACTION_NOTHING:    {' ', "#000000"},
+	ACTION_LINE_RESET: {'↔', "#cf142b"},
+}
 
 type ratchet string
 
