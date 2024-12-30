@@ -103,7 +103,7 @@ const C1 = 36
 type note struct {
 	accentIndex  uint8
 	ratchetIndex uint8
-	actionIndex  uint8
+	action       action
 }
 
 type action uint8
@@ -111,12 +111,11 @@ type action uint8
 type lineaction struct {
 	shape rune
 	color lipgloss.Color
-	value action
 }
 
-var lineactions = []lineaction{
-	{' ', "#000000", ACTION_NOTHING},
-	{'↔', "#cf142b", ACTION_LINE_RESET},
+var lineactions = map[action]lineaction{
+	ACTION_NOTHING:    {' ', "#000000"},
+	ACTION_LINE_RESET: {'↔', "#cf142b"},
 }
 
 const (
@@ -235,11 +234,11 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 }
 
 func (m *model) AddTrigger() {
-	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = note{5, 0, 0}
+	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = note{5, 0, ACTION_NOTHING}
 }
 
 func (m *model) AddAction(act action) {
-	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = note{0, 0, uint8(act)}
+	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = note{0, 0, act}
 }
 
 func (m *model) RemoveTrigger() {
@@ -453,7 +452,7 @@ func (m *model) advanceCurrentBeat() {
 	for i, v := range m.currentBeat {
 		advancedBeat := (v + 1) % m.beats
 		m.currentBeat[i] = advancedBeat
-		if m.lines[i][advancedBeat].actionIndex == 1 {
+		if m.lines[i][advancedBeat].action == ACTION_LINE_RESET {
 			m.currentBeat[i] = 0
 		}
 	}
@@ -593,14 +592,15 @@ func (line line) View(lineNumber int, m model) string {
 		var foregroundColor lipgloss.Color
 		currentNote := line[i]
 		currentAccent := accents[currentNote.accentIndex]
-		currentAction := lineactions[currentNote.actionIndex]
+		currentAction := currentNote.action
 
-		if currentAction.value == ACTION_NOTHING {
+		if currentAction == ACTION_NOTHING {
 			char = string(currentAccent.shape) + string(ratchets[currentNote.ratchetIndex])
 			foregroundColor = currentAccent.color
 		} else {
-			char = string(currentAction.shape)
-			foregroundColor = currentAction.color
+			lineaction := lineactions[currentAction]
+			char = string(lineaction.shape)
+			foregroundColor = lineaction.color
 		}
 
 		if m.cursorPos.lineNumber == lineNumber && m.cursorPos.beat == i {
