@@ -38,6 +38,7 @@ type keymap struct {
 	RatchetIncrease      key.Binding
 	RatchetDecrease      key.Binding
 	ActionAddLineReset   key.Binding
+	ActionAddLineReverse key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -64,6 +65,7 @@ var keys = keymap{
 	RatchetIncrease:      Key("R", "Increase Ratchet"),
 	RatchetDecrease:      Key("r", "Decrease Ratchet"),
 	ActionAddLineReset:   Key("s", "Add Line Reset Action"),
+	ActionAddLineReverse: Key("S", "Add Line Reverse Action"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -116,11 +118,13 @@ type lineaction struct {
 const (
 	ACTION_NOTHING action = iota
 	ACTION_LINE_RESET
+	ACTION_LINE_REVERSE
 )
 
 var lineactions = map[action]lineaction{
-	ACTION_NOTHING:    {' ', "#000000"},
-	ACTION_LINE_RESET: {'↔', "#cf142b"},
+	ACTION_NOTHING:      {' ', "#000000"},
+	ACTION_LINE_RESET:   {'↔', "#cf142b"},
+	ACTION_LINE_REVERSE: {'←', "#f8730e"},
 }
 
 type ratchet string
@@ -138,16 +142,33 @@ var ratchets = []ratchet{
 
 var zeronote note
 
-type line []note
+type line struct {
+	notes           []note
+	advanceInterval int8
+}
 
 type CursorPosition struct {
 	lineNumber int
-	beat       int
+	beat       uint8
+}
+
+type ZeroBehavior uint8
+
+const (
+	NORMAL ZeroBehavior = iota
+	LOOP
+)
+
+type linestate struct {
+	currentBeat    uint8
+	direction      int8
+	resetDirection int8
+	resetLocation  uint8
 }
 
 type model struct {
 	keys                    keymap
-	beats                   int
+	beats                   uint8
 	tempo                   int
 	subdivisions            int
 	help                    help.Model
@@ -159,7 +180,7 @@ type model struct {
 	playTime                time.Time
 	trackTime               time.Duration
 	totalBeats              int
-	currentBeat             []int
+	playState               []linestate
 	tempoSelectionIndicator uint8
 	accentMode              bool
 	accentModifier          int8
@@ -185,7 +206,7 @@ func (m *model) BeatInterval() time.Duration {
 	return next
 }
 
-func PlayBeat(beatInterval time.Duration, lines []line, currentBeat []int, sendFn SendFunc) tea.Cmd {
+func PlayBeat(beatInterval time.Duration, lines []line, currentBeat []linestate, sendFn SendFunc) tea.Cmd {
 	return func() tea.Msg {
 		Play(beatInterval, lines, currentBeat, sendFn)
 		return nil
@@ -194,9 +215,9 @@ func PlayBeat(beatInterval time.Duration, lines []line, currentBeat []int, sendF
 
 type SendFunc func(msg midi.Message) error
 
-func Play(beatInterval time.Duration, lines []line, currentBeat []int, sendFn SendFunc) {
+func Play(beatInterval time.Duration, lines []line, currentBeat []linestate, sendFn SendFunc) {
 	for i, line := range lines {
-		spot := line[currentBeat[i]]
+		spot := line.notes[currentBeat[i].currentBeat]
 		if spot != zeronote {
 			onMessage := midi.NoteOn(10, C1+uint8(i), accents[spot.accentIndex].value)
 			offMessage := midi.NoteOff(10, C1+uint8(i))
@@ -234,29 +255,29 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 }
 
 func (m *model) AddTrigger() {
-	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = note{5, 0, ACTION_NOTHING}
+	m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat] = note{5, 0, ACTION_NOTHING}
 }
 
 func (m *model) AddAction(act action) {
-	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = note{0, 0, act}
+	m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat] = note{0, 0, act}
 }
 
 func (m *model) RemoveTrigger() {
-	m.lines[m.cursorPos.lineNumber][m.cursorPos.beat] = zeronote
+	m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat] = zeronote
 }
 
 func (m *model) IncreaseRatchet() {
-	ratchetIndex := m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].ratchetIndex
+	ratchetIndex := m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat].ratchetIndex
 	if ratchetIndex+1 < uint8(len(ratchets)) {
-		m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].ratchetIndex++
+		m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat].ratchetIndex++
 	}
 }
 
 func (m *model) DecreaseRatchet() {
-	ratchetIndex := m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].ratchetIndex
+	ratchetIndex := m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat].ratchetIndex
 
 	if ratchetIndex > 0 {
-		m.lines[m.cursorPos.lineNumber][m.cursorPos.beat].ratchetIndex--
+		m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat].ratchetIndex--
 	}
 }
 
@@ -264,9 +285,26 @@ func InitSeq(lineNumber int, beatNumber int) []line {
 	var lines = make([]line, 0, lineNumber)
 
 	for i := 0; i < lineNumber; i++ {
-		lines = append(lines, make([]note, beatNumber))
+		lines = append(lines, InitLine(beatNumber))
 	}
 	return lines
+}
+
+func InitLine(beatNumber int) line {
+	return line{
+		make([]note, beatNumber),
+		1,
+	}
+}
+
+func InitPlayState(lines int) []linestate {
+	linestates := make([]linestate, lines)
+	for i, _ := range linestates {
+		linestates[i].direction = 1
+		linestates[i].resetDirection = 1
+		linestates[i].resetLocation = 0
+	}
+	return linestates
 }
 
 func InitModel() model {
@@ -379,14 +417,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.playTime = time.Now()
 			if m.playing {
 				m.totalBeats = 0
-				m.currentBeat = make([]int, len(m.lines))
+				m.playState = InitPlayState(len(m.lines))
 				m.trackTime = time.Duration(0)
 				sendFn, err := midi.SendTo(m.outport)
 				if err != nil {
 					panic("sendFn is broken")
 				}
 				beatInterval := m.BeatInterval()
-				return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.currentBeat, sendFn), BeatTick(beatInterval))
+				return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.playState, sendFn), BeatTick(beatInterval))
 			}
 		case Is(msg, m.keys.TempoInputSwitch):
 			m.tempoSelectionIndicator = (m.tempoSelectionIndicator + 1) % 3
@@ -420,6 +458,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.DecreaseRatchet()
 		case Is(msg, m.keys.ActionAddLineReset):
 			m.AddAction(ACTION_LINE_RESET)
+		case Is(msg, m.keys.ActionAddLineReverse):
+			m.AddAction(ACTION_LINE_REVERSE)
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			beatInterval, _ := strconv.Atoi(msg.String())
@@ -439,7 +479,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				panic("sendFn is broken")
 			}
 			beatInterval := m.BeatInterval()
-			return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.currentBeat, sendFn), BeatTick(beatInterval))
+			return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.playState, sendFn), BeatTick(beatInterval))
 		}
 	}
 	var cmd tea.Cmd
@@ -449,42 +489,55 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) advanceCurrentBeat() {
-	for i, v := range m.currentBeat {
-		advancedBeat := (v + 1) % m.beats
-		m.currentBeat[i] = advancedBeat
-		if m.lines[i][advancedBeat].action == ACTION_LINE_RESET {
-			m.currentBeat[i] = 0
+	for i, currentState := range m.playState {
+		advancedBeat := int8(currentState.currentBeat) + currentState.direction
+		if advancedBeat < 0 || advancedBeat >= int8(m.beats) {
+			m.playState[i].currentBeat = currentState.resetLocation
+			advancedBeat = int8(currentState.resetLocation)
+			m.playState[i].direction = currentState.resetDirection
+		} else {
+			m.playState[i].currentBeat = uint8(advancedBeat)
+		}
+
+		switch m.lines[i].notes[advancedBeat].action {
+		case ACTION_LINE_RESET:
+			m.playState[i].currentBeat = 0
+		case ACTION_LINE_REVERSE:
+			m.playState[i].currentBeat = uint8(max(advancedBeat-1, 0))
+			m.playState[i].direction = -1
 		}
 	}
 }
 
 func zeroLine(beatline line) {
-	for i := range beatline {
-		beatline[i] = zeronote
+	for i := range beatline.notes {
+		beatline.notes[i] = zeronote
 	}
 }
 
-func fill(beatline line, start int, every int) line {
-	for i := range beatline[start:] {
+func fill(beatline line, start uint8, every int) line {
+	for i := range beatline.notes[start:] {
 		if i%every == 0 {
-			if beatline[start+i] != zeronote {
-				beatline[start+i] = zeronote
+			gridLocation := start + uint8(i)
+			if beatline.notes[gridLocation] != zeronote {
+				beatline.notes[gridLocation] = zeronote
 			} else {
-				beatline[start+i] = note{5, 0, 0}
+				beatline.notes[gridLocation] = note{5, 0, 0}
 			}
 		}
 	}
 	return beatline
 }
 
-func incrementAccent(beatline line, start int, every int, modifier int8) line {
-	for i := range beatline[start:] {
+func incrementAccent(beatline line, start uint8, every int, modifier int8) line {
+	for i := range beatline.notes[start:] {
 		if i%every == 0 {
-			if beatline[start+i] != zeronote {
-				currentAccentIndex := beatline[start+i].accentIndex
+			gridLocation := start + uint8(i)
+			if beatline.notes[gridLocation] != zeronote {
+				currentAccentIndex := beatline.notes[gridLocation].accentIndex
 				nextAccentIndex := uint8(currentAccentIndex - uint8(1*modifier))
 				if nextAccentIndex >= 1 && nextAccentIndex < uint8(len(accents)) {
-					beatline[start+i].accentIndex = nextAccentIndex
+					beatline.notes[gridLocation].accentIndex = nextAccentIndex
 				}
 			}
 		}
@@ -561,7 +614,7 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(line.View(i, m))
 	}
 	if m.playing {
-		buf.WriteString(fmt.Sprintf("   %*s%s", m.currentBeat[0], "", "█"))
+		buf.WriteString(fmt.Sprintf("   %*s%s", m.playState[0].currentBeat, "", "█"))
 	}
 	buf.WriteString("\n")
 	// buf.WriteString(m.help.View(m.keys))
@@ -579,8 +632,8 @@ func (line line) View(lineNumber int, m model) string {
 
 	var backgroundSeqColor lipgloss.Color
 
-	for i := 0; i < m.beats; i++ {
-		if m.playing && m.currentBeat[lineNumber] == i {
+	for i := uint8(0); i < uint8(m.beats); i++ {
+		if m.playing && m.playState[lineNumber].currentBeat == i {
 			backgroundSeqColor = seqCursorColor
 		} else if i%8 > 3 {
 			backgroundSeqColor = altSeqColor
@@ -590,7 +643,7 @@ func (line line) View(lineNumber int, m model) string {
 
 		var char string
 		var foregroundColor lipgloss.Color
-		currentNote := line[i]
+		currentNote := line.notes[i]
 		currentAccent := accents[currentNote.accentIndex]
 		currentAction := currentNote.action
 
