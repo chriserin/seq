@@ -39,6 +39,7 @@ type keymap struct {
 	RatchetDecrease      key.Binding
 	ActionAddLineReset   key.Binding
 	ActionAddLineReverse key.Binding
+	OverlayInputSwitch   key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -66,6 +67,7 @@ var keys = keymap{
 	RatchetDecrease:      Key("r", "Decrease Ratchet"),
 	ActionAddLineReset:   Key("s", "Add Line Reset Action"),
 	ActionAddLineReverse: Key("S", "Add Line Reverse Action"),
+	OverlayInputSwitch:   Key("O", "Select Overlay Indicator"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -167,24 +169,27 @@ type linestate struct {
 }
 
 type model struct {
-	keys                    keymap
-	beats                   uint8
-	tempo                   int
-	subdivisions            int
-	help                    help.Model
-	lines                   []line
-	cursorPos               CursorPosition
-	cursor                  cursor.Model
-	outport                 drivers.Out
-	playing                 bool
-	playTime                time.Time
-	trackTime               time.Duration
-	totalBeats              int
-	playState               []linestate
-	tempoSelectionIndicator uint8
-	accentMode              bool
-	accentModifier          int8
-	logFile                 *os.File
+	keys                      keymap
+	beats                     uint8
+	tempo                     int
+	subdivisions              int
+	help                      help.Model
+	lines                     []line
+	cursorPos                 CursorPosition
+	cursor                    cursor.Model
+	outport                   drivers.Out
+	playing                   bool
+	playTime                  time.Time
+	trackTime                 time.Duration
+	totalBeats                int
+	playState                 []linestate
+	tempoSelectionIndicator   uint8
+	overlaySelectionIndicator uint8
+	accentMode                bool
+	accentModifier            int8
+	logFile                   *os.File
+	overlayNumerator          uint8
+	overlayDenominator        uint8
 }
 
 type beatMsg struct {
@@ -321,17 +326,19 @@ func InitModel() model {
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
 	return model{
-		keys:           keys,
-		beats:          32,
-		tempo:          120,
-		subdivisions:   2,
-		help:           help.New(),
-		lines:          InitSeq(8, 32),
-		cursorPos:      CursorPosition{lineNumber: 0, beat: 0},
-		cursor:         newCursor,
-		outport:        outport,
-		accentModifier: 1,
-		logFile:        logFile,
+		keys:               keys,
+		beats:              32,
+		tempo:              120,
+		subdivisions:       2,
+		help:               help.New(),
+		lines:              InitSeq(8, 32),
+		cursorPos:          CursorPosition{lineNumber: 0, beat: 0},
+		cursor:             newCursor,
+		outport:            outport,
+		accentModifier:     1,
+		logFile:            logFile,
+		overlayNumerator:   1,
+		overlayDenominator: 1,
 	}
 }
 
@@ -426,26 +433,48 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				beatInterval := m.BeatInterval()
 				return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.playState, sendFn), BeatTick(beatInterval))
 			}
+		case Is(msg, m.keys.OverlayInputSwitch):
+			m.overlaySelectionIndicator = (m.overlaySelectionIndicator + 1) % 3
+			m.tempoSelectionIndicator = 0
 		case Is(msg, m.keys.TempoInputSwitch):
 			m.tempoSelectionIndicator = (m.tempoSelectionIndicator + 1) % 3
+			m.overlaySelectionIndicator = 0
 		case Is(msg, m.keys.TempoIncrease):
-			if m.tempoSelectionIndicator == 1 {
+			switch {
+			case m.tempoSelectionIndicator == 1:
 				if m.tempo < 300 {
 					m.tempo++
 				}
-			} else if m.tempoSelectionIndicator == 2 {
+			case m.tempoSelectionIndicator == 2:
 				if m.subdivisions < 8 {
 					m.subdivisions++
 				}
+			case m.overlaySelectionIndicator == 1:
+				if m.overlayNumerator < 9 {
+					m.overlayNumerator++
+				}
+			case m.overlaySelectionIndicator == 2:
+				if m.overlayDenominator < 9 {
+					m.overlayDenominator++
+				}
 			}
 		case Is(msg, m.keys.TempoDecrease):
-			if m.tempoSelectionIndicator == 1 {
+			switch {
+			case m.tempoSelectionIndicator == 1:
 				if m.tempo > 30 {
 					m.tempo--
 				}
-			} else if m.tempoSelectionIndicator == 2 {
+			case m.tempoSelectionIndicator == 2:
 				if m.subdivisions > 1 {
 					m.subdivisions--
+				}
+			case m.overlaySelectionIndicator == 1:
+				if m.overlayNumerator > 1 {
+					m.overlayNumerator--
+				}
+			case m.overlaySelectionIndicator == 2:
+				if m.overlayDenominator > 1 {
+					m.overlayDenominator--
 				}
 			}
 		case Is(msg, m.keys.ToggleAccentMode):
@@ -598,14 +627,17 @@ var accentModeStyle = lipgloss.NewStyle().Background(accents[1].color).Foregroun
 
 func (m model) ViewTriggerSeq() string {
 	var buf strings.Builder
+	var overlay = m.ViewOverlay()
+	var mode string
 	if m.accentMode {
-		var accentModeTitle string
 		if m.accentModifier > 0 {
-			accentModeTitle = " Accent Mode \u2191 "
+			mode = " Accent Mode \u2191 "
 		} else {
-			accentModeTitle = " Accent Mode \u2193 "
+			mode = " Accent Mode \u2193 "
 		}
-		buf.WriteString(fmt.Sprintf("   Seq - %s\n", accentModeStyle.Render(accentModeTitle)))
+		buf.WriteString(fmt.Sprintf("   Seq - %s - %s\n", accentModeStyle.Render(mode), overlay))
+	} else if m.overlaySelectionIndicator > 0 {
+		buf.WriteString(fmt.Sprintf("   Seq - %s - %s\n", "Overlay", overlay))
 	} else {
 		buf.WriteString("   Seq - A sequencer for your cli\n")
 	}
@@ -620,6 +652,22 @@ func (m model) ViewTriggerSeq() string {
 	// buf.WriteString(m.help.View(m.keys))
 	// buf.WriteString("\n")
 	return buf.String()
+}
+
+func (m model) ViewOverlay() string {
+	var numerator, denominator string
+	switch m.overlaySelectionIndicator {
+	case 0:
+		numerator = numberColor.Render(strconv.Itoa(int(m.overlayNumerator)))
+		denominator = numberColor.Render(strconv.Itoa(int(m.overlayDenominator)))
+	case 1:
+		numerator = selectedColor.Render(strconv.Itoa(int(m.overlayNumerator)))
+		denominator = numberColor.Render(strconv.Itoa(int(m.overlayDenominator)))
+	case 2:
+		numerator = numberColor.Render(strconv.Itoa(int(m.overlayNumerator)))
+		denominator = selectedColor.Render(strconv.Itoa(int(m.overlayDenominator)))
+	}
+	return fmt.Sprintf("%s/%s", numerator, denominator)
 }
 
 var altSeqColor = lipgloss.Color("#222222")
