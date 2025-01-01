@@ -145,13 +145,7 @@ var ratchets = []ratchet{
 var zeronote note
 
 type line struct {
-	notes           []note
-	advanceInterval int8
-}
-
-type CursorPosition struct {
-	lineNumber int
-	beat       uint8
+	notes []note
 }
 
 type ZeroBehavior uint8
@@ -168,6 +162,46 @@ type linestate struct {
 	resetLocation  uint8
 }
 
+type overlayKey struct {
+	num   uint8
+	denom uint8
+}
+
+var ROOT_OVERLAY = overlayKey{1, 1}
+
+func (o *overlayKey) IncrementNumerator() {
+	if o.num < 9 {
+		o.num++
+	}
+}
+
+func (o *overlayKey) IncrementDenominator() {
+	if o.denom < 9 {
+		o.denom++
+	}
+}
+
+func (o *overlayKey) DecrementNumerator() {
+	if o.num > 1 {
+		o.num--
+	}
+}
+
+func (o *overlayKey) DecrementDenominator() {
+	if o.denom > 1 {
+		o.denom--
+	}
+}
+
+type overlays map[overlayKey]overlay
+
+type gridKey struct {
+	line uint8
+	beat uint8
+}
+
+type overlay map[gridKey]note
+
 type model struct {
 	keys                      keymap
 	beats                     uint8
@@ -175,7 +209,7 @@ type model struct {
 	subdivisions              int
 	help                      help.Model
 	lines                     []line
-	cursorPos                 CursorPosition
+	cursorPos                 gridKey
 	cursor                    cursor.Model
 	outport                   drivers.Out
 	playing                   bool
@@ -188,8 +222,8 @@ type model struct {
 	accentMode                bool
 	accentModifier            int8
 	logFile                   *os.File
-	overlayNumerator          uint8
-	overlayDenominator        uint8
+	overlayKey                overlayKey
+	overlays                  overlays
 }
 
 type beatMsg struct {
@@ -260,29 +294,51 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 }
 
 func (m *model) AddTrigger() {
-	m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat] = note{5, 0, ACTION_NOTHING}
+	if m.overlayKey == ROOT_OVERLAY {
+		m.lines[m.cursorPos.line].notes[m.cursorPos.beat] = note{5, 0, ACTION_NOTHING}
+	} else {
+		if len(m.overlays[m.overlayKey]) == 0 {
+			m.overlays[m.overlayKey] = make(overlay)
+		}
+		m.overlays[m.overlayKey][m.cursorPos] = note{5, 0, ACTION_NOTHING}
+	}
 }
 
 func (m *model) AddAction(act action) {
-	m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat] = note{0, 0, act}
+
+	if m.overlayKey == ROOT_OVERLAY {
+		m.lines[m.cursorPos.line].notes[m.cursorPos.beat] = note{0, 0, act}
+	} else {
+		if len(m.overlays[m.overlayKey]) == 0 {
+			m.overlays[m.overlayKey] = make(overlay)
+		}
+		m.overlays[m.overlayKey][m.cursorPos] = note{0, 0, act}
+	}
 }
 
 func (m *model) RemoveTrigger() {
-	m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat] = zeronote
+	if m.overlayKey == ROOT_OVERLAY {
+		m.lines[m.cursorPos.line].notes[m.cursorPos.beat] = zeronote
+	} else {
+		if len(m.overlays[m.overlayKey]) == 0 {
+			m.overlays[m.overlayKey] = make(overlay)
+		}
+		m.overlays[m.overlayKey][m.cursorPos] = zeronote
+	}
 }
 
 func (m *model) IncreaseRatchet() {
-	ratchetIndex := m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat].ratchetIndex
+	ratchetIndex := m.lines[m.cursorPos.line].notes[m.cursorPos.beat].ratchetIndex
 	if ratchetIndex+1 < uint8(len(ratchets)) {
-		m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat].ratchetIndex++
+		m.lines[m.cursorPos.line].notes[m.cursorPos.beat].ratchetIndex++
 	}
 }
 
 func (m *model) DecreaseRatchet() {
-	ratchetIndex := m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat].ratchetIndex
+	ratchetIndex := m.lines[m.cursorPos.line].notes[m.cursorPos.beat].ratchetIndex
 
 	if ratchetIndex > 0 {
-		m.lines[m.cursorPos.lineNumber].notes[m.cursorPos.beat].ratchetIndex--
+		m.lines[m.cursorPos.line].notes[m.cursorPos.beat].ratchetIndex--
 	}
 }
 
@@ -298,7 +354,6 @@ func InitSeq(lineNumber int, beatNumber int) []line {
 func InitLine(beatNumber int) line {
 	return line{
 		make([]note, beatNumber),
-		1,
 	}
 }
 
@@ -326,19 +381,19 @@ func InitModel() model {
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
 	return model{
-		keys:               keys,
-		beats:              32,
-		tempo:              120,
-		subdivisions:       2,
-		help:               help.New(),
-		lines:              InitSeq(8, 32),
-		cursorPos:          CursorPosition{lineNumber: 0, beat: 0},
-		cursor:             newCursor,
-		outport:            outport,
-		accentModifier:     1,
-		logFile:            logFile,
-		overlayNumerator:   1,
-		overlayDenominator: 1,
+		keys:           keys,
+		beats:          32,
+		tempo:          120,
+		subdivisions:   2,
+		help:           help.New(),
+		lines:          InitSeq(8, 32),
+		cursorPos:      gridKey{line: 0, beat: 0},
+		cursor:         newCursor,
+		outport:        outport,
+		accentModifier: 1,
+		logFile:        logFile,
+		overlayKey:     ROOT_OVERLAY,
+		overlays:       make(overlays),
 	}
 }
 
@@ -384,12 +439,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logFile.Close()
 			return m, tea.Quit
 		case Is(msg, m.keys.CursorDown):
-			if m.cursorPos.lineNumber < len(m.lines)-1 {
-				m.cursorPos.lineNumber++
+			if m.cursorPos.line < uint8(len(m.lines)-1) {
+				m.cursorPos.line++
 			}
 		case Is(msg, m.keys.CursorUp):
-			if m.cursorPos.lineNumber > 0 {
-				m.cursorPos.lineNumber--
+			if m.cursorPos.line > 0 {
+				m.cursorPos.line--
 			}
 		case Is(msg, m.keys.CursorLeft):
 			if m.cursorPos.beat > 0 {
@@ -404,7 +459,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, m.keys.TriggerRemove):
 			m.RemoveTrigger()
 		case Is(msg, m.keys.ClearLine):
-			zeroLine(m.lines[m.cursorPos.lineNumber])
+			zeroLine(m.lines[m.cursorPos.line])
 		case Is(msg, m.keys.ClearSeq):
 			m.lines = InitSeq(8, 32)
 
@@ -450,13 +505,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.subdivisions++
 				}
 			case m.overlaySelectionIndicator == 1:
-				if m.overlayNumerator < 9 {
-					m.overlayNumerator++
-				}
+				m.overlayKey.IncrementNumerator()
 			case m.overlaySelectionIndicator == 2:
-				if m.overlayDenominator < 9 {
-					m.overlayDenominator++
-				}
+				m.overlayKey.IncrementDenominator()
 			}
 		case Is(msg, m.keys.TempoDecrease):
 			switch {
@@ -469,13 +520,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.subdivisions--
 				}
 			case m.overlaySelectionIndicator == 1:
-				if m.overlayNumerator > 1 {
-					m.overlayNumerator--
-				}
+				m.overlayKey.DecrementNumerator()
 			case m.overlaySelectionIndicator == 2:
-				if m.overlayDenominator > 1 {
-					m.overlayDenominator--
-				}
+				m.overlayKey.DecrementDenominator()
 			}
 		case Is(msg, m.keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
@@ -492,11 +539,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			beatInterval, _ := strconv.Atoi(msg.String())
-			line := m.lines[m.cursorPos.lineNumber]
+			line := m.lines[m.cursorPos.line]
 			if m.accentMode {
-				m.lines[m.cursorPos.lineNumber] = incrementAccent(line, m.cursorPos.beat, beatInterval, m.accentModifier)
+				m.lines[m.cursorPos.line] = incrementAccent(line, m.cursorPos.beat, beatInterval, m.accentModifier)
 			} else {
-				m.lines[m.cursorPos.lineNumber] = fill(line, m.cursorPos.beat, beatInterval)
+				m.lines[m.cursorPos.line] = fill(line, m.cursorPos.beat, beatInterval)
 			}
 		}
 	case beatMsg:
@@ -658,14 +705,14 @@ func (m model) ViewOverlay() string {
 	var numerator, denominator string
 	switch m.overlaySelectionIndicator {
 	case 0:
-		numerator = numberColor.Render(strconv.Itoa(int(m.overlayNumerator)))
-		denominator = numberColor.Render(strconv.Itoa(int(m.overlayDenominator)))
+		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.num)))
+		denominator = numberColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
 	case 1:
-		numerator = selectedColor.Render(strconv.Itoa(int(m.overlayNumerator)))
-		denominator = numberColor.Render(strconv.Itoa(int(m.overlayDenominator)))
+		numerator = selectedColor.Render(strconv.Itoa(int(m.overlayKey.num)))
+		denominator = numberColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
 	case 2:
-		numerator = numberColor.Render(strconv.Itoa(int(m.overlayNumerator)))
-		denominator = selectedColor.Render(strconv.Itoa(int(m.overlayDenominator)))
+		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.num)))
+		denominator = selectedColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
 	}
 	return fmt.Sprintf("%s/%s", numerator, denominator)
 }
@@ -673,6 +720,7 @@ func (m model) ViewOverlay() string {
 var altSeqColor = lipgloss.Color("#222222")
 var seqColor = lipgloss.Color("#000000")
 var seqCursorColor = lipgloss.Color("#444444")
+var seqOverlayColor = lipgloss.Color("#dddddd")
 
 func (line line) View(lineNumber int, m model) string {
 	var buf strings.Builder
@@ -681,7 +729,10 @@ func (line line) View(lineNumber int, m model) string {
 	var backgroundSeqColor lipgloss.Color
 
 	for i := uint8(0); i < uint8(m.beats); i++ {
-		if m.playing && m.playState[lineNumber].currentBeat == i {
+		overlayNote, hasOverlayNote := m.overlays[m.overlayKey][gridKey{uint8(lineNumber), i}]
+		if hasOverlayNote {
+			backgroundSeqColor = seqOverlayColor
+		} else if m.playing && m.playState[lineNumber].currentBeat == i {
 			backgroundSeqColor = seqCursorColor
 		} else if i%8 > 3 {
 			backgroundSeqColor = altSeqColor
@@ -691,7 +742,12 @@ func (line line) View(lineNumber int, m model) string {
 
 		var char string
 		var foregroundColor lipgloss.Color
-		currentNote := line.notes[i]
+		var currentNote note
+		if hasOverlayNote {
+			currentNote = overlayNote
+		} else {
+			currentNote = line.notes[i]
+		}
 		currentAccent := accents[currentNote.accentIndex]
 		currentAction := currentNote.action
 
@@ -704,7 +760,7 @@ func (line line) View(lineNumber int, m model) string {
 			foregroundColor = lineaction.color
 		}
 
-		if m.cursorPos.lineNumber == lineNumber && m.cursorPos.beat == i {
+		if m.cursorPos.line == uint8(lineNumber) && m.cursorPos.beat == i {
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
 			buf.WriteString(lipgloss.NewStyle().Background(backgroundSeqColor).Render(char))
