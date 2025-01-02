@@ -110,6 +110,14 @@ type note struct {
 	action       action
 }
 
+func (n note) IncrementAccent(modifier int8) note {
+	var newAccent = int8(n.accentIndex) - modifier
+	if newAccent >= 1 && newAccent < int8(len(accents)) {
+		n.accentIndex = uint8(newAccent)
+	}
+	return n
+}
+
 type action uint8
 
 type lineaction struct {
@@ -145,13 +153,6 @@ var ratchets = []ratchet{
 var zeronote note
 
 type line []note
-
-type ZeroBehavior uint8
-
-const (
-	NORMAL ZeroBehavior = iota
-	LOOP
-)
 
 type linestate struct {
 	currentBeat    uint8
@@ -191,7 +192,20 @@ func (o *overlayKey) DecrementDenominator() {
 	}
 }
 
+type Notable interface {
+	SetNote(gridKey, note)
+}
+type pattern []line
+
+func (p *pattern) SetNote(gridKey gridKey, note note) {
+	(*p)[gridKey.line][gridKey.beat] = note
+}
+
 type overlays map[overlayKey]overlay
+
+func (ol *overlay) SetNote(gridKey gridKey, note note) {
+	(*ol)[gridKey] = note
+}
 
 type gridKey struct {
 	line uint8
@@ -206,7 +220,7 @@ type model struct {
 	tempo                     int
 	subdivisions              int
 	help                      help.Model
-	lines                     []line
+	rootPattern               pattern
 	cursorPos                 gridKey
 	cursor                    cursor.Model
 	outport                   drivers.Out
@@ -291,56 +305,52 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 	time.AfterFunc(timeInterval, fn)
 }
 
-func (m *model) AddTrigger() {
-	if m.overlayKey == ROOT_OVERLAY {
-		m.lines[m.cursorPos.line][m.cursorPos.beat] = note{5, 0, ACTION_NOTHING}
-	} else {
-		if len(m.overlays[m.overlayKey]) == 0 {
-			m.overlays[m.overlayKey] = make(overlay)
-		}
-		m.overlays[m.overlayKey][m.cursorPos] = note{5, 0, ACTION_NOTHING}
+func (m *model) EnsureOverlay() {
+	if len(m.overlays[m.overlayKey]) == 0 {
+		m.overlays[m.overlayKey] = make(overlay)
 	}
+}
+
+func (m *model) CurrentNotable() Notable {
+	var notable Notable
+	if m.overlayKey == ROOT_OVERLAY {
+		notable = &m.rootPattern
+	} else {
+		overlay := m.overlays[m.overlayKey]
+		notable = &overlay
+	}
+	return notable
+}
+
+func (m *model) AddTrigger() {
+	m.CurrentNotable().SetNote(m.cursorPos, note{5, 0, ACTION_NOTHING})
 }
 
 func (m *model) AddAction(act action) {
-
-	if m.overlayKey == ROOT_OVERLAY {
-		m.lines[m.cursorPos.line][m.cursorPos.beat] = note{0, 0, act}
-	} else {
-		if len(m.overlays[m.overlayKey]) == 0 {
-			m.overlays[m.overlayKey] = make(overlay)
-		}
-		m.overlays[m.overlayKey][m.cursorPos] = note{0, 0, act}
-	}
+	m.CurrentNotable().SetNote(m.cursorPos, note{0, 0, act})
 }
 
 func (m *model) RemoveTrigger() {
-	if m.overlayKey == ROOT_OVERLAY {
-		m.lines[m.cursorPos.line][m.cursorPos.beat] = zeronote
-	} else {
-		if len(m.overlays[m.overlayKey]) == 0 {
-			m.overlays[m.overlayKey] = make(overlay)
-		}
-		m.overlays[m.overlayKey][m.cursorPos] = zeronote
-	}
+	m.CurrentNotable().SetNote(m.cursorPos, zeronote)
 }
 
 func (m *model) IncreaseRatchet() {
-	ratchetIndex := m.lines[m.cursorPos.line][m.cursorPos.beat].ratchetIndex
+	ratchetIndex := m.rootPattern[m.cursorPos.line][m.cursorPos.beat].ratchetIndex
+
 	if ratchetIndex+1 < uint8(len(ratchets)) {
-		m.lines[m.cursorPos.line][m.cursorPos.beat].ratchetIndex++
+		m.rootPattern[m.cursorPos.line][m.cursorPos.beat].ratchetIndex++
 	}
 }
 
 func (m *model) DecreaseRatchet() {
-	ratchetIndex := m.lines[m.cursorPos.line][m.cursorPos.beat].ratchetIndex
+	ratchetIndex := m.rootPattern[m.cursorPos.line][m.cursorPos.beat].ratchetIndex
 
 	if ratchetIndex > 0 {
-		m.lines[m.cursorPos.line][m.cursorPos.beat].ratchetIndex--
+		m.rootPattern[m.cursorPos.line][m.cursorPos.beat].ratchetIndex--
 	}
 }
 
-func InitSeq(lineNumber int, beatNumber int) []line {
+func InitSeq(lineNumber int, beatNumber int) pattern {
 	var lines = make([]line, 0, lineNumber)
 
 	for i := 0; i < lineNumber; i++ {
@@ -382,7 +392,7 @@ func InitModel() model {
 		tempo:          120,
 		subdivisions:   2,
 		help:           help.New(),
-		lines:          InitSeq(8, 32),
+		rootPattern:    InitSeq(8, 32),
 		cursorPos:      gridKey{line: 0, beat: 0},
 		cursor:         newCursor,
 		outport:        outport,
@@ -435,7 +445,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logFile.Close()
 			return m, tea.Quit
 		case Is(msg, m.keys.CursorDown):
-			if m.cursorPos.line < uint8(len(m.lines)-1) {
+			if m.cursorPos.line < uint8(len(m.rootPattern)-1) {
 				m.cursorPos.line++
 			}
 		case Is(msg, m.keys.CursorUp):
@@ -451,13 +461,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursorPos.beat++
 			}
 		case Is(msg, m.keys.TriggerAdd):
+			m.EnsureOverlay()
 			m.AddTrigger()
 		case Is(msg, m.keys.TriggerRemove):
+			m.EnsureOverlay()
 			m.RemoveTrigger()
 		case Is(msg, m.keys.ClearLine):
-			zeroLine(m.lines[m.cursorPos.line])
+			m.EnsureOverlay()
+			zeroLine(m.rootPattern[m.cursorPos.line])
 		case Is(msg, m.keys.ClearSeq):
-			m.lines = InitSeq(8, 32)
+			m.rootPattern = InitSeq(8, 32)
 
 		case Is(msg, m.keys.PlayStop):
 			if !m.playing && !m.outport.IsOpen() {
@@ -475,14 +488,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.playTime = time.Now()
 			if m.playing {
 				m.totalBeats = 0
-				m.playState = InitPlayState(len(m.lines))
+				m.playState = InitPlayState(len(m.rootPattern))
 				m.trackTime = time.Duration(0)
 				sendFn, err := midi.SendTo(m.outport)
 				if err != nil {
 					panic("sendFn is broken")
 				}
 				beatInterval := m.BeatInterval()
-				return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.playState, sendFn), BeatTick(beatInterval))
+				return m, tea.Batch(PlayBeat(beatInterval, m.rootPattern, m.playState, sendFn), BeatTick(beatInterval))
 			}
 		case Is(msg, m.keys.OverlayInputSwitch):
 			m.overlaySelectionIndicator = (m.overlaySelectionIndicator + 1) % 3
@@ -534,12 +547,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.AddAction(ACTION_LINE_REVERSE)
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
+			m.EnsureOverlay()
 			beatInterval, _ := strconv.Atoi(msg.String())
-			line := m.lines[m.cursorPos.line]
 			if m.accentMode {
-				m.lines[m.cursorPos.line] = incrementAccent(line, m.cursorPos.beat, beatInterval, m.accentModifier)
+				m.incrementAccent(beatInterval)
 			} else {
-				m.lines[m.cursorPos.line] = fill(line, m.cursorPos.beat, beatInterval)
+				m.fill(beatInterval)
 			}
 		}
 	case beatMsg:
@@ -551,7 +564,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				panic("sendFn is broken")
 			}
 			beatInterval := m.BeatInterval()
-			return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.playState, sendFn), BeatTick(beatInterval))
+			return m, tea.Batch(PlayBeat(beatInterval, m.rootPattern, m.playState, sendFn), BeatTick(beatInterval))
 		}
 	}
 	var cmd tea.Cmd
@@ -571,7 +584,7 @@ func (m *model) advanceCurrentBeat() {
 			m.playState[i].currentBeat = uint8(advancedBeat)
 		}
 
-		switch m.lines[i][advancedBeat].action {
+		switch m.rootPattern[i][advancedBeat].action {
 		case ACTION_LINE_RESET:
 			m.playState[i].currentBeat = 0
 		case ACTION_LINE_REVERSE:
@@ -587,34 +600,54 @@ func zeroLine(beatline line) {
 	}
 }
 
-func fill(beatline line, start uint8, every int) line {
-	for i := range beatline[start:] {
-		if i%every == 0 {
-			gridLocation := start + uint8(i)
-			if beatline[gridLocation] != zeronote {
-				beatline[gridLocation] = zeronote
-			} else {
-				beatline[gridLocation] = note{5, 0, 0}
-			}
+func (m model) CombinedLine() line {
+	var rootLine line = m.rootPattern[m.cursorPos.line]
+	if m.overlayKey == ROOT_OVERLAY {
+		return rootLine
+	}
+	var resultLine line = make([]note, len(rootLine))
+	copy(resultLine, rootLine)
+	for i := range rootLine {
+		gk := gridKey{m.cursorPos.line, uint8(i)}
+		note, hasNote := m.overlays[m.overlayKey][gk]
+		if hasNote {
+			resultLine[i] = note
 		}
 	}
-	return beatline
+	return resultLine
 }
 
-func incrementAccent(beatline line, start uint8, every int, modifier int8) line {
-	for i := range beatline[start:] {
+func (m *model) fill(every int) {
+	combinedLine := m.CombinedLine()
+	start := m.cursorPos.beat
+
+	for i := range combinedLine[start:] {
 		if i%every == 0 {
-			gridLocation := start + uint8(i)
-			if beatline[gridLocation] != zeronote {
-				currentAccentIndex := beatline[gridLocation].accentIndex
-				nextAccentIndex := uint8(currentAccentIndex - uint8(1*modifier))
-				if nextAccentIndex >= 1 && nextAccentIndex < uint8(len(accents)) {
-					beatline[gridLocation].accentIndex = nextAccentIndex
-				}
+			currentBeat := start + uint8(i)
+			gridKey := gridKey{m.cursorPos.line, currentBeat}
+			if combinedLine[currentBeat] != zeronote {
+				m.CurrentNotable().SetNote(gridKey, zeronote)
+			} else {
+				m.CurrentNotable().SetNote(gridKey, note{5, 0, 0})
 			}
 		}
 	}
-	return beatline
+}
+
+func (m *model) incrementAccent(every int) {
+	combinedLine := m.CombinedLine()
+	start := m.cursorPos.beat
+
+	for i := range combinedLine[start:] {
+		if i%every == 0 {
+			currentBeat := start + uint8(i)
+			gridKey := gridKey{m.cursorPos.line, currentBeat}
+			if combinedLine[currentBeat] != zeronote {
+				n := combinedLine[currentBeat]
+				m.CurrentNotable().SetNote(gridKey, n.IncrementAccent(m.accentModifier))
+			}
+		}
+	}
 }
 
 var heartColor = lipgloss.NewStyle().Foreground(lipgloss.Color("#ed3902"))
@@ -685,7 +718,7 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString("   Seq - A sequencer for your cli\n")
 	}
 	buf.WriteString("  ┌─────────────────────────────────\n")
-	for i, line := range m.lines {
+	for i, line := range m.rootPattern {
 		buf.WriteString(line.View(i, m))
 	}
 	if m.playing {
