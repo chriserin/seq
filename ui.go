@@ -144,9 +144,7 @@ var ratchets = []ratchet{
 
 var zeronote note
 
-type line struct {
-	notes []note
-}
+type line []note
 
 type ZeroBehavior uint8
 
@@ -256,7 +254,7 @@ type SendFunc func(msg midi.Message) error
 
 func Play(beatInterval time.Duration, lines []line, currentBeat []linestate, sendFn SendFunc) {
 	for i, line := range lines {
-		spot := line.notes[currentBeat[i].currentBeat]
+		spot := line[currentBeat[i].currentBeat]
 		if spot != zeronote {
 			onMessage := midi.NoteOn(10, C1+uint8(i), accents[spot.accentIndex].value)
 			offMessage := midi.NoteOff(10, C1+uint8(i))
@@ -295,7 +293,7 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 
 func (m *model) AddTrigger() {
 	if m.overlayKey == ROOT_OVERLAY {
-		m.lines[m.cursorPos.line].notes[m.cursorPos.beat] = note{5, 0, ACTION_NOTHING}
+		m.lines[m.cursorPos.line][m.cursorPos.beat] = note{5, 0, ACTION_NOTHING}
 	} else {
 		if len(m.overlays[m.overlayKey]) == 0 {
 			m.overlays[m.overlayKey] = make(overlay)
@@ -307,7 +305,7 @@ func (m *model) AddTrigger() {
 func (m *model) AddAction(act action) {
 
 	if m.overlayKey == ROOT_OVERLAY {
-		m.lines[m.cursorPos.line].notes[m.cursorPos.beat] = note{0, 0, act}
+		m.lines[m.cursorPos.line][m.cursorPos.beat] = note{0, 0, act}
 	} else {
 		if len(m.overlays[m.overlayKey]) == 0 {
 			m.overlays[m.overlayKey] = make(overlay)
@@ -318,7 +316,7 @@ func (m *model) AddAction(act action) {
 
 func (m *model) RemoveTrigger() {
 	if m.overlayKey == ROOT_OVERLAY {
-		m.lines[m.cursorPos.line].notes[m.cursorPos.beat] = zeronote
+		m.lines[m.cursorPos.line][m.cursorPos.beat] = zeronote
 	} else {
 		if len(m.overlays[m.overlayKey]) == 0 {
 			m.overlays[m.overlayKey] = make(overlay)
@@ -328,17 +326,17 @@ func (m *model) RemoveTrigger() {
 }
 
 func (m *model) IncreaseRatchet() {
-	ratchetIndex := m.lines[m.cursorPos.line].notes[m.cursorPos.beat].ratchetIndex
+	ratchetIndex := m.lines[m.cursorPos.line][m.cursorPos.beat].ratchetIndex
 	if ratchetIndex+1 < uint8(len(ratchets)) {
-		m.lines[m.cursorPos.line].notes[m.cursorPos.beat].ratchetIndex++
+		m.lines[m.cursorPos.line][m.cursorPos.beat].ratchetIndex++
 	}
 }
 
 func (m *model) DecreaseRatchet() {
-	ratchetIndex := m.lines[m.cursorPos.line].notes[m.cursorPos.beat].ratchetIndex
+	ratchetIndex := m.lines[m.cursorPos.line][m.cursorPos.beat].ratchetIndex
 
 	if ratchetIndex > 0 {
-		m.lines[m.cursorPos.line].notes[m.cursorPos.beat].ratchetIndex--
+		m.lines[m.cursorPos.line][m.cursorPos.beat].ratchetIndex--
 	}
 }
 
@@ -352,9 +350,7 @@ func InitSeq(lineNumber int, beatNumber int) []line {
 }
 
 func InitLine(beatNumber int) line {
-	return line{
-		make([]note, beatNumber),
-	}
+	return make([]note, beatNumber)
 }
 
 func InitPlayState(lines int) []linestate {
@@ -575,7 +571,7 @@ func (m *model) advanceCurrentBeat() {
 			m.playState[i].currentBeat = uint8(advancedBeat)
 		}
 
-		switch m.lines[i].notes[advancedBeat].action {
+		switch m.lines[i][advancedBeat].action {
 		case ACTION_LINE_RESET:
 			m.playState[i].currentBeat = 0
 		case ACTION_LINE_REVERSE:
@@ -586,19 +582,19 @@ func (m *model) advanceCurrentBeat() {
 }
 
 func zeroLine(beatline line) {
-	for i := range beatline.notes {
-		beatline.notes[i] = zeronote
+	for i := range beatline {
+		beatline[i] = zeronote
 	}
 }
 
 func fill(beatline line, start uint8, every int) line {
-	for i := range beatline.notes[start:] {
+	for i := range beatline[start:] {
 		if i%every == 0 {
 			gridLocation := start + uint8(i)
-			if beatline.notes[gridLocation] != zeronote {
-				beatline.notes[gridLocation] = zeronote
+			if beatline[gridLocation] != zeronote {
+				beatline[gridLocation] = zeronote
 			} else {
-				beatline.notes[gridLocation] = note{5, 0, 0}
+				beatline[gridLocation] = note{5, 0, 0}
 			}
 		}
 	}
@@ -606,14 +602,14 @@ func fill(beatline line, start uint8, every int) line {
 }
 
 func incrementAccent(beatline line, start uint8, every int, modifier int8) line {
-	for i := range beatline.notes[start:] {
+	for i := range beatline[start:] {
 		if i%every == 0 {
 			gridLocation := start + uint8(i)
-			if beatline.notes[gridLocation] != zeronote {
-				currentAccentIndex := beatline.notes[gridLocation].accentIndex
+			if beatline[gridLocation] != zeronote {
+				currentAccentIndex := beatline[gridLocation].accentIndex
 				nextAccentIndex := uint8(currentAccentIndex - uint8(1*modifier))
 				if nextAccentIndex >= 1 && nextAccentIndex < uint8(len(accents)) {
-					beatline.notes[gridLocation].accentIndex = nextAccentIndex
+					beatline[gridLocation].accentIndex = nextAccentIndex
 				}
 			}
 		}
@@ -746,7 +742,7 @@ func (line line) View(lineNumber int, m model) string {
 		if hasOverlayNote {
 			currentNote = overlayNote
 		} else {
-			currentNote = line.notes[i]
+			currentNote = line[i]
 		}
 		currentAccent := accents[currentNote.accentIndex]
 		currentAction := currentNote.action
