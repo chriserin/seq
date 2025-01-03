@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -168,6 +170,16 @@ type overlayKey struct {
 	denom uint8
 }
 
+func OverlayKeySort(x overlayKey, y overlayKey) int {
+	var result int
+	if x.num == y.num {
+		result = int(y.denom) - int(x.denom)
+	} else {
+		result = int(y.num) - int(x.num)
+	}
+	return result
+}
+
 var ROOT_OVERLAY = overlayKey{1, 1}
 
 func (o *overlayKey) IncrementNumerator() {
@@ -239,6 +251,8 @@ type model struct {
 	overlayKey                overlayKey
 	overlays                  overlays
 	keyline                   uint8
+	keyCycles                 int
+	playingMatchedOverlay     overlayKey
 }
 
 type beatMsg struct {
@@ -260,7 +274,7 @@ func (m *model) BeatInterval() time.Duration {
 	return next
 }
 
-func PlayBeat(beatInterval time.Duration, lines []line, currentBeat []linestate, sendFn SendFunc) tea.Cmd {
+func PlayBeat(beatInterval time.Duration, lines pattern, currentBeat []linestate, sendFn SendFunc) tea.Cmd {
 	return func() tea.Msg {
 		Play(beatInterval, lines, currentBeat, sendFn)
 		return nil
@@ -269,7 +283,7 @@ func PlayBeat(beatInterval time.Duration, lines []line, currentBeat []linestate,
 
 type SendFunc func(msg midi.Message) error
 
-func Play(beatInterval time.Duration, lines []line, currentBeat []linestate, sendFn SendFunc) {
+func Play(beatInterval time.Duration, lines pattern, currentBeat []linestate, sendFn SendFunc) {
 	for i, line := range lines {
 		spot := line[currentBeat[i].currentBeat]
 		if spot != zeronote {
@@ -309,7 +323,7 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 }
 
 func (m *model) EnsureOverlay() {
-	if len(m.overlays[m.overlayKey]) == 0 {
+	if m.overlayKey != ROOT_OVERLAY && len(m.overlays[m.overlayKey]) == 0 {
 		m.overlays[m.overlayKey] = make(overlay)
 	}
 }
@@ -338,7 +352,7 @@ func (m *model) RemoveTrigger() {
 }
 
 func (m *model) IncreaseRatchet() {
-	line := m.CombinedLine()
+	line := m.CombinedLine(m.cursorPos.line, m.overlayKey)
 	currentNote := line[m.cursorPos.beat]
 	currentRatchet := currentNote.ratchetIndex
 
@@ -349,7 +363,7 @@ func (m *model) IncreaseRatchet() {
 }
 
 func (m *model) DecreaseRatchet() {
-	line := m.CombinedLine()
+	line := m.CombinedLine(m.cursorPos.line, m.overlayKey)
 	currentNote := line[m.cursorPos.beat]
 	currentRatchet := currentNote.ratchetIndex
 
@@ -443,6 +457,27 @@ func Is(msg tea.KeyMsg, k key.Binding) bool {
 	return key.Matches(msg, k)
 }
 
+func GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKey {
+	var matchedKeys = make([]overlayKey, 0, 5)
+
+	for _, k := range keys {
+		additional := k.num / k.denom
+		over := k.num % k.denom
+		if over > 0 {
+			rem := keyCycles % (int(k.denom) * (1 + int(additional)))
+			if rem == int(k.num) {
+				matchedKeys = append(matchedKeys, k)
+			}
+		} else {
+			if keyCycles%int(k.num) == 0 {
+				matchedKeys = append(matchedKeys, k)
+			}
+		}
+	}
+
+	return matchedKeys
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	//m.LogTeaMsg(msg)
@@ -496,15 +531,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.playing = !m.playing
 			m.playTime = time.Now()
 			if m.playing {
+				m.keyCycles = 0
 				m.totalBeats = 0
 				m.playState = InitPlayState(len(m.rootPattern))
+				m.advanceKeyCycle()
 				m.trackTime = time.Duration(0)
 				sendFn, err := midi.SendTo(m.outport)
 				if err != nil {
 					panic("sendFn is broken")
 				}
 				beatInterval := m.BeatInterval()
-				return m, tea.Batch(PlayBeat(beatInterval, m.rootPattern, m.playState, sendFn), BeatTick(beatInterval))
+				return m, tea.Batch(PlayBeat(beatInterval, m.CombinedPattern(), m.playState, sendFn), BeatTick(beatInterval))
 			}
 		case Is(msg, m.keys.OverlayInputSwitch):
 			m.overlaySelectionIndicator = (m.overlaySelectionIndicator + 1) % 3
@@ -573,13 +610,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case beatMsg:
 		if m.playing {
 			m.advanceCurrentBeat()
+			m.advanceKeyCycle()
 			m.totalBeats++
 			sendFn, err := midi.SendTo(m.outport)
 			if err != nil {
 				panic("sendFn is broken")
 			}
 			beatInterval := m.BeatInterval()
-			return m, tea.Batch(PlayBeat(beatInterval, m.rootPattern, m.playState, sendFn), BeatTick(beatInterval))
+			return m, tea.Batch(PlayBeat(beatInterval, m.CombinedPattern(), m.playState, sendFn), BeatTick(beatInterval))
 		}
 	}
 	var cmd tea.Cmd
@@ -589,6 +627,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) advanceCurrentBeat() {
+	combinedPattern := m.CombinedPattern()
 	for i, currentState := range m.playState {
 		advancedBeat := int8(currentState.currentBeat) + currentState.direction
 		if advancedBeat < 0 || advancedBeat >= int8(m.beats) {
@@ -599,7 +638,7 @@ func (m *model) advanceCurrentBeat() {
 			m.playState[i].currentBeat = uint8(advancedBeat)
 		}
 
-		switch m.rootPattern[i][advancedBeat].action {
+		switch combinedPattern[i][advancedBeat].action {
 		case ACTION_LINE_RESET:
 			m.playState[i].currentBeat = 0
 		case ACTION_LINE_REVERSE:
@@ -609,22 +648,37 @@ func (m *model) advanceCurrentBeat() {
 	}
 }
 
+func (m *model) advanceKeyCycle() {
+	if m.playState[m.keyline].currentBeat == 0 {
+		m.keyCycles++
+		m.playingMatchedOverlay = m.MatchingOverlay()
+	}
+}
+
 func zeroLine(beatline line) {
 	for i := range beatline {
 		beatline[i] = zeronote
 	}
 }
 
-func (m model) CombinedLine() line {
-	var rootLine line = m.rootPattern[m.cursorPos.line]
-	if m.overlayKey == ROOT_OVERLAY {
+func (m model) CombinedPattern() pattern {
+	newPattern := make(pattern, 0, len(m.rootPattern))
+	for i, _ := range m.rootPattern {
+		newPattern = append(newPattern, m.CombinedLine(uint8(i), m.playingMatchedOverlay))
+	}
+	return newPattern
+}
+
+func (m model) CombinedLine(lineNo uint8, key overlayKey) line {
+	var rootLine line = m.rootPattern[lineNo]
+	if key == ROOT_OVERLAY || key == (overlayKey{0, 0}) {
 		return rootLine
 	}
 	var resultLine line = make([]note, len(rootLine))
 	copy(resultLine, rootLine)
 	for i := range rootLine {
-		gk := gridKey{m.cursorPos.line, uint8(i)}
-		note, hasNote := m.overlays[m.overlayKey][gk]
+		gk := gridKey{lineNo, uint8(i)}
+		note, hasNote := m.overlays[key][gk]
 		if hasNote {
 			resultLine[i] = note
 		}
@@ -633,7 +687,7 @@ func (m model) CombinedLine() line {
 }
 
 func (m *model) fill(every int) {
-	combinedLine := m.CombinedLine()
+	combinedLine := m.CombinedLine(m.cursorPos.line, m.overlayKey)
 	start := m.cursorPos.beat
 
 	for i := range combinedLine[start:] {
@@ -650,7 +704,7 @@ func (m *model) fill(every int) {
 }
 
 func (m *model) incrementAccent(every int) {
-	combinedLine := m.CombinedLine()
+	combinedLine := m.CombinedLine(m.cursorPos.line, m.overlayKey)
 	start := m.cursorPos.beat
 
 	for i := range combinedLine[start:] {
@@ -729,6 +783,8 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(fmt.Sprintf("   Seq - %s - %s\n", accentModeStyle.Render(mode), overlay))
 	} else if m.overlaySelectionIndicator > 0 {
 		buf.WriteString(fmt.Sprintf("   Seq - %s - %s\n", "Overlay", overlay))
+	} else if m.playing {
+		buf.WriteString(fmt.Sprintf("   Seq - Playing - %d - %s\n", m.keyCycles, m.CurrentOverlayView()))
 	} else {
 		buf.WriteString("   Seq - A sequencer for your cli\n")
 	}
@@ -761,6 +817,28 @@ func (m model) ViewOverlay() string {
 	return fmt.Sprintf("%s/%s", numerator, denominator)
 }
 
+func (m model) CurrentOverlayView() string {
+	matchedKey := m.playingMatchedOverlay
+	if matchedKey != (overlayKey{0, 0}) {
+		return fmt.Sprintf("%d/%d", matchedKey.num, matchedKey.denom)
+	}
+	return " "
+}
+
+func (m model) MatchingOverlay() overlayKey {
+	keys := make([]overlayKey, 0, 5)
+	for k := range maps.Keys(m.overlays) {
+		keys = append(keys, k)
+	}
+	matchingKeys := GetMatchingOverlays(m.keyCycles, keys)
+	if len(matchingKeys) > 0 {
+		slices.SortFunc(matchingKeys, OverlayKeySort)
+		return matchingKeys[0]
+	} else {
+		return overlayKey{0, 0}
+	}
+}
+
 var altSeqColor = lipgloss.Color("#222222")
 var seqColor = lipgloss.Color("#000000")
 var seqCursorColor = lipgloss.Color("#444444")
@@ -780,8 +858,15 @@ func (line line) View(lineNumber int, m model) string {
 
 	var backgroundSeqColor lipgloss.Color
 
+	var key overlayKey
+	if m.playing {
+		key = m.playingMatchedOverlay
+	} else {
+		key = m.overlayKey
+	}
+
 	for i := uint8(0); i < uint8(m.beats); i++ {
-		overlayNote, hasOverlayNote := m.overlays[m.overlayKey][gridKey{uint8(lineNumber), i}]
+		overlayNote, hasOverlayNote := m.overlays[key][gridKey{uint8(lineNumber), i}]
 		if hasOverlayNote {
 			backgroundSeqColor = seqOverlayColor
 		} else if m.playing && m.playState[lineNumber].currentBeat == i {
