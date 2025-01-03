@@ -40,6 +40,7 @@ type keymap struct {
 	ActionAddLineReset   key.Binding
 	ActionAddLineReverse key.Binding
 	OverlayInputSwitch   key.Binding
+	SelectKeyLine        key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -68,6 +69,7 @@ var keys = keymap{
 	ActionAddLineReset:   Key("s", "Add Line Reset Action"),
 	ActionAddLineReverse: Key("S", "Add Line Reverse Action"),
 	OverlayInputSwitch:   Key("O", "Select Overlay Indicator"),
+	SelectKeyLine:        Key("K", "Select Key Line"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -236,6 +238,7 @@ type model struct {
 	logFile                   *os.File
 	overlayKey                overlayKey
 	overlays                  overlays
+	keyline                   uint8
 }
 
 type beatMsg struct {
@@ -545,6 +548,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.AddAction(ACTION_LINE_RESET)
 		case Is(msg, m.keys.ActionAddLineReverse):
 			m.AddAction(ACTION_LINE_REVERSE)
+		case Is(msg, m.keys.SelectKeyLine):
+			m.keyline = m.cursorPos.line
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			m.EnsureOverlay()
@@ -751,9 +756,17 @@ var seqColor = lipgloss.Color("#000000")
 var seqCursorColor = lipgloss.Color("#444444")
 var seqOverlayColor = lipgloss.Color("#333388")
 
+func KeyLineIndicator(k uint8, l uint8) string {
+	if k == l {
+		return "K"
+	} else {
+		return " "
+	}
+}
+
 func (line line) View(lineNumber int, m model) string {
 	var buf strings.Builder
-	buf.WriteString(fmt.Sprintf("%d │", lineNumber))
+	buf.WriteString(fmt.Sprintf("%d%s│", lineNumber, KeyLineIndicator(m.keyline, uint8(lineNumber))))
 
 	var backgroundSeqColor lipgloss.Color
 
