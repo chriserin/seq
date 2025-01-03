@@ -338,18 +338,24 @@ func (m *model) RemoveTrigger() {
 }
 
 func (m *model) IncreaseRatchet() {
-	ratchetIndex := m.rootPattern[m.cursorPos.line][m.cursorPos.beat].ratchetIndex
+	line := m.CombinedLine()
+	currentNote := line[m.cursorPos.beat]
+	currentRatchet := currentNote.ratchetIndex
 
-	if ratchetIndex+1 < uint8(len(ratchets)) {
-		m.rootPattern[m.cursorPos.line][m.cursorPos.beat].ratchetIndex++
+	if currentRatchet+1 < uint8(len(ratchets)) {
+		currentNote.ratchetIndex = currentNote.ratchetIndex + 1
+		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
 }
 
 func (m *model) DecreaseRatchet() {
-	ratchetIndex := m.rootPattern[m.cursorPos.line][m.cursorPos.beat].ratchetIndex
+	line := m.CombinedLine()
+	currentNote := line[m.cursorPos.beat]
+	currentRatchet := currentNote.ratchetIndex
 
-	if ratchetIndex > 0 {
-		m.rootPattern[m.cursorPos.line][m.cursorPos.beat].ratchetIndex--
+	if currentRatchet > 0 {
+		currentNote.ratchetIndex = currentNote.ratchetIndex - 1
+		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
 }
 
@@ -541,12 +547,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, m.keys.ToggleAccentModifier):
 			m.accentModifier = -1 * m.accentModifier
 		case Is(msg, m.keys.RatchetIncrease):
+			m.EnsureOverlay()
 			m.IncreaseRatchet()
 		case Is(msg, m.keys.RatchetDecrease):
+			m.EnsureOverlay()
 			m.DecreaseRatchet()
 		case Is(msg, m.keys.ActionAddLineReset):
+			m.EnsureOverlay()
 			m.AddAction(ACTION_LINE_RESET)
 		case Is(msg, m.keys.ActionAddLineReverse):
+			m.EnsureOverlay()
 			m.AddAction(ACTION_LINE_REVERSE)
 		case Is(msg, m.keys.SelectKeyLine):
 			m.keyline = m.cursorPos.line
