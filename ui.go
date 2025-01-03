@@ -749,7 +749,7 @@ func (m model) ViewOverlay() string {
 var altSeqColor = lipgloss.Color("#222222")
 var seqColor = lipgloss.Color("#000000")
 var seqCursorColor = lipgloss.Color("#444444")
-var seqOverlayColor = lipgloss.Color("#dddddd")
+var seqOverlayColor = lipgloss.Color("#333388")
 
 func (line line) View(lineNumber int, m model) string {
 	var buf strings.Builder
