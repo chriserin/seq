@@ -512,10 +512,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.RemoveTrigger()
 		case Is(msg, m.keys.ClearLine):
 			m.EnsureOverlay()
-			zeroLine(m.rootPattern[m.cursorPos.line])
+			m.ClearOverlayLine()
 		case Is(msg, m.keys.ClearSeq):
-			m.rootPattern = InitSeq(8, 32)
-
+			m.ClearOverlay()
 		case Is(msg, m.keys.PlayStop):
 			if !m.playing && !m.outport.IsOpen() {
 				err := m.outport.Open()
@@ -624,6 +623,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
 	return m, cmd
+}
+
+func (m *model) ClearOverlayLine() {
+	if m.overlayKey == ROOT_OVERLAY {
+		zeroLine(m.rootPattern[m.cursorPos.line])
+	} else {
+		for i := uint8(0); i < m.beats; i++ {
+			key := gridKey{m.cursorPos.line, i}
+			delete(m.overlays[m.overlayKey], key)
+		}
+	}
+}
+
+func (m *model) ClearOverlay() {
+	if m.overlayKey == ROOT_OVERLAY {
+		m.rootPattern = InitSeq(8, 32)
+	} else {
+
+		delete(m.overlays, m.overlayKey)
+
+	}
 }
 
 func (m *model) advanceCurrentBeat() {
