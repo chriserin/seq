@@ -59,7 +59,7 @@ var keys = keymap{
 	TriggerAdd:           Key("f", "Add Trigger"),
 	TriggerRemove:        Key("d", "Remove Trigger"),
 	ClearLine:            Key("c", "Clear Line"),
-	ClearSeq:             Key("C", "Clear Seq"),
+	ClearSeq:             Key("C", "Clear Overlay"),
 	PlayStop:             Key(" ", "Play/Stop"),
 	TempoInputSwitch:     Key("T", "Select Tempo Indicator"),
 	TempoIncrease:        Key("+", "Tempo Increase"),
