@@ -44,6 +44,8 @@ type keymap struct {
 	ActionAddLineReverse key.Binding
 	OverlayInputSwitch   key.Binding
 	SelectKeyLine        key.Binding
+	NextOverlay          key.Binding
+	PrevOverlay          key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -74,6 +76,8 @@ var keys = keymap{
 	ActionAddLineReverse: Key("S", "Add Line Reverse Action"),
 	OverlayInputSwitch:   Key("O", "Select Overlay Indicator"),
 	SelectKeyLine:        Key("K", "Select Key Line"),
+	NextOverlay:          Key("{", "Next Overlay"),
+	PrevOverlay:          Key("}", "Prev Overlay"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -602,6 +606,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.AddAction(ACTION_LINE_REVERSE)
 		case Is(msg, m.keys.SelectKeyLine):
 			m.keyline = m.cursorPos.line
+		case Is(msg, m.keys.PrevOverlay):
+			m.PrevOverlay()
+		case Is(msg, m.keys.NextOverlay):
+			m.NextOverlay()
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			m.EnsureOverlay()
@@ -629,6 +637,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
 	return m, cmd
+}
+
+func (m *model) PrevOverlay() {
+	keys := m.OverlayKeys()
+	slices.SortFunc(keys, OverlayKeySort)
+	index := slices.Index(keys, m.overlayKey)
+	if index+1 < len(keys) {
+		m.overlayKey = keys[index+1]
+	}
+}
+
+func (m *model) NextOverlay() {
+	keys := m.OverlayKeys()
+	slices.SortFunc(keys, OverlayKeySort)
+	index := slices.Index(keys, m.overlayKey)
+	if index-1 >= 0 {
+		m.overlayKey = keys[index-1]
+	}
 }
 
 func (m *model) ClearOverlayLine() {
@@ -763,7 +789,7 @@ func (m model) TempoView() string {
 
 func (m model) View() string {
 	var buf strings.Builder
-	buf.WriteString(lipgloss.JoinHorizontal(0, m.TempoView(), "  ", m.ViewTriggerSeq(), " ", AccentKeyView()))
+	buf.WriteString(lipgloss.JoinHorizontal(0, m.TempoView(), "  ", m.ViewTriggerSeq(), " ", m.OverlaysView()))
 	return buf.String()
 }
 
@@ -774,6 +800,28 @@ func AccentKeyView() string {
 	for _, accent := range accents[1:] {
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(accent.color))
 		buf.WriteString(fmt.Sprintf("  %s  \n", style.Render(string(accent.shape))))
+	}
+	return buf.String()
+}
+
+const SELECTED_OVERLAY_ARROW = "\u2192"
+
+func (m model) OverlaysView() string {
+	var buf strings.Builder
+	buf.WriteString("      Overlays\n")
+	buf.WriteString("  ----------------\n")
+	keys := m.OverlayKeys()
+	slices.SortFunc(keys, OverlayKeySort)
+	for _, k := range keys {
+		var playing = ""
+		if m.playingMatchedOverlay == k {
+			playing = SELECTED_OVERLAY_ARROW
+		}
+		var editing = ""
+		if m.overlayKey == k {
+			editing = " E"
+		}
+		buf.WriteString(fmt.Sprintf("%*s %d/%d%s\n", 5, playing, k.num, k.denom, editing))
 	}
 	return buf.String()
 }
@@ -835,11 +883,16 @@ func (m model) CurrentOverlayView() string {
 	return " "
 }
 
-func (m model) MatchingOverlay() overlayKey {
+func (m model) OverlayKeys() []overlayKey {
 	keys := make([]overlayKey, 0, 5)
 	for k := range maps.Keys(m.overlays) {
 		keys = append(keys, k)
 	}
+	return keys
+}
+
+func (m model) MatchingOverlay() overlayKey {
+	keys := m.OverlayKeys()
 	matchingKeys := GetMatchingOverlays(m.keyCycles, keys)
 	if len(matchingKeys) > 0 {
 		slices.SortFunc(matchingKeys, OverlayKeySort)
