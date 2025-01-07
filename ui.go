@@ -492,7 +492,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logFile.Close()
 			return m, tea.Quit
 		case Is(msg, m.keys.CursorDown):
-			if m.cursorPos.line < m.beats {
+			if m.cursorPos.line < m.lines-1 {
 				m.cursorPos.line++
 			}
 		case Is(msg, m.keys.CursorUp):
