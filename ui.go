@@ -156,8 +156,6 @@ var ratchets = []ratchet{
 
 var zeronote note
 
-type line []note
-
 type linestate struct {
 	currentBeat    uint8
 	direction      int8
@@ -208,11 +206,6 @@ func (o *overlayKey) DecrementDenominator() {
 
 type Notable interface {
 	SetNote(gridKey, note)
-}
-type pattern []line
-
-func (p *pattern) SetNote(gridKey gridKey, note note) {
-	(*p)[gridKey.line][gridKey.beat] = note
 }
 
 type overlays map[overlayKey]overlay
