@@ -29,6 +29,7 @@ type keymap struct {
 	CursorRight          key.Binding
 	TriggerAdd           key.Binding
 	TriggerRemove        key.Binding
+	OverlayTriggerRemove key.Binding
 	PlayStop             key.Binding
 	ClearLine            key.Binding
 	ClearSeq             key.Binding
@@ -58,6 +59,7 @@ var keys = keymap{
 	CursorRight:          Key("l", "Right"),
 	TriggerAdd:           Key("f", "Add Trigger"),
 	TriggerRemove:        Key("d", "Remove Trigger"),
+	OverlayTriggerRemove: Key("x", "Remove Overlay Note"),
 	ClearLine:            Key("c", "Clear Line"),
 	ClearSeq:             Key("C", "Clear Overlay"),
 	PlayStop:             Key(" ", "Play/Stop"),
@@ -341,6 +343,10 @@ func (m *model) RemoveTrigger() {
 	m.CurrentNotable().SetNote(m.cursorPos, zeronote)
 }
 
+func (m *model) OverlayRemoveTrigger() {
+	delete(m.overlays[m.overlayKey], m.cursorPos)
+}
+
 func (m *model) IncreaseRatchet() {
 	rootOverlay := m.overlays[ROOT_OVERLAY]
 	currentOverlay := m.overlays[m.overlayKey]
@@ -507,6 +513,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, m.keys.TriggerRemove):
 			m.EnsureOverlay()
 			m.RemoveTrigger()
+		case Is(msg, m.keys.OverlayTriggerRemove):
+			m.EnsureOverlay()
+			m.OverlayRemoveTrigger()
 		case Is(msg, m.keys.ClearLine):
 			m.EnsureOverlay()
 			m.ClearOverlayLine()
