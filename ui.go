@@ -46,6 +46,7 @@ type keymap struct {
 	SelectKeyLine        key.Binding
 	NextOverlay          key.Binding
 	PrevOverlay          key.Binding
+	StackUpOverlay       key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -78,6 +79,7 @@ var keys = keymap{
 	SelectKeyLine:        Key("K", "Select Key Line"),
 	NextOverlay:          Key("{", "Next Overlay"),
 	PrevOverlay:          Key("}", "Prev Overlay"),
+	StackUpOverlay:       Key("ctrl+s", "StackUp Overlay"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -174,6 +176,10 @@ type overlayKey struct {
 	denom uint8
 }
 
+func (o overlayKey) String() string {
+	return fmt.Sprintf("%d/%d", o.num, o.denom)
+}
+
 func OverlayKeySort(x overlayKey, y overlayKey) int {
 	var result int
 	if x.num == y.num {
@@ -251,7 +257,9 @@ type model struct {
 	overlays                  overlays
 	keyline                   uint8
 	keyCycles                 int
-	playingMatchedOverlay     overlayKey
+	playingMatchedOverlays    []overlayKey
+	stackedupKeys             []overlayKey
+	pressedDownKeys           []overlayKey
 }
 
 type beatMsg struct {
@@ -417,19 +425,21 @@ func InitModel() model {
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
 	return model{
-		keys:           keys,
-		lines:          8,
-		beats:          32,
-		tempo:          120,
-		subdivisions:   2,
-		help:           help.New(),
-		cursorPos:      gridKey{line: 0, beat: 0},
-		cursor:         newCursor,
-		outport:        outport,
-		accentModifier: 1,
-		logFile:        logFile,
-		overlayKey:     ROOT_OVERLAY,
-		overlays:       make(overlays),
+		keys:            keys,
+		lines:           8,
+		beats:           32,
+		tempo:           120,
+		subdivisions:    2,
+		help:            help.New(),
+		cursorPos:       gridKey{line: 0, beat: 0},
+		cursor:          newCursor,
+		outport:         outport,
+		accentModifier:  1,
+		logFile:         logFile,
+		overlayKey:      ROOT_OVERLAY,
+		overlays:        make(overlays),
+		stackedupKeys:   []overlayKey{ROOT_OVERLAY},
+		pressedDownKeys: []overlayKey{},
 	}
 }
 
@@ -445,7 +455,7 @@ func (m model) LogTeaMsg(msg tea.Msg) {
 }
 
 func (m model) LogString(message string) {
-	_, err := m.logFile.WriteString(message)
+	_, err := m.logFile.WriteString(message + "\n")
 	if err != nil {
 		panic("could not write to log file")
 	}
@@ -464,20 +474,24 @@ func Is(msg tea.KeyMsg, k key.Binding) bool {
 	return key.Matches(msg, k)
 }
 
-func GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKey {
+func (m model) GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKey {
 	var matchedKeys = make([]overlayKey, 0, 5)
 
-	for _, k := range keys {
-		additional := k.num / k.denom
-		over := k.num % k.denom
-		if over > 0 {
-			rem := keyCycles % (int(k.denom) * (1 + int(additional)))
-			if rem == int(k.num) {
-				matchedKeys = append(matchedKeys, k)
+	slices.SortFunc(keys, OverlayKeySort)
+	var pressNext = false
+
+	for _, key := range keys {
+		matches := DoesKeyMatch(keyCycles, key)
+		if (matches && len(matchedKeys) == 0) || pressNext {
+			matchedKeys = append(matchedKeys, key)
+			if slices.Index(m.pressedDownKeys, key) >= 0 {
+				pressNext = true
+			} else {
+				pressNext = false
 			}
-		} else {
-			if keyCycles%int(k.num) == 0 {
-				matchedKeys = append(matchedKeys, k)
+		} else if matches && len(matchedKeys) != 0 {
+			if slices.Index(m.stackedupKeys, key) >= 0 {
+				matchedKeys = append(matchedKeys, key)
 			}
 		}
 	}
@@ -485,9 +499,23 @@ func GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKey {
 	return matchedKeys
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func DoesKeyMatch(keyCycles int, key overlayKey) bool {
+	additional := key.num / key.denom
+	over := key.num % key.denom
+	if over > 0 {
+		rem := keyCycles % (int(key.denom) * (1 + int(additional)))
+		if rem == int(key.num) {
+			return true
+		}
+	} else {
+		if keyCycles%int(key.num) == 0 {
+			return true
+		}
+	}
+	return false
+}
 
-	//m.LogTeaMsg(msg)
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -550,7 +578,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					panic("sendFn is broken")
 				}
 				beatInterval := m.BeatInterval()
-				return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.CombinedPattern(m.playingMatchedOverlay), m.playState, sendFn), BeatTick(beatInterval))
+				return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
 			}
 		case Is(msg, m.keys.OverlayInputSwitch):
 			m.overlaySelectionIndicator = (m.overlaySelectionIndicator + 1) % 3
@@ -610,6 +638,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.PrevOverlay()
 		case Is(msg, m.keys.NextOverlay):
 			m.NextOverlay()
+		case Is(msg, m.keys.StackUpOverlay):
+			m.ToggleStackupOverlay(m.overlayKey)
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			m.EnsureOverlay()
@@ -630,13 +660,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				panic("sendFn is broken")
 			}
 			beatInterval := m.BeatInterval()
-			return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.CombinedPattern(m.playingMatchedOverlay), m.playState, sendFn), BeatTick(beatInterval))
+			return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
 		}
 	}
 	var cmd tea.Cmd
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
 	return m, cmd
+}
+
+func (m *model) ToggleStackupOverlay(key overlayKey) {
+	index := slices.Index(m.stackedupKeys, m.overlayKey)
+	if index < 0 {
+		m.stackedupKeys = append(m.stackedupKeys, m.overlayKey)
+	} else {
+		m.stackedupKeys = append(m.stackedupKeys[:index], m.stackedupKeys[index+1:]...)
+	}
+}
+
+func RemoveRootKey(keys []overlayKey) []overlayKey {
+	index := slices.Index(keys, ROOT_OVERLAY)
+	if index >= 0 {
+		return append(keys[:index], keys[index+1:]...)
+	}
+	return keys
 }
 
 func (m *model) PrevOverlay() {
@@ -669,9 +716,10 @@ func (m *model) ClearOverlay() {
 }
 
 func (m *model) advanceCurrentBeat() {
-	combinedPattern := m.CombinedPattern(m.playingMatchedOverlay)
+	combinedPattern := m.CombinedPattern(m.playingMatchedOverlays)
 	for i, currentState := range m.playState {
 		advancedBeat := int8(currentState.currentBeat) + currentState.direction
+
 		if advancedBeat < 0 || advancedBeat >= int8(m.beats) {
 			m.playState[i].currentBeat = currentState.resetLocation
 			advancedBeat = int8(currentState.resetLocation)
@@ -693,15 +741,18 @@ func (m *model) advanceCurrentBeat() {
 func (m *model) advanceKeyCycle() {
 	if m.playState[m.keyline].currentBeat == 0 {
 		m.keyCycles++
-		m.playingMatchedOverlay = m.MatchingOverlay()
+		keys := m.OverlayKeys()
+		m.playingMatchedOverlays = m.GetMatchingOverlays(m.keyCycles, keys)
 	}
 }
 
-func (m model) CombinedPattern(key overlayKey) overlay {
+func (m model) CombinedPattern(keys []overlayKey) overlay {
 	var combinedOverlay = make(overlay)
-	maps.Copy(combinedOverlay, m.overlays[ROOT_OVERLAY])
-	for k, v := range m.overlays[key] {
-		combinedOverlay[k] = v
+
+	for _, key := range slices.Backward(keys) {
+		for gridKey, note := range m.overlays[key] {
+			combinedOverlay[gridKey] = note
+		}
 	}
 	return combinedOverlay
 }
@@ -709,7 +760,9 @@ func (m model) CombinedPattern(key overlayKey) overlay {
 func (m *model) fill(every uint8) {
 	start := m.cursorPos.beat
 
-	combinedOverlay := m.CombinedPattern(m.overlayKey)
+	matchedKeys := m.GetMatchingOverlays(0, m.OverlayKeys())
+	matchedKeys = append(matchedKeys, m.overlayKey)
+	combinedOverlay := m.CombinedPattern(matchedKeys)
 
 	for i := uint8(0); i < m.beats; i++ {
 		if i%every == 0 {
@@ -753,6 +806,11 @@ func (m *model) incrementAccent(every uint8) {
 			}
 		}
 	}
+}
+
+func (m model) OverlayKeys() []overlayKey {
+	keys := make([]overlayKey, 0, 5)
+	return slices.AppendSeq(keys, maps.Keys(m.overlays))
 }
 
 var heartColor = lipgloss.NewStyle().Foreground(lipgloss.Color("#ed3902"))
@@ -814,14 +872,18 @@ func (m model) OverlaysView() string {
 	slices.SortFunc(keys, OverlayKeySort)
 	for _, k := range keys {
 		var playing = ""
-		if m.playingMatchedOverlay == k {
+		if m.playing && m.playingMatchedOverlays[0] == k {
 			playing = SELECTED_OVERLAY_ARROW
 		}
 		var editing = ""
 		if m.overlayKey == k {
 			editing = " E"
 		}
-		buf.WriteString(fmt.Sprintf("%*s %d/%d%s\n", 5, playing, k.num, k.denom, editing))
+		var stackup = ""
+		if slices.Index(m.stackedupKeys, k) >= 0 {
+			stackup = "\u2191\u0305"
+		}
+		buf.WriteString(fmt.Sprintf("%*s%s%d/%d%s\n", 5, playing, stackup, k.num, k.denom, editing))
 	}
 	return buf.String()
 }
@@ -876,27 +938,11 @@ func (m model) ViewOverlay() string {
 }
 
 func (m model) CurrentOverlayView() string {
-	matchedKey := m.playingMatchedOverlay
+	matchedKey := m.playingMatchedOverlays[0]
 	if matchedKey != (overlayKey{0, 0}) {
 		return fmt.Sprintf("%d/%d", matchedKey.num, matchedKey.denom)
 	}
 	return " "
-}
-
-func (m model) OverlayKeys() []overlayKey {
-	keys := make([]overlayKey, 0, 5)
-	return slices.AppendSeq(keys, maps.Keys(m.overlays))
-}
-
-func (m model) MatchingOverlay() overlayKey {
-	keys := m.OverlayKeys()
-	matchingKeys := GetMatchingOverlays(m.keyCycles, keys)
-	if len(matchingKeys) > 0 {
-		slices.SortFunc(matchingKeys, OverlayKeySort)
-		return matchingKeys[0]
-	} else {
-		return overlayKey{0, 0}
-	}
 }
 
 var altSeqColor = lipgloss.Color("#222222")
@@ -918,19 +964,22 @@ func lineView(lineNumber uint8, m model) string {
 
 	var backgroundSeqColor lipgloss.Color
 
-	var key overlayKey
+	var currentKeys []overlayKey
 	if m.playing {
-		key = m.playingMatchedOverlay
+		currentKeys = m.playingMatchedOverlays
 	} else {
-		key = m.overlayKey
+		currentKeys = []overlayKey{m.overlayKey}
 	}
+
+	hasRoot := slices.Index(m.stackedupKeys, overlayKey{1, 1}) >= 0 || slices.Index(currentKeys, overlayKey{1, 1}) >= 0
+	combinedOverlay := m.CombinedPattern(RemoveRootKey(currentKeys))
 
 	for i := uint8(0); i < m.beats; i++ {
 		currentGridKey := gridKey{uint8(lineNumber), i}
-		overlayNote, hasOverlayNote := m.overlays[key][currentGridKey]
+		overlayNote, hasOverlayNote := combinedOverlay[currentGridKey]
 		rootNote := m.overlays[ROOT_OVERLAY][currentGridKey]
 
-		if hasOverlayNote && key != ROOT_OVERLAY {
+		if hasOverlayNote {
 			backgroundSeqColor = seqOverlayColor
 		} else if m.playing && m.playState[lineNumber].currentBeat == i {
 			backgroundSeqColor = seqCursorColor
@@ -943,7 +992,7 @@ func lineView(lineNumber uint8, m model) string {
 		var char string
 		var foregroundColor lipgloss.Color
 		var currentNote note
-		if hasOverlayNote {
+		if hasOverlayNote || !hasRoot {
 			currentNote = overlayNote
 		} else {
 			currentNote = rootNote
