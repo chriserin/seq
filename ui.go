@@ -885,10 +885,7 @@ func (m model) CurrentOverlayView() string {
 
 func (m model) OverlayKeys() []overlayKey {
 	keys := make([]overlayKey, 0, 5)
-	for k := range maps.Keys(m.overlays) {
-		keys = append(keys, k)
-	}
-	return keys
+	return slices.AppendSeq(keys, maps.Keys(m.overlays))
 }
 
 func (m model) MatchingOverlay() overlayKey {
