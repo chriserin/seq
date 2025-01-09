@@ -335,6 +335,9 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 func (m *model) EnsureOverlay() {
 	if len(m.overlays[m.overlayKey]) == 0 {
 		m.overlays[m.overlayKey] = make(overlay)
+		if m.playing {
+			m.determineMatachedOverlays()
+		}
 	}
 }
 
@@ -754,9 +757,13 @@ func (m *model) advanceCurrentBeat() {
 func (m *model) advanceKeyCycle() {
 	if m.playState[m.keyline].currentBeat == 0 {
 		m.keyCycles++
-		keys := m.OverlayKeys()
-		m.playingMatchedOverlays = m.GetMatchingOverlays(m.keyCycles, keys)
+		m.determineMatachedOverlays()
 	}
+}
+
+func (m *model) determineMatachedOverlays() {
+	keys := m.OverlayKeys()
+	m.playingMatchedOverlays = m.GetMatchingOverlays(m.keyCycles, keys)
 }
 
 func (m model) CombinedPattern(keys []overlayKey) overlay {
@@ -960,9 +967,11 @@ func (m model) ViewOverlay() string {
 }
 
 func (m model) CurrentOverlayView() string {
-	matchedKey := m.playingMatchedOverlays[0]
-	if matchedKey != (overlayKey{0, 0}) {
-		return fmt.Sprintf("%d/%d", matchedKey.num, matchedKey.denom)
+	if len(m.playingMatchedOverlays) > 0 {
+		matchedKey := m.playingMatchedOverlays[0]
+		if matchedKey != (overlayKey{0, 0}) {
+			return fmt.Sprintf("%d/%d", matchedKey.num, matchedKey.denom)
+		}
 	}
 	return " "
 }
