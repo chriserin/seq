@@ -72,6 +72,13 @@ func TestGetMatchingKeys(t *testing.T) {
 			expected:  []overlayKey{{3, 1}, {2, 1}, {1, 1}},
 			model:     model{pressedDownKeys: []overlayKey{}, stackedupKeys: []overlayKey{{1, 1}, {2, 1}}},
 		},
+		{
+			desc:      "I",
+			keyCycles: 9,
+			keys:      []overlayKey{{3, 1}, {2, 1}, {1, 1}},
+			expected:  []overlayKey{{3, 1}, {2, 1}},
+			model:     model{pressedDownKeys: []overlayKey{{3, 1}}, stackedupKeys: []overlayKey{}},
+		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {

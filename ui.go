@@ -47,6 +47,7 @@ type keymap struct {
 	NextOverlay          key.Binding
 	PrevOverlay          key.Binding
 	StackUpOverlay       key.Binding
+	PressDownOverlay     key.Binding
 }
 
 func Key(keyboardKey string, help string) key.Binding {
@@ -80,6 +81,7 @@ var keys = keymap{
 	NextOverlay:          Key("{", "Next Overlay"),
 	PrevOverlay:          Key("}", "Prev Overlay"),
 	StackUpOverlay:       Key("ctrl+s", "StackUp Overlay"),
+	PressDownOverlay:     Key("ctrl+p", "PressDown Overlay"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -640,6 +642,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.NextOverlay()
 		case Is(msg, m.keys.StackUpOverlay):
 			m.ToggleStackupOverlay(m.overlayKey)
+		case Is(msg, m.keys.PressDownOverlay):
+			m.TogglePressdownOverlay(m.overlayKey)
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			m.EnsureOverlay()
@@ -675,6 +679,15 @@ func (m *model) ToggleStackupOverlay(key overlayKey) {
 		m.stackedupKeys = append(m.stackedupKeys, m.overlayKey)
 	} else {
 		m.stackedupKeys = append(m.stackedupKeys[:index], m.stackedupKeys[index+1:]...)
+	}
+}
+
+func (m *model) TogglePressdownOverlay(key overlayKey) {
+	index := slices.Index(m.pressedDownKeys, m.overlayKey)
+	if index < 0 {
+		m.pressedDownKeys = append(m.pressedDownKeys, m.overlayKey)
+	} else {
+		m.pressedDownKeys = append(m.pressedDownKeys[:index], m.pressedDownKeys[index+1:]...)
 	}
 }
 
@@ -879,11 +892,13 @@ func (m model) OverlaysView() string {
 		if m.overlayKey == k {
 			editing = " E"
 		}
-		var stackup = ""
-		if slices.Index(m.stackedupKeys, k) >= 0 {
-			stackup = "\u2191\u0305"
+		var stackModifier = ""
+		if slices.Index(m.pressedDownKeys, k) >= 0 {
+			stackModifier = "\u2193\u0332"
+		} else if slices.Index(m.stackedupKeys, k) >= 0 {
+			stackModifier = "\u2191\u0305"
 		}
-		buf.WriteString(fmt.Sprintf("%*s%s%d/%d%s\n", 5, playing, stackup, k.num, k.denom, editing))
+		buf.WriteString(fmt.Sprintf("%*s%s%d/%d%s\n", 5, playing, stackModifier, k.num, k.denom, editing))
 	}
 	return buf.String()
 }
