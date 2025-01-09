@@ -319,11 +319,11 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 	fn := func() {
 		err := sendFn(onMessage)
 		if err != nil {
-			panic("ratchet note on failed")
+			// panic("ratchet note on failed")
 		}
 		err = sendFn(offMessage)
 		if err != nil {
-			panic("ratchet note off failed")
+			// panic("ratchet note off failed")
 		}
 		if number > 0 {
 			PlayRatchet(number-1, timeInterval, onMessage, offMessage, sendFn)
@@ -416,11 +416,7 @@ func InitPlayState(lines uint8) []linestate {
 	return linestates
 }
 
-func InitModel() model {
-	outport, err := midi.OutPort(0)
-	if err != nil {
-		panic("Did not get midi outport")
-	}
+func InitModel(midiOutport drivers.Out) model {
 	logFile, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
 		panic("could not open log file")
@@ -438,7 +434,7 @@ func InitModel() model {
 		help:            help.New(),
 		cursorPos:       gridKey{line: 0, beat: 0},
 		cursor:          newCursor,
-		outport:         outport,
+		outport:         midiOutport,
 		accentModifier:  1,
 		logFile:         logFile,
 		overlayKey:      ROOT_OVERLAY,
@@ -466,8 +462,8 @@ func (m model) LogString(message string) {
 	}
 }
 
-func RunProgram() *tea.Program {
-	p := tea.NewProgram(InitModel(), tea.WithAltScreen())
+func RunProgram(midiOutport drivers.Out) *tea.Program {
+	p := tea.NewProgram(InitModel(midiOutport), tea.WithAltScreen())
 	return p
 }
 
@@ -566,9 +562,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-			if m.playing && m.outport.IsOpen() {
-				m.outport.Close()
-			}
+			// if m.playing && m.outport.IsOpen() {
+			// 	m.outport.Close()
+			// }
 
 			m.playing = !m.playing
 			m.playTime = time.Now()

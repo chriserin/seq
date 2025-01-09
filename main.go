@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/gomidi/midi/v2"
 )
 
 const VERSION = "0.1.0-alpha"
@@ -16,8 +17,13 @@ func main() {
 		Long:  "A sequencer for your cli",
 		Args:  cobra.MinimumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			p := RunProgram()
-			_, err := p.Run()
+			outport, err := midi.OutPort(0)
+			if err != nil {
+				panic("Did not get midi outport")
+			}
+			defer outport.Close()
+			p := RunProgram(outport)
+			_, err = p.Run()
 			if err != nil {
 				log.Fatal("Program Failure")
 			} else {
