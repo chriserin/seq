@@ -883,6 +883,7 @@ func (m model) OverlaysView() string {
 	buf.WriteString("  ----------------\n")
 	keys := m.OverlayKeys()
 	slices.SortFunc(keys, OverlayKeySort)
+	style := lipgloss.NewStyle().Background(seqOverlayColor)
 	for _, k := range keys {
 		var playing = ""
 		if m.playing && m.playingMatchedOverlays[0] == k {
@@ -898,7 +899,13 @@ func (m model) OverlaysView() string {
 		} else if slices.Index(m.stackedupKeys, k) >= 0 {
 			stackModifier = "\u2191\u0305"
 		}
-		buf.WriteString(fmt.Sprintf("%*s%s%d/%d%s\n", 5, playing, stackModifier, k.num, k.denom, editing))
+		overlayLine := fmt.Sprintf("%*s%s%d/%d%s", 5, playing, stackModifier, k.num, k.denom, editing)
+		if slices.Index(m.playingMatchedOverlays, k) >= 0 {
+			buf.WriteString(style.Render(overlayLine))
+		} else {
+			buf.WriteString(overlayLine)
+		}
+		buf.WriteString("\n")
 	}
 	return buf.String()
 }
