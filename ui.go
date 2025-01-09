@@ -319,11 +319,11 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 	fn := func() {
 		err := sendFn(onMessage)
 		if err != nil {
-			// panic("ratchet note on failed")
+			panic("ratchet note on failed")
 		}
 		err = sendFn(offMessage)
 		if err != nil {
-			// panic("ratchet note off failed")
+			panic("ratchet note off failed")
 		}
 		if number > 0 {
 			PlayRatchet(number-1, timeInterval, onMessage, offMessage, sendFn)
@@ -580,6 +580,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				beatInterval := m.BeatInterval()
 				return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
+			} else {
+				m.keyCycles = 0
+				m.playingMatchedOverlays = []overlayKey{}
 			}
 		case Is(msg, m.keys.OverlayInputSwitch):
 			m.overlaySelectionIndicator = (m.overlaySelectionIndicator + 1) % 3
@@ -863,14 +866,22 @@ func (m model) TempoView() string {
 
 func (m model) View() string {
 	var buf strings.Builder
-	buf.WriteString(lipgloss.JoinHorizontal(0, m.TempoView(), "  ", m.ViewTriggerSeq(), " ", m.OverlaysView()))
+	var sideView string
+
+	if m.accentMode {
+		sideView = AccentKeyView()
+	} else {
+		sideView = m.OverlaysView()
+	}
+
+	buf.WriteString(lipgloss.JoinHorizontal(0, m.TempoView(), "  ", m.ViewTriggerSeq(), "  ", sideView))
 	return buf.String()
 }
 
 func AccentKeyView() string {
 	var buf strings.Builder
-	buf.WriteString("      ACCENTS\n")
-	buf.WriteString("  ----------------\n")
+	buf.WriteString("    ACCENTS\n")
+	buf.WriteString("———————————————\n")
 	for _, accent := range accents[1:] {
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(accent.color))
 		buf.WriteString(fmt.Sprintf("  %s  \n", style.Render(string(accent.shape))))
@@ -880,17 +891,27 @@ func AccentKeyView() string {
 
 const SELECTED_OVERLAY_ARROW = "\u2192"
 
+var currentPlayingColor lipgloss.Color = "#abfaa9"
+var activePlayingColor lipgloss.Color = "#f34213"
+
 func (m model) OverlaysView() string {
 	var buf strings.Builder
-	buf.WriteString("      Overlays\n")
-	buf.WriteString("  ----------------\n")
+	buf.WriteString("Overlays\n")
+	buf.WriteString("——————————————\n")
 	keys := m.OverlayKeys()
 	slices.SortFunc(keys, OverlayKeySort)
 	style := lipgloss.NewStyle().Background(seqOverlayColor)
 	for _, k := range keys {
+		var playingSpacer = "   "
 		var playing = ""
 		if m.playing && m.playingMatchedOverlays[0] == k {
-			playing = SELECTED_OVERLAY_ARROW
+			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(activePlayingColor).Render(" \u25CF ")
+			buf.WriteString(playing)
+			playingSpacer = ""
+		} else if m.playing && slices.Contains(m.playingMatchedOverlays, k) {
+			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(currentPlayingColor).Render(" \u25C9 ")
+			buf.WriteString(playing)
+			playingSpacer = ""
 		}
 		var editing = ""
 		if m.overlayKey == k {
@@ -898,16 +919,20 @@ func (m model) OverlaysView() string {
 		}
 		var stackModifier = ""
 		if slices.Index(m.pressedDownKeys, k) >= 0 {
-			stackModifier = "\u2193\u0332"
+			stackModifier = " \u2193\u0332"
 		} else if slices.Index(m.stackedupKeys, k) >= 0 {
-			stackModifier = "\u2191\u0305"
+			stackModifier = " \u2191\u0305"
 		}
-		overlayLine := fmt.Sprintf("%*s%s%d/%d%s", 5, playing, stackModifier, k.num, k.denom, editing)
-		if slices.Index(m.playingMatchedOverlays, k) >= 0 {
+		overlayLine := fmt.Sprintf("%d/%d%2s%2s", k.num, k.denom, stackModifier, editing)
+
+		buf.WriteString(playingSpacer)
+		if slices.Contains(m.playingMatchedOverlays, k) {
 			buf.WriteString(style.Render(overlayLine))
 		} else {
 			buf.WriteString(overlayLine)
 		}
+		buf.WriteString(playing)
+		buf.WriteString(playingSpacer)
 		buf.WriteString("\n")
 	}
 	return buf.String()
