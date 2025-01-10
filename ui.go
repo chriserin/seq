@@ -884,7 +884,7 @@ func AccentKeyView() string {
 	buf.WriteString("———————————————\n")
 	for _, accent := range accents[1:] {
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(accent.color))
-		buf.WriteString(fmt.Sprintf("  %s  \n", style.Render(string(accent.shape))))
+		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(accent.shape)), accent.value))
 	}
 	return buf.String()
 }
@@ -942,7 +942,6 @@ var accentModeStyle = lipgloss.NewStyle().Background(accents[1].color).Foregroun
 
 func (m model) ViewTriggerSeq() string {
 	var buf strings.Builder
-	var overlay = m.ViewOverlay()
 	var mode string
 	if m.accentMode {
 		if m.accentModifier > 0 {
@@ -950,11 +949,9 @@ func (m model) ViewTriggerSeq() string {
 		} else {
 			mode = " Accent Mode \u2193 "
 		}
-		buf.WriteString(fmt.Sprintf("   Seq - %s - %s\n", accentModeStyle.Render(mode), overlay))
-	} else if m.overlaySelectionIndicator > 0 {
-		buf.WriteString(fmt.Sprintf("   Seq - %s - %s\n", "Overlay", overlay))
+		buf.WriteString(fmt.Sprintf("   Seq - %s\n", accentModeStyle.Render(mode)))
 	} else if m.playing {
-		buf.WriteString(fmt.Sprintf("   Seq - Playing - %d - %s\n", m.keyCycles, m.CurrentOverlayView()))
+		buf.WriteString(fmt.Sprintf("   Seq - Playing - %d\n", m.keyCycles))
 	} else {
 		buf.WriteString("   Seq - A sequencer for your cli\n")
 	}
@@ -962,9 +959,7 @@ func (m model) ViewTriggerSeq() string {
 	for i := uint8(0); i < m.lines; i++ {
 		buf.WriteString(lineView(i, m))
 	}
-	if m.playing {
-		buf.WriteString(fmt.Sprintf("   %*s%s", m.playState[0].currentBeat, "", "█"))
-	}
+	buf.WriteString(m.CurrentOverlayView())
 	buf.WriteString("\n")
 	// buf.WriteString(m.help.View(m.keys))
 	// buf.WriteString("\n")
@@ -988,13 +983,13 @@ func (m model) ViewOverlay() string {
 }
 
 func (m model) CurrentOverlayView() string {
+	var matchedKey overlayKey
 	if len(m.playingMatchedOverlays) > 0 {
-		matchedKey := m.playingMatchedOverlays[0]
-		if matchedKey != (overlayKey{0, 0}) {
-			return fmt.Sprintf("%d/%d", matchedKey.num, matchedKey.denom)
-		}
+		matchedKey = m.playingMatchedOverlays[0]
+	} else {
+		matchedKey = overlayKey{1, 1}
 	}
-	return " "
+	return fmt.Sprintf("   Editing - %s     Playing - %d/%d", m.ViewOverlay(), matchedKey.num, matchedKey.denom)
 }
 
 var altSeqColor = lipgloss.Color("#222222")
