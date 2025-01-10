@@ -664,9 +664,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, m.keys.SelectKeyLine):
 			m.keyline = m.cursorPos.line
 		case Is(msg, m.keys.PrevOverlay):
-			m.PrevOverlay()
+			m.NextOverlay(-1)
 		case Is(msg, m.keys.NextOverlay):
-			m.NextOverlay()
+			m.NextOverlay(+1)
 		case Is(msg, m.keys.StackUpOverlay):
 			m.ToggleStackupOverlay(m.overlayKey)
 		case Is(msg, m.keys.PressDownOverlay):
@@ -726,21 +726,12 @@ func RemoveRootKey(keys []overlayKey) []overlayKey {
 	return keys
 }
 
-func (m *model) PrevOverlay() {
+func (m *model) NextOverlay(direction int) {
 	keys := m.OverlayKeys()
 	slices.SortFunc(keys, OverlayKeySort)
 	index := slices.Index(keys, m.overlayKey)
-	if index+1 < len(keys) {
-		m.overlayKey = keys[index+1]
-	}
-}
-
-func (m *model) NextOverlay() {
-	keys := m.OverlayKeys()
-	slices.SortFunc(keys, OverlayKeySort)
-	index := slices.Index(keys, m.overlayKey)
-	if index-1 >= 0 {
-		m.overlayKey = keys[index-1]
+	if index+direction < len(keys) && index+direction >= 0 {
+		m.overlayKey = keys[index+direction]
 	}
 }
 
