@@ -870,8 +870,10 @@ func (m model) View() string {
 
 	if m.accentMode {
 		sideView = AccentKeyView()
-	} else {
+	} else if len(m.overlays) > 0 {
 		sideView = m.OverlaysView()
+	} else {
+		sideView = m.SetupView()
 	}
 
 	buf.WriteString(lipgloss.JoinHorizontal(0, m.TempoView(), "  ", m.ViewTriggerSeq(), "  ", sideView))
@@ -885,6 +887,16 @@ func AccentKeyView() string {
 	for _, accent := range accents[1:] {
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(accent.color))
 		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(accent.shape)), accent.value))
+	}
+	return buf.String()
+}
+
+func (m model) SetupView() string {
+	var buf strings.Builder
+	buf.WriteString("    Setup\n")
+	buf.WriteString("———————————————\n")
+	for range m.lines {
+		buf.WriteString("CH 10 Note C1\n")
 	}
 	return buf.String()
 }
