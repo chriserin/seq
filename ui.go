@@ -485,13 +485,13 @@ func (m model) GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKe
 		matches := DoesKeyMatch(keyCycles, key)
 		if (matches && len(matchedKeys) == 0) || pressNext {
 			matchedKeys = append(matchedKeys, key)
-			if slices.Index(m.pressedDownKeys, key) >= 0 {
+			if slices.Contains(m.pressedDownKeys, key) {
 				pressNext = true
 			} else {
 				pressNext = false
 			}
 		} else if matches && len(matchedKeys) != 0 {
-			if slices.Index(m.stackedupKeys, key) >= 0 {
+			if slices.Contains(m.stackedupKeys, key) {
 				matchedKeys = append(matchedKeys, key)
 			}
 		}
@@ -930,9 +930,9 @@ func (m model) OverlaysView() string {
 			editing = " E"
 		}
 		var stackModifier = ""
-		if slices.Index(m.pressedDownKeys, k) >= 0 {
+		if slices.Contains(m.pressedDownKeys, k) {
 			stackModifier = " \u2193\u0332"
-		} else if slices.Index(m.stackedupKeys, k) >= 0 {
+		} else if slices.Contains(m.stackedupKeys, k) {
 			stackModifier = " \u2191\u0305"
 		}
 		overlayLine := fmt.Sprintf("%d/%d%2s%2s", k.num, k.denom, stackModifier, editing)
@@ -1030,7 +1030,7 @@ func lineView(lineNumber uint8, m model) string {
 		currentKeys = []overlayKey{m.overlayKey}
 	}
 
-	hasRoot := slices.Index(m.stackedupKeys, overlayKey{1, 1}) >= 0 || slices.Index(currentKeys, overlayKey{1, 1}) >= 0
+	hasRoot := slices.Contains(m.stackedupKeys, overlayKey{1, 1}) || slices.Contains(currentKeys, overlayKey{1, 1})
 	combinedOverlay := m.CombinedPattern(RemoveRootKey(currentKeys))
 
 	for i := uint8(0); i < m.beats; i++ {
