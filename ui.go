@@ -274,14 +274,11 @@ func (l *lineDefinition) DecrementNote() {
 
 type model struct {
 	keys                      keymap
-	lines                     []lineDefinition
-	beats                     uint8
-	tempo                     int
-	subdivisions              int
 	help                      help.Model
-	cursorPos                 gridKey
 	cursor                    cursor.Model
+	cursorPos                 gridKey
 	outport                   drivers.Out
+	logFile                   *os.File
 	playing                   bool
 	playTime                  time.Time
 	trackTime                 time.Duration
@@ -292,14 +289,22 @@ type model struct {
 	setupSelectionIndicator   uint8
 	accentMode                bool
 	accentModifier            int8
-	logFile                   *os.File
 	overlayKey                overlayKey
-	overlays                  overlays
-	keyline                   uint8
 	keyCycles                 int
 	playingMatchedOverlays    []overlayKey
-	stackedupKeys             []overlayKey
-	pressedDownKeys           []overlayKey
+	// save everything below here
+	lines        []lineDefinition
+	beats        uint8
+	tempo        int
+	subdivisions int
+	keyline      uint8
+	overlays     overlays
+	metaOverlays map[overlayKey]metaOverlay
+}
+
+type metaOverlay struct {
+	pressUp   bool
+	pressDown bool
 }
 
 type beatMsg struct {
@@ -476,21 +481,20 @@ func InitModel(midiOutport drivers.Out) model {
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
 	return model{
-		keys:            keys,
-		lines:           InitLines(8),
-		beats:           32,
-		tempo:           120,
-		subdivisions:    2,
-		help:            help.New(),
-		cursorPos:       gridKey{line: 0, beat: 0},
-		cursor:          newCursor,
-		outport:         midiOutport,
-		accentModifier:  1,
-		logFile:         logFile,
-		overlayKey:      ROOT_OVERLAY,
-		overlays:        make(overlays),
-		stackedupKeys:   []overlayKey{ROOT_OVERLAY},
-		pressedDownKeys: []overlayKey{},
+		keys:           keys,
+		lines:          InitLines(8),
+		beats:          32,
+		tempo:          120,
+		subdivisions:   2,
+		help:           help.New(),
+		cursorPos:      gridKey{line: 0, beat: 0},
+		cursor:         newCursor,
+		outport:        midiOutport,
+		accentModifier: 1,
+		logFile:        logFile,
+		overlayKey:     ROOT_OVERLAY,
+		overlays:       make(overlays),
+		metaOverlays:   map[overlayKey]metaOverlay{{1, 1}: {pressUp: true, pressDown: false}},
 	}
 }
 
@@ -535,13 +539,13 @@ func (m model) GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKe
 		matches := DoesKeyMatch(keyCycles, key)
 		if (matches && len(matchedKeys) == 0) || pressNext {
 			matchedKeys = append(matchedKeys, key)
-			if slices.Contains(m.pressedDownKeys, key) {
+			if m.metaOverlays[key].pressDown {
 				pressNext = true
 			} else {
 				pressNext = false
 			}
 		} else if matches && len(matchedKeys) != 0 {
-			if slices.Contains(m.stackedupKeys, key) {
+			if m.metaOverlays[key].pressUp {
 				matchedKeys = append(matchedKeys, key)
 			}
 		}
@@ -738,15 +742,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *model) ToggleOverlayStackOptions(key overlayKey) {
-	if slices.Contains(m.stackedupKeys, m.overlayKey) {
-		index := slices.Index(m.stackedupKeys, m.overlayKey)
-		m.stackedupKeys = append(m.stackedupKeys[:index], m.stackedupKeys[index+1:]...)
-		m.pressedDownKeys = append(m.pressedDownKeys, m.overlayKey)
-	} else if slices.Contains(m.pressedDownKeys, m.overlayKey) {
-		index := slices.Index(m.pressedDownKeys, m.overlayKey)
-		m.pressedDownKeys = append(m.pressedDownKeys[:index], m.pressedDownKeys[index+1:]...)
+	meta, hasMeta := m.metaOverlays[m.overlayKey]
+
+	if !hasMeta {
+		m.metaOverlays[m.overlayKey] = metaOverlay{pressUp: true, pressDown: false}
+	} else if meta.pressUp {
+		m.metaOverlays[m.overlayKey] = metaOverlay{pressUp: false, pressDown: true}
 	} else {
-		m.stackedupKeys = append(m.stackedupKeys, m.overlayKey)
+		m.metaOverlays[m.overlayKey] = metaOverlay{pressUp: false, pressDown: false}
 	}
 }
 
@@ -991,9 +994,9 @@ func (m model) OverlaysView() string {
 			editing = " E"
 		}
 		var stackModifier = ""
-		if slices.Contains(m.pressedDownKeys, k) {
+		if m.metaOverlays[k].pressDown {
 			stackModifier = " \u2193\u0332"
-		} else if slices.Contains(m.stackedupKeys, k) {
+		} else if m.metaOverlays[k].pressUp {
 			stackModifier = " \u2191\u0305"
 		}
 		overlayLine := fmt.Sprintf("%d/%d%2s%2s", k.num, k.denom, stackModifier, editing)
@@ -1091,7 +1094,7 @@ func lineView(lineNumber uint8, m model) string {
 		currentKeys = []overlayKey{m.overlayKey}
 	}
 
-	hasRoot := slices.Contains(m.stackedupKeys, overlayKey{1, 1}) || slices.Contains(currentKeys, overlayKey{1, 1})
+	hasRoot := m.metaOverlays[overlayKey{1, 1}].pressUp || slices.Contains(currentKeys, overlayKey{1, 1})
 	combinedOverlay := m.CombinedPattern(RemoveRootKey(currentKeys))
 
 	for i := uint8(0); i < m.beats; i++ {
