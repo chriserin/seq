@@ -34,8 +34,8 @@ type keymap struct {
 	ClearLine            key.Binding
 	ClearSeq             key.Binding
 	TempoInputSwitch     key.Binding
-	TempoIncrease        key.Binding
-	TempoDecrease        key.Binding
+	Increase             key.Binding
+	Decrease             key.Binding
 	ToggleAccentMode     key.Binding
 	ToggleAccentModifier key.Binding
 	RatchetIncrease      key.Binding
@@ -43,6 +43,7 @@ type keymap struct {
 	ActionAddLineReset   key.Binding
 	ActionAddLineReverse key.Binding
 	OverlayInputSwitch   key.Binding
+	SetupInputSwitch     key.Binding
 	SelectKeyLine        key.Binding
 	NextOverlay          key.Binding
 	PrevOverlay          key.Binding
@@ -50,38 +51,39 @@ type keymap struct {
 	PressDownOverlay     key.Binding
 }
 
-func Key(keyboardKey string, help string) key.Binding {
-	return key.NewBinding(key.WithKeys(keyboardKey), key.WithHelp(keyboardKey, help))
+func Key(help string, keyboardKey ...string) key.Binding {
+	return key.NewBinding(key.WithKeys(keyboardKey...), key.WithHelp(keyboardKey[0], help))
 }
 
 var keys = keymap{
-	Quit:                 Key("q", "Quit"),
-	Help:                 Key("?", "Expand Help"),
-	CursorUp:             Key("k", "Up"),
-	CursorDown:           Key("j", "Down"),
-	CursorLeft:           Key("h", "Left"),
-	CursorRight:          Key("l", "Right"),
-	TriggerAdd:           Key("f", "Add Trigger"),
-	TriggerRemove:        Key("d", "Remove Trigger"),
-	OverlayTriggerRemove: Key("x", "Remove Overlay Note"),
-	ClearLine:            Key("c", "Clear Line"),
-	ClearSeq:             Key("C", "Clear Overlay"),
-	PlayStop:             Key(" ", "Play/Stop"),
-	TempoInputSwitch:     Key("T", "Select Tempo Indicator"),
-	TempoIncrease:        Key("+", "Tempo Increase"),
-	TempoDecrease:        Key("-", "Tempo Decrease"),
-	ToggleAccentMode:     Key("A", "Toggle Accent Mode"),
-	ToggleAccentModifier: Key("a", "Toggle Accent Modifier"),
-	RatchetIncrease:      Key("R", "Increase Ratchet"),
-	RatchetDecrease:      Key("r", "Decrease Ratchet"),
-	ActionAddLineReset:   Key("s", "Add Line Reset Action"),
-	ActionAddLineReverse: Key("S", "Add Line Reverse Action"),
-	OverlayInputSwitch:   Key("O", "Select Overlay Indicator"),
-	SelectKeyLine:        Key("K", "Select Key Line"),
-	NextOverlay:          Key("{", "Next Overlay"),
-	PrevOverlay:          Key("}", "Prev Overlay"),
-	StackUpOverlay:       Key("ctrl+s", "StackUp Overlay"),
-	PressDownOverlay:     Key("ctrl+p", "PressDown Overlay"),
+	Quit:                 Key("Quit", "q"),
+	Help:                 Key("Expand Help", "?"),
+	CursorUp:             Key("Up", "k"),
+	CursorDown:           Key("Down", "j"),
+	CursorLeft:           Key("Left", "h"),
+	CursorRight:          Key("Right", "l"),
+	TriggerAdd:           Key("Add Trigger", "f"),
+	TriggerRemove:        Key("Remove Trigger", "d"),
+	OverlayTriggerRemove: Key("Remove Overlay Note", "x"),
+	ClearLine:            Key("Clear Line", "c"),
+	ClearSeq:             Key("Clear Overlay", "C"),
+	PlayStop:             Key("Play/Stop", " "),
+	TempoInputSwitch:     Key("Select Tempo Indicator", "T"),
+	Increase:             Key("Tempo Increase", "+", "="),
+	Decrease:             Key("Tempo Decrease", "-"),
+	ToggleAccentMode:     Key("Toggle Accent Mode", "A"),
+	ToggleAccentModifier: Key("Toggle Accent Modifier", "a"),
+	RatchetIncrease:      Key("Increase Ratchet", "R"),
+	RatchetDecrease:      Key("Decrease Ratchet", "r"),
+	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
+	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
+	OverlayInputSwitch:   Key("Select Overlay Indicator", "O"),
+	SetupInputSwitch:     Key("Setup Input Indicator", "ctrl+s"),
+	SelectKeyLine:        Key("Select Key Line", "K"),
+	NextOverlay:          Key("Next Overlay", "{"),
+	PrevOverlay:          Key("Prev Overlay", "}"),
+	StackUpOverlay:       Key("StackUp Overlay", "ctrl+shift+s"),
+	PressDownOverlay:     Key("PressDown Overlay", "ctrl+p"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -248,6 +250,30 @@ type lineDefinition struct {
 	target  accentTarget
 }
 
+func (l *lineDefinition) IncrementChannel() {
+	if l.channel < 16 {
+		l.channel++
+	}
+}
+
+func (l *lineDefinition) DecrementChannel() {
+	if l.channel > 1 {
+		l.channel--
+	}
+}
+
+func (l *lineDefinition) IncrementNote() {
+	if l.note < 128 {
+		l.note++
+	}
+}
+
+func (l *lineDefinition) DecrementNote() {
+	if l.note > 1 {
+		l.note--
+	}
+}
+
 type model struct {
 	keys                      keymap
 	lines                     []lineDefinition
@@ -265,6 +291,7 @@ type model struct {
 	playState                 []linestate
 	tempoSelectionIndicator   uint8
 	overlaySelectionIndicator uint8
+	setupSelectionIndicator   uint8
 	accentMode                bool
 	accentModifier            int8
 	logFile                   *os.File
@@ -612,10 +639,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, m.keys.OverlayInputSwitch):
 			m.overlaySelectionIndicator = (m.overlaySelectionIndicator + 1) % 3
 			m.tempoSelectionIndicator = 0
+			m.setupSelectionIndicator = 0
 		case Is(msg, m.keys.TempoInputSwitch):
 			m.tempoSelectionIndicator = (m.tempoSelectionIndicator + 1) % 3
 			m.overlaySelectionIndicator = 0
-		case Is(msg, m.keys.TempoIncrease):
+			m.setupSelectionIndicator = 0
+		case Is(msg, m.keys.SetupInputSwitch):
+			m.setupSelectionIndicator = (m.setupSelectionIndicator + 1) % 3
+			m.overlaySelectionIndicator = 0
+			m.tempoSelectionIndicator = 0
+		case Is(msg, m.keys.Increase):
 			switch {
 			case m.tempoSelectionIndicator == 1:
 				if m.tempo < 300 {
@@ -629,8 +662,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.overlayKey.IncrementNumerator()
 			case m.overlaySelectionIndicator == 2:
 				m.overlayKey.IncrementDenominator()
+			case m.setupSelectionIndicator == 1:
+				m.lines[m.cursorPos.line].IncrementChannel()
+			case m.setupSelectionIndicator == 2:
+				m.lines[m.cursorPos.line].IncrementNote()
 			}
-		case Is(msg, m.keys.TempoDecrease):
+		case Is(msg, m.keys.Decrease):
 			switch {
 			case m.tempoSelectionIndicator == 1:
 				if m.tempo > 30 {
@@ -644,6 +681,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.overlayKey.DecrementNumerator()
 			case m.overlaySelectionIndicator == 2:
 				m.overlayKey.DecrementDenominator()
+			case m.setupSelectionIndicator == 1:
+				m.lines[m.cursorPos.line].DecrementChannel()
+			case m.setupSelectionIndicator == 2:
+				m.lines[m.cursorPos.line].DecrementNote()
 			}
 		case Is(msg, m.keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
@@ -886,7 +927,7 @@ func (m model) View() string {
 
 	if m.accentMode {
 		sideView = AccentKeyView()
-	} else if len(m.overlays) > 0 {
+	} else if len(m.overlays) > 0 && m.setupSelectionIndicator == 0 {
 		sideView = m.OverlaysView()
 	} else {
 		sideView = m.SetupView()
@@ -911,11 +952,20 @@ func (m model) SetupView() string {
 	var buf strings.Builder
 	buf.WriteString("    Setup\n")
 	buf.WriteString("———————————————\n")
-	for _, line := range m.lines {
+	for i, line := range m.lines {
 		buf.WriteString("CH ")
-		buf.WriteString(strconv.Itoa(int(line.channel)))
+		if uint8(i) == m.cursorPos.line && m.setupSelectionIndicator == 1 {
+			buf.WriteString(selectedColor.Render(fmt.Sprintf("%2d", line.channel)))
+		} else {
+			buf.WriteString(numberColor.Render(fmt.Sprintf("%2d", line.channel)))
+		}
 		buf.WriteString(" NOTE ")
-		buf.WriteString(strconv.Itoa(int(line.note)))
+		if uint8(i) == m.cursorPos.line && m.setupSelectionIndicator == 2 {
+			buf.WriteString(selectedColor.Render(strconv.Itoa(int(line.note))))
+		} else {
+
+			buf.WriteString(numberColor.Render(strconv.Itoa(int(line.note))))
+		}
 		buf.WriteString("\n")
 	}
 	return buf.String()
