@@ -68,7 +68,7 @@ var keys = keymap{
 	ClearLine:            Key("Clear Line", "c"),
 	ClearSeq:             Key("Clear Overlay", "C"),
 	PlayStop:             Key("Play/Stop", " "),
-	TempoInputSwitch:     Key("Select Tempo Indicator", "T"),
+	TempoInputSwitch:     Key("Select Tempo Indicator", "ctrl+t"),
 	Increase:             Key("Tempo Increase", "+", "="),
 	Decrease:             Key("Tempo Decrease", "-"),
 	ToggleAccentMode:     Key("Toggle Accent Mode", "A"),
@@ -77,12 +77,12 @@ var keys = keymap{
 	RatchetDecrease:      Key("Decrease Ratchet", "r"),
 	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
 	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
-	OverlayInputSwitch:   Key("Select Overlay Indicator", "O"),
+	OverlayInputSwitch:   Key("Select Overlay Indicator", "ctrl+o"),
 	SetupInputSwitch:     Key("Setup Input Indicator", "ctrl+s"),
 	SelectKeyLine:        Key("Select Key Line", "K"),
 	NextOverlay:          Key("Next Overlay", "{"),
 	PrevOverlay:          Key("Prev Overlay", "}"),
-	StackUpOverlay:       Key("StackUp Overlay", "ctrl+shift+s"),
+	StackUpOverlay:       Key("StackUp Overlay", "shift+ctrl+s"),
 	PressDownOverlay:     Key("PressDown Overlay", "ctrl+p"),
 }
 
