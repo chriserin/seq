@@ -235,9 +235,22 @@ type gridKey struct {
 
 type overlay map[gridKey]note
 
+type accentTarget uint8
+
+const (
+	ACCENT_TARGET_VELOCITY accentTarget = iota
+	ACCENT_TARGET_NOTE
+)
+
+type lineDefinition struct {
+	channel uint8
+	note    uint8
+	target  accentTarget
+}
+
 type model struct {
 	keys                      keymap
-	lines                     uint8
+	lines                     []lineDefinition
 	beats                     uint8
 	tempo                     int
 	subdivisions              int
@@ -283,7 +296,7 @@ func (m *model) BeatInterval() time.Duration {
 	return next
 }
 
-func PlayBeat(beatInterval time.Duration, lines uint8, pattern overlay, currentBeat []linestate, sendFn SendFunc) tea.Cmd {
+func PlayBeat(beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate, sendFn SendFunc) tea.Cmd {
 	return func() tea.Msg {
 		Play(beatInterval, lines, pattern, currentBeat, sendFn)
 		return nil
@@ -292,13 +305,13 @@ func PlayBeat(beatInterval time.Duration, lines uint8, pattern overlay, currentB
 
 type SendFunc func(msg midi.Message) error
 
-func Play(beatInterval time.Duration, lines uint8, pattern overlay, currentBeat []linestate, sendFn SendFunc) {
-	for i := range lines {
-		currentGridKey := gridKey{i, currentBeat[i].currentBeat}
+func Play(beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate, sendFn SendFunc) {
+	for i, line := range lines {
+		currentGridKey := gridKey{uint8(i), currentBeat[i].currentBeat}
 		note, hasNote := pattern[currentGridKey]
 		if hasNote && note != zeronote {
-			onMessage := midi.NoteOn(10, C1+uint8(i), accents[note.accentIndex].value)
-			offMessage := midi.NoteOff(10, C1+uint8(i))
+			onMessage := midi.NoteOn(line.channel, line.note, accents[note.accentIndex].value)
+			offMessage := midi.NoteOff(line.channel, line.note)
 			err := sendFn(onMessage)
 			if err != nil {
 				panic("note on failed")
@@ -406,6 +419,18 @@ func (m *model) DecreaseRatchet() {
 	}
 }
 
+func InitLines(n uint8) []lineDefinition {
+	var lines = make([]lineDefinition, n)
+	for i := range n {
+		lines[i] = lineDefinition{
+			channel: 10,
+			note:    C1 + i,
+			target:  ACCENT_TARGET_VELOCITY,
+		}
+	}
+	return lines
+}
+
 func InitPlayState(lines uint8) []linestate {
 	linestates := make([]linestate, lines)
 	for i, _ := range linestates {
@@ -427,7 +452,7 @@ func InitModel(midiOutport drivers.Out) model {
 
 	return model{
 		keys:            keys,
-		lines:           8,
+		lines:           InitLines(8),
 		beats:           32,
 		tempo:           120,
 		subdivisions:    2,
@@ -525,7 +550,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logFile.Close()
 			return m, tea.Quit
 		case Is(msg, m.keys.CursorDown):
-			if m.cursorPos.line < m.lines-1 {
+			if m.cursorPos.line < uint8(len(m.lines)-1) {
 				m.cursorPos.line++
 			}
 		case Is(msg, m.keys.CursorUp):
@@ -571,7 +596,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.playing {
 				m.keyCycles = 0
 				m.totalBeats = 0
-				m.playState = InitPlayState(m.lines)
+				m.playState = InitPlayState(uint8(len(m.lines)))
 				m.advanceKeyCycle()
 				m.trackTime = time.Duration(0)
 				sendFn, err := midi.SendTo(m.outport)
@@ -895,8 +920,12 @@ func (m model) SetupView() string {
 	var buf strings.Builder
 	buf.WriteString("    Setup\n")
 	buf.WriteString("———————————————\n")
-	for range m.lines {
-		buf.WriteString("CH 10 Note C1\n")
+	for _, line := range m.lines {
+		buf.WriteString("CH ")
+		buf.WriteString(strconv.Itoa(int(line.channel)))
+		buf.WriteString(" NOTE ")
+		buf.WriteString(strconv.Itoa(int(line.note)))
+		buf.WriteString("\n")
 	}
 	return buf.String()
 }
@@ -968,7 +997,7 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString("   Seq - A sequencer for your cli\n")
 	}
 	buf.WriteString("  ┌─────────────────────────────────\n")
-	for i := uint8(0); i < m.lines; i++ {
+	for i := uint8(0); i < uint8(len(m.lines)); i++ {
 		buf.WriteString(lineView(i, m))
 	}
 	buf.WriteString(m.CurrentOverlayView())
