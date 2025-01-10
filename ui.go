@@ -47,7 +47,6 @@ type keymap struct {
 	SelectKeyLine        key.Binding
 	NextOverlay          key.Binding
 	PrevOverlay          key.Binding
-	StackUpOverlay       key.Binding
 	PressDownOverlay     key.Binding
 }
 
@@ -82,7 +81,6 @@ var keys = keymap{
 	SelectKeyLine:        Key("Select Key Line", "K"),
 	NextOverlay:          Key("Next Overlay", "{"),
 	PrevOverlay:          Key("Prev Overlay", "}"),
-	StackUpOverlay:       Key("StackUp Overlay", "shift+ctrl+s"),
 	PressDownOverlay:     Key("PressDown Overlay", "ctrl+p"),
 }
 
@@ -708,10 +706,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.NextOverlay(-1)
 		case Is(msg, m.keys.NextOverlay):
 			m.NextOverlay(+1)
-		case Is(msg, m.keys.StackUpOverlay):
-			m.ToggleStackupOverlay(m.overlayKey)
 		case Is(msg, m.keys.PressDownOverlay):
-			m.TogglePressdownOverlay(m.overlayKey)
+			m.ToggleOverlayStackOptions(m.overlayKey)
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			m.EnsureOverlay()
@@ -741,21 +737,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *model) ToggleStackupOverlay(key overlayKey) {
-	index := slices.Index(m.stackedupKeys, m.overlayKey)
-	if index < 0 {
-		m.stackedupKeys = append(m.stackedupKeys, m.overlayKey)
-	} else {
+func (m *model) ToggleOverlayStackOptions(key overlayKey) {
+	if slices.Contains(m.stackedupKeys, m.overlayKey) {
+		index := slices.Index(m.stackedupKeys, m.overlayKey)
 		m.stackedupKeys = append(m.stackedupKeys[:index], m.stackedupKeys[index+1:]...)
-	}
-}
-
-func (m *model) TogglePressdownOverlay(key overlayKey) {
-	index := slices.Index(m.pressedDownKeys, m.overlayKey)
-	if index < 0 {
 		m.pressedDownKeys = append(m.pressedDownKeys, m.overlayKey)
-	} else {
+	} else if slices.Contains(m.pressedDownKeys, m.overlayKey) {
+		index := slices.Index(m.pressedDownKeys, m.overlayKey)
 		m.pressedDownKeys = append(m.pressedDownKeys[:index], m.pressedDownKeys[index+1:]...)
+	} else {
+		m.stackedupKeys = append(m.stackedupKeys, m.overlayKey)
 	}
 }
 
