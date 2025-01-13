@@ -48,6 +48,7 @@ type keymap struct {
 	NextOverlay          key.Binding
 	PrevOverlay          key.Binding
 	PressDownOverlay     key.Binding
+	Save                 key.Binding
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -82,6 +83,7 @@ var keys = keymap{
 	NextOverlay:          Key("Next Overlay", "{"),
 	PrevOverlay:          Key("Prev Overlay", "}"),
 	PressDownOverlay:     Key("PressDown Overlay", "ctrl+p"),
+	Save:                 Key("Save", "ctrl+w"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -119,15 +121,15 @@ var accents = []Accent{
 const C1 = 36
 
 type note struct {
-	accentIndex  uint8
-	ratchetIndex uint8
-	action       action
+	AccentIndex  uint8
+	RatchetIndex uint8
+	Action       action
 }
 
 func (n note) IncrementAccent(modifier int8) note {
-	var newAccent = int8(n.accentIndex) - modifier
+	var newAccent = int8(n.AccentIndex) - modifier
 	if newAccent >= 1 && newAccent < int8(len(accents)) {
-		n.accentIndex = uint8(newAccent)
+		n.AccentIndex = uint8(newAccent)
 	}
 	return n
 }
@@ -179,7 +181,11 @@ type overlayKey struct {
 }
 
 func (o overlayKey) String() string {
-	return fmt.Sprintf("%d/%d", o.num, o.denom)
+	return fmt.Sprintf("Overlay-%d/%d", o.num, o.denom)
+}
+
+func (o overlayKey) MarshalTOML() ([]byte, error) {
+	return []byte(fmt.Sprintf("%d/%d", o.num, o.denom)), nil
 }
 
 func OverlayKeySort(x overlayKey, y overlayKey) int {
@@ -233,6 +239,10 @@ type gridKey struct {
 	beat uint8
 }
 
+func (gk gridKey) String() string {
+	return fmt.Sprintf("Grid-%0.2d-%0.2d", gk.line, gk.beat)
+}
+
 type overlay map[gridKey]note
 
 type accentTarget uint8
@@ -243,32 +253,32 @@ const (
 )
 
 type lineDefinition struct {
-	channel uint8
-	note    uint8
-	target  accentTarget
+	Channel uint8
+	Note    uint8
+	Target  accentTarget
 }
 
 func (l *lineDefinition) IncrementChannel() {
-	if l.channel < 16 {
-		l.channel++
+	if l.Channel < 16 {
+		l.Channel++
 	}
 }
 
 func (l *lineDefinition) DecrementChannel() {
-	if l.channel > 1 {
-		l.channel--
+	if l.Channel > 1 {
+		l.Channel--
 	}
 }
 
 func (l *lineDefinition) IncrementNote() {
-	if l.note < 128 {
-		l.note++
+	if l.Note < 128 {
+		l.Note++
 	}
 }
 
 func (l *lineDefinition) DecrementNote() {
-	if l.note > 1 {
-		l.note--
+	if l.Note > 1 {
+		l.Note--
 	}
 }
 
@@ -293,18 +303,22 @@ type model struct {
 	keyCycles                 int
 	playingMatchedOverlays    []overlayKey
 	// save everything below here
+	definition Definition
+}
+
+type Definition struct {
+	overlays     overlays
 	lines        []lineDefinition
 	beats        uint8
 	tempo        int
 	subdivisions int
 	keyline      uint8
-	overlays     overlays
 	metaOverlays map[overlayKey]metaOverlay
 }
 
 type metaOverlay struct {
-	pressUp   bool
-	pressDown bool
+	PressUp   bool
+	PressDown bool
 }
 
 type beatMsg struct {
@@ -319,7 +333,7 @@ func BeatTick(beatInterval time.Duration) tea.Cmd {
 }
 
 func (m *model) BeatInterval() time.Duration {
-	tickInterval := time.Minute / time.Duration(m.tempo*m.subdivisions)
+	tickInterval := time.Minute / time.Duration(m.definition.tempo*m.definition.subdivisions)
 	adjuster := time.Since(m.playTime) - m.trackTime
 	m.trackTime = m.trackTime + tickInterval
 	next := tickInterval - adjuster
@@ -340,8 +354,8 @@ func Play(beatInterval time.Duration, lines []lineDefinition, pattern overlay, c
 		currentGridKey := gridKey{uint8(i), currentBeat[i].currentBeat}
 		note, hasNote := pattern[currentGridKey]
 		if hasNote && note != zeronote {
-			onMessage := midi.NoteOn(line.channel, line.note, accents[note.accentIndex].value)
-			offMessage := midi.NoteOff(line.channel, line.note)
+			onMessage := midi.NoteOn(line.Channel, line.Note, accents[note.AccentIndex].value)
+			offMessage := midi.NoteOff(line.Channel, line.Note)
 			err := sendFn(onMessage)
 			if err != nil {
 				panic("note on failed")
@@ -350,9 +364,9 @@ func Play(beatInterval time.Duration, lines []lineDefinition, pattern overlay, c
 			if err != nil {
 				panic("note off failed")
 			}
-			if note.ratchetIndex > 0 {
-				ratchetInterval := beatInterval / time.Duration(note.ratchetIndex+1)
-				PlayRatchet(note.ratchetIndex-1, ratchetInterval, onMessage, offMessage, sendFn)
+			if note.RatchetIndex > 0 {
+				ratchetInterval := beatInterval / time.Duration(note.RatchetIndex+1)
+				PlayRatchet(note.RatchetIndex-1, ratchetInterval, onMessage, offMessage, sendFn)
 			}
 		}
 	}
@@ -376,8 +390,8 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 }
 
 func (m *model) EnsureOverlay() {
-	if len(m.overlays[m.overlayKey]) == 0 {
-		m.overlays[m.overlayKey] = make(overlay)
+	if len(m.definition.overlays[m.overlayKey]) == 0 {
+		m.definition.overlays[m.overlayKey] = make(overlay)
 		if m.playing {
 			m.determineMatachedOverlays()
 		}
@@ -386,7 +400,7 @@ func (m *model) EnsureOverlay() {
 
 func (m *model) CurrentNotable() Notable {
 	var notable Notable
-	overlay := m.overlays[m.overlayKey]
+	overlay := m.definition.overlays[m.overlayKey]
 	notable = &overlay
 	return notable
 }
@@ -404,47 +418,47 @@ func (m *model) RemoveTrigger() {
 }
 
 func (m *model) OverlayRemoveTrigger() {
-	delete(m.overlays[m.overlayKey], m.cursorPos)
+	delete(m.definition.overlays[m.overlayKey], m.cursorPos)
 }
 
 func (m *model) IncreaseRatchet() {
-	rootOverlay := m.overlays[ROOT_OVERLAY]
-	currentOverlay := m.overlays[m.overlayKey]
+	rootOverlay := m.definition.overlays[ROOT_OVERLAY]
+	currentOverlay := m.definition.overlays[m.overlayKey]
 	rootNote, rootHasNote := rootOverlay[m.cursorPos]
 	currentOverlayNote, currentHasNote := currentOverlay[m.cursorPos]
 	var currentRatchet uint8
 	var currentNote note
 	if currentHasNote {
-		currentRatchet = currentOverlayNote.ratchetIndex
+		currentRatchet = currentOverlayNote.RatchetIndex
 		currentNote = currentOverlayNote
 	} else if rootHasNote {
-		currentRatchet = rootNote.ratchetIndex
+		currentRatchet = rootNote.RatchetIndex
 		currentNote = rootNote
 	}
 
-	if currentNote.action == ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
-		currentNote.ratchetIndex = currentNote.ratchetIndex + 1
+	if currentNote.Action == ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
+		currentNote.RatchetIndex = currentNote.RatchetIndex + 1
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
 }
 
 func (m *model) DecreaseRatchet() {
-	rootOverlay := m.overlays[ROOT_OVERLAY]
-	currentOverlay := m.overlays[m.overlayKey]
+	rootOverlay := m.definition.overlays[ROOT_OVERLAY]
+	currentOverlay := m.definition.overlays[m.overlayKey]
 	rootNote, rootHasNote := rootOverlay[m.cursorPos]
 	currentOverlayNote, currentHasNote := currentOverlay[m.cursorPos]
 	var currentRatchet uint8
 	var currentNote note
 	if currentHasNote {
-		currentRatchet = currentOverlayNote.ratchetIndex
+		currentRatchet = currentOverlayNote.RatchetIndex
 		currentNote = currentOverlayNote
 	} else if rootHasNote {
-		currentRatchet = rootNote.ratchetIndex
+		currentRatchet = rootNote.RatchetIndex
 		currentNote = rootNote
 	}
 
-	if currentNote.action == ACTION_NOTHING && currentRatchet > 0 {
-		currentNote.ratchetIndex = currentNote.ratchetIndex - 1
+	if currentNote.Action == ACTION_NOTHING && currentRatchet > 0 {
+		currentNote.RatchetIndex = currentNote.RatchetIndex - 1
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
 }
@@ -453,9 +467,9 @@ func InitLines(n uint8) []lineDefinition {
 	var lines = make([]lineDefinition, n)
 	for i := range n {
 		lines[i] = lineDefinition{
-			channel: 10,
-			note:    C1 + i,
-			target:  ACCENT_TARGET_VELOCITY,
+			Channel: 10,
+			Note:    C1 + i,
+			Target:  ACCENT_TARGET_VELOCITY,
 		}
 	}
 	return lines
@@ -480,28 +494,37 @@ func InitModel(midiOutport drivers.Out) model {
 	newCursor := cursor.New()
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
+	definition, hasDefinition := Read()
+
+	if !hasDefinition {
+		definition = Definition{
+			overlays:     make(overlays),
+			beats:        32,
+			tempo:        120,
+			keyline:      0,
+			subdivisions: 2,
+			lines:        InitLines(8),
+			metaOverlays: make(map[overlayKey]metaOverlay),
+		}
+	}
+
 	return model{
 		keys:           keys,
-		lines:          InitLines(8),
-		beats:          32,
-		tempo:          120,
-		subdivisions:   2,
 		help:           help.New(),
-		cursorPos:      gridKey{line: 0, beat: 0},
+		cursorPos:      gridKey{0, 0},
 		cursor:         newCursor,
 		outport:        midiOutport,
 		accentModifier: 1,
 		logFile:        logFile,
 		overlayKey:     ROOT_OVERLAY,
-		overlays:       make(overlays),
-		metaOverlays:   map[overlayKey]metaOverlay{{1, 1}: {pressUp: true, pressDown: false}},
+		definition:     definition,
 	}
 }
 
 func (m model) LogTeaMsg(msg tea.Msg) {
 	switch msg := msg.(type) {
 	case beatMsg:
-		m.LogString(fmt.Sprintf("beatMsg %d %d %d\n", msg.interval, m.totalBeats, m.tempo))
+		m.LogString(fmt.Sprintf("beatMsg %d %d %d\n", msg.interval, m.totalBeats, m.definition.tempo))
 	case tea.KeyMsg:
 		m.LogString(fmt.Sprintf("keyMsg %s\n", msg.String()))
 	default:
@@ -539,13 +562,13 @@ func (m model) GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKe
 		matches := DoesKeyMatch(keyCycles, key)
 		if (matches && len(matchedKeys) == 0) || pressNext {
 			matchedKeys = append(matchedKeys, key)
-			if m.metaOverlays[key].pressDown {
+			if m.definition.metaOverlays[key].PressDown {
 				pressNext = true
 			} else {
 				pressNext = false
 			}
 		} else if matches && len(matchedKeys) != 0 {
-			if m.metaOverlays[key].pressUp {
+			if m.definition.metaOverlays[key].PressUp {
 				matchedKeys = append(matchedKeys, key)
 			}
 		}
@@ -579,7 +602,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logFile.Close()
 			return m, tea.Quit
 		case Is(msg, m.keys.CursorDown):
-			if m.cursorPos.line < uint8(len(m.lines)-1) {
+			if m.cursorPos.line < uint8(len(m.definition.lines)-1) {
 				m.cursorPos.line++
 			}
 		case Is(msg, m.keys.CursorUp):
@@ -591,7 +614,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursorPos.beat--
 			}
 		case Is(msg, m.keys.CursorRight):
-			if m.cursorPos.beat < m.beats-1 {
+			if m.cursorPos.beat < m.definition.beats-1 {
 				m.cursorPos.beat++
 			}
 		case Is(msg, m.keys.TriggerAdd):
@@ -625,7 +648,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.playing {
 				m.keyCycles = 0
 				m.totalBeats = 0
-				m.playState = InitPlayState(uint8(len(m.lines)))
+				m.playState = InitPlayState(uint8(len(m.definition.lines)))
 				m.advanceKeyCycle()
 				m.trackTime = time.Duration(0)
 				sendFn, err := midi.SendTo(m.outport)
@@ -633,7 +656,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					panic("sendFn is broken")
 				}
 				beatInterval := m.BeatInterval()
-				return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
+				return m, tea.Batch(PlayBeat(beatInterval, m.definition.lines, m.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
 			} else {
 				m.keyCycles = 0
 				m.playingMatchedOverlays = []overlayKey{}
@@ -653,40 +676,40 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, m.keys.Increase):
 			switch {
 			case m.tempoSelectionIndicator == 1:
-				if m.tempo < 300 {
-					m.tempo++
+				if m.definition.tempo < 300 {
+					m.definition.tempo++
 				}
 			case m.tempoSelectionIndicator == 2:
-				if m.subdivisions < 8 {
-					m.subdivisions++
+				if m.definition.subdivisions < 8 {
+					m.definition.subdivisions++
 				}
 			case m.overlaySelectionIndicator == 1:
 				m.overlayKey.IncrementNumerator()
 			case m.overlaySelectionIndicator == 2:
 				m.overlayKey.IncrementDenominator()
 			case m.setupSelectionIndicator == 1:
-				m.lines[m.cursorPos.line].IncrementChannel()
+				m.definition.lines[m.cursorPos.line].IncrementChannel()
 			case m.setupSelectionIndicator == 2:
-				m.lines[m.cursorPos.line].IncrementNote()
+				m.definition.lines[m.cursorPos.line].IncrementNote()
 			}
 		case Is(msg, m.keys.Decrease):
 			switch {
 			case m.tempoSelectionIndicator == 1:
-				if m.tempo > 30 {
-					m.tempo--
+				if m.definition.tempo > 30 {
+					m.definition.tempo--
 				}
 			case m.tempoSelectionIndicator == 2:
-				if m.subdivisions > 1 {
-					m.subdivisions--
+				if m.definition.subdivisions > 1 {
+					m.definition.subdivisions--
 				}
 			case m.overlaySelectionIndicator == 1:
 				m.overlayKey.DecrementNumerator()
 			case m.overlaySelectionIndicator == 2:
 				m.overlayKey.DecrementDenominator()
 			case m.setupSelectionIndicator == 1:
-				m.lines[m.cursorPos.line].DecrementChannel()
+				m.definition.lines[m.cursorPos.line].DecrementChannel()
 			case m.setupSelectionIndicator == 2:
-				m.lines[m.cursorPos.line].DecrementNote()
+				m.definition.lines[m.cursorPos.line].DecrementNote()
 			}
 		case Is(msg, m.keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
@@ -705,13 +728,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.EnsureOverlay()
 			m.AddAction(ACTION_LINE_REVERSE)
 		case Is(msg, m.keys.SelectKeyLine):
-			m.keyline = m.cursorPos.line
+			m.definition.keyline = m.cursorPos.line
 		case Is(msg, m.keys.PrevOverlay):
 			m.NextOverlay(-1)
 		case Is(msg, m.keys.NextOverlay):
 			m.NextOverlay(+1)
 		case Is(msg, m.keys.PressDownOverlay):
 			m.ToggleOverlayStackOptions(m.overlayKey)
+		case Is(msg, m.keys.Save):
+			m.Save()
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			m.EnsureOverlay()
@@ -732,7 +757,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				panic("sendFn is broken")
 			}
 			beatInterval := m.BeatInterval()
-			return m, tea.Batch(PlayBeat(beatInterval, m.lines, m.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
+			return m, tea.Batch(PlayBeat(beatInterval, m.definition.lines, m.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
 		}
 	}
 	var cmd tea.Cmd
@@ -741,15 +766,53 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m model) Save() {
+
+	Write(m.definition)
+
+	// var buf strings.Builder
+	// // lines        []lineDefinition
+	// // beats        uint8
+	// // tempo        int
+	// // subdivisions int
+	// // keyline      uint8
+	// // overlays     overlays
+	// // metaOverlays map[overlayKey]metaOverlay
+	// buf.WriteString(m.SerializeLines())
+	// buf.WriteString(m.SerializeBeat())
+	// buf.WriteString(m.SerializeTempo())
+	// buf.WriteString(m.SerializeKeyLine())
+	// buf.WriteString(m.SerializeOverlays())
+	// buf.WriteString(m.SerializeMetaOverlays())
+	//
+	// err := os.WriteFile("./filename.seq", []byte(buf.String()), 0666)
+	// if err != nil {
+	// 	panic("Could not save")
+	// }
+}
+
+func (m model) SerializeLines() string {
+	// buf strings.Builder
+	// for line := range m.lines {
+	// 	buf.WriteString()
+	// }
+	return ""
+}
+func (m model) SerializeBeat() string         { return "" }
+func (m model) SerializeTempo() string        { return "" }
+func (m model) SerializeKeyLine() string      { return "" }
+func (m model) SerializeOverlays() string     { return "" }
+func (m model) SerializeMetaOverlays() string { return "" }
+
 func (m *model) ToggleOverlayStackOptions(key overlayKey) {
-	meta, hasMeta := m.metaOverlays[m.overlayKey]
+	meta, hasMeta := m.definition.metaOverlays[m.overlayKey]
 
 	if !hasMeta {
-		m.metaOverlays[m.overlayKey] = metaOverlay{pressUp: true, pressDown: false}
-	} else if meta.pressUp {
-		m.metaOverlays[m.overlayKey] = metaOverlay{pressUp: false, pressDown: true}
+		m.definition.metaOverlays[m.overlayKey] = metaOverlay{PressUp: true, PressDown: false}
+	} else if meta.PressUp {
+		m.definition.metaOverlays[m.overlayKey] = metaOverlay{PressUp: false, PressDown: true}
 	} else {
-		m.metaOverlays[m.overlayKey] = metaOverlay{pressUp: false, pressDown: false}
+		m.definition.metaOverlays[m.overlayKey] = metaOverlay{PressUp: false, PressDown: false}
 	}
 }
 
@@ -771,14 +834,14 @@ func (m *model) NextOverlay(direction int) {
 }
 
 func (m *model) ClearOverlayLine() {
-	for i := uint8(0); i < m.beats; i++ {
+	for i := uint8(0); i < m.definition.beats; i++ {
 		key := gridKey{m.cursorPos.line, i}
-		delete(m.overlays[m.overlayKey], key)
+		delete(m.definition.overlays[m.overlayKey], key)
 	}
 }
 
 func (m *model) ClearOverlay() {
-	delete(m.overlays, m.overlayKey)
+	delete(m.definition.overlays, m.overlayKey)
 }
 
 func (m *model) advanceCurrentBeat() {
@@ -786,7 +849,7 @@ func (m *model) advanceCurrentBeat() {
 	for i, currentState := range m.playState {
 		advancedBeat := int8(currentState.currentBeat) + currentState.direction
 
-		if advancedBeat < 0 || advancedBeat >= int8(m.beats) {
+		if advancedBeat < 0 || advancedBeat >= int8(m.definition.beats) {
 			m.playState[i].currentBeat = currentState.resetLocation
 			advancedBeat = int8(currentState.resetLocation)
 			m.playState[i].direction = currentState.resetDirection
@@ -794,7 +857,7 @@ func (m *model) advanceCurrentBeat() {
 			m.playState[i].currentBeat = uint8(advancedBeat)
 		}
 
-		switch combinedPattern[gridKey{uint8(i), uint8(advancedBeat)}].action {
+		switch combinedPattern[gridKey{uint8(i), uint8(advancedBeat)}].Action {
 		case ACTION_LINE_RESET:
 			m.playState[i].currentBeat = 0
 		case ACTION_LINE_REVERSE:
@@ -805,7 +868,7 @@ func (m *model) advanceCurrentBeat() {
 }
 
 func (m *model) advanceKeyCycle() {
-	if m.playState[m.keyline].currentBeat == 0 {
+	if m.playState[m.definition.keyline].currentBeat == 0 {
 		m.keyCycles++
 		m.determineMatachedOverlays()
 	}
@@ -820,7 +883,7 @@ func (m model) CombinedPattern(keys []overlayKey) overlay {
 	var combinedOverlay = make(overlay)
 
 	for _, key := range slices.Backward(keys) {
-		for gridKey, note := range m.overlays[key] {
+		for gridKey, note := range m.definition.overlays[key] {
 			combinedOverlay[gridKey] = note
 		}
 	}
@@ -834,10 +897,10 @@ func (m *model) fill(every uint8) {
 	matchedKeys = append(matchedKeys, m.overlayKey)
 	combinedOverlay := m.CombinedPattern(matchedKeys)
 
-	for i := uint8(0); i < m.beats; i++ {
+	for i := uint8(0); i < m.definition.beats; i++ {
 		if i%every == 0 {
 			currentBeat := start + i
-			if currentBeat >= m.beats {
+			if currentBeat >= m.definition.beats {
 				return
 			}
 			gridKey := gridKey{m.cursorPos.line, currentBeat}
@@ -847,7 +910,7 @@ func (m *model) fill(every uint8) {
 			if m.overlayKey != ROOT_OVERLAY && hasNote {
 				m.CurrentNotable().SetNote(gridKey, zeronote)
 			} else if m.overlayKey == ROOT_OVERLAY && hasNote {
-				delete(m.overlays[ROOT_OVERLAY], gridKey)
+				delete(m.definition.overlays[ROOT_OVERLAY], gridKey)
 			} else {
 				m.CurrentNotable().SetNote(gridKey, note{5, 0, 0})
 			}
@@ -857,13 +920,13 @@ func (m *model) fill(every uint8) {
 
 func (m *model) incrementAccent(every uint8) {
 	start := m.cursorPos.beat
-	rootOverlay := m.overlays[ROOT_OVERLAY]
-	currentOverlay := m.overlays[m.overlayKey]
+	rootOverlay := m.definition.overlays[ROOT_OVERLAY]
+	currentOverlay := m.definition.overlays[m.overlayKey]
 
-	for i := uint8(0); i < m.beats; i++ {
+	for i := uint8(0); i < m.definition.beats; i++ {
 		if i%every == 0 {
 			currentBeat := start + i
-			if currentBeat >= m.beats {
+			if currentBeat >= m.definition.beats {
 				return
 			}
 			gridKey := gridKey{m.cursorPos.line, currentBeat}
@@ -880,7 +943,7 @@ func (m *model) incrementAccent(every uint8) {
 
 func (m model) OverlayKeys() []overlayKey {
 	keys := make([]overlayKey, 0, 5)
-	return slices.AppendSeq(keys, maps.Keys(m.overlays))
+	return slices.AppendSeq(keys, maps.Keys(m.definition.overlays))
 }
 
 var heartColor = lipgloss.NewStyle().Foreground(lipgloss.Color("#ed3902"))
@@ -892,14 +955,14 @@ func (m model) TempoView() string {
 	var tempo, division string
 	switch m.tempoSelectionIndicator {
 	case 0:
-		tempo = numberColor.Render(strconv.Itoa(m.tempo))
-		division = numberColor.Render(strconv.Itoa(m.subdivisions))
+		tempo = numberColor.Render(strconv.Itoa(m.definition.tempo))
+		division = numberColor.Render(strconv.Itoa(m.definition.subdivisions))
 	case 1:
-		tempo = selectedColor.Render(strconv.Itoa(m.tempo))
-		division = numberColor.Render(strconv.Itoa(m.subdivisions))
+		tempo = selectedColor.Render(strconv.Itoa(m.definition.tempo))
+		division = numberColor.Render(strconv.Itoa(m.definition.subdivisions))
 	case 2:
-		tempo = numberColor.Render(strconv.Itoa(m.tempo))
-		division = selectedColor.Render(strconv.Itoa(m.subdivisions))
+		tempo = numberColor.Render(strconv.Itoa(m.definition.tempo))
+		division = selectedColor.Render(strconv.Itoa(m.definition.subdivisions))
 	}
 	heart := heartColor.Render("♡")
 	buf.WriteString(heartColor.Render("             ") + "\n")
@@ -921,7 +984,7 @@ func (m model) View() string {
 
 	if m.accentMode {
 		sideView = AccentKeyView()
-	} else if len(m.overlays) > 0 && m.setupSelectionIndicator == 0 {
+	} else if len(m.definition.overlays) > 0 && m.setupSelectionIndicator == 0 {
 		sideView = m.OverlaysView()
 	} else {
 		sideView = m.SetupView()
@@ -946,19 +1009,19 @@ func (m model) SetupView() string {
 	var buf strings.Builder
 	buf.WriteString("    Setup\n")
 	buf.WriteString("———————————————\n")
-	for i, line := range m.lines {
+	for i, line := range m.definition.lines {
 		buf.WriteString("CH ")
 		if uint8(i) == m.cursorPos.line && m.setupSelectionIndicator == 1 {
-			buf.WriteString(selectedColor.Render(fmt.Sprintf("%2d", line.channel)))
+			buf.WriteString(selectedColor.Render(fmt.Sprintf("%2d", line.Channel)))
 		} else {
-			buf.WriteString(numberColor.Render(fmt.Sprintf("%2d", line.channel)))
+			buf.WriteString(numberColor.Render(fmt.Sprintf("%2d", line.Channel)))
 		}
 		buf.WriteString(" NOTE ")
 		if uint8(i) == m.cursorPos.line && m.setupSelectionIndicator == 2 {
-			buf.WriteString(selectedColor.Render(strconv.Itoa(int(line.note))))
+			buf.WriteString(selectedColor.Render(strconv.Itoa(int(line.Note))))
 		} else {
 
-			buf.WriteString(numberColor.Render(strconv.Itoa(int(line.note))))
+			buf.WriteString(numberColor.Render(strconv.Itoa(int(line.Note))))
 		}
 		buf.WriteString("\n")
 	}
@@ -994,9 +1057,9 @@ func (m model) OverlaysView() string {
 			editing = " E"
 		}
 		var stackModifier = ""
-		if m.metaOverlays[k].pressDown {
+		if m.definition.metaOverlays[k].PressDown {
 			stackModifier = " \u2193\u0332"
-		} else if m.metaOverlays[k].pressUp {
+		} else if m.definition.metaOverlays[k].PressUp {
 			stackModifier = " \u2191\u0305"
 		}
 		overlayLine := fmt.Sprintf("%d/%d%2s%2s", k.num, k.denom, stackModifier, editing)
@@ -1032,7 +1095,7 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString("   Seq - A sequencer for your cli\n")
 	}
 	buf.WriteString("  ┌─────────────────────────────────\n")
-	for i := uint8(0); i < uint8(len(m.lines)); i++ {
+	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
 		buf.WriteString(lineView(i, m))
 	}
 	buf.WriteString(m.CurrentOverlayView())
@@ -1083,7 +1146,7 @@ func KeyLineIndicator(k uint8, l uint8) string {
 
 func lineView(lineNumber uint8, m model) string {
 	var buf strings.Builder
-	buf.WriteString(fmt.Sprintf("%d%s│", lineNumber, KeyLineIndicator(m.keyline, lineNumber)))
+	buf.WriteString(fmt.Sprintf("%d%s│", lineNumber, KeyLineIndicator(m.definition.keyline, lineNumber)))
 
 	var backgroundSeqColor lipgloss.Color
 
@@ -1094,13 +1157,13 @@ func lineView(lineNumber uint8, m model) string {
 		currentKeys = []overlayKey{m.overlayKey}
 	}
 
-	hasRoot := m.metaOverlays[overlayKey{1, 1}].pressUp || slices.Contains(currentKeys, overlayKey{1, 1})
+	hasRoot := m.definition.metaOverlays[overlayKey{1, 1}].PressUp || slices.Contains(currentKeys, overlayKey{1, 1})
 	combinedOverlay := m.CombinedPattern(RemoveRootKey(currentKeys))
 
-	for i := uint8(0); i < m.beats; i++ {
+	for i := uint8(0); i < m.definition.beats; i++ {
 		currentGridKey := gridKey{uint8(lineNumber), i}
 		overlayNote, hasOverlayNote := combinedOverlay[currentGridKey]
-		rootNote := m.overlays[ROOT_OVERLAY][currentGridKey]
+		rootNote := m.definition.overlays[ROOT_OVERLAY][currentGridKey]
 
 		if hasOverlayNote {
 			backgroundSeqColor = seqOverlayColor
@@ -1120,11 +1183,11 @@ func lineView(lineNumber uint8, m model) string {
 		} else {
 			currentNote = rootNote
 		}
-		currentAccent := accents[currentNote.accentIndex]
-		currentAction := currentNote.action
+		currentAccent := accents[currentNote.AccentIndex]
+		currentAction := currentNote.Action
 
 		if currentAction == ACTION_NOTHING {
-			char = string(currentAccent.shape) + string(ratchets[currentNote.ratchetIndex])
+			char = string(currentAccent.shape) + string(ratchets[currentNote.RatchetIndex])
 			foregroundColor = currentAccent.color
 		} else {
 			lineaction := lineactions[currentAction]
