@@ -49,6 +49,7 @@ type keymap struct {
 	PrevOverlay          key.Binding
 	PressDownOverlay     key.Binding
 	Save                 key.Binding
+	Undo                 key.Binding
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -84,6 +85,7 @@ var keys = keymap{
 	PrevOverlay:          Key("Prev Overlay", "}"),
 	PressDownOverlay:     Key("PressDown Overlay", "ctrl+p"),
 	Save:                 Key("Save", "ctrl+w"),
+	Undo:                 Key("Undo", "u"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -302,8 +304,62 @@ type model struct {
 	overlayKey                overlayKey
 	keyCycles                 int
 	playingMatchedOverlays    []overlayKey
+	undoStack                 UndoStack
 	// save everything below here
 	definition Definition
+}
+
+type Undoable interface {
+	ApplyUndo(m *model)
+}
+
+type UndoStack struct {
+	data Undoable
+	next *UndoStack
+}
+
+var NIL_STACK = UndoStack{}
+
+type UndoKeyline struct {
+	keyline uint8
+}
+
+func (ukl UndoKeyline) ApplyUndo(m *model) {
+	m.definition.keyline = ukl.keyline
+}
+
+func (m *model) PushUndo(undoable Undoable) {
+	if m.undoStack == NIL_STACK {
+		m.undoStack = UndoStack{
+			data: undoable,
+			next: nil,
+		}
+	} else {
+		pusheddown := m.undoStack
+		lastin := UndoStack{
+			data: undoable,
+			next: &pusheddown,
+		}
+		m.undoStack = lastin
+	}
+}
+
+func (m *model) PopUndo() Undoable {
+	firstout := m.undoStack
+	if firstout != NIL_STACK && m.undoStack.next != nil {
+		lastin := *m.undoStack.next
+		m.undoStack = lastin
+	} else {
+		m.undoStack = NIL_STACK
+	}
+	return firstout.data
+}
+
+func (m *model) Undo() {
+	undoable := m.PopUndo()
+	if undoable != nil {
+		undoable.ApplyUndo(m)
+	}
 }
 
 type Definition struct {
@@ -728,6 +784,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.EnsureOverlay()
 			m.AddAction(ACTION_LINE_REVERSE)
 		case Is(msg, m.keys.SelectKeyLine):
+			m.PushUndo(UndoKeyline{m.definition.keyline})
 			m.definition.keyline = m.cursorPos.line
 		case Is(msg, m.keys.PrevOverlay):
 			m.NextOverlay(-1)
@@ -737,6 +794,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ToggleOverlayStackOptions(m.overlayKey)
 		case Is(msg, m.keys.Save):
 			m.Save()
+		case Is(msg, m.keys.Undo):
+			m.Undo()
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			m.EnsureOverlay()
