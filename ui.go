@@ -829,6 +829,35 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ClearOverlayLine()
 			redoable := m.UndoableNote()
 			m.PushUndo(undoable, redoable)
+		case Is(msg, m.keys.RatchetIncrease):
+			undoable := m.UndoableNote()
+			m.EnsureOverlay()
+			m.IncreaseRatchet()
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
+		case Is(msg, m.keys.RatchetDecrease):
+			undoable := m.UndoableNote()
+			m.EnsureOverlay()
+			m.DecreaseRatchet()
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
+		case Is(msg, m.keys.ActionAddLineReset):
+			undoable := m.UndoableNote()
+			m.EnsureOverlay()
+			m.AddAction(ACTION_LINE_RESET)
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
+		case Is(msg, m.keys.ActionAddLineReverse):
+			undoable := m.UndoableNote()
+			m.EnsureOverlay()
+			m.AddAction(ACTION_LINE_REVERSE)
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
+		case Is(msg, m.keys.SelectKeyLine):
+			undoable := UndoKeyline{m.definition.keyline}
+			m.definition.keyline = m.cursorPos.line
+			redoable := UndoKeyline{m.definition.keyline}
+			m.PushUndo(undoable, redoable)
 		case Is(msg, m.keys.ClearSeq):
 			m.ClearOverlay()
 		case Is(msg, m.keys.PlayStop):
@@ -915,36 +944,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.accentMode = !m.accentMode
 		case Is(msg, m.keys.ToggleAccentModifier):
 			m.accentModifier = -1 * m.accentModifier
-		case Is(msg, m.keys.RatchetIncrease):
-			// m.PushUndo(m.UndoableNote())
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.IncreaseRatchet()
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.RatchetDecrease):
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.DecreaseRatchet()
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.ActionAddLineReset):
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.AddAction(ACTION_LINE_RESET)
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.ActionAddLineReverse):
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.AddAction(ACTION_LINE_REVERSE)
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.SelectKeyLine):
-			undoable := UndoKeyline{m.definition.keyline}
-			m.definition.keyline = m.cursorPos.line
-			redoable := UndoKeyline{m.definition.keyline}
-			m.PushUndo(undoable, redoable)
 		case Is(msg, m.keys.PrevOverlay):
 			m.NextOverlay(-1)
 		case Is(msg, m.keys.NextOverlay):
