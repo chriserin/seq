@@ -50,6 +50,7 @@ type keymap struct {
 	PressDownOverlay     key.Binding
 	Save                 key.Binding
 	Undo                 key.Binding
+	Redo                 key.Binding
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -86,6 +87,7 @@ var keys = keymap{
 	PressDownOverlay:     Key("PressDown Overlay", "ctrl+p"),
 	Save:                 Key("Save", "ctrl+w"),
 	Undo:                 Key("Undo", "u"),
+	Redo:                 Key("Redo", "ctrl+r"),
 }
 
 func (k keymap) ShortHelp() []key.Binding {
@@ -305,6 +307,7 @@ type model struct {
 	keyCycles                 int
 	playingMatchedOverlays    []overlayKey
 	undoStack                 UndoStack
+	redoStack                 UndoStack
 	// save everything below here
 	definition Definition
 }
@@ -314,7 +317,8 @@ type Undoable interface {
 }
 
 type UndoStack struct {
-	data Undoable
+	undo Undoable
+	redo Undoable
 	next *UndoStack
 }
 
@@ -363,14 +367,15 @@ type UndoGridNote struct {
 }
 
 func (ugn UndoGridNote) ApplyUndo(m *model) {
+	m.EnsureOverlayWithKey(ugn.overlayKey)
 	overlay := m.definition.overlays[ugn.overlayKey]
 	overlay[ugn.gridNote.gridKey] = ugn.gridNote.note
 }
 
 type UndoLineGridNotes struct {
-	overlayKey overlayKey
-	line       uint8
-	gridNotes  []GridNote
+	overlayKey
+	line      uint8
+	gridNotes []GridNote
 }
 
 func (ugn UndoLineGridNotes) ApplyUndo(m *model) {
@@ -414,23 +419,43 @@ func (uno UndoNewOverlay) ApplyUndo(m *model) {
 	delete(m.definition.overlays, uno.overlayKey)
 }
 
-func (m *model) PushUndo(undoable Undoable) {
+func (m *model) PushUndo(undo Undoable, redo Undoable) {
 	if m.undoStack == NIL_STACK {
 		m.undoStack = UndoStack{
-			data: undoable,
+			undo: undo,
+			redo: redo,
 			next: nil,
 		}
 	} else {
 		pusheddown := m.undoStack
 		lastin := UndoStack{
-			data: undoable,
+			undo: undo,
+			redo: redo,
 			next: &pusheddown,
 		}
 		m.undoStack = lastin
 	}
 }
 
-func (m *model) PopUndo() Undoable {
+func (m *model) PushRedo(undo Undoable, redo Undoable) {
+	if m.redoStack == NIL_STACK {
+		m.redoStack = UndoStack{
+			undo: undo,
+			redo: redo,
+			next: nil,
+		}
+	} else {
+		pusheddown := m.redoStack
+		lastin := UndoStack{
+			undo: undo,
+			redo: redo,
+			next: &pusheddown,
+		}
+		m.redoStack = lastin
+	}
+}
+
+func (m *model) PopUndo() UndoStack {
 	firstout := m.undoStack
 	if firstout != NIL_STACK && m.undoStack.next != nil {
 		lastin := *m.undoStack.next
@@ -438,14 +463,34 @@ func (m *model) PopUndo() Undoable {
 	} else {
 		m.undoStack = NIL_STACK
 	}
-	return firstout.data
+	return firstout
 }
 
-func (m *model) Undo() {
-	undoable := m.PopUndo()
-	if undoable != nil {
-		undoable.ApplyUndo(m)
+func (m *model) PopRedo() UndoStack {
+	firstout := m.redoStack
+	if firstout != NIL_STACK && m.redoStack.next != nil {
+		lastin := *m.redoStack.next
+		m.redoStack = lastin
+	} else {
+		m.redoStack = NIL_STACK
 	}
+	return firstout
+}
+
+func (m *model) Undo() UndoStack {
+	undoStack := m.PopUndo()
+	if undoStack != NIL_STACK {
+		undoStack.undo.ApplyUndo(m)
+	}
+	return undoStack
+}
+
+func (m *model) Redo() UndoStack {
+	undoStack := m.PopRedo()
+	if undoStack != NIL_STACK {
+		undoStack.redo.ApplyUndo(m)
+	}
+	return undoStack
 }
 
 type Definition struct {
@@ -532,8 +577,12 @@ func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage
 }
 
 func (m *model) EnsureOverlay() {
-	if len(m.definition.overlays[m.overlayKey]) == 0 {
-		m.definition.overlays[m.overlayKey] = make(overlay)
+	m.EnsureOverlayWithKey(m.overlayKey)
+}
+
+func (m *model) EnsureOverlayWithKey(key overlayKey) {
+	if len(m.definition.overlays[key]) == 0 {
+		m.definition.overlays[key] = make(overlay)
 		if m.playing {
 			m.determineMatachedOverlays()
 		}
@@ -760,20 +809,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursorPos.beat++
 			}
 		case Is(msg, m.keys.TriggerAdd):
-			m.PushUndo(m.UndoableNote())
+			undoable := m.UndoableNote()
 			m.EnsureOverlay()
 			m.AddTrigger()
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
 		case Is(msg, m.keys.TriggerRemove):
-			m.PushUndo(m.UndoableNote())
+			undoable := m.UndoableNote()
 			m.EnsureOverlay()
 			m.RemoveTrigger()
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
 		case Is(msg, m.keys.OverlayTriggerRemove):
 			m.EnsureOverlay()
 			m.OverlayRemoveTrigger()
 		case Is(msg, m.keys.ClearLine):
-			m.PushUndo(m.UndoableLine())
+			undoable := m.UndoableNote()
 			m.EnsureOverlay()
 			m.ClearOverlayLine()
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
 		case Is(msg, m.keys.ClearSeq):
 			m.ClearOverlay()
 		case Is(msg, m.keys.PlayStop):
@@ -861,24 +916,35 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, m.keys.ToggleAccentModifier):
 			m.accentModifier = -1 * m.accentModifier
 		case Is(msg, m.keys.RatchetIncrease):
-			m.PushUndo(m.UndoableNote())
+			// m.PushUndo(m.UndoableNote())
+			undoable := m.UndoableNote()
 			m.EnsureOverlay()
 			m.IncreaseRatchet()
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
 		case Is(msg, m.keys.RatchetDecrease):
-			m.PushUndo(m.UndoableNote())
+			undoable := m.UndoableNote()
 			m.EnsureOverlay()
 			m.DecreaseRatchet()
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
 		case Is(msg, m.keys.ActionAddLineReset):
-			m.PushUndo(m.UndoableNote())
+			undoable := m.UndoableNote()
 			m.EnsureOverlay()
 			m.AddAction(ACTION_LINE_RESET)
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
 		case Is(msg, m.keys.ActionAddLineReverse):
-			m.PushUndo(m.UndoableNote())
+			undoable := m.UndoableNote()
 			m.EnsureOverlay()
 			m.AddAction(ACTION_LINE_REVERSE)
+			redoable := m.UndoableNote()
+			m.PushUndo(undoable, redoable)
 		case Is(msg, m.keys.SelectKeyLine):
-			m.PushUndo(UndoKeyline{m.definition.keyline})
+			undoable := UndoKeyline{m.definition.keyline}
 			m.definition.keyline = m.cursorPos.line
+			redoable := UndoKeyline{m.definition.keyline}
+			m.PushUndo(undoable, redoable)
 		case Is(msg, m.keys.PrevOverlay):
 			m.NextOverlay(-1)
 		case Is(msg, m.keys.NextOverlay):
@@ -888,10 +954,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, m.keys.Save):
 			m.Save()
 		case Is(msg, m.keys.Undo):
-			m.Undo()
+			undoStack := m.Undo()
+			m.PushRedo(undoStack.undo, undoStack.redo)
+		case Is(msg, m.keys.Redo):
+			undoStack := m.Redo()
+			m.PushUndo(undoStack.undo, undoStack.redo)
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
-			m.PushUndo(m.UndoableLine())
+			undoable := m.UndoableLine()
 			m.EnsureOverlay()
 			beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
 			if m.accentMode {
@@ -899,6 +969,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.fill(uint8(beatInterval))
 			}
+			redoable := m.UndoableLine()
+			m.PushUndo(undoable, redoable)
 		}
 	case beatMsg:
 		if m.playing {
