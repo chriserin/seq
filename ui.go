@@ -328,6 +328,92 @@ func (ukl UndoKeyline) ApplyUndo(m *model) {
 	m.definition.keyline = ukl.keyline
 }
 
+type UndoBeats struct {
+	beats uint8
+}
+
+func (ukl UndoBeats) ApplyUndo(m *model) {
+	m.definition.beats = ukl.beats
+}
+
+type UndoTempo struct {
+	tempo int
+}
+
+func (ukl UndoTempo) ApplyUndo(m *model) {
+	m.definition.tempo = ukl.tempo
+}
+
+type UndoSubdivisions struct {
+	subdivisions int
+}
+
+func (ukl UndoSubdivisions) ApplyUndo(m *model) {
+	m.definition.subdivisions = ukl.subdivisions
+}
+
+type GridNote struct {
+	gridKey gridKey
+	note    note
+}
+
+type UndoGridNote struct {
+	overlayKey
+	gridNote GridNote
+}
+
+func (ugn UndoGridNote) ApplyUndo(m *model) {
+	overlay := m.definition.overlays[ugn.overlayKey]
+	overlay[ugn.gridNote.gridKey] = ugn.gridNote.note
+}
+
+type UndoLineGridNotes struct {
+	overlayKey overlayKey
+	line       uint8
+	gridNotes  []GridNote
+}
+
+func (ugn UndoLineGridNotes) ApplyUndo(m *model) {
+	overlay := m.definition.overlays[ugn.overlayKey]
+	for i := range m.definition.beats {
+		delete(overlay, gridKey{ugn.line, i})
+	}
+	for _, gridNote := range ugn.gridNotes {
+		overlay[gridNote.gridKey] = gridNote.note
+	}
+}
+
+type UndoToNothing struct {
+	overlayKey overlayKey
+	location   gridKey
+}
+
+func (utn UndoToNothing) ApplyUndo(m *model) {
+	overlay := m.definition.overlays[utn.overlayKey]
+	delete(overlay, utn.location)
+}
+
+type UndoLineToNothing struct {
+	overlayKey overlayKey
+	line       uint8
+}
+
+func (ultn UndoLineToNothing) ApplyUndo(m *model) {
+	fmt.Println("Line to Nothing")
+	overlay := m.definition.overlays[ultn.overlayKey]
+	for i := range m.definition.beats {
+		delete(overlay, gridKey{ultn.line, i})
+	}
+}
+
+type UndoNewOverlay struct {
+	overlayKey overlayKey
+}
+
+func (uno UndoNewOverlay) ApplyUndo(m *model) {
+	delete(m.definition.overlays, uno.overlayKey)
+}
+
 func (m *model) PushUndo(undoable Undoable) {
 	if m.undoStack == NIL_STACK {
 		m.undoStack = UndoStack{
@@ -674,15 +760,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursorPos.beat++
 			}
 		case Is(msg, m.keys.TriggerAdd):
+			m.PushUndo(m.UndoableNote())
 			m.EnsureOverlay()
 			m.AddTrigger()
 		case Is(msg, m.keys.TriggerRemove):
+			m.PushUndo(m.UndoableNote())
 			m.EnsureOverlay()
 			m.RemoveTrigger()
 		case Is(msg, m.keys.OverlayTriggerRemove):
 			m.EnsureOverlay()
 			m.OverlayRemoveTrigger()
 		case Is(msg, m.keys.ClearLine):
+			m.PushUndo(m.UndoableLine())
 			m.EnsureOverlay()
 			m.ClearOverlayLine()
 		case Is(msg, m.keys.ClearSeq):
@@ -772,15 +861,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, m.keys.ToggleAccentModifier):
 			m.accentModifier = -1 * m.accentModifier
 		case Is(msg, m.keys.RatchetIncrease):
+			m.PushUndo(m.UndoableNote())
 			m.EnsureOverlay()
 			m.IncreaseRatchet()
 		case Is(msg, m.keys.RatchetDecrease):
+			m.PushUndo(m.UndoableNote())
 			m.EnsureOverlay()
 			m.DecreaseRatchet()
 		case Is(msg, m.keys.ActionAddLineReset):
+			m.PushUndo(m.UndoableNote())
 			m.EnsureOverlay()
 			m.AddAction(ACTION_LINE_RESET)
 		case Is(msg, m.keys.ActionAddLineReverse):
+			m.PushUndo(m.UndoableNote())
 			m.EnsureOverlay()
 			m.AddAction(ACTION_LINE_REVERSE)
 		case Is(msg, m.keys.SelectKeyLine):
@@ -798,6 +891,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Undo()
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
+			m.PushUndo(m.UndoableLine())
 			m.EnsureOverlay()
 			beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
 			if m.accentMode {
@@ -825,29 +919,40 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m model) UndoableNote() Undoable {
+	overlay, hasOverlay := m.definition.overlays[m.overlayKey]
+	if !hasOverlay {
+		return UndoNewOverlay{m.overlayKey}
+	}
+	currentNote, hasNote := overlay[m.cursorPos]
+	if hasNote {
+		return UndoGridNote{m.overlayKey, GridNote{m.cursorPos, currentNote}}
+	} else {
+		return UndoToNothing{m.overlayKey, m.cursorPos}
+	}
+}
+
+func (m model) UndoableLine() Undoable {
+	overlay, hasOverlay := m.definition.overlays[m.overlayKey]
+	if !hasOverlay {
+		return UndoNewOverlay{m.overlayKey}
+	}
+	notesToUndo := make([]GridNote, 0, m.definition.beats)
+	for i := range m.definition.beats {
+		key := gridKey{m.cursorPos.line, i}
+		currentNote, hasNote := overlay[key]
+		if hasNote {
+			notesToUndo = append(notesToUndo, GridNote{key, currentNote})
+		}
+	}
+	if len(notesToUndo) == 0 {
+		return UndoLineToNothing{m.overlayKey, m.cursorPos.line}
+	}
+	return UndoLineGridNotes{m.overlayKey, m.cursorPos.line, notesToUndo}
+}
+
 func (m model) Save() {
-
 	Write(m.definition)
-
-	// var buf strings.Builder
-	// // lines        []lineDefinition
-	// // beats        uint8
-	// // tempo        int
-	// // subdivisions int
-	// // keyline      uint8
-	// // overlays     overlays
-	// // metaOverlays map[overlayKey]metaOverlay
-	// buf.WriteString(m.SerializeLines())
-	// buf.WriteString(m.SerializeBeat())
-	// buf.WriteString(m.SerializeTempo())
-	// buf.WriteString(m.SerializeKeyLine())
-	// buf.WriteString(m.SerializeOverlays())
-	// buf.WriteString(m.SerializeMetaOverlays())
-	//
-	// err := os.WriteFile("./filename.seq", []byte(buf.String()), 0666)
-	// if err != nil {
-	// 	panic("Could not save")
-	// }
 }
 
 func (m model) SerializeLines() string {
