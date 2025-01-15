@@ -9,68 +9,68 @@ import (
 
 func TestGetMatchingKeys(t *testing.T) {
 	testCases := []struct {
-		desc      string
-		keys      []overlayKey
-		keyCycles int
-		expected  []overlayKey
-		run       bool
-		model     model
+		desc       string
+		keys       []overlayKey
+		keyCycles  int
+		expected   []overlayKey
+		run        bool
+		definition Definition
 	}{
 		{
-			desc:      "A",
-			keyCycles: 1,
-			keys:      []overlayKey{{2, 1}},
-			expected:  []overlayKey{},
-			model:     model{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			desc:       "A",
+			keyCycles:  1,
+			keys:       []overlayKey{{2, 1}},
+			expected:   []overlayKey{},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
 		},
 		{
-			desc:      "B",
-			keyCycles: 5,
-			keys:      []overlayKey{{2, 1}},
-			expected:  []overlayKey{},
-			model:     model{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			desc:       "B",
+			keyCycles:  5,
+			keys:       []overlayKey{{2, 1}},
+			expected:   []overlayKey{},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
 		},
 		{
-			desc:      "C",
-			keyCycles: 3,
-			keys:      []overlayKey{{3, 1}, {2, 1}},
-			expected:  []overlayKey{{3, 1}},
-			model:     model{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			desc:       "C",
+			keyCycles:  3,
+			keys:       []overlayKey{{3, 1}, {2, 1}},
+			expected:   []overlayKey{{3, 1}},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
 		},
 		{
-			desc:      "D",
-			keyCycles: 3,
-			keys:      []overlayKey{{3, 2}},
-			expected:  []overlayKey{{3, 2}},
-			model:     model{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			desc:       "D",
+			keyCycles:  3,
+			keys:       []overlayKey{{3, 2}},
+			expected:   []overlayKey{{3, 2}},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
 		},
 		{
-			desc:      "E",
-			keyCycles: 1,
-			keys:      []overlayKey{{3, 2}},
-			expected:  []overlayKey{},
-			model:     model{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			desc:       "E",
+			keyCycles:  1,
+			keys:       []overlayKey{{3, 2}},
+			expected:   []overlayKey{},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
 		},
 		{
-			desc:      "F",
-			keyCycles: 11,
-			keys:      []overlayKey{{3, 8}, {3, 4}},
-			expected:  []overlayKey{{3, 8}, {3, 4}},
-			model:     model{metaOverlays: map[overlayKey]metaOverlay{{3, 4}: {true, false}}},
+			desc:       "F",
+			keyCycles:  11,
+			keys:       []overlayKey{{3, 8}, {3, 4}},
+			expected:   []overlayKey{{3, 8}, {3, 4}},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{3, 4}: {true, false}}},
 		},
 		{
-			desc:      "G",
-			keyCycles: 11,
-			keys:      []overlayKey{{3, 8}, {3, 4}},
-			expected:  []overlayKey{{3, 8}},
-			model:     model{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			desc:       "G",
+			keyCycles:  11,
+			keys:       []overlayKey{{3, 8}, {3, 4}},
+			expected:   []overlayKey{{3, 8}},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
 		},
 		{
 			desc:      "H",
 			keyCycles: 12,
 			keys:      []overlayKey{{3, 1}, {2, 1}, {1, 1}},
 			expected:  []overlayKey{{3, 1}, {2, 1}, {1, 1}},
-			model: model{
+			definition: Definition{
 				metaOverlays: map[overlayKey]metaOverlay{
 					{1, 1}: {true, false},
 					{2, 1}: {true, false},
@@ -78,16 +78,16 @@ func TestGetMatchingKeys(t *testing.T) {
 			},
 		},
 		{
-			desc:      "I",
-			keyCycles: 9,
-			keys:      []overlayKey{{3, 1}, {2, 1}, {1, 1}},
-			expected:  []overlayKey{{3, 1}, {2, 1}},
-			model:     model{metaOverlays: map[overlayKey]metaOverlay{{3, 1}: {false, true}}},
+			desc:       "I",
+			keyCycles:  9,
+			keys:       []overlayKey{{3, 1}, {2, 1}, {1, 1}},
+			expected:   []overlayKey{{3, 1}, {2, 1}},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{3, 1}: {false, true}}},
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			result := tC.model.GetMatchingOverlays(tC.keyCycles, tC.keys)
+			result := tC.definition.GetMatchingOverlays(tC.keyCycles, tC.keys)
 			assert.Equal(t, tC.expected, result)
 		})
 	}
@@ -122,55 +122,55 @@ func TestOverlayKeySort(t *testing.T) {
 
 func TestCombinePattern(t *testing.T) {
 	testCases := []struct {
-		desc   string
-		model  model
-		result overlay
-		keys   []overlayKey
+		desc       string
+		definition Definition
+		result     overlay
+		keys       []overlayKey
 	}{
 		{
 			desc: "A",
-			model: model{
+			definition: Definition{
 				overlays: overlays{
 					{1, 1}: overlay{
-						{1, 1}: note{action: 1},
+						{1, 1}: note{Action: 1},
 					},
 					{1, 2}: overlay{
-						{1, 2}: note{action: 2},
+						{1, 2}: note{Action: 2},
 					},
 				},
 			},
 			keys: []overlayKey{{1, 2}, {1, 1}},
 			result: overlay{
-				{1, 1}: note{action: 1},
-				{1, 2}: note{action: 2},
+				{1, 1}: note{Action: 1},
+				{1, 2}: note{Action: 2},
 			},
 		},
 		{
 			desc: "B",
-			model: model{
+			definition: Definition{
 				overlays: overlays{
 					{1, 1}: overlay{
-						{1, 1}: note{action: 1},
+						{1, 1}: note{Action: 1},
 					},
 					{2, 1}: overlay{
-						{1, 2}: note{action: 2},
+						{1, 2}: note{Action: 2},
 					},
 					{3, 1}: overlay{
-						{1, 3}: note{action: 3},
+						{1, 3}: note{Action: 3},
 					},
 				},
 			},
 			keys: []overlayKey{{3, 1}, {2, 1}, {1, 1}},
 			result: overlay{
-				{1, 1}: note{action: 1},
-				{1, 2}: note{action: 2},
-				{1, 3}: note{action: 3},
+				{1, 1}: note{Action: 1},
+				{1, 2}: note{Action: 2},
+				{1, 3}: note{Action: 3},
 			},
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			assert.Equal(t, tC.result, tC.model.CombinedPattern(tC.keys))
+			assert.Equal(t, tC.result, tC.definition.CombinedPattern(tC.keys))
 		})
 	}
 }

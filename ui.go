@@ -743,7 +743,7 @@ func Is(msg tea.KeyMsg, k key.Binding) bool {
 	return key.Matches(msg, k)
 }
 
-func (m model) GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKey {
+func (d Definition) GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKey {
 	var matchedKeys = make([]overlayKey, 0, 5)
 
 	slices.SortFunc(keys, OverlayKeySort)
@@ -753,13 +753,13 @@ func (m model) GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKe
 		matches := DoesKeyMatch(keyCycles, key)
 		if (matches && len(matchedKeys) == 0) || pressNext {
 			matchedKeys = append(matchedKeys, key)
-			if m.definition.metaOverlays[key].PressDown {
+			if d.metaOverlays[key].PressDown {
 				pressNext = true
 			} else {
 				pressNext = false
 			}
 		} else if matches && len(matchedKeys) != 0 {
-			if m.definition.metaOverlays[key].PressUp {
+			if d.metaOverlays[key].PressUp {
 				matchedKeys = append(matchedKeys, key)
 			}
 		}
@@ -885,7 +885,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					panic("sendFn is broken")
 				}
 				beatInterval := m.BeatInterval()
-				return m, tea.Batch(PlayBeat(beatInterval, m.definition.lines, m.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
+				return m, tea.Batch(PlayBeat(beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
 			} else {
 				m.keyCycles = 0
 				m.playingMatchedOverlays = []overlayKey{}
@@ -981,7 +981,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				panic("sendFn is broken")
 			}
 			beatInterval := m.BeatInterval()
-			return m, tea.Batch(PlayBeat(beatInterval, m.definition.lines, m.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
+			return m, tea.Batch(PlayBeat(beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
 		}
 	}
 	var cmd tea.Cmd
@@ -1080,7 +1080,7 @@ func (m *model) ClearOverlay() {
 }
 
 func (m *model) advanceCurrentBeat() {
-	combinedPattern := m.CombinedPattern(m.playingMatchedOverlays)
+	combinedPattern := m.definition.CombinedPattern(m.playingMatchedOverlays)
 	for i, currentState := range m.playState {
 		advancedBeat := int8(currentState.currentBeat) + currentState.direction
 
@@ -1111,14 +1111,14 @@ func (m *model) advanceKeyCycle() {
 
 func (m *model) determineMatachedOverlays() {
 	keys := m.OverlayKeys()
-	m.playingMatchedOverlays = m.GetMatchingOverlays(m.keyCycles, keys)
+	m.playingMatchedOverlays = m.definition.GetMatchingOverlays(m.keyCycles, keys)
 }
 
-func (m model) CombinedPattern(keys []overlayKey) overlay {
+func (d Definition) CombinedPattern(keys []overlayKey) overlay {
 	var combinedOverlay = make(overlay)
 
 	for _, key := range slices.Backward(keys) {
-		for gridKey, note := range m.definition.overlays[key] {
+		for gridKey, note := range d.overlays[key] {
 			combinedOverlay[gridKey] = note
 		}
 	}
@@ -1128,9 +1128,9 @@ func (m model) CombinedPattern(keys []overlayKey) overlay {
 func (m *model) fill(every uint8) {
 	start := m.cursorPos.beat
 
-	matchedKeys := m.GetMatchingOverlays(0, m.OverlayKeys())
+	matchedKeys := m.definition.GetMatchingOverlays(0, m.OverlayKeys())
 	matchedKeys = append(matchedKeys, m.overlayKey)
-	combinedOverlay := m.CombinedPattern(matchedKeys)
+	combinedOverlay := m.definition.CombinedPattern(matchedKeys)
 
 	for i := uint8(0); i < m.definition.beats; i++ {
 		if i%every == 0 {
@@ -1393,7 +1393,7 @@ func lineView(lineNumber uint8, m model) string {
 	}
 
 	hasRoot := m.definition.metaOverlays[overlayKey{1, 1}].PressUp || slices.Contains(currentKeys, overlayKey{1, 1})
-	combinedOverlay := m.CombinedPattern(RemoveRootKey(currentKeys))
+	combinedOverlay := m.definition.CombinedPattern(RemoveRootKey(currentKeys))
 
 	for i := uint8(0); i < m.definition.beats; i++ {
 		currentGridKey := gridKey{uint8(lineNumber), i}
