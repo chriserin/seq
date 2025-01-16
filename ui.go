@@ -508,6 +508,10 @@ func (m *model) PushRedo(undo Undoable, redo Undoable) {
 	}
 }
 
+func (m *model) ResetRedo() {
+	m.redoStack = NIL_STACK
+}
+
 func (m *model) PopUndo() UndoStack {
 	firstout := m.undoStack
 	if firstout != NIL_STACK && firstout.next != nil {
@@ -1053,6 +1057,7 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 		redoable := m.UndoableOverlay()
 		m.PushUndo(undoable, redoable)
 	}
+	m.ResetRedo()
 	return m
 }
 
