@@ -1201,7 +1201,11 @@ func (m *model) KeysBelowCurrent() []overlayKey {
 	slices.SortFunc(keys, OverlayKeySort)
 	slices.Reverse(keys)
 	indexOfCurrent := slices.Index(keys, m.overlayKey)
-	return keys[:indexOfCurrent]
+	if indexOfCurrent >= 0 {
+		return keys[:indexOfCurrent]
+	} else {
+		return []overlayKey{}
+	}
 }
 
 func (m *model) fill(every uint8) {
