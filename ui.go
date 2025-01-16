@@ -456,9 +456,8 @@ func (m *model) PushRedo(undo Undoable, redo Undoable) {
 
 func (m *model) PopUndo() UndoStack {
 	firstout := m.undoStack
-	if firstout != NIL_STACK && m.undoStack.next != nil {
-		lastin := *m.undoStack.next
-		m.undoStack = lastin
+	if firstout != NIL_STACK && firstout.next != nil {
+		m.undoStack = *m.undoStack.next
 	} else {
 		m.undoStack = NIL_STACK
 	}
@@ -467,9 +466,8 @@ func (m *model) PopUndo() UndoStack {
 
 func (m *model) PopRedo() UndoStack {
 	firstout := m.redoStack
-	if firstout != NIL_STACK && m.redoStack.next != nil {
-		lastin := *m.redoStack.next
-		m.redoStack = lastin
+	if firstout != NIL_STACK && firstout.next != nil {
+		m.redoStack = *m.redoStack.next
 	} else {
 		m.redoStack = NIL_STACK
 	}
@@ -962,10 +960,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.Save()
 		case Is(msg, m.keys.Undo):
 			undoStack := m.Undo()
-			m.PushRedo(undoStack.undo, undoStack.redo)
+			if undoStack != NIL_STACK {
+				m.PushRedo(undoStack.undo, undoStack.redo)
+			}
 		case Is(msg, m.keys.Redo):
 			undoStack := m.Redo()
-			m.PushUndo(undoStack.undo, undoStack.redo)
+			if undoStack != NIL_STACK {
+				m.PushUndo(undoStack.undo, undoStack.redo)
+			}
 		}
 		if msg.String() >= "1" && msg.String() <= "9" {
 			undoable := m.UndoableLine()
