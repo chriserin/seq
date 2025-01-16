@@ -1134,6 +1134,24 @@ func (d Definition) CombinedPattern(keys []overlayKey) overlay {
 	return combinedOverlay
 }
 
+type VisualNote struct {
+	origin overlayKey
+	note
+}
+
+type VisualOverlay map[gridKey]VisualNote
+
+func (d Definition) VisualCombinedPattern(keys []overlayKey) VisualOverlay {
+	var combinedOverlay = make(VisualOverlay)
+
+	for _, key := range slices.Backward(keys) {
+		for gridKey, note := range d.overlays[key] {
+			combinedOverlay[gridKey] = VisualNote{key, note}
+		}
+	}
+	return combinedOverlay
+}
+
 func (m *model) KeysBelowCurrent() []overlayKey {
 	keys := m.OverlayKeys()
 	slices.SortFunc(keys, OverlayKeySort)
@@ -1145,10 +1163,7 @@ func (m *model) KeysBelowCurrent() []overlayKey {
 func (m *model) fill(every uint8) {
 	start := m.cursorPos.beat
 
-	keysBelowCurrent := m.KeysBelowCurrent()
-	matchedKeys := m.definition.GetMatchingOverlays(GetMinimumKeyCycle(m.overlayKey), keysBelowCurrent)
-	matchedKeys = append(matchedKeys, m.overlayKey)
-	slices.SortFunc(matchedKeys, OverlayKeySort)
+	matchedKeys := m.EditKeys()
 	combinedOverlay := m.definition.CombinedPattern(matchedKeys)
 
 	for i := uint8(0); i < m.definition.beats; i++ {
@@ -1169,6 +1184,22 @@ func (m *model) fill(every uint8) {
 				m.CurrentNotable().SetNote(gridKey, note{5, 0, 0})
 			}
 		}
+	}
+}
+
+func (m *model) EditKeys() []overlayKey {
+	keysBelowCurrent := m.KeysBelowCurrent()
+	matchedKeys := m.definition.GetMatchingOverlays(GetMinimumKeyCycle(m.overlayKey), keysBelowCurrent)
+	matchedKeys = append(matchedKeys, m.overlayKey)
+	slices.SortFunc(matchedKeys, OverlayKeySort)
+	return matchedKeys
+}
+
+func (m *model) CurrentKeys() []overlayKey {
+	if m.playing {
+		return m.playingMatchedOverlays
+	} else {
+		return m.EditKeys()
 	}
 }
 
@@ -1336,6 +1367,8 @@ var accentModeStyle = lipgloss.NewStyle().Background(accents[1].color).Foregroun
 func (m model) ViewTriggerSeq() string {
 	var buf strings.Builder
 	var mode string
+	visualCombinedPattern := m.definition.VisualCombinedPattern(m.CurrentKeys())
+
 	if m.accentMode {
 		if m.accentModifier > 0 {
 			mode = " Accent Mode \u2191 "
@@ -1350,7 +1383,7 @@ func (m model) ViewTriggerSeq() string {
 	}
 	buf.WriteString("  ┌─────────────────────────────────\n")
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
-		buf.WriteString(lineView(i, m))
+		buf.WriteString(lineView(i, m, visualCombinedPattern))
 	}
 	buf.WriteString(m.CurrentOverlayView())
 	buf.WriteString("\n")
@@ -1398,31 +1431,19 @@ func KeyLineIndicator(k uint8, l uint8) string {
 	}
 }
 
-func lineView(lineNumber uint8, m model) string {
+func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) string {
 	var buf strings.Builder
 	buf.WriteString(fmt.Sprintf("%d%s│", lineNumber, KeyLineIndicator(m.definition.keyline, lineNumber)))
 
-	var backgroundSeqColor lipgloss.Color
-
-	var currentKeys []overlayKey
-	if m.playing {
-		currentKeys = m.playingMatchedOverlays
-	} else {
-		currentKeys = []overlayKey{m.overlayKey}
-	}
-
-	hasRoot := m.definition.metaOverlays[overlayKey{1, 1}].PressUp || slices.Contains(currentKeys, overlayKey{1, 1})
-	combinedOverlay := m.definition.CombinedPattern(RemoveRootKey(currentKeys))
-
 	for i := uint8(0); i < m.definition.beats; i++ {
 		currentGridKey := gridKey{uint8(lineNumber), i}
-		overlayNote, hasOverlayNote := combinedOverlay[currentGridKey]
-		rootNote := m.definition.overlays[ROOT_OVERLAY][currentGridKey]
+		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
 
-		if hasOverlayNote {
-			backgroundSeqColor = seqOverlayColor
-		} else if m.playing && m.playState[lineNumber].currentBeat == i {
+		var backgroundSeqColor lipgloss.Color
+		if m.playing && m.playState[lineNumber].currentBeat == i {
 			backgroundSeqColor = seqCursorColor
+		} else if hasNote && overlayNote.origin != ROOT_OVERLAY {
+			backgroundSeqColor = seqOverlayColor
 		} else if i%8 > 3 {
 			backgroundSeqColor = altSeqColor
 		} else {
@@ -1431,12 +1452,7 @@ func lineView(lineNumber uint8, m model) string {
 
 		var char string
 		var foregroundColor lipgloss.Color
-		var currentNote note
-		if hasOverlayNote || !hasRoot {
-			currentNote = overlayNote
-		} else {
-			currentNote = rootNote
-		}
+		var currentNote = overlayNote.note
 		currentAccent := accents[currentNote.AccentIndex]
 		currentAction := currentNote.Action
 
