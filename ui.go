@@ -743,6 +743,15 @@ func Is(msg tea.KeyMsg, k key.Binding) bool {
 	return key.Matches(msg, k)
 }
 
+func GetMinimumKeyCycle(key overlayKey) int {
+	for i := 0; i < 100; i++ {
+		if DoesKeyMatch(i, key) {
+			return i
+		}
+	}
+	return 100
+}
+
 func (d Definition) GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKey {
 	var matchedKeys = make([]overlayKey, 0, 5)
 
@@ -1125,11 +1134,21 @@ func (d Definition) CombinedPattern(keys []overlayKey) overlay {
 	return combinedOverlay
 }
 
+func (m *model) KeysBelowCurrent() []overlayKey {
+	keys := m.OverlayKeys()
+	slices.SortFunc(keys, OverlayKeySort)
+	slices.Reverse(keys)
+	indexOfCurrent := slices.Index(keys, m.overlayKey)
+	return keys[:indexOfCurrent]
+}
+
 func (m *model) fill(every uint8) {
 	start := m.cursorPos.beat
 
-	matchedKeys := m.definition.GetMatchingOverlays(0, m.OverlayKeys())
+	keysBelowCurrent := m.KeysBelowCurrent()
+	matchedKeys := m.definition.GetMatchingOverlays(GetMinimumKeyCycle(m.overlayKey), keysBelowCurrent)
 	matchedKeys = append(matchedKeys, m.overlayKey)
+	slices.SortFunc(matchedKeys, OverlayKeySort)
 	combinedOverlay := m.definition.CombinedPattern(matchedKeys)
 
 	for i := uint8(0); i < m.definition.beats; i++ {
