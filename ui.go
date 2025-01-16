@@ -404,7 +404,6 @@ type UndoLineToNothing struct {
 }
 
 func (ultn UndoLineToNothing) ApplyUndo(m *model) {
-	fmt.Println("Line to Nothing")
 	overlay := m.definition.overlays[ultn.overlayKey]
 	for i := range m.definition.beats {
 		delete(overlay, gridKey{ultn.line, i})
@@ -1450,31 +1449,37 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 			backgroundSeqColor = seqColor
 		}
 
-		var char string
-		var foregroundColor lipgloss.Color
-		var currentNote = overlayNote.note
-		currentAccent := accents[currentNote.AccentIndex]
-		currentAction := currentNote.Action
+		char, foregroundColor := overlayNote.note.ViewComponents()
 
-		if currentAction == ACTION_NOTHING {
-			char = string(currentAccent.shape) + string(ratchets[currentNote.RatchetIndex])
-			foregroundColor = currentAccent.color
-		} else {
-			lineaction := lineactions[currentAction]
-			char = string(lineaction.shape)
-			foregroundColor = lineaction.color
-		}
-
+		style := lipgloss.NewStyle().Background(backgroundSeqColor)
 		if m.cursorPos.line == uint8(lineNumber) && m.cursorPos.beat == i {
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
-			buf.WriteString(lipgloss.NewStyle().Background(backgroundSeqColor).Render(char))
 		} else {
-			style := lipgloss.NewStyle().Background(backgroundSeqColor).Foreground(foregroundColor)
-			buf.WriteString(style.Render(char))
+			style = style.Foreground(foregroundColor)
 		}
+		buf.WriteString(style.Render(char))
 	}
 
 	buf.WriteString("\n")
 	return buf.String()
+}
+
+func (n note) ViewComponents() (string, lipgloss.Color) {
+
+	currentNote := n
+	currentAccent := accents[currentNote.AccentIndex]
+	currentAction := currentNote.Action
+	var char string
+	var foregroundColor lipgloss.Color
+	if currentAction == ACTION_NOTHING {
+		char = string(currentAccent.shape) + string(ratchets[currentNote.RatchetIndex])
+		foregroundColor = currentAccent.color
+	} else {
+		lineaction := lineactions[currentAction]
+		char = string(lineaction.shape)
+		foregroundColor = lineaction.color
+	}
+
+	return char, foregroundColor
 }
