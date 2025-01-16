@@ -1022,19 +1022,16 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.ClearOverlay()
 	}
 	if msg.String() >= "1" && msg.String() <= "9" {
-		undoable := m.UndoableLine()
-		m.EnsureOverlay()
 		beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
 		if m.accentMode {
 			m.incrementAccent(uint8(beatInterval))
 		} else {
 			m.fill(uint8(beatInterval))
 		}
-		redoable := m.UndoableLine()
-		m.PushUndo(undoable, redoable)
 	}
 	return m
 }
+
 func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 	keys := definitionKeys
 	if keys.IsNoteWiseKey(msg) {
