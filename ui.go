@@ -429,6 +429,19 @@ func (ugn UndoLineGridNotes) ApplyUndo(m *model) {
 	}
 }
 
+type UndoGridNotes struct {
+	overlayKey
+	gridNotes []GridNote
+}
+
+func (ugn UndoGridNotes) ApplyUndo(m *model) {
+	m.EnsureOverlay()
+	overlay := m.definition.overlays[ugn.overlayKey]
+	for _, gridNote := range ugn.gridNotes {
+		overlay[gridNote.gridKey] = gridNote.note
+	}
+}
+
 type UndoToNothing struct {
 	overlayKey overlayKey
 	location   gridKey
@@ -1037,8 +1050,11 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 		redoable := m.UndoableLine()
 		m.PushUndo(undoable, redoable)
 	} else {
+		undoable := m.UndoableOverlay()
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
+		redoable := m.UndoableOverlay()
+		m.PushUndo(undoable, redoable)
 	}
 	return m
 }
@@ -1073,6 +1089,18 @@ func (m model) UndoableLine() Undoable {
 		return UndoLineToNothing{m.overlayKey, m.cursorPos.line}
 	}
 	return UndoLineGridNotes{m.overlayKey, m.cursorPos.line, notesToUndo}
+}
+
+func (m model) UndoableOverlay() Undoable {
+	_, hasOverlay := m.definition.overlays[m.overlayKey]
+	if !hasOverlay {
+		return UndoNewOverlay{m.overlayKey}
+	}
+	notesToUndo := make([]GridNote, 0, m.definition.beats)
+	for key, note := range m.definition.overlays[m.overlayKey] {
+		notesToUndo = append(notesToUndo, GridNote{key, note})
+	}
+	return UndoGridNotes{m.overlayKey, notesToUndo}
 }
 
 func (m model) Save() {
