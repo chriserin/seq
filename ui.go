@@ -69,6 +69,11 @@ var noteWiseKeys = []key.Binding{
 
 var lineWiseKeys = []key.Binding{
 	definitionKeys.ClearLine,
+	definitionKeys.NumberPattern,
+}
+
+var overlayWiseKeys = []key.Binding{
+	definitionKeys.ClearSeq,
 }
 
 func (dkm definitionKeyMap) IsNoteWiseKey(keyMsg tea.KeyMsg) bool {
@@ -82,6 +87,15 @@ func (dkm definitionKeyMap) IsNoteWiseKey(keyMsg tea.KeyMsg) bool {
 
 func (dkm definitionKeyMap) IsLineWiseKey(keyMsg tea.KeyMsg) bool {
 	for _, kb := range lineWiseKeys {
+		if key.Matches(keyMsg, kb) {
+			return true
+		}
+	}
+	return false
+}
+
+func (dkm definitionKeyMap) IsOverlayWiseKey(keyMsg tea.KeyMsg) bool {
+	for _, kb := range overlayWiseKeys {
 		if key.Matches(keyMsg, kb) {
 			return true
 		}
@@ -1050,12 +1064,14 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 		m = m.UpdateDefinitionKeys(msg)
 		redoable := m.UndoableLine()
 		m.PushUndo(undoable, redoable)
-	} else {
+	} else if keys.IsOverlayWiseKey(msg) {
 		undoable := m.UndoableOverlay()
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 		redoable := m.UndoableOverlay()
 		m.PushUndo(undoable, redoable)
+	} else {
+		m = m.UpdateDefinitionKeys(msg)
 	}
 	m.ResetRedo()
 	return m
