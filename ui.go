@@ -20,89 +20,129 @@ import (
 	_ "gitlab.com/gomidi/midi/v2/drivers/portmididrv"
 )
 
-type keymap struct {
+type transitiveKeyMap struct {
 	Quit                 key.Binding
 	Help                 key.Binding
 	CursorUp             key.Binding
 	CursorDown           key.Binding
 	CursorLeft           key.Binding
 	CursorRight          key.Binding
-	TriggerAdd           key.Binding
-	TriggerRemove        key.Binding
-	OverlayTriggerRemove key.Binding
 	PlayStop             key.Binding
-	ClearLine            key.Binding
-	ClearSeq             key.Binding
 	TempoInputSwitch     key.Binding
 	Increase             key.Binding
 	Decrease             key.Binding
 	ToggleAccentMode     key.Binding
 	ToggleAccentModifier key.Binding
+	OverlayInputSwitch   key.Binding
+	SetupInputSwitch     key.Binding
+	NextOverlay          key.Binding
+	PrevOverlay          key.Binding
+	Save                 key.Binding
+	Undo                 key.Binding
+	Redo                 key.Binding
+}
+
+type definitionKeyMap struct {
+	TriggerAdd           key.Binding
+	TriggerRemove        key.Binding
+	OverlayTriggerRemove key.Binding
+	ClearLine            key.Binding
+	ClearSeq             key.Binding
 	RatchetIncrease      key.Binding
 	RatchetDecrease      key.Binding
 	ActionAddLineReset   key.Binding
 	ActionAddLineReverse key.Binding
-	OverlayInputSwitch   key.Binding
-	SetupInputSwitch     key.Binding
 	SelectKeyLine        key.Binding
-	NextOverlay          key.Binding
-	PrevOverlay          key.Binding
 	PressDownOverlay     key.Binding
-	Save                 key.Binding
-	Undo                 key.Binding
-	Redo                 key.Binding
+	NumberPattern        key.Binding
+}
+
+var noteWiseKeys = []key.Binding{
+	definitionKeys.TriggerAdd,
+	definitionKeys.TriggerRemove,
+	definitionKeys.OverlayTriggerRemove,
+	definitionKeys.RatchetIncrease,
+	definitionKeys.RatchetDecrease,
+	definitionKeys.ActionAddLineReset,
+	definitionKeys.ActionAddLineReverse,
+}
+
+var lineWiseKeys = []key.Binding{
+	definitionKeys.ClearLine,
+}
+
+func (dkm definitionKeyMap) IsNoteWiseKey(keyMsg tea.KeyMsg) bool {
+	for _, kb := range noteWiseKeys {
+		if key.Matches(keyMsg, kb) {
+			return true
+		}
+	}
+	return false
+}
+
+func (dkm definitionKeyMap) IsLineWiseKey(keyMsg tea.KeyMsg) bool {
+	for _, kb := range lineWiseKeys {
+		if key.Matches(keyMsg, kb) {
+			return true
+		}
+	}
+	return false
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
 	return key.NewBinding(key.WithKeys(keyboardKey...), key.WithHelp(keyboardKey[0], help))
 }
 
-var keys = keymap{
+var transitiveKeys = transitiveKeyMap{
 	Quit:                 Key("Quit", "q"),
 	Help:                 Key("Expand Help", "?"),
 	CursorUp:             Key("Up", "k"),
 	CursorDown:           Key("Down", "j"),
 	CursorLeft:           Key("Left", "h"),
 	CursorRight:          Key("Right", "l"),
-	TriggerAdd:           Key("Add Trigger", "f"),
-	TriggerRemove:        Key("Remove Trigger", "d"),
-	OverlayTriggerRemove: Key("Remove Overlay Note", "x"),
-	ClearLine:            Key("Clear Line", "c"),
-	ClearSeq:             Key("Clear Overlay", "C"),
 	PlayStop:             Key("Play/Stop", " "),
 	TempoInputSwitch:     Key("Select Tempo Indicator", "ctrl+t"),
 	Increase:             Key("Tempo Increase", "+", "="),
 	Decrease:             Key("Tempo Decrease", "-"),
 	ToggleAccentMode:     Key("Toggle Accent Mode", "A"),
 	ToggleAccentModifier: Key("Toggle Accent Modifier", "a"),
-	RatchetIncrease:      Key("Increase Ratchet", "R"),
-	RatchetDecrease:      Key("Decrease Ratchet", "r"),
-	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
-	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
 	OverlayInputSwitch:   Key("Select Overlay Indicator", "ctrl+o"),
 	SetupInputSwitch:     Key("Setup Input Indicator", "ctrl+s"),
-	SelectKeyLine:        Key("Select Key Line", "K"),
 	NextOverlay:          Key("Next Overlay", "{"),
 	PrevOverlay:          Key("Prev Overlay", "}"),
-	PressDownOverlay:     Key("PressDown Overlay", "ctrl+p"),
 	Save:                 Key("Save", "ctrl+w"),
 	Undo:                 Key("Undo", "u"),
 	Redo:                 Key("Redo", "ctrl+r"),
 }
 
-func (k keymap) ShortHelp() []key.Binding {
-	return []key.Binding{
-		k.Help, k.Quit,
-	}
+var definitionKeys = definitionKeyMap{
+	TriggerAdd:           Key("Add Trigger", "f"),
+	TriggerRemove:        Key("Remove Trigger", "d"),
+	OverlayTriggerRemove: Key("Remove Overlay Note", "x"),
+	ClearLine:            Key("Clear Line", "c"),
+	ClearSeq:             Key("Clear Overlay", "C"),
+	RatchetIncrease:      Key("Increase Ratchet", "R"),
+	RatchetDecrease:      Key("Decrease Ratchet", "r"),
+	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
+	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
+	SelectKeyLine:        Key("Select Key Line", "K"),
+	PressDownOverlay:     Key("PressDown Overlay", "ctrl+p"),
+	NumberPattern:        Key("Number Pattern", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
 }
 
-func (k keymap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		{k.Help, k.Quit},
-		{k.CursorUp, k.CursorDown, k.CursorLeft, k.CursorRight},
-		{k.TriggerAdd, k.TriggerRemove},
-	}
-}
+// func (k keymap) ShortHelp() []key.Binding {
+// 	return []key.Binding{
+// 		k.Help, k.Quit,
+// 	}
+// }
+//
+// func (k keymap) FullHelp() [][]key.Binding {
+// 	return [][]key.Binding{
+// 		{k.Help, k.Quit},
+// 		{k.CursorUp, k.CursorDown, k.CursorLeft, k.CursorRight},
+// 		{k.TriggerAdd, k.TriggerRemove},
+// 	}
+// }
 
 type Accent struct {
 	shape rune
@@ -287,7 +327,8 @@ func (l *lineDefinition) DecrementNote() {
 }
 
 type model struct {
-	keys                      keymap
+	transitiveStatekeys       transitiveKeyMap
+	definitionKeys            definitionKeyMap
 	help                      help.Model
 	cursor                    cursor.Model
 	cursorPos                 gridKey
@@ -697,15 +738,16 @@ func InitModel(midiOutport drivers.Out) model {
 	}
 
 	return model{
-		keys:           keys,
-		help:           help.New(),
-		cursorPos:      gridKey{0, 0},
-		cursor:         newCursor,
-		outport:        midiOutport,
-		accentModifier: 1,
-		logFile:        logFile,
-		overlayKey:     ROOT_OVERLAY,
-		definition:     definition,
+		transitiveStatekeys: transitiveKeys,
+		definitionKeys:      definitionKeys,
+		help:                help.New(),
+		cursorPos:           gridKey{0, 0},
+		cursor:              newCursor,
+		outport:             midiOutport,
+		accentModifier:      1,
+		logFile:             logFile,
+		overlayKey:          ROOT_OVERLAY,
+		definition:          definition,
 	}
 }
 
@@ -791,82 +833,31 @@ func DoesKeyMatch(keyCycles int, key overlayKey) bool {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	keys := transitiveKeys
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case Is(msg, m.keys.Quit):
+		case Is(msg, keys.Quit):
 			m.logFile.Close()
 			return m, tea.Quit
-		case Is(msg, m.keys.CursorDown):
+		case Is(msg, keys.CursorDown):
 			if m.cursorPos.line < uint8(len(m.definition.lines)-1) {
 				m.cursorPos.line++
 			}
-		case Is(msg, m.keys.CursorUp):
+		case Is(msg, keys.CursorUp):
 			if m.cursorPos.line > 0 {
 				m.cursorPos.line--
 			}
-		case Is(msg, m.keys.CursorLeft):
+		case Is(msg, keys.CursorLeft):
 			if m.cursorPos.beat > 0 {
 				m.cursorPos.beat--
 			}
-		case Is(msg, m.keys.CursorRight):
+		case Is(msg, keys.CursorRight):
 			if m.cursorPos.beat < m.definition.beats-1 {
 				m.cursorPos.beat++
 			}
-		case Is(msg, m.keys.TriggerAdd):
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.AddTrigger()
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.TriggerRemove):
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.RemoveTrigger()
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.OverlayTriggerRemove):
-			m.EnsureOverlay()
-			m.OverlayRemoveTrigger()
-		case Is(msg, m.keys.ClearLine):
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.ClearOverlayLine()
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.RatchetIncrease):
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.IncreaseRatchet()
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.RatchetDecrease):
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.DecreaseRatchet()
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.ActionAddLineReset):
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.AddAction(ACTION_LINE_RESET)
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.ActionAddLineReverse):
-			undoable := m.UndoableNote()
-			m.EnsureOverlay()
-			m.AddAction(ACTION_LINE_REVERSE)
-			redoable := m.UndoableNote()
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.SelectKeyLine):
-			undoable := UndoKeyline{m.definition.keyline}
-			m.definition.keyline = m.cursorPos.line
-			redoable := UndoKeyline{m.definition.keyline}
-			m.PushUndo(undoable, redoable)
-		case Is(msg, m.keys.ClearSeq):
-			m.ClearOverlay()
-		case Is(msg, m.keys.PlayStop):
+		case Is(msg, keys.PlayStop):
 			if !m.playing && !m.outport.IsOpen() {
 				err := m.outport.Open()
 				if err != nil {
@@ -896,19 +887,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.keyCycles = 0
 				m.playingMatchedOverlays = []overlayKey{}
 			}
-		case Is(msg, m.keys.OverlayInputSwitch):
+		case Is(msg, keys.OverlayInputSwitch):
 			m.overlaySelectionIndicator = (m.overlaySelectionIndicator + 1) % 3
 			m.tempoSelectionIndicator = 0
 			m.setupSelectionIndicator = 0
-		case Is(msg, m.keys.TempoInputSwitch):
+		case Is(msg, keys.TempoInputSwitch):
 			m.tempoSelectionIndicator = (m.tempoSelectionIndicator + 1) % 3
 			m.overlaySelectionIndicator = 0
 			m.setupSelectionIndicator = 0
-		case Is(msg, m.keys.SetupInputSwitch):
+		case Is(msg, keys.SetupInputSwitch):
 			m.setupSelectionIndicator = (m.setupSelectionIndicator + 1) % 3
 			m.overlaySelectionIndicator = 0
 			m.tempoSelectionIndicator = 0
-		case Is(msg, m.keys.Increase):
+		case Is(msg, keys.Increase):
 			switch {
 			case m.tempoSelectionIndicator == 1:
 				if m.definition.tempo < 300 {
@@ -927,7 +918,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case m.setupSelectionIndicator == 2:
 				m.definition.lines[m.cursorPos.line].IncrementNote()
 			}
-		case Is(msg, m.keys.Decrease):
+		case Is(msg, keys.Decrease):
 			switch {
 			case m.tempoSelectionIndicator == 1:
 				if m.definition.tempo > 30 {
@@ -946,40 +937,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case m.setupSelectionIndicator == 2:
 				m.definition.lines[m.cursorPos.line].DecrementNote()
 			}
-		case Is(msg, m.keys.ToggleAccentMode):
+		case Is(msg, keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
-		case Is(msg, m.keys.ToggleAccentModifier):
+		case Is(msg, keys.ToggleAccentModifier):
 			m.accentModifier = -1 * m.accentModifier
-		case Is(msg, m.keys.PrevOverlay):
+		case Is(msg, keys.PrevOverlay):
 			m.NextOverlay(-1)
-		case Is(msg, m.keys.NextOverlay):
+		case Is(msg, keys.NextOverlay):
 			m.NextOverlay(+1)
-		case Is(msg, m.keys.PressDownOverlay):
-			m.ToggleOverlayStackOptions(m.overlayKey)
-		case Is(msg, m.keys.Save):
+		case Is(msg, keys.Save):
 			m.Save()
-		case Is(msg, m.keys.Undo):
+		case Is(msg, keys.Undo):
 			undoStack := m.Undo()
 			if undoStack != NIL_STACK {
 				m.PushRedo(undoStack.undo, undoStack.redo)
 			}
-		case Is(msg, m.keys.Redo):
+		case Is(msg, keys.Redo):
 			undoStack := m.Redo()
 			if undoStack != NIL_STACK {
 				m.PushUndo(undoStack.undo, undoStack.redo)
 			}
-		}
-		if msg.String() >= "1" && msg.String() <= "9" {
-			undoable := m.UndoableLine()
-			m.EnsureOverlay()
-			beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
-			if m.accentMode {
-				m.incrementAccent(uint8(beatInterval))
-			} else {
-				m.fill(uint8(beatInterval))
-			}
-			redoable := m.UndoableLine()
-			m.PushUndo(undoable, redoable)
+		default:
+			m = m.UpdateDefinition(msg)
 		}
 	case beatMsg:
 		if m.playing {
@@ -998,6 +977,70 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
 	return m, cmd
+}
+
+func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
+	keys := definitionKeys
+	switch {
+	case Is(msg, keys.TriggerAdd):
+		m.AddTrigger()
+	case Is(msg, keys.TriggerRemove):
+		m.RemoveTrigger()
+	case Is(msg, keys.OverlayTriggerRemove):
+		m.OverlayRemoveTrigger()
+	case Is(msg, keys.ClearLine):
+		m.ClearOverlayLine()
+	case Is(msg, keys.RatchetIncrease):
+		m.IncreaseRatchet()
+	case Is(msg, keys.RatchetDecrease):
+		m.DecreaseRatchet()
+	case Is(msg, keys.ActionAddLineReset):
+		m.AddAction(ACTION_LINE_RESET)
+	case Is(msg, keys.ActionAddLineReverse):
+		m.AddAction(ACTION_LINE_REVERSE)
+	case Is(msg, keys.SelectKeyLine):
+		undoable := UndoKeyline{m.definition.keyline}
+		m.definition.keyline = m.cursorPos.line
+		redoable := UndoKeyline{m.definition.keyline}
+		m.PushUndo(undoable, redoable)
+	case Is(msg, keys.PressDownOverlay):
+		m.ToggleOverlayStackOptions(m.overlayKey)
+	case Is(msg, keys.ClearSeq):
+		m.ClearOverlay()
+	}
+	if msg.String() >= "1" && msg.String() <= "9" {
+		undoable := m.UndoableLine()
+		m.EnsureOverlay()
+		beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
+		if m.accentMode {
+			m.incrementAccent(uint8(beatInterval))
+		} else {
+			m.fill(uint8(beatInterval))
+		}
+		redoable := m.UndoableLine()
+		m.PushUndo(undoable, redoable)
+	}
+	return m
+}
+func (m model) UpdateDefinition(msg tea.KeyMsg) model {
+	keys := definitionKeys
+	if keys.IsNoteWiseKey(msg) {
+		undoable := m.UndoableNote()
+		m.EnsureOverlay()
+		m = m.UpdateDefinitionKeys(msg)
+		redoable := m.UndoableNote()
+		m.PushUndo(undoable, redoable)
+	} else if keys.IsLineWiseKey(msg) {
+		undoable := m.UndoableLine()
+		m.EnsureOverlay()
+		m = m.UpdateDefinitionKeys(msg)
+		redoable := m.UndoableLine()
+		m.PushUndo(undoable, redoable)
+	} else {
+		m.EnsureOverlay()
+		m = m.UpdateDefinitionKeys(msg)
+	}
+	return m
 }
 
 func (m model) UndoableNote() Undoable {
