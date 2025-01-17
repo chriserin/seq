@@ -40,6 +40,7 @@ type transitiveKeyMap struct {
 	Save                 key.Binding
 	Undo                 key.Binding
 	Redo                 key.Binding
+	New                  key.Binding
 }
 
 type definitionKeyMap struct {
@@ -127,6 +128,7 @@ var transitiveKeys = transitiveKeyMap{
 	Save:                 Key("Save", "ctrl+w"),
 	Undo:                 Key("Undo", "u"),
 	Redo:                 Key("Redo", "ctrl+r"),
+	New:                  Key("New", "ctrl+n"),
 }
 
 var definitionKeys = definitionKeyMap{
@@ -745,6 +747,18 @@ func InitPlayState(lines uint8) []linestate {
 	return linestates
 }
 
+func InitDefinition() Definition {
+	return Definition{
+		overlays:     make(overlays),
+		beats:        32,
+		tempo:        120,
+		keyline:      0,
+		subdivisions: 2,
+		lines:        InitLines(8),
+		metaOverlays: make(map[overlayKey]metaOverlay),
+	}
+}
+
 func InitModel(midiOutport drivers.Out) model {
 	logFile, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
@@ -757,26 +771,18 @@ func InitModel(midiOutport drivers.Out) model {
 	definition, hasDefinition := Read()
 
 	if !hasDefinition {
-		definition = Definition{
-			overlays:     make(overlays),
-			beats:        32,
-			tempo:        120,
-			keyline:      0,
-			subdivisions: 2,
-			lines:        InitLines(8),
-			metaOverlays: make(map[overlayKey]metaOverlay),
-		}
+		definition = InitDefinition()
 	}
 
 	return model{
 		transitiveStatekeys: transitiveKeys,
 		definitionKeys:      definitionKeys,
 		help:                help.New(),
-		cursorPos:           gridKey{0, 0},
 		cursor:              newCursor,
 		outport:             midiOutport,
-		accentModifier:      1,
 		logFile:             logFile,
+		cursorPos:           gridKey{0, 0},
+		accentModifier:      1,
 		overlayKey:          ROOT_OVERLAY,
 		definition:          definition,
 	}
@@ -988,6 +994,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if undoStack != NIL_STACK {
 				m.PushUndo(undoStack.undo, undoStack.redo)
 			}
+		case Is(msg, keys.New):
+			m.cursorPos = gridKey{0, 0}
+			m.overlayKey = ROOT_OVERLAY
+			m.accentModifier = 1
+			m.definition = InitDefinition()
 		default:
 			m = m.UpdateDefinition(msg)
 		}
