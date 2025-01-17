@@ -41,6 +41,7 @@ type transitiveKeyMap struct {
 	Undo                 key.Binding
 	Redo                 key.Binding
 	New                  key.Binding
+	ToggleRatchetMode    key.Binding
 }
 
 type definitionKeyMap struct {
@@ -51,6 +52,7 @@ type definitionKeyMap struct {
 	ClearSeq             key.Binding
 	RatchetIncrease      key.Binding
 	RatchetDecrease      key.Binding
+	ToggleRatchetMute    key.Binding
 	ActionAddLineReset   key.Binding
 	ActionAddLineReverse key.Binding
 	SelectKeyLine        key.Binding
@@ -64,6 +66,7 @@ var noteWiseKeys = []key.Binding{
 	definitionKeys.OverlayTriggerRemove,
 	definitionKeys.RatchetIncrease,
 	definitionKeys.RatchetDecrease,
+	definitionKeys.ToggleRatchetMute,
 	definitionKeys.ActionAddLineReset,
 	definitionKeys.ActionAddLineReverse,
 }
@@ -129,6 +132,7 @@ var transitiveKeys = transitiveKeyMap{
 	Undo:                 Key("Undo", "u"),
 	Redo:                 Key("Redo", "ctrl+r"),
 	New:                  Key("New", "ctrl+n"),
+	ToggleRatchetMode:    Key("Toggle Ratchet Mode", "ctrl+r"),
 }
 
 var definitionKeys = definitionKeyMap{
@@ -139,6 +143,7 @@ var definitionKeys = definitionKeyMap{
 	ClearSeq:             Key("Clear Overlay", "C"),
 	RatchetIncrease:      Key("Increase Ratchet", "R"),
 	RatchetDecrease:      Key("Decrease Ratchet", "r"),
+	ToggleRatchetMute:    Key("Toggle Ratchet Mute", "m"),
 	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
 	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
 	SelectKeyLine:        Key("Select Key Line", "K"),
@@ -180,10 +185,22 @@ var accents = []Accent{
 
 const C1 = 36
 
+type ratchet struct {
+	hits   [9]bool
+	length uint8
+	span   uint8
+}
+
+func InitRatchet() ratchet {
+	return ratchet{
+		hits: [9]bool{true, false, false, false, false, false, false, false, false},
+	}
+}
+
 type note struct {
-	AccentIndex  uint8
-	RatchetIndex uint8
-	Action       action
+	AccentIndex uint8
+	Ratchets    ratchet
+	Action      action
 }
 
 func (n note) IncrementAccent(modifier int8) note {
@@ -213,9 +230,9 @@ var lineactions = map[action]lineaction{
 	ACTION_LINE_REVERSE: {'←', "#f8730e"},
 }
 
-type ratchet string
+type ratchetDiacritical string
 
-var ratchets = []ratchet{
+var ratchets = []ratchetDiacritical{
 	"",
 	"\u0307",
 	"\u030A",
@@ -360,6 +377,8 @@ type model struct {
 	setupSelectionIndicator   uint8
 	accentMode                bool
 	accentModifier            int8
+	ratchetMode               bool
+	ratchetCursor             uint8
 	overlayKey                overlayKey
 	keyCycles                 int
 	playingMatchedOverlays    []overlayKey
@@ -622,9 +641,9 @@ func Play(beatInterval time.Duration, lines []lineDefinition, pattern overlay, c
 			if err != nil {
 				panic("note off failed")
 			}
-			if note.RatchetIndex > 0 {
-				ratchetInterval := beatInterval / time.Duration(note.RatchetIndex+1)
-				PlayRatchet(note.RatchetIndex-1, ratchetInterval, onMessage, offMessage, sendFn)
+			if note.Ratchets.length > 0 {
+				ratchetInterval := beatInterval / time.Duration(note.Ratchets.length+1)
+				PlayRatchet(note.Ratchets.length-1, ratchetInterval, onMessage, offMessage, sendFn)
 			}
 		}
 	}
@@ -668,11 +687,11 @@ func (m *model) CurrentNotable() Notable {
 }
 
 func (m *model) AddTrigger() {
-	m.CurrentNotable().SetNote(m.cursorPos, note{5, 0, ACTION_NOTHING})
+	m.CurrentNotable().SetNote(m.cursorPos, note{5, InitRatchet(), ACTION_NOTHING})
 }
 
 func (m *model) AddAction(act action) {
-	m.CurrentNotable().SetNote(m.cursorPos, note{0, 0, act})
+	m.CurrentNotable().SetNote(m.cursorPos, note{0, InitRatchet(), act})
 }
 
 func (m *model) RemoveTrigger() {
@@ -684,45 +703,28 @@ func (m *model) OverlayRemoveTrigger() {
 }
 
 func (m *model) IncreaseRatchet() {
-	rootOverlay := m.definition.overlays[ROOT_OVERLAY]
-	currentOverlay := m.definition.overlays[m.overlayKey]
-	rootNote, rootHasNote := rootOverlay[m.cursorPos]
-	currentOverlayNote, currentHasNote := currentOverlay[m.cursorPos]
-	var currentRatchet uint8
-	var currentNote note
-	if currentHasNote {
-		currentRatchet = currentOverlayNote.RatchetIndex
-		currentNote = currentOverlayNote
-	} else if rootHasNote {
-		currentRatchet = rootNote.RatchetIndex
-		currentNote = rootNote
-	}
-
+	currentNote := m.CurrentNote()
+	currentRatchet := currentNote.Ratchets.length
 	if currentNote.Action == ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
-		currentNote.RatchetIndex = currentNote.RatchetIndex + 1
+		currentNote.Ratchets.length = currentRatchet + 1
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
 }
 
 func (m *model) DecreaseRatchet() {
-	rootOverlay := m.definition.overlays[ROOT_OVERLAY]
-	currentOverlay := m.definition.overlays[m.overlayKey]
-	rootNote, rootHasNote := rootOverlay[m.cursorPos]
-	currentOverlayNote, currentHasNote := currentOverlay[m.cursorPos]
-	var currentRatchet uint8
-	var currentNote note
-	if currentHasNote {
-		currentRatchet = currentOverlayNote.RatchetIndex
-		currentNote = currentOverlayNote
-	} else if rootHasNote {
-		currentRatchet = rootNote.RatchetIndex
-		currentNote = rootNote
-	}
+	currentNote := m.CurrentNote()
+	currentRatchet := currentNote.Ratchets.length
 
 	if currentNote.Action == ACTION_NOTHING && currentRatchet > 0 {
-		currentNote.RatchetIndex = currentNote.RatchetIndex - 1
+		currentNote.Ratchets.length = currentRatchet - 1
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
+}
+
+func (m *model) ToggleRatchetMute() {
+	currentNote := m.CurrentNote()
+	currentNote.Ratchets.hits[m.ratchetCursor] = !currentNote.Ratchets.hits[m.ratchetCursor]
+	m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 }
 
 func InitLines(n uint8) []lineDefinition {
@@ -887,12 +889,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursorPos.line--
 			}
 		case Is(msg, keys.CursorLeft):
-			if m.cursorPos.beat > 0 {
-				m.cursorPos.beat--
+			if m.ratchetMode {
+				if m.ratchetCursor > 0 {
+					m.ratchetCursor--
+				}
+			} else {
+				if m.cursorPos.beat > 0 {
+					m.cursorPos.beat--
+				}
 			}
 		case Is(msg, keys.CursorRight):
-			if m.cursorPos.beat < m.definition.beats-1 {
-				m.cursorPos.beat++
+			if m.ratchetMode {
+				currentNote := m.CurrentNote()
+				if m.ratchetCursor < currentNote.Ratchets.length {
+					m.ratchetCursor++
+				}
+			} else {
+				if m.cursorPos.beat < m.definition.beats-1 {
+					m.cursorPos.beat++
+				}
 			}
 		case Is(msg, keys.PlayStop):
 			if !m.playing && !m.outport.IsOpen() {
@@ -976,6 +991,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case Is(msg, keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
+		case Is(msg, keys.ToggleRatchetMode):
+			m.ratchetMode = !m.ratchetMode
 		case Is(msg, keys.ToggleAccentModifier):
 			m.accentModifier = -1 * m.accentModifier
 		case Is(msg, keys.PrevOverlay):
@@ -1036,6 +1053,8 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.IncreaseRatchet()
 	case Is(msg, keys.RatchetDecrease):
 		m.DecreaseRatchet()
+	case Is(msg, keys.ToggleRatchetMute):
+		m.ToggleRatchetMute()
 	case Is(msg, keys.ActionAddLineReset):
 		m.AddAction(ACTION_LINE_RESET)
 	case Is(msg, keys.ActionAddLineReverse):
@@ -1159,6 +1178,13 @@ func (m *model) ToggleOverlayStackOptions(key overlayKey) {
 	} else {
 		m.definition.metaOverlays[m.overlayKey] = metaOverlay{PressUp: false, PressDown: false}
 	}
+}
+
+func (m model) CurrentNote() note {
+	matchedKeys := m.EditKeys()
+	combinedOverlay := m.definition.CombinedPattern(matchedKeys)
+	currentNote := combinedOverlay[m.cursorPos]
+	return currentNote
 }
 
 func RemoveRootKey(keys []overlayKey) []overlayKey {
@@ -1286,7 +1312,7 @@ func (m *model) fill(every uint8) {
 			} else if m.overlayKey == ROOT_OVERLAY && hasNote {
 				delete(m.definition.overlays[ROOT_OVERLAY], gridKey)
 			} else {
-				m.CurrentNotable().SetNote(gridKey, note{5, 0, 0})
+				m.CurrentNotable().SetNote(gridKey, note{5, InitRatchet(), 0})
 			}
 		}
 	}
@@ -1481,6 +1507,8 @@ func (m model) ViewTriggerSeq() string {
 			mode = " Accent Mode \u2193 "
 		}
 		buf.WriteString(fmt.Sprintf("   Seq - %s\n", accentModeStyle.Render(mode)))
+	} else if m.ratchetMode {
+		buf.WriteString(m.RatchetModeView())
 	} else if m.playing {
 		buf.WriteString(fmt.Sprintf("   Seq - Playing - %d\n", m.keyCycles))
 	} else {
@@ -1494,6 +1522,33 @@ func (m model) ViewTriggerSeq() string {
 	buf.WriteString("\n")
 	// buf.WriteString(m.help.View(m.keys))
 	// buf.WriteString("\n")
+	return buf.String()
+}
+
+var activeRatchetColor lipgloss.Color = "#abfaa9"
+var mutedRatchetColor lipgloss.Color = "#f34213"
+
+func (m model) RatchetModeView() string {
+	activeStyle := lipgloss.NewStyle().Foreground(activeRatchetColor)
+	mutedStyle := lipgloss.NewStyle().Foreground(mutedRatchetColor)
+	var buf strings.Builder
+	matchedKeys := m.EditKeys()
+	combinedOverlay := m.definition.CombinedPattern(matchedKeys)
+	currentNote := combinedOverlay[m.cursorPos]
+	buf.WriteString("   Ratchets  ")
+	for i := range currentNote.Ratchets.length + 1 {
+		var backgroundColor lipgloss.Color
+		if m.ratchetCursor == i {
+			backgroundColor = lipgloss.Color("#5cdffb")
+		}
+		if currentNote.Ratchets.hits[i] {
+			buf.WriteString(activeStyle.Background(backgroundColor).Render("\u25CF"))
+		} else {
+			buf.WriteString(mutedStyle.Background(backgroundColor).Render("\u25C9"))
+		}
+		buf.WriteString(" ")
+	}
+	buf.WriteString("\n")
 	return buf.String()
 }
 
@@ -1579,7 +1634,7 @@ func (n note) ViewComponents() (string, lipgloss.Color) {
 	var char string
 	var foregroundColor lipgloss.Color
 	if currentAction == ACTION_NOTHING {
-		char = string(currentAccent.shape) + string(ratchets[currentNote.RatchetIndex])
+		char = string(currentAccent.shape) + string(ratchets[currentNote.Ratchets.length])
 		foregroundColor = currentAccent.color
 	} else {
 		lineaction := lineactions[currentAction]
