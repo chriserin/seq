@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/gomidi/midi/v2"
+	midi "gitlab.com/gomidi/midi/v2"
 )
 
 const VERSION = "0.1.0-alpha"
@@ -40,6 +40,18 @@ func main() {
 		},
 	}
 
+	cmdListOutports := &cobra.Command{
+		Use:   "list",
+		Short: "List available midi outports",
+		Run: func(cmd *cobra.Command, args []string) {
+			outports := midi.GetOutPorts()
+			for i, outport := range outports {
+				fmt.Printf("%d) %s\n", i+1, outport)
+			}
+		},
+	}
+
+	rootCmd.AddCommand(cmdListOutports)
 	rootCmd.AddCommand(cmdVersion)
 
 	err := rootCmd.Execute()
