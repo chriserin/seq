@@ -147,7 +147,7 @@ var definitionKeys = definitionKeyMap{
 	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
 	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
 	SelectKeyLine:        Key("Select Key Line", "K"),
-	PressDownOverlay:     Key("PressDown Overlay", "ctrl+p"),
+	PressDownOverlay:     Key("Press Down Overlay", "ctrl+p"),
 	NumberPattern:        Key("Number Pattern", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
 }
 
@@ -620,7 +620,7 @@ type ratchetMsg struct {
 }
 
 func RatchetTick(ratchet lineNote, times uint8, beatInterval time.Duration) tea.Cmd {
-	ratchetInterval := ratchet.note.Ratchets.Interval(beatInterval)
+	ratchetInterval := ratchet.Ratchets.Interval(beatInterval)
 	return tea.Tick(
 		ratchetInterval,
 		func(t time.Time) tea.Msg { return ratchetMsg{ratchet, times, beatInterval} },
@@ -787,7 +787,7 @@ func InitLines(n uint8) []lineDefinition {
 
 func InitPlayState(lines uint8) []linestate {
 	linestates := make([]linestate, lines)
-	for i, _ := range linestates {
+	for i := range linestates {
 		linestates[i].direction = 1
 		linestates[i].resetDirection = 1
 		linestates[i].resetLocation = 0
@@ -1087,20 +1087,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 		}
 	case ratchetMsg:
-		if m.playing && msg.iterations < (msg.lineNote.Ratchets.length+1) {
+		if m.playing && msg.iterations < (msg.Ratchets.length+1) {
 			var playCmd tea.Cmd
 			var ratchetTickCmd tea.Cmd
 			sendFn, err := midi.SendTo(m.outport)
 			if err != nil {
 				panic("sendFn is broken")
 			}
-			if msg.lineNote.note.Ratchets.hits[msg.iterations] {
+			if msg.Ratchets.hits[msg.iterations] {
 				playCmd = func() tea.Msg {
 					Play([]lineNote{msg.lineNote}, sendFn)
 					return nil
 				}
 			}
-			if msg.iterations+1 < (msg.lineNote.Ratchets.length + 1) {
+			if msg.iterations+1 < (msg.Ratchets.length + 1) {
 				ratchetTickCmd = RatchetTick(msg.lineNote, msg.iterations+1, msg.beatInterval)
 			}
 			return m, tea.Batch(playCmd, ratchetTickCmd)
@@ -1609,7 +1609,7 @@ func (m model) RatchetModeView() string {
 	matchedKeys := m.EditKeys()
 	combinedOverlay := m.definition.CombinedPattern(matchedKeys)
 	currentNote := combinedOverlay[m.cursorPos]
-	buf.WriteString("   Ratchets  ")
+	buf.WriteString("   Ratchets ")
 	for i := range currentNote.Ratchets.length + 1 {
 		var backgroundColor lipgloss.Color
 		if m.ratchetCursor == i {
@@ -1622,6 +1622,7 @@ func (m model) RatchetModeView() string {
 		}
 		buf.WriteString(" ")
 	}
+	buf.WriteString(" Span 3 ")
 	buf.WriteString("\n")
 	return buf.String()
 }
@@ -1684,7 +1685,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 			backgroundSeqColor = seqColor
 		}
 
-		char, foregroundColor := overlayNote.note.ViewComponents()
+		char, foregroundColor := overlayNote.ViewComponents()
 
 		style := lipgloss.NewStyle().Background(backgroundSeqColor)
 		if m.cursorPos.line == uint8(lineNumber) && m.cursorPos.beat == i {
