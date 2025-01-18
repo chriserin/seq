@@ -188,7 +188,11 @@ const C1 = 36
 type ratchet struct {
 	hits   [9]bool
 	length uint8
-	span   uint8
+	//span   uint8
+}
+
+func (r ratchet) Interval(beatInterval time.Duration) time.Duration {
+	return beatInterval / time.Duration(r.length+1)
 }
 
 func InitRatchet() ratchet {
@@ -609,6 +613,20 @@ func BeatTick(beatInterval time.Duration) tea.Cmd {
 	)
 }
 
+type ratchetMsg struct {
+	lineNote
+	iterations   uint8
+	beatInterval time.Duration
+}
+
+func RatchetTick(ratchet lineNote, times uint8, beatInterval time.Duration) tea.Cmd {
+	ratchetInterval := ratchet.note.Ratchets.Interval(beatInterval)
+	return tea.Tick(
+		ratchetInterval,
+		func(t time.Time) tea.Msg { return ratchetMsg{ratchet, times, beatInterval} },
+	)
+}
+
 func (m *model) BeatInterval() time.Duration {
 	tickInterval := time.Minute / time.Duration(m.definition.tempo*m.definition.subdivisions)
 	adjuster := time.Since(m.playTime) - m.trackTime
@@ -617,34 +635,62 @@ func (m *model) BeatInterval() time.Duration {
 	return next
 }
 
-func PlayBeat(beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate, sendFn SendFunc) tea.Cmd {
+type lineNote struct {
+	note
+	line lineDefinition
+}
+
+func PlayBeat(beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate, sendFn SendFunc) []tea.Cmd {
+	notes := make([]lineNote, 0, len(lines))
+	ratchetNotes := make([]lineNote, 0, len(lines))
+
+	for i, line := range lines {
+		currentGridKey := gridKey{uint8(i), currentBeat[i].currentBeat}
+		note, hasNote := pattern[currentGridKey]
+		if hasNote && note.Ratchets.length > 0 {
+			ratchetNotes = append(ratchetNotes, lineNote{note, line})
+		} else if hasNote && note != zeronote {
+			notes = append(notes, lineNote{note, line})
+		}
+	}
+
+	playCmds := make([]tea.Cmd, 0, len(lines))
+
+	playNotes := func() tea.Msg {
+		Play(notes, sendFn)
+		return nil
+	}
+
+	playCmds = append(playCmds, playNotes)
+
+	for _, ratchetNote := range ratchetNotes {
+		playCmds = append(playCmds, func() tea.Msg {
+			return ratchetMsg{ratchetNote, 0, beatInterval}
+		})
+	}
+
+	return playCmds
+}
+
+func PlayRatchets(lineNote lineNote, beatInterval time.Duration, sendFn SendFunc) tea.Cmd {
 	return func() tea.Msg {
-		Play(beatInterval, lines, pattern, currentBeat, sendFn)
 		return nil
 	}
 }
 
 type SendFunc func(msg midi.Message) error
 
-func Play(beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate, sendFn SendFunc) {
-	for i, line := range lines {
-		currentGridKey := gridKey{uint8(i), currentBeat[i].currentBeat}
-		note, hasNote := pattern[currentGridKey]
-		if hasNote && note != zeronote {
-			onMessage := midi.NoteOn(line.Channel, line.Note, accents[note.AccentIndex].value)
-			offMessage := midi.NoteOff(line.Channel, line.Note)
-			err := sendFn(onMessage)
-			if err != nil {
-				panic("note on failed")
-			}
-			err = sendFn(offMessage)
-			if err != nil {
-				panic("note off failed")
-			}
-			if note.Ratchets.length > 0 {
-				ratchetInterval := beatInterval / time.Duration(note.Ratchets.length+1)
-				PlayRatchet(note.Ratchets.length-1, ratchetInterval, onMessage, offMessage, sendFn)
-			}
+func Play(lineNotes []lineNote, sendFn SendFunc) {
+	for _, lineNote := range lineNotes {
+		onMessage := midi.NoteOn(lineNote.line.Channel, lineNote.line.Note, accents[lineNote.note.AccentIndex].value)
+		offMessage := midi.NoteOff(lineNote.line.Channel, lineNote.line.Note)
+		err := sendFn(onMessage)
+		if err != nil {
+			panic("note on failed")
+		}
+		err = sendFn(offMessage)
+		if err != nil {
+			panic("note off failed")
 		}
 	}
 }
@@ -934,7 +980,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					panic("sendFn is broken")
 				}
 				beatInterval := m.BeatInterval()
-				return m, tea.Batch(PlayBeat(beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
+
+				cmds := make([]tea.Cmd, 0, 10)
+				cmds = append(cmds, PlayBeat(beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn)...)
+				cmds = append(cmds, BeatTick(beatInterval))
+				return m, tea.Batch(cmds...)
 			} else {
 				m.keyCycles = 0
 				m.playingMatchedOverlays = []overlayKey{}
@@ -1029,7 +1079,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				panic("sendFn is broken")
 			}
 			beatInterval := m.BeatInterval()
-			return m, tea.Batch(PlayBeat(beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn), BeatTick(beatInterval))
+			cmds := make([]tea.Cmd, 0, 10)
+			cmds = append(cmds, PlayBeat(beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn)...)
+			cmds = append(cmds, BeatTick(beatInterval))
+			return m, tea.Batch(
+				cmds...,
+			)
+		}
+	case ratchetMsg:
+		if m.playing && msg.iterations < (msg.lineNote.Ratchets.length+1) {
+			var playCmd tea.Cmd
+			var ratchetTickCmd tea.Cmd
+			sendFn, err := midi.SendTo(m.outport)
+			if err != nil {
+				panic("sendFn is broken")
+			}
+			if msg.lineNote.note.Ratchets.hits[msg.iterations] {
+				playCmd = func() tea.Msg {
+					Play([]lineNote{msg.lineNote}, sendFn)
+					return nil
+				}
+			}
+			if msg.iterations+1 < (msg.lineNote.Ratchets.length + 1) {
+				ratchetTickCmd = RatchetTick(msg.lineNote, msg.iterations+1, msg.beatInterval)
+			}
+			return m, tea.Batch(playCmd, ratchetTickCmd)
 		}
 	}
 	var cmd tea.Cmd
