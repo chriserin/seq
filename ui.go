@@ -188,11 +188,15 @@ const C1 = 36
 type ratchet struct {
 	hits   [9]bool
 	length uint8
-	//span   uint8
+	span   uint8
+}
+
+func (r ratchet) Span() uint8 {
+	return r.span + 1
 }
 
 func (r ratchet) Interval(beatInterval time.Duration) time.Duration {
-	return beatInterval / time.Duration(r.length+1)
+	return (beatInterval * time.Duration(r.Span())) / time.Duration(r.length+1)
 }
 
 func InitRatchet() ratchet {
@@ -379,9 +383,9 @@ type model struct {
 	tempoSelectionIndicator   uint8
 	overlaySelectionIndicator uint8
 	setupSelectionIndicator   uint8
+	ratchetSelectionIndicator uint8
 	accentMode                bool
 	accentModifier            int8
-	ratchetMode               bool
 	ratchetCursor             uint8
 	overlayKey                overlayKey
 	keyCycles                 int
@@ -758,6 +762,28 @@ func (m *model) IncreaseRatchet() {
 	}
 }
 
+func (m *model) IncreaseSpan() {
+	currentNote := m.CurrentNote()
+	if currentNote != zeronote && currentNote.Action == ACTION_NOTHING {
+		span := currentNote.Ratchets.span
+		if span < 8 {
+			currentNote.Ratchets.span = span + 1
+		}
+		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
+	}
+}
+
+func (m *model) DecreaseSpan() {
+	currentNote := m.CurrentNote()
+	if currentNote != zeronote && currentNote.Action == ACTION_NOTHING {
+		span := currentNote.Ratchets.span
+		if span > 0 {
+			currentNote.Ratchets.span = span - 1
+		}
+		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
+	}
+}
+
 func (m *model) DecreaseRatchet() {
 	currentNote := m.CurrentNote()
 	currentRatchet := currentNote.Ratchets.length
@@ -928,15 +954,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logFile.Close()
 			return m, tea.Quit
 		case Is(msg, keys.CursorDown):
-			if m.cursorPos.line < uint8(len(m.definition.lines)-1) {
-				m.cursorPos.line++
+			if m.ratchetSelectionIndicator == 0 {
+				if m.cursorPos.line < uint8(len(m.definition.lines)-1) {
+					m.cursorPos.line++
+				}
 			}
 		case Is(msg, keys.CursorUp):
-			if m.cursorPos.line > 0 {
-				m.cursorPos.line--
+			if m.ratchetSelectionIndicator == 0 {
+				if m.cursorPos.line > 0 {
+					m.cursorPos.line--
+				}
 			}
 		case Is(msg, keys.CursorLeft):
-			if m.ratchetMode {
+			if m.ratchetSelectionIndicator > 0 {
 				if m.ratchetCursor > 0 {
 					m.ratchetCursor--
 				}
@@ -946,7 +976,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case Is(msg, keys.CursorRight):
-			if m.ratchetMode {
+			if m.ratchetSelectionIndicator > 0 {
 				currentNote := m.CurrentNote()
 				if m.ratchetCursor < currentNote.Ratchets.length {
 					m.ratchetCursor++
@@ -994,14 +1024,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.overlaySelectionIndicator = (m.overlaySelectionIndicator + 1) % 3
 			m.tempoSelectionIndicator = 0
 			m.setupSelectionIndicator = 0
+			m.ratchetSelectionIndicator = 0
 		case Is(msg, keys.TempoInputSwitch):
 			m.tempoSelectionIndicator = (m.tempoSelectionIndicator + 1) % 3
 			m.overlaySelectionIndicator = 0
 			m.setupSelectionIndicator = 0
+			m.ratchetSelectionIndicator = 0
 		case Is(msg, keys.SetupInputSwitch):
 			m.setupSelectionIndicator = (m.setupSelectionIndicator + 1) % 3
 			m.overlaySelectionIndicator = 0
 			m.tempoSelectionIndicator = 0
+			m.ratchetSelectionIndicator = 0
 		case Is(msg, keys.Increase):
 			switch {
 			case m.tempoSelectionIndicator == 1:
@@ -1020,6 +1053,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.definition.lines[m.cursorPos.line].IncrementChannel()
 			case m.setupSelectionIndicator == 2:
 				m.definition.lines[m.cursorPos.line].IncrementNote()
+			case m.ratchetSelectionIndicator == 2:
+				m.IncreaseSpan()
 			}
 		case Is(msg, keys.Decrease):
 			switch {
@@ -1039,12 +1074,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.definition.lines[m.cursorPos.line].DecrementChannel()
 			case m.setupSelectionIndicator == 2:
 				m.definition.lines[m.cursorPos.line].DecrementNote()
+			case m.ratchetSelectionIndicator == 2:
+				m.DecreaseSpan()
 			}
 		case Is(msg, keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
 		case Is(msg, keys.ToggleRatchetMode):
 			m.ratchetCursor = 0
-			m.ratchetMode = !m.ratchetMode
+			if m.CurrentNote() != zeronote {
+				m.ratchetSelectionIndicator = (m.ratchetSelectionIndicator + 1) % 3
+			}
+			m.tempoSelectionIndicator = 0
+			m.setupSelectionIndicator = 0
+			m.overlaySelectionIndicator = 0
 		case Is(msg, keys.ToggleAccentModifier):
 			m.accentModifier = -1 * m.accentModifier
 		case Is(msg, keys.PrevOverlay):
@@ -1067,6 +1109,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursorPos = gridKey{0, 0}
 			m.overlayKey = ROOT_OVERLAY
 			m.accentModifier = 1
+			m.tempoSelectionIndicator = 0
+			m.setupSelectionIndicator = 0
+			m.overlaySelectionIndicator = 0
+			m.ratchetSelectionIndicator = 0
 			m.definition = InitDefinition()
 		default:
 			m = m.UpdateDefinition(msg)
@@ -1259,8 +1305,7 @@ func (m *model) ToggleOverlayStackOptions(key overlayKey) {
 func (m model) CurrentNote() note {
 	matchedKeys := m.EditKeys()
 	combinedOverlay := m.definition.CombinedPattern(matchedKeys)
-	currentNote := combinedOverlay[m.cursorPos]
-	return currentNote
+	return combinedOverlay[m.cursorPos]
 }
 
 func RemoveRootKey(keys []overlayKey) []overlayKey {
@@ -1583,7 +1628,7 @@ func (m model) ViewTriggerSeq() string {
 			mode = " Accent Mode \u2193 "
 		}
 		buf.WriteString(fmt.Sprintf("   Seq - %s\n", accentModeStyle.Render(mode)))
-	} else if m.ratchetMode {
+	} else if m.ratchetSelectionIndicator > 0 {
 		buf.WriteString(m.RatchetModeView())
 	} else if m.playing {
 		buf.WriteString(fmt.Sprintf("   Seq - Playing - %d\n", m.keyCycles))
@@ -1607,30 +1652,43 @@ var mutedRatchetColor lipgloss.Color = "#f34213"
 func (m model) RatchetModeView() string {
 	activeStyle := lipgloss.NewStyle().Foreground(activeRatchetColor)
 	mutedStyle := lipgloss.NewStyle().Foreground(mutedRatchetColor)
+
+	currentNote := m.CurrentNote()
+
 	var buf strings.Builder
-	matchedKeys := m.EditKeys()
-	combinedOverlay := m.definition.CombinedPattern(matchedKeys)
-	currentNote := combinedOverlay[m.cursorPos]
+	var ratchetsBuf strings.Builder
 	buf.WriteString("   Ratchets ")
-	for i := range currentNote.Ratchets.length + 1 {
+	for i := range uint8(8) {
 		var backgroundColor lipgloss.Color
-		if m.ratchetCursor == i {
-			backgroundColor = lipgloss.Color("#5cdffb")
-		}
-		if currentNote.Ratchets.hits[i] {
-			buf.WriteString(activeStyle.Background(backgroundColor).Render("\u25CF"))
+		if i <= currentNote.Ratchets.length {
+			if m.ratchetCursor == i && m.ratchetSelectionIndicator == 1 {
+				backgroundColor = lipgloss.Color("#5cdffb")
+			}
+			if currentNote.Ratchets.hits[i] {
+				ratchetsBuf.WriteString(activeStyle.Background(backgroundColor).Render("\u25CF"))
+			} else {
+				ratchetsBuf.WriteString(mutedStyle.Background(backgroundColor).Render("\u25C9"))
+			}
+			ratchetsBuf.WriteString(" ")
 		} else {
-			buf.WriteString(mutedStyle.Background(backgroundColor).Render("\u25C9"))
+
+			ratchetsBuf.WriteString("  ")
 		}
-		buf.WriteString(" ")
 	}
-	buf.WriteString(" Span 3 ")
+	buf.WriteString(fmt.Sprintf("%*s", 32, ratchetsBuf.String()))
+	if m.ratchetSelectionIndicator == 2 {
+		buf.WriteString(fmt.Sprintf(" Span %s ", selectedColor.Render(strconv.Itoa(int(currentNote.Ratchets.Span())))))
+	} else {
+		buf.WriteString(fmt.Sprintf(" Span %s ", numberColor.Render(strconv.Itoa(int(currentNote.Ratchets.Span())))))
+	}
 	buf.WriteString("\n")
+
 	return buf.String()
 }
 
 func (m model) ViewOverlay() string {
 	var numerator, denominator string
+
 	switch m.overlaySelectionIndicator {
 	case 0:
 		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.num)))
@@ -1642,6 +1700,7 @@ func (m model) ViewOverlay() string {
 		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.num)))
 		denominator = selectedColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
 	}
+
 	return fmt.Sprintf("%s/%s", numerator, denominator)
 }
 
