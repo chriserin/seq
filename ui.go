@@ -42,6 +42,7 @@ type transitiveKeyMap struct {
 	Redo                 key.Binding
 	New                  key.Binding
 	ToggleRatchetMode    key.Binding
+	ToggleVisualMode     key.Binding
 }
 
 type definitionKeyMap struct {
@@ -133,6 +134,7 @@ var transitiveKeys = transitiveKeyMap{
 	Redo:                 Key("Redo", "ctrl+r"),
 	New:                  Key("New", "ctrl+n"),
 	ToggleRatchetMode:    Key("Toggle Ratchet Mode", "ctrl+r"),
+	ToggleVisualMode:     Key("Toggle Visual Mode", "v"),
 }
 
 var definitionKeys = definitionKeyMap{
@@ -373,6 +375,8 @@ type model struct {
 	help                   help.Model
 	cursor                 cursor.Model
 	cursorPos              gridKey
+	visualAnchorCursor     gridKey
+	visualMode             bool
 	outport                drivers.Out
 	logFile                *os.File
 	playing                bool
@@ -1111,6 +1115,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.accentModifier = 1
 			m.selectionIndicator = SELECT_NOTHING
 			m.definition = InitDefinition()
+		case Is(msg, keys.ToggleVisualMode):
+			m.visualAnchorCursor = m.cursorPos
+			m.visualMode = !m.visualMode
 		default:
 			m = m.UpdateDefinition(msg)
 		}
@@ -1728,6 +1735,7 @@ func (m model) CurrentOverlayView() string {
 var altSeqColor = lipgloss.Color("#222222")
 var seqColor = lipgloss.Color("#000000")
 var seqCursorColor = lipgloss.Color("#444444")
+var seqVisualColor = lipgloss.Color("#aaaaaa")
 var seqOverlayColor = lipgloss.Color("#333388")
 
 func KeyLineIndicator(k uint8, l uint8) string {
@@ -1749,6 +1757,8 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 		var backgroundSeqColor lipgloss.Color
 		if m.playing && m.playState[lineNumber].currentBeat == i {
 			backgroundSeqColor = seqCursorColor
+		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
+			backgroundSeqColor = seqVisualColor
 		} else if hasNote && overlayNote.origin != ROOT_OVERLAY {
 			backgroundSeqColor = seqOverlayColor
 		} else if i%8 > 3 {
@@ -1763,6 +1773,8 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 		if m.cursorPos.line == uint8(lineNumber) && m.cursorPos.beat == i {
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
+		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
+			style = style.Foreground(lipgloss.Color("#000000"))
 		} else {
 			style = style.Foreground(foregroundColor)
 		}
@@ -1771,6 +1783,17 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 
 	buf.WriteString("\n")
 	return buf.String()
+}
+
+func (m model) InVisualSelection(key gridKey) bool {
+	top := min(m.cursorPos.line, m.visualAnchorCursor.line)
+	bottom := max(m.cursorPos.line, m.visualAnchorCursor.line)
+	left := min(m.cursorPos.beat, m.visualAnchorCursor.beat)
+	right := max(m.cursorPos.beat, m.visualAnchorCursor.beat)
+	return key.line >= top &&
+		key.line <= bottom &&
+		key.beat >= left &&
+		key.beat <= right
 }
 
 func (n note) ViewComponents() (string, lipgloss.Color) {
