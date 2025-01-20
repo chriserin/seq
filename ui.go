@@ -487,6 +487,23 @@ func (ugn UndoLineGridNotes) ApplyUndo(m *model) {
 	}
 }
 
+type UndoVisualSelection struct {
+	overlayKey
+	anchorPosition gridKey
+	cursorPosition gridKey
+	gridNotes      []GridNote
+}
+
+func (uvs UndoVisualSelection) ApplyUndo(m *model) {
+	overlay := m.definition.overlays[uvs.overlayKey]
+	for _, k := range GridKeysForCursors(uvs.anchorPosition, uvs.cursorPosition) {
+		delete(overlay, k)
+	}
+	for _, gridNote := range uvs.gridNotes {
+		overlay[gridNote.gridKey] = gridNote.note
+	}
+}
+
 type UndoGridNotes struct {
 	overlayKey
 	gridNotes []GridNote
@@ -761,20 +778,24 @@ func absdiff(a, b uint8) uint8 {
 
 func (m model) VisualSelectedGridKeys() []gridKey {
 	if m.visualMode {
-		top := min(m.cursorPos.line, m.visualAnchorCursor.line)
-		bottom := max(m.cursorPos.line, m.visualAnchorCursor.line)
-		left := min(m.cursorPos.beat, m.visualAnchorCursor.beat)
-		right := max(m.cursorPos.beat, m.visualAnchorCursor.beat)
-		keys := make([]gridKey, 0, int(absdiff(top, bottom)*absdiff(left, right)))
-		for i := top; i <= bottom; i++ {
-			for j := left; j <= right; j++ {
-				keys = append(keys, gridKey{i, j})
-			}
-		}
-		return keys
+		return GridKeysForCursors(m.visualAnchorCursor, m.cursorPos)
 	} else {
 		return []gridKey{m.cursorPos}
 	}
+}
+
+func GridKeysForCursors(cursorA, cursorB gridKey) []gridKey {
+	top := min(cursorA.line, cursorB.line)
+	bottom := max(cursorA.line, cursorB.line)
+	left := min(cursorA.beat, cursorB.beat)
+	right := max(cursorA.beat, cursorB.beat)
+	keys := make([]gridKey, 0, int(absdiff(top, bottom)*absdiff(left, right)))
+	for i := top; i <= bottom; i++ {
+		for j := left; j <= right; j++ {
+			keys = append(keys, gridKey{i, j})
+		}
+	}
+	return keys
 }
 
 func (m *model) AddTrigger() {
@@ -1258,7 +1279,13 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 
 func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 	keys := definitionKeys
-	if keys.IsNoteWiseKey(msg) {
+	if m.visualMode {
+		undoable := m.UndoableVisualSelection()
+		m.EnsureOverlay()
+		m = m.UpdateDefinitionKeys(msg)
+		redoable := m.UndoableVisualSelection()
+		m.PushUndo(undoable, redoable)
+	} else if keys.IsNoteWiseKey(msg) {
 		undoable := m.UndoableNote()
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
@@ -1294,6 +1321,21 @@ func (m model) UndoableNote() Undoable {
 	} else {
 		return UndoToNothing{m.overlayKey, m.cursorPos}
 	}
+}
+
+func (m model) UndoableVisualSelection() Undoable {
+	overlay, hasOverlay := m.definition.overlays[m.overlayKey]
+	if !hasOverlay {
+		return UndoNewOverlay{m.overlayKey}
+	}
+	gridNotes := make([]GridNote, 100)
+	for _, k := range m.VisualSelectedGridKeys() {
+		currentNote, hasNote := overlay[k]
+		if hasNote {
+			gridNotes = append(gridNotes, GridNote{k, currentNote})
+		}
+	}
+	return UndoVisualSelection{m.overlayKey, m.visualAnchorCursor, m.cursorPos, gridNotes}
 }
 
 func (m model) UndoableLine() Undoable {
