@@ -753,6 +753,7 @@ func (m *model) IncreaseRatchet() {
 	currentRatchet := currentNote.Ratchets.length
 	if currentNote.Action == ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
 		currentNote.Ratchets.length = currentRatchet + 1
+		currentNote.Ratchets.hits[currentNote.Ratchets.length] = true
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
 }
