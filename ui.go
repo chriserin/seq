@@ -751,20 +751,58 @@ func (m *model) CurrentNotable() Notable {
 	return notable
 }
 
+func absdiff(a, b uint8) uint8 {
+	if a > b {
+		return a - b
+	} else {
+		return b - a
+	}
+}
+
+func (m model) VisualSelectedGridKeys() []gridKey {
+	if m.visualMode {
+		top := min(m.cursorPos.line, m.visualAnchorCursor.line)
+		bottom := max(m.cursorPos.line, m.visualAnchorCursor.line)
+		left := min(m.cursorPos.beat, m.visualAnchorCursor.beat)
+		right := max(m.cursorPos.beat, m.visualAnchorCursor.beat)
+		keys := make([]gridKey, 0, int(absdiff(top, bottom)*absdiff(left, right)))
+		for i := top; i <= bottom; i++ {
+			for j := left; j <= right; j++ {
+				keys = append(keys, gridKey{i, j})
+			}
+		}
+		return keys
+	} else {
+		return []gridKey{m.cursorPos}
+	}
+}
+
 func (m *model) AddTrigger() {
-	m.CurrentNotable().SetNote(m.cursorPos, note{5, InitRatchet(), ACTION_NOTHING})
+	keys := m.VisualSelectedGridKeys()
+	for _, k := range keys {
+		m.CurrentNotable().SetNote(k, note{5, InitRatchet(), ACTION_NOTHING})
+	}
 }
 
 func (m *model) AddAction(act action) {
-	m.CurrentNotable().SetNote(m.cursorPos, note{0, InitRatchet(), act})
+	keys := m.VisualSelectedGridKeys()
+	for _, k := range keys {
+		m.CurrentNotable().SetNote(k, note{0, InitRatchet(), act})
+	}
 }
 
 func (m *model) RemoveTrigger() {
-	m.CurrentNotable().SetNote(m.cursorPos, zeronote)
+	keys := m.VisualSelectedGridKeys()
+	for _, k := range keys {
+		m.CurrentNotable().SetNote(k, zeronote)
+	}
 }
 
 func (m *model) OverlayRemoveTrigger() {
-	delete(m.definition.overlays[m.overlayKey], m.cursorPos)
+	keys := m.VisualSelectedGridKeys()
+	for _, k := range keys {
+		delete(m.definition.overlays[m.overlayKey], k)
+	}
 }
 
 func (m *model) IncreaseRatchet() {
