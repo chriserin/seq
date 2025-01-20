@@ -1043,6 +1043,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
 		case Is(msg, keys.ToggleRatchetMode):
+			m.ratchetCursor = 0
 			m.ratchetMode = !m.ratchetMode
 		case Is(msg, keys.ToggleAccentModifier):
 			m.accentModifier = -1 * m.accentModifier
