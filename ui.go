@@ -368,33 +368,44 @@ func (l *lineDefinition) DecrementNote() {
 }
 
 type model struct {
-	transitiveStatekeys       transitiveKeyMap
-	definitionKeys            definitionKeyMap
-	help                      help.Model
-	cursor                    cursor.Model
-	cursorPos                 gridKey
-	outport                   drivers.Out
-	logFile                   *os.File
-	playing                   bool
-	playTime                  time.Time
-	trackTime                 time.Duration
-	totalBeats                int
-	playState                 []linestate
-	tempoSelectionIndicator   uint8
-	overlaySelectionIndicator uint8
-	setupSelectionIndicator   uint8
-	ratchetSelectionIndicator uint8
-	accentMode                bool
-	accentModifier            int8
-	ratchetCursor             uint8
-	overlayKey                overlayKey
-	keyCycles                 int
-	playingMatchedOverlays    []overlayKey
-	undoStack                 UndoStack
-	redoStack                 UndoStack
+	transitiveStatekeys    transitiveKeyMap
+	definitionKeys         definitionKeyMap
+	help                   help.Model
+	cursor                 cursor.Model
+	cursorPos              gridKey
+	outport                drivers.Out
+	logFile                *os.File
+	playing                bool
+	playTime               time.Time
+	trackTime              time.Duration
+	totalBeats             int
+	playState              []linestate
+	selectionIndicator     Selection
+	accentMode             bool
+	accentModifier         int8
+	ratchetCursor          uint8
+	overlayKey             overlayKey
+	keyCycles              int
+	playingMatchedOverlays []overlayKey
+	undoStack              UndoStack
+	redoStack              UndoStack
 	// save everything below here
 	definition Definition
 }
+
+type Selection uint8
+
+const (
+	SELECT_NOTHING Selection = iota
+	SELECT_TEMPO
+	SELECT_TEMPO_SUBDIVISION
+	SELECT_OVERLAY_NUM
+	SELECT_OVERLAY_DENOM
+	SELECT_SETUP_CHANNEL
+	SELECT_SETUP_NOTE
+	SELECT_RATCHETS
+	SELECT_RATCHET_SPAN
+)
 
 type Undoable interface {
 	ApplyUndo(m *model)
@@ -954,19 +965,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logFile.Close()
 			return m, tea.Quit
 		case Is(msg, keys.CursorDown):
-			if m.ratchetSelectionIndicator == 0 {
+			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_NOTE}, m.selectionIndicator) {
 				if m.cursorPos.line < uint8(len(m.definition.lines)-1) {
 					m.cursorPos.line++
 				}
 			}
 		case Is(msg, keys.CursorUp):
-			if m.ratchetSelectionIndicator == 0 {
+			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_NOTE}, m.selectionIndicator) {
 				if m.cursorPos.line > 0 {
 					m.cursorPos.line--
 				}
 			}
 		case Is(msg, keys.CursorLeft):
-			if m.ratchetSelectionIndicator > 0 {
+			if m.selectionIndicator == SELECT_RATCHETS {
 				if m.ratchetCursor > 0 {
 					m.ratchetCursor--
 				}
@@ -976,7 +987,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case Is(msg, keys.CursorRight):
-			if m.ratchetSelectionIndicator > 0 {
+			if m.selectionIndicator == SELECT_RATCHETS {
 				currentNote := m.CurrentNote()
 				if m.ratchetCursor < currentNote.Ratchets.length {
 					m.ratchetCursor++
@@ -1021,72 +1032,61 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.playingMatchedOverlays = []overlayKey{}
 			}
 		case Is(msg, keys.OverlayInputSwitch):
-			m.overlaySelectionIndicator = (m.overlaySelectionIndicator + 1) % 3
-			m.tempoSelectionIndicator = 0
-			m.setupSelectionIndicator = 0
-			m.ratchetSelectionIndicator = 0
+			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY_NUM, SELECT_OVERLAY_DENOM}
+			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
 		case Is(msg, keys.TempoInputSwitch):
-			m.tempoSelectionIndicator = (m.tempoSelectionIndicator + 1) % 3
-			m.overlaySelectionIndicator = 0
-			m.setupSelectionIndicator = 0
-			m.ratchetSelectionIndicator = 0
+			states := []Selection{SELECT_NOTHING, SELECT_TEMPO, SELECT_TEMPO_SUBDIVISION}
+			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
 		case Is(msg, keys.SetupInputSwitch):
-			m.setupSelectionIndicator = (m.setupSelectionIndicator + 1) % 3
-			m.overlaySelectionIndicator = 0
-			m.tempoSelectionIndicator = 0
-			m.ratchetSelectionIndicator = 0
+			states := []Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_NOTE}
+			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+		case Is(msg, keys.ToggleRatchetMode):
+			states := []Selection{SELECT_NOTHING, SELECT_RATCHETS, SELECT_RATCHET_SPAN}
+			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
 		case Is(msg, keys.Increase):
-			switch {
-			case m.tempoSelectionIndicator == 1:
+			switch m.selectionIndicator {
+			case SELECT_TEMPO:
 				if m.definition.tempo < 300 {
 					m.definition.tempo++
 				}
-			case m.tempoSelectionIndicator == 2:
+			case SELECT_TEMPO_SUBDIVISION:
 				if m.definition.subdivisions < 8 {
 					m.definition.subdivisions++
 				}
-			case m.overlaySelectionIndicator == 1:
+			case SELECT_OVERLAY_NUM:
 				m.overlayKey.IncrementNumerator()
-			case m.overlaySelectionIndicator == 2:
+			case SELECT_OVERLAY_DENOM:
 				m.overlayKey.IncrementDenominator()
-			case m.setupSelectionIndicator == 1:
+			case SELECT_SETUP_CHANNEL:
 				m.definition.lines[m.cursorPos.line].IncrementChannel()
-			case m.setupSelectionIndicator == 2:
+			case SELECT_SETUP_NOTE:
 				m.definition.lines[m.cursorPos.line].IncrementNote()
-			case m.ratchetSelectionIndicator == 2:
+			case SELECT_RATCHET_SPAN:
 				m.IncreaseSpan()
 			}
 		case Is(msg, keys.Decrease):
-			switch {
-			case m.tempoSelectionIndicator == 1:
+			switch m.selectionIndicator {
+			case SELECT_TEMPO:
 				if m.definition.tempo > 30 {
 					m.definition.tempo--
 				}
-			case m.tempoSelectionIndicator == 2:
+			case SELECT_TEMPO_SUBDIVISION:
 				if m.definition.subdivisions > 1 {
 					m.definition.subdivisions--
 				}
-			case m.overlaySelectionIndicator == 1:
+			case SELECT_OVERLAY_NUM:
 				m.overlayKey.DecrementNumerator()
-			case m.overlaySelectionIndicator == 2:
+			case SELECT_OVERLAY_DENOM:
 				m.overlayKey.DecrementDenominator()
-			case m.setupSelectionIndicator == 1:
+			case SELECT_SETUP_CHANNEL:
 				m.definition.lines[m.cursorPos.line].DecrementChannel()
-			case m.setupSelectionIndicator == 2:
+			case SELECT_SETUP_NOTE:
 				m.definition.lines[m.cursorPos.line].DecrementNote()
-			case m.ratchetSelectionIndicator == 2:
+			case SELECT_RATCHET_SPAN:
 				m.DecreaseSpan()
 			}
 		case Is(msg, keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
-		case Is(msg, keys.ToggleRatchetMode):
-			m.ratchetCursor = 0
-			if m.CurrentNote() != zeronote {
-				m.ratchetSelectionIndicator = (m.ratchetSelectionIndicator + 1) % 3
-			}
-			m.tempoSelectionIndicator = 0
-			m.setupSelectionIndicator = 0
-			m.overlaySelectionIndicator = 0
 		case Is(msg, keys.ToggleAccentModifier):
 			m.accentModifier = -1 * m.accentModifier
 		case Is(msg, keys.PrevOverlay):
@@ -1109,10 +1109,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursorPos = gridKey{0, 0}
 			m.overlayKey = ROOT_OVERLAY
 			m.accentModifier = 1
-			m.tempoSelectionIndicator = 0
-			m.setupSelectionIndicator = 0
-			m.overlaySelectionIndicator = 0
-			m.ratchetSelectionIndicator = 0
+			m.selectionIndicator = SELECT_NOTHING
 			m.definition = InitDefinition()
 		default:
 			m = m.UpdateDefinition(msg)
@@ -1158,6 +1155,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
 	return m, cmd
+}
+
+func AdvanceSelectionState(states []Selection, currentSelection Selection) Selection {
+	index := slices.Index(states, currentSelection)
+	var resultSelection Selection
+	if index < 0 {
+		indexNothing := slices.Index(states, SELECT_NOTHING)
+		resultSelection = states[uint8(indexNothing+1)%uint8(len(states))]
+	} else {
+		resultSelection = states[uint8(index+1)%uint8(len(states))]
+	}
+	return resultSelection
 }
 
 func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
@@ -1490,16 +1499,16 @@ var numberColor = lipgloss.NewStyle().Foreground(lipgloss.Color("#fcbd15"))
 func (m model) TempoView() string {
 	var buf strings.Builder
 	var tempo, division string
-	switch m.tempoSelectionIndicator {
-	case 0:
-		tempo = numberColor.Render(strconv.Itoa(m.definition.tempo))
-		division = numberColor.Render(strconv.Itoa(m.definition.subdivisions))
-	case 1:
+	switch m.selectionIndicator {
+	case SELECT_TEMPO:
 		tempo = selectedColor.Render(strconv.Itoa(m.definition.tempo))
 		division = numberColor.Render(strconv.Itoa(m.definition.subdivisions))
-	case 2:
+	case SELECT_TEMPO_SUBDIVISION:
 		tempo = numberColor.Render(strconv.Itoa(m.definition.tempo))
 		division = selectedColor.Render(strconv.Itoa(m.definition.subdivisions))
+	default:
+		tempo = numberColor.Render(strconv.Itoa(m.definition.tempo))
+		division = numberColor.Render(strconv.Itoa(m.definition.subdivisions))
 	}
 	heart := heartColor.Render("♡")
 	buf.WriteString(heartColor.Render("             ") + "\n")
@@ -1521,10 +1530,12 @@ func (m model) View() string {
 
 	if m.accentMode {
 		sideView = AccentKeyView()
-	} else if len(m.definition.overlays) > 0 && m.setupSelectionIndicator == 0 {
-		sideView = m.OverlaysView()
-	} else {
+	} else if len(m.definition.overlays) == 0 ||
+		m.selectionIndicator == SELECT_SETUP_NOTE ||
+		m.selectionIndicator == SELECT_SETUP_CHANNEL {
 		sideView = m.SetupView()
+	} else {
+		sideView = m.OverlaysView()
 	}
 
 	buf.WriteString(lipgloss.JoinHorizontal(0, m.TempoView(), "  ", m.ViewTriggerSeq(), "  ", sideView))
@@ -1548,13 +1559,13 @@ func (m model) SetupView() string {
 	buf.WriteString("———————————————\n")
 	for i, line := range m.definition.lines {
 		buf.WriteString("CH ")
-		if uint8(i) == m.cursorPos.line && m.setupSelectionIndicator == 1 {
+		if uint8(i) == m.cursorPos.line && m.selectionIndicator == SELECT_SETUP_CHANNEL {
 			buf.WriteString(selectedColor.Render(fmt.Sprintf("%2d", line.Channel)))
 		} else {
 			buf.WriteString(numberColor.Render(fmt.Sprintf("%2d", line.Channel)))
 		}
 		buf.WriteString(" NOTE ")
-		if uint8(i) == m.cursorPos.line && m.setupSelectionIndicator == 2 {
+		if uint8(i) == m.cursorPos.line && m.selectionIndicator == SELECT_SETUP_NOTE {
 			buf.WriteString(selectedColor.Render(strconv.Itoa(int(line.Note))))
 		} else {
 
@@ -1628,7 +1639,7 @@ func (m model) ViewTriggerSeq() string {
 			mode = " Accent Mode \u2193 "
 		}
 		buf.WriteString(fmt.Sprintf("   Seq - %s\n", accentModeStyle.Render(mode)))
-	} else if m.ratchetSelectionIndicator > 0 {
+	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetModeView())
 	} else if m.playing {
 		buf.WriteString(fmt.Sprintf("   Seq - Playing - %d\n", m.keyCycles))
@@ -1661,7 +1672,7 @@ func (m model) RatchetModeView() string {
 	for i := range uint8(8) {
 		var backgroundColor lipgloss.Color
 		if i <= currentNote.Ratchets.length {
-			if m.ratchetCursor == i && m.ratchetSelectionIndicator == 1 {
+			if m.ratchetCursor == i && m.selectionIndicator == SELECT_RATCHETS {
 				backgroundColor = lipgloss.Color("#5cdffb")
 			}
 			if currentNote.Ratchets.hits[i] {
@@ -1676,7 +1687,7 @@ func (m model) RatchetModeView() string {
 		}
 	}
 	buf.WriteString(fmt.Sprintf("%*s", 32, ratchetsBuf.String()))
-	if m.ratchetSelectionIndicator == 2 {
+	if m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(fmt.Sprintf(" Span %s ", selectedColor.Render(strconv.Itoa(int(currentNote.Ratchets.Span())))))
 	} else {
 		buf.WriteString(fmt.Sprintf(" Span %s ", numberColor.Render(strconv.Itoa(int(currentNote.Ratchets.Span())))))
@@ -1689,16 +1700,16 @@ func (m model) RatchetModeView() string {
 func (m model) ViewOverlay() string {
 	var numerator, denominator string
 
-	switch m.overlaySelectionIndicator {
-	case 0:
-		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.num)))
-		denominator = numberColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
-	case 1:
+	switch m.selectionIndicator {
+	case SELECT_OVERLAY_NUM:
 		numerator = selectedColor.Render(strconv.Itoa(int(m.overlayKey.num)))
 		denominator = numberColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
-	case 2:
+	case SELECT_OVERLAY_DENOM:
 		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.num)))
 		denominator = selectedColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
+	default:
+		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.num)))
+		denominator = numberColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
 	}
 
 	return fmt.Sprintf("%s/%s", numerator, denominator)
