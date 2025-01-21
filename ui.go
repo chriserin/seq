@@ -1286,7 +1286,7 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 
 func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 	keys := definitionKeys
-	if m.visualMode {
+	if m.visualMode && (keys.IsLineWiseKey(msg) || keys.IsNoteWiseKey(msg)) {
 		undoable := m.UndoableVisualSelection()
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
