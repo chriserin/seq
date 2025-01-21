@@ -477,12 +477,13 @@ type UndoLineGridNotes struct {
 	gridNotes []GridNote
 }
 
-func (ugn UndoLineGridNotes) ApplyUndo(m *model) {
-	overlay := m.definition.overlays[ugn.overlayKey]
+func (ulgn UndoLineGridNotes) ApplyUndo(m *model) {
+	m.EnsureOverlayWithKey(ulgn.overlayKey)
+	overlay := m.definition.overlays[ulgn.overlayKey]
 	for i := range m.definition.beats {
-		delete(overlay, gridKey{ugn.line, i})
+		delete(overlay, gridKey{ulgn.line, i})
 	}
-	for _, gridNote := range ugn.gridNotes {
+	for _, gridNote := range ulgn.gridNotes {
 		overlay[gridNote.gridKey] = gridNote.note
 	}
 }
@@ -495,7 +496,7 @@ type UndoVisualSelection struct {
 }
 
 func (uvs UndoVisualSelection) ApplyUndo(m *model) {
-	m.EnsureOverlay()
+	m.EnsureOverlayWithKey(uvs.overlayKey)
 	overlay := m.definition.overlays[uvs.overlayKey]
 	for _, k := range GridKeysForCursors(uvs.anchorPosition, uvs.cursorPosition) {
 		delete(overlay, k)
@@ -511,7 +512,7 @@ type UndoGridNotes struct {
 }
 
 func (ugn UndoGridNotes) ApplyUndo(m *model) {
-	m.EnsureOverlay()
+	m.EnsureOverlayWithKey(ugn.overlayKey)
 	overlay := m.definition.overlays[ugn.overlayKey]
 	for _, gridNote := range ugn.gridNotes {
 		overlay[gridNote.gridKey] = gridNote.note
