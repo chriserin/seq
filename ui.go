@@ -756,6 +756,11 @@ func (m *model) EnsureOverlay() {
 func (m *model) EnsureOverlayWithKey(key overlayKey) {
 	if len(m.definition.overlays[key]) == 0 {
 		m.definition.overlays[key] = make(overlay)
+		if key == ROOT_OVERLAY {
+			m.definition.metaOverlays[key] = metaOverlay{PressUp: true, PressDown: false}
+		} else {
+			m.definition.metaOverlays[key] = metaOverlay{PressUp: false, PressDown: false}
+		}
 		if m.playing {
 			m.determineMatachedOverlays()
 		}
@@ -1392,6 +1397,8 @@ func (m *model) ToggleOverlayStackOptions(key overlayKey) {
 	meta, hasMeta := m.definition.metaOverlays[m.overlayKey]
 
 	if !hasMeta {
+		m.definition.metaOverlays[m.overlayKey] = metaOverlay{PressUp: true, PressDown: false}
+	} else if !meta.PressDown && !meta.PressUp {
 		m.definition.metaOverlays[m.overlayKey] = metaOverlay{PressUp: true, PressDown: false}
 	} else if meta.PressUp {
 		m.definition.metaOverlays[m.overlayKey] = metaOverlay{PressUp: false, PressDown: true}
