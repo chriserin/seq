@@ -1696,11 +1696,11 @@ func (m model) OverlaysView() string {
 		var playingSpacer = "   "
 		var playing = ""
 		if m.playing && m.playingMatchedOverlays[0] == k {
-			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(activePlayingColor).Render(" \u25CF ")
+			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(currentPlayingColor).Render(" \u25CF ")
 			buf.WriteString(playing)
 			playingSpacer = ""
 		} else if m.playing && slices.Contains(m.playingMatchedOverlays, k) {
-			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(currentPlayingColor).Render(" \u25C9 ")
+			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(activePlayingColor).Render(" \u25C9 ")
 			buf.WriteString(playing)
 			playingSpacer = ""
 		}
