@@ -174,3 +174,92 @@ func TestCombinePattern(t *testing.T) {
 		})
 	}
 }
+
+func TestEditKeys(t *testing.T) {
+	testCases := []struct {
+		desc   string
+		m      model
+		result []overlayKey
+		focus  bool
+	}{
+		{
+			desc:   "A",
+			m:      model{overlayKey: overlayKey{1, 1}},
+			result: []overlayKey{{1, 1}},
+		},
+		{
+			desc: "B",
+			m: model{
+				overlayKey: overlayKey{1, 1},
+				definition: Definition{
+					overlays: overlays{
+						overlayKey{1, 1}: make(overlay),
+						overlayKey{2, 1}: make(overlay),
+					}}},
+			result: []overlayKey{{1, 1}},
+		},
+		{
+			desc: "C",
+			m: model{
+				overlayKey: overlayKey{2, 1},
+				definition: Definition{
+					overlays: overlays{
+						overlayKey{1, 1}: make(overlay),
+						overlayKey{2, 1}: make(overlay),
+					},
+					metaOverlays: map[overlayKey]metaOverlay{
+						{1, 1}: {PressUp: true},
+					},
+				},
+			},
+			result: []overlayKey{{2, 1}, {1, 1}},
+		},
+		{
+			desc: "D",
+			m: model{
+				overlayKey: overlayKey{3, 1},
+				definition: Definition{
+					overlays: overlays{
+						overlayKey{1, 1}: make(overlay),
+						overlayKey{2, 1}: make(overlay),
+						overlayKey{3, 1}: make(overlay),
+					}}},
+			result: []overlayKey{{3, 1}},
+		},
+		{
+			desc: "E",
+			m: model{
+				overlayKey: overlayKey{4, 1},
+				definition: Definition{
+					overlays: overlays{
+						// overlayKey{1, 1}: make(overlay),
+						// overlayKey{2, 1}: make(overlay),
+						// overlayKey{4, 1}: make(overlay),
+					}}},
+			result: []overlayKey{{4, 1}},
+		},
+		{
+			desc: "F",
+			m: model{
+				overlayKey: overlayKey{2, 1},
+				definition: Definition{
+					overlays: overlays{
+						overlayKey{1, 1}: make(overlay),
+					},
+					metaOverlays: map[overlayKey]metaOverlay{
+						{1, 1}: {PressUp: true},
+					},
+				},
+			},
+			result: []overlayKey{{2, 1}, {1, 1}},
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			if true || tC.focus {
+				keys := tC.m.EditKeys()
+				assert.Equal(t, tC.result, keys)
+			}
+		})
+	}
+}

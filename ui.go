@@ -976,7 +976,7 @@ func Is(msg tea.KeyMsg, k key.Binding) bool {
 }
 
 func GetMinimumKeyCycle(key overlayKey) int {
-	for i := 0; i < 100; i++ {
+	for i := 1; i < 100; i++ {
 		if DoesKeyMatch(i, key) {
 			return i
 		}
@@ -1508,6 +1508,9 @@ func (d Definition) VisualCombinedPattern(keys []overlayKey) VisualOverlay {
 
 func (m *model) KeysBelowCurrent() []overlayKey {
 	keys := m.OverlayKeys()
+	if !slices.Contains(keys, m.overlayKey) {
+		keys = append(keys, m.overlayKey)
+	}
 	slices.SortFunc(keys, OverlayKeySort)
 	slices.Reverse(keys)
 	indexOfCurrent := slices.Index(keys, m.overlayKey)
@@ -1574,8 +1577,8 @@ func (m *model) RemoveNote(gridKey gridKey) {
 
 func (m model) EditKeys() []overlayKey {
 	keysBelowCurrent := m.KeysBelowCurrent()
+	keysBelowCurrent = append(keysBelowCurrent, m.overlayKey)
 	matchedKeys := m.definition.GetMatchingOverlays(GetMinimumKeyCycle(m.overlayKey), keysBelowCurrent)
-	matchedKeys = append(matchedKeys, m.overlayKey)
 	slices.SortFunc(matchedKeys, OverlayKeySort)
 	return matchedKeys
 }
