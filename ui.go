@@ -131,7 +131,7 @@ var transitiveKeys = transitiveKeyMap{
 	PrevOverlay:          Key("Prev Overlay", "}"),
 	Save:                 Key("Save", "ctrl+w"),
 	Undo:                 Key("Undo", "u"),
-	Redo:                 Key("Redo", "ctrl+r"),
+	Redo:                 Key("Redo", "U"),
 	New:                  Key("New", "ctrl+n"),
 	ToggleRatchetMode:    Key("Toggle Ratchet Mode", "ctrl+r"),
 	ToggleVisualMode:     Key("Toggle Visual Mode", "v"),
@@ -495,6 +495,7 @@ type UndoVisualSelection struct {
 }
 
 func (uvs UndoVisualSelection) ApplyUndo(m *model) {
+	m.EnsureOverlay()
 	overlay := m.definition.overlays[uvs.overlayKey]
 	for _, k := range GridKeysForCursors(uvs.anchorPosition, uvs.cursorPosition) {
 		delete(overlay, k)
@@ -1306,6 +1307,7 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 	} else {
 		m = m.UpdateDefinitionKeys(msg)
 	}
+	m.visualMode = false
 	m.ResetRedo()
 	return m
 }
