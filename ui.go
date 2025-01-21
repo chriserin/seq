@@ -1511,31 +1511,45 @@ func (m *model) KeysBelowCurrent() []overlayKey {
 func (m *model) fill(every uint8) {
 	start := m.cursorPos.beat
 
-	matchedKeys := m.EditKeys()
-	combinedOverlay := m.definition.CombinedPattern(matchedKeys)
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
 
-	for i := uint8(0); i < m.definition.beats; i++ {
-		if i%every == 0 {
-			currentBeat := start + i
-			if currentBeat >= m.definition.beats {
-				return
-			}
-			gridKey := gridKey{m.cursorPos.line, currentBeat}
-			currentNote, hasNote := combinedOverlay[gridKey]
-			hasNote = hasNote && currentNote != zeronote
+	for i := start; i < m.definition.beats; i += every {
+		gridKey := gridKey{m.cursorPos.line, i}
+		currentNote, hasNote := combinedOverlay[gridKey]
+		hasNote = hasNote && currentNote != zeronote
 
-			if m.overlayKey != ROOT_OVERLAY && hasNote {
-				m.CurrentNotable().SetNote(gridKey, zeronote)
-			} else if m.overlayKey == ROOT_OVERLAY && hasNote {
-				delete(m.definition.overlays[ROOT_OVERLAY], gridKey)
-			} else {
-				m.CurrentNotable().SetNote(gridKey, note{5, InitRatchet(), 0})
-			}
+		if hasNote {
+			m.RemoveNote(gridKey)
+		} else {
+			m.CurrentNotable().SetNote(gridKey, note{5, InitRatchet(), 0})
 		}
 	}
 }
 
-func (m *model) EditKeys() []overlayKey {
+func (m *model) incrementAccent(every uint8) {
+	start := m.cursorPos.beat
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+
+	for i := uint8(start); i < m.definition.beats; i += every {
+		gridKey := gridKey{m.cursorPos.line, i}
+		currentNote, hasNote := combinedOverlay[gridKey]
+		hasNote = hasNote && currentNote != zeronote
+
+		if hasNote {
+			m.CurrentNotable().SetNote(gridKey, currentNote.IncrementAccent(m.accentModifier))
+		}
+	}
+}
+
+func (m *model) RemoveNote(gridKey gridKey) {
+	if m.overlayKey == ROOT_OVERLAY {
+		delete(m.definition.overlays[ROOT_OVERLAY], gridKey)
+	} else {
+		m.CurrentNotable().SetNote(gridKey, zeronote)
+	}
+}
+
+func (m model) EditKeys() []overlayKey {
 	keysBelowCurrent := m.KeysBelowCurrent()
 	matchedKeys := m.definition.GetMatchingOverlays(GetMinimumKeyCycle(m.overlayKey), keysBelowCurrent)
 	matchedKeys = append(matchedKeys, m.overlayKey)
@@ -1548,29 +1562,6 @@ func (m *model) CurrentKeys() []overlayKey {
 		return m.playingMatchedOverlays
 	} else {
 		return m.EditKeys()
-	}
-}
-
-func (m *model) incrementAccent(every uint8) {
-	start := m.cursorPos.beat
-	rootOverlay := m.definition.overlays[ROOT_OVERLAY]
-	currentOverlay := m.definition.overlays[m.overlayKey]
-
-	for i := uint8(0); i < m.definition.beats; i++ {
-		if i%every == 0 {
-			currentBeat := start + i
-			if currentBeat >= m.definition.beats {
-				return
-			}
-			gridKey := gridKey{m.cursorPos.line, currentBeat}
-			rootNote, rootHasNote := rootOverlay[gridKey]
-			currentNote, currentHasNote := currentOverlay[gridKey]
-			if currentHasNote && currentNote != zeronote {
-				m.CurrentNotable().SetNote(gridKey, currentNote.IncrementAccent(m.accentModifier))
-			} else if rootHasNote && rootNote != zeronote {
-				m.CurrentNotable().SetNote(gridKey, rootNote.IncrementAccent(m.accentModifier))
-			}
-		}
 	}
 }
 
