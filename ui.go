@@ -1509,11 +1509,11 @@ func (m *model) KeysBelowCurrent() []overlayKey {
 }
 
 func (m *model) fill(every uint8) {
-	start := m.cursorPos.beat
-
 	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
 
-	for i := start; i < m.definition.beats; i += every {
+	start, end := m.PatternActionBoundaries()
+
+	for i := uint8(start); i <= end; i += every {
 		gridKey := gridKey{m.cursorPos.line, i}
 		currentNote, hasNote := combinedOverlay[gridKey]
 		hasNote = hasNote && currentNote != zeronote
@@ -1527,10 +1527,11 @@ func (m *model) fill(every uint8) {
 }
 
 func (m *model) incrementAccent(every uint8) {
-	start := m.cursorPos.beat
 	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
 
-	for i := uint8(start); i < m.definition.beats; i += every {
+	start, end := m.PatternActionBoundaries()
+
+	for i := uint8(start); i <= end; i += every {
 		gridKey := gridKey{m.cursorPos.line, i}
 		currentNote, hasNote := combinedOverlay[gridKey]
 		hasNote = hasNote && currentNote != zeronote
@@ -1538,6 +1539,18 @@ func (m *model) incrementAccent(every uint8) {
 		if hasNote {
 			m.CurrentNotable().SetNote(gridKey, currentNote.IncrementAccent(m.accentModifier))
 		}
+	}
+}
+
+func (m model) PatternActionBoundaries() (uint8, uint8) {
+	if m.visualMode {
+		if m.visualAnchorCursor.beat < m.cursorPos.beat {
+			return m.visualAnchorCursor.beat, m.cursorPos.beat
+		} else {
+			return m.cursorPos.beat, m.visualAnchorCursor.beat
+		}
+	} else {
+		return m.cursorPos.beat, m.definition.beats
 	}
 }
 
