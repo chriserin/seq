@@ -64,6 +64,7 @@ type definitionKeyMap struct {
 	SelectKeyLine        key.Binding
 	PressDownOverlay     key.Binding
 	NumberPattern        key.Binding
+	RotateRight          key.Binding
 }
 
 var noteWiseKeys = []key.Binding{
@@ -83,6 +84,7 @@ var noteWiseKeys = []key.Binding{
 var lineWiseKeys = []key.Binding{
 	definitionKeys.ClearLine,
 	definitionKeys.NumberPattern,
+	definitionKeys.RotateRight,
 }
 
 var overlayWiseKeys = []key.Binding{
@@ -164,6 +166,7 @@ var definitionKeys = definitionKeyMap{
 	SelectKeyLine:        Key("Select Key Line", "K"),
 	PressDownOverlay:     Key("Press Down Overlay", "ctrl+p"),
 	NumberPattern:        Key("Number Pattern", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
+	RotateRight:          Key("Right Right", "L"),
 }
 
 // func (k keymap) ShortHelp() []key.Binding {
@@ -1373,6 +1376,8 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.ToggleOverlayStackOptions(m.overlayKey)
 	case Is(msg, keys.ClearSeq):
 		m.ClearOverlay()
+	case Is(msg, keys.RotateRight):
+		m.RotateRight()
 	}
 	if msg.String() >= "1" && msg.String() <= "9" {
 		beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
@@ -1541,6 +1546,23 @@ func (m *model) ClearOverlayLine() {
 
 func (m *model) ClearOverlay() {
 	delete(m.definition.overlays, m.overlayKey)
+}
+
+func (m *model) RotateRight() {
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+
+	start, end := m.PatternActionBoundaries()
+	lastNote := combinedOverlay[gridKey{m.cursorPos.line, end}]
+	previousNote := zeronote
+	for i := uint8(start); i <= end; i++ {
+		gridKey := gridKey{m.cursorPos.line, i}
+		currentNote := combinedOverlay[gridKey]
+
+		m.CurrentNotable().SetNote(gridKey, previousNote)
+		previousNote = currentNote
+	}
+
+	m.CurrentNotable().SetNote(gridKey{m.cursorPos.line, start}, lastNote)
 }
 
 func (m *model) advanceCurrentBeat() {
