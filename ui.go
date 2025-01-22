@@ -61,6 +61,7 @@ type definitionKeyMap struct {
 	ActionAddSkipBeat    key.Binding
 	ActionAddReset       key.Binding
 	ActionAddLineBounce  key.Binding
+	ActionAddLineDelay   key.Binding
 	SelectKeyLine        key.Binding
 	PressDownOverlay     key.Binding
 	NumberPattern        key.Binding
@@ -80,6 +81,7 @@ var noteWiseKeys = []key.Binding{
 	definitionKeys.ActionAddSkipBeat,
 	definitionKeys.ActionAddReset,
 	definitionKeys.ActionAddLineBounce,
+	definitionKeys.ActionAddLineDelay,
 }
 
 var lineWiseKeys = []key.Binding{
@@ -163,6 +165,7 @@ var definitionKeys = definitionKeyMap{
 	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
 	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
 	ActionAddLineBounce:  Key("Add Line Bounce", "B"),
+	ActionAddLineDelay:   Key("Add Line Delay", "z"),
 	ActionAddSkipBeat:    Key("Add Skip Beat", "b"),
 	ActionAddReset:       Key("Add Pattern Reset", "T"),
 	SelectKeyLine:        Key("Select Key Line", "K"),
@@ -254,6 +257,7 @@ const (
 	ACTION_LINE_SKIP_BEAT
 	ACTION_RESET
 	ACTION_LINE_BOUNCE
+	ACTION_LINE_DELAY
 )
 
 var lineactions = map[action]lineaction{
@@ -263,6 +267,7 @@ var lineactions = map[action]lineaction{
 	ACTION_LINE_SKIP_BEAT: {'⇒', "#a9e5bb"},
 	ACTION_RESET:          {'⇚', "#fcf6b1"},
 	ACTION_LINE_BOUNCE:    {'↨', "#fcf6b1"},
+	ACTION_LINE_DELAY:     {'z', "#cc4bc2"},
 }
 
 type ratchetDiacritical string
@@ -1370,6 +1375,8 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.AddAction(ACTION_RESET)
 	case Is(msg, keys.ActionAddLineBounce):
 		m.AddAction(ACTION_LINE_BOUNCE)
+	case Is(msg, keys.ActionAddLineDelay):
+		m.AddAction(ACTION_LINE_DELAY)
 	case Is(msg, keys.SelectKeyLine):
 		undoable := UndoKeyline{m.definition.keyline}
 		m.definition.keyline = m.cursorPos.line
@@ -1623,6 +1630,8 @@ func (m *model) advancePlayState(combinedPattern overlay, i int) bool {
 		m.playState[i].direction = -1
 	case ACTION_LINE_SKIP_BEAT:
 		m.advancePlayState(combinedPattern, i)
+	case ACTION_LINE_DELAY:
+		m.playState[i].currentBeat = uint8(max(advancedBeat-1, 0))
 	case ACTION_RESET:
 		for i := range m.playState {
 			m.playState[i].currentBeat = 0
