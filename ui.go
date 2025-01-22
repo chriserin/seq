@@ -341,6 +341,27 @@ type lineDefinition struct {
 	Note    uint8
 }
 
+type noteMessage struct {
+	channel  uint8
+	note     uint8
+	velocity uint8
+}
+
+func (l lineDefinition) Message(note note, accentValue uint8, accentTarget accentTarget) noteMessage {
+	var noteValue uint8
+	var velocityValue uint8
+	switch accentTarget {
+	case ACCENT_TARGET_NOTE:
+		noteValue = l.Note + accentValue
+		velocityValue = 96
+	case ACCENT_TARGET_VELOCITY:
+		noteValue = l.Note
+		velocityValue = accentValue
+	}
+
+	return noteMessage{l.Channel, noteValue, velocityValue}
+}
+
 func (l *lineDefinition) IncrementChannel() {
 	if l.Channel < 16 {
 		l.Channel++
@@ -702,7 +723,7 @@ type lineNote struct {
 }
 
 func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate, sendFn SendFunc) []tea.Cmd {
-	notes := make([]lineNote, 0, len(lines))
+	messages := make([]noteMessage, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
 	for i, line := range lines {
@@ -711,14 +732,14 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 		if hasNote && note.Ratchets.length > 0 {
 			ratchetNotes = append(ratchetNotes, lineNote{note, line})
 		} else if hasNote && note != zeronote {
-			notes = append(notes, lineNote{note, line})
+			messages = append(messages, line.Message(note, accents.data[note.AccentIndex].value, accents.target))
 		}
 	}
 
 	playCmds := make([]tea.Cmd, 0, len(lines))
 
 	playNotes := func() tea.Msg {
-		Play(accents, notes, sendFn)
+		Play(messages, sendFn)
 		return nil
 	}
 
@@ -741,29 +762,17 @@ func PlayRatchets(lineNote lineNote, beatInterval time.Duration, sendFn SendFunc
 
 type SendFunc func(msg midi.Message) error
 
-func Play(accents patternAccents, lineNotes []lineNote, sendFn SendFunc) {
-	for _, lineNote := range lineNotes {
-		var note uint8
-		var velocity uint8
-		switch accents.target {
-		case ACCENT_TARGET_NOTE:
-			note = lineNote.line.Note + accents.data[lineNote.note.AccentIndex].value
-			velocity = 96
-		case ACCENT_TARGET_VELOCITY:
-			note = lineNote.line.Note
-			velocity = accents.data[lineNote.note.AccentIndex].value
-		}
-		onMessage := midi.NoteOn(lineNote.line.Channel, note, velocity)
-		offMessage := midi.NoteOff(lineNote.line.Channel, note)
-		time.AfterFunc(time.Millisecond*40, func() {
-			err := sendFn(offMessage)
-			if err != nil {
-				panic("note off failed")
-			}
-		})
+func Play(messages []noteMessage, sendFn SendFunc) {
+	for _, message := range messages {
+		onMessage := midi.NoteOn(message.channel, message.note, message.velocity)
+		offMessage := midi.NoteOff(message.channel, message.note)
 		err := sendFn(onMessage)
 		if err != nil {
 			panic("note on failed")
+		}
+		err = sendFn(offMessage)
+		if err != nil {
+			panic("note off failed")
 		}
 	}
 }
@@ -1281,8 +1290,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				panic("sendFn is broken")
 			}
 			if msg.Ratchets.hits[msg.iterations] {
+				note := msg.lineNote.note
+				message := msg.lineNote.line.Message(msg.lineNote.note, m.definition.accents.data[note.AccentIndex].value, m.definition.accents.target)
 				playCmd = func() tea.Msg {
-					Play(m.definition.accents, []lineNote{msg.lineNote}, sendFn)
+					Play([]noteMessage{message}, sendFn)
 					return nil
 				}
 			}
