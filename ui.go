@@ -172,9 +172,9 @@ var definitionKeys = definitionKeyMap{
 // }
 
 type Accent struct {
-	shape rune
-	color lipgloss.Color
-	value uint8
+	Shape rune
+	Color lipgloss.Color
+	Value uint8
 }
 
 var accents = []Accent{
@@ -657,10 +657,10 @@ type Definition struct {
 }
 
 type patternAccents struct {
-	diff   uint8
-	data   []Accent
-	start  uint8
-	target accentTarget
+	Diff   uint8
+	Data   []Accent
+	Start  uint8
+	Target accentTarget
 }
 
 type accentTarget uint8
@@ -672,11 +672,11 @@ const (
 
 func (pa *patternAccents) ReCalc() {
 	accents := make([]Accent, 9)
-	for i, a := range pa.data[1:] {
-		a.value = pa.start - pa.diff*uint8(i)
+	for i, a := range pa.Data[1:] {
+		a.Value = pa.Start - pa.Diff*uint8(i)
 		accents[i+1] = a
 	}
-	pa.data = accents
+	pa.Data = accents
 }
 
 type metaOverlay struct {
@@ -732,7 +732,7 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 		if hasNote && note.Ratchets.length > 0 {
 			ratchetNotes = append(ratchetNotes, lineNote{note, line})
 		} else if hasNote && note != zeronote {
-			messages = append(messages, line.Message(note, accents.data[note.AccentIndex].value, accents.target))
+			messages = append(messages, line.Message(note, accents.Data[note.AccentIndex].Value, accents.Target))
 		}
 	}
 
@@ -903,26 +903,26 @@ func (m *model) DecreaseRatchet() {
 }
 
 func (m *model) IncreaseAccent() {
-	m.definition.accents.diff = m.definition.accents.diff + 1
+	m.definition.accents.Diff = m.definition.accents.Diff + 1
 	m.definition.accents.ReCalc()
 }
 
 func (m *model) DecreaseAccent() {
-	m.definition.accents.diff = m.definition.accents.diff - 1
+	m.definition.accents.Diff = m.definition.accents.Diff - 1
 	m.definition.accents.ReCalc()
 }
 
 func (m *model) DecreaseAccentTarget() {
-	m.definition.accents.target = (m.definition.accents.target + 1) % 2
+	m.definition.accents.Target = (m.definition.accents.Target + 1) % 2
 }
 
 func (m *model) IncreaseAccentStart() {
-	m.definition.accents.start = m.definition.accents.start + 1
+	m.definition.accents.Start = m.definition.accents.Start + 1
 	m.definition.accents.ReCalc()
 }
 
 func (m *model) DecreaseAccentStart() {
-	m.definition.accents.start = m.definition.accents.start - 1
+	m.definition.accents.Start = m.definition.accents.Start - 1
 	m.definition.accents.ReCalc()
 }
 
@@ -962,7 +962,7 @@ func InitDefinition() Definition {
 		subdivisions: 2,
 		lines:        InitLines(8),
 		metaOverlays: make(map[overlayKey]metaOverlay),
-		accents:      patternAccents{diff: 15, data: accents, start: 120, target: ACCENT_TARGET_VELOCITY},
+		accents:      patternAccents{Diff: 15, Data: accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
 	}
 }
 
@@ -1291,7 +1291,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if msg.Ratchets.hits[msg.iterations] {
 				note := msg.lineNote.note
-				message := msg.lineNote.line.Message(msg.lineNote.note, m.definition.accents.data[note.AccentIndex].value, m.definition.accents.target)
+				message := msg.lineNote.line.Message(msg.lineNote.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
 				playCmd = func() tea.Msg {
 					Play([]noteMessage{message}, sendFn)
 					return nil
@@ -1728,13 +1728,13 @@ func (m model) View() string {
 func (m model) AccentKeyView() string {
 	var buf strings.Builder
 	var accentDiffString string
-	var accentDiff = m.definition.accents.diff
-	var accentStart = m.definition.accents.start
+	var accentDiff = m.definition.accents.Diff
+	var accentStart = m.definition.accents.Start
 
 	var accentTarget string
-	if m.definition.accents.target == ACCENT_TARGET_NOTE {
+	if m.definition.accents.Target == ACCENT_TARGET_NOTE {
 		accentTarget = "N"
-	} else if m.definition.accents.target == ACCENT_TARGET_VELOCITY {
+	} else if m.definition.accents.Target == ACCENT_TARGET_VELOCITY {
 		accentTarget = "V"
 	}
 
@@ -1753,7 +1753,7 @@ func (m model) AccentKeyView() string {
 
 	buf.WriteString(fmt.Sprintf(" ACCENTS %s %s\n", accentDiffString, accentTargetString))
 	buf.WriteString("———————————————\n")
-	startAccent := m.definition.accents.data[1]
+	startAccent := m.definition.accents.Data[1]
 
 	var accentStartString string
 	if m.selectionIndicator == SELECT_ACCENT_START {
@@ -1762,11 +1762,11 @@ func (m model) AccentKeyView() string {
 		accentStartString = numberColor.Render(fmt.Sprintf("%2d", accentStart))
 	}
 
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color(startAccent.color))
-	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(startAccent.shape)), accentStartString))
-	for _, accent := range m.definition.accents.data[2:] {
-		style := lipgloss.NewStyle().Foreground(lipgloss.Color(accent.color))
-		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(accent.shape)), accent.value))
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color(startAccent.Color))
+	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(startAccent.Shape)), accentStartString))
+	for _, accent := range m.definition.accents.Data[2:] {
+		style := lipgloss.NewStyle().Foreground(lipgloss.Color(accent.Color))
+		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(accent.Shape)), accent.Value))
 	}
 	return buf.String()
 }
@@ -1843,7 +1843,7 @@ func (m model) OverlaysView() string {
 	return buf.String()
 }
 
-var accentModeStyle = lipgloss.NewStyle().Background(accents[1].color).Foreground(lipgloss.Color("#000000"))
+var accentModeStyle = lipgloss.NewStyle().Background(accents[1].Color).Foreground(lipgloss.Color("#000000"))
 
 func (m model) ViewTriggerSeq() string {
 	var buf strings.Builder
@@ -2015,8 +2015,8 @@ func (n note) ViewComponents() (string, lipgloss.Color) {
 	var char string
 	var foregroundColor lipgloss.Color
 	if currentAction == ACTION_NOTHING {
-		char = string(currentAccent.shape) + string(ratchets[currentNote.Ratchets.length])
-		foregroundColor = currentAccent.color
+		char = string(currentAccent.Shape) + string(ratchets[currentNote.Ratchets.length])
+		foregroundColor = currentAccent.Color
 	} else {
 		lineaction := lineactions[currentAction]
 		char = string(lineaction.shape)

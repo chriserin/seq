@@ -51,6 +51,7 @@ type AllWrite struct {
 	Subdivisions    int
 	Keyline         uint8
 	MetaOverlays    WriteMetaOverlays
+	Accents         patternAccents
 }
 
 func (a AllWrite) UntransformOverlays() overlays {
@@ -124,6 +125,7 @@ func Read() (Definition, bool) {
 		keyline:      (*all).Keyline,
 		subdivisions: (*all).Subdivisions,
 		metaOverlays: (*all).UntransformMetaOverlays(),
+		accents:      (*all).Accents,
 	}, true
 }
 
@@ -145,6 +147,7 @@ func Write(definition Definition) {
 		Subdivisions:    definition.subdivisions,
 		Keyline:         definition.keyline,
 		MetaOverlays:    TransformMetaOverlays(definition.metaOverlays),
+		Accents:         definition.accents,
 	}
 	err = encoder.Encode(all)
 	if err != nil {
