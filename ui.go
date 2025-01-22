@@ -58,6 +58,7 @@ type definitionKeyMap struct {
 	ToggleRatchetMute    key.Binding
 	ActionAddLineReset   key.Binding
 	ActionAddLineReverse key.Binding
+	ActionAddSkipBeat    key.Binding
 	SelectKeyLine        key.Binding
 	PressDownOverlay     key.Binding
 	NumberPattern        key.Binding
@@ -72,6 +73,7 @@ var noteWiseKeys = []key.Binding{
 	definitionKeys.ToggleRatchetMute,
 	definitionKeys.ActionAddLineReset,
 	definitionKeys.ActionAddLineReverse,
+	definitionKeys.ActionAddSkipBeat,
 }
 
 var lineWiseKeys = []key.Binding{
@@ -152,6 +154,7 @@ var definitionKeys = definitionKeyMap{
 	ToggleRatchetMute:    Key("Toggle Ratchet Mute", "m"),
 	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
 	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
+	ActionAddSkipBeat:    Key("Add Skip Beat", "B"),
 	SelectKeyLine:        Key("Select Key Line", "K"),
 	PressDownOverlay:     Key("Press Down Overlay", "ctrl+p"),
 	NumberPattern:        Key("Number Pattern", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
@@ -236,12 +239,14 @@ const (
 	ACTION_NOTHING action = iota
 	ACTION_LINE_RESET
 	ACTION_LINE_REVERSE
+	ACTION_LINE_SKIP_BEAT
 )
 
 var lineactions = map[action]lineaction{
-	ACTION_NOTHING:      {' ', "#000000"},
-	ACTION_LINE_RESET:   {'↔', "#cf142b"},
-	ACTION_LINE_REVERSE: {'←', "#f8730e"},
+	ACTION_NOTHING:        {' ', "#000000"},
+	ACTION_LINE_RESET:     {'↔', "#cf142b"},
+	ACTION_LINE_REVERSE:   {'←', "#f8730e"},
+	ACTION_LINE_SKIP_BEAT: {'⇒', "#a9e5bb"},
 }
 
 type ratchetDiacritical string
@@ -1342,6 +1347,8 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.AddAction(ACTION_LINE_RESET)
 	case Is(msg, keys.ActionAddLineReverse):
 		m.AddAction(ACTION_LINE_REVERSE)
+	case Is(msg, keys.ActionAddSkipBeat):
+		m.AddAction(ACTION_LINE_SKIP_BEAT)
 	case Is(msg, keys.SelectKeyLine):
 		undoable := UndoKeyline{m.definition.keyline}
 		m.definition.keyline = m.cursorPos.line
@@ -1523,24 +1530,31 @@ func (m *model) ClearOverlay() {
 
 func (m *model) advanceCurrentBeat() {
 	combinedPattern := m.definition.CombinedPattern(m.playingMatchedOverlays)
-	for i, currentState := range m.playState {
-		advancedBeat := int8(currentState.currentBeat) + currentState.direction
+	for i := range m.playState {
+		m.advancePlayState(combinedPattern, i)
+	}
+}
 
-		if advancedBeat < 0 || advancedBeat >= int8(m.definition.beats) {
-			m.playState[i].currentBeat = currentState.resetLocation
-			advancedBeat = int8(currentState.resetLocation)
-			m.playState[i].direction = currentState.resetDirection
-		} else {
-			m.playState[i].currentBeat = uint8(advancedBeat)
-		}
+func (m *model) advancePlayState(combinedPattern overlay, i int) {
+	currentState := m.playState[i]
+	advancedBeat := int8(currentState.currentBeat) + currentState.direction
 
-		switch combinedPattern[gridKey{uint8(i), uint8(advancedBeat)}].Action {
-		case ACTION_LINE_RESET:
-			m.playState[i].currentBeat = 0
-		case ACTION_LINE_REVERSE:
-			m.playState[i].currentBeat = uint8(max(advancedBeat-1, 0))
-			m.playState[i].direction = -1
-		}
+	if advancedBeat < 0 || advancedBeat >= int8(m.definition.beats) {
+		m.playState[i].currentBeat = currentState.resetLocation
+		advancedBeat = int8(currentState.resetLocation)
+		m.playState[i].direction = currentState.resetDirection
+	} else {
+		m.playState[i].currentBeat = uint8(advancedBeat)
+	}
+
+	switch combinedPattern[gridKey{uint8(i), uint8(advancedBeat)}].Action {
+	case ACTION_LINE_RESET:
+		m.playState[i].currentBeat = 0
+	case ACTION_LINE_REVERSE:
+		m.playState[i].currentBeat = uint8(max(advancedBeat-1, 0))
+		m.playState[i].direction = -1
+	case ACTION_LINE_SKIP_BEAT:
+		m.advancePlayState(combinedPattern, i)
 	}
 }
 
