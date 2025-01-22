@@ -65,6 +65,7 @@ type definitionKeyMap struct {
 	PressDownOverlay     key.Binding
 	NumberPattern        key.Binding
 	RotateRight          key.Binding
+	RotateLeft           key.Binding
 }
 
 var noteWiseKeys = []key.Binding{
@@ -85,6 +86,7 @@ var lineWiseKeys = []key.Binding{
 	definitionKeys.ClearLine,
 	definitionKeys.NumberPattern,
 	definitionKeys.RotateRight,
+	definitionKeys.RotateLeft,
 }
 
 var overlayWiseKeys = []key.Binding{
@@ -167,6 +169,7 @@ var definitionKeys = definitionKeyMap{
 	PressDownOverlay:     Key("Press Down Overlay", "ctrl+p"),
 	NumberPattern:        Key("Number Pattern", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
 	RotateRight:          Key("Right Right", "L"),
+	RotateLeft:           Key("Right Left", "H"),
 }
 
 // func (k keymap) ShortHelp() []key.Binding {
@@ -1378,6 +1381,8 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.ClearOverlay()
 	case Is(msg, keys.RotateRight):
 		m.RotateRight()
+	case Is(msg, keys.RotateLeft):
+		m.RotateLeft()
 	}
 	if msg.String() >= "1" && msg.String() <= "9" {
 		beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
@@ -1565,6 +1570,25 @@ func (m *model) RotateRight() {
 	m.CurrentNotable().SetNote(gridKey{m.cursorPos.line, start}, lastNote)
 }
 
+func (m *model) RotateLeft() {
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+
+	start, end := m.PatternActionBoundaries()
+	firstNote := combinedOverlay[gridKey{m.cursorPos.line, start}]
+	previousNote := zeronote
+	m.LogString(fmt.Sprintf("START %d", start))
+	m.LogString(fmt.Sprintf("END %d", end))
+	for i := int8(end); i >= int8(start); i-- {
+		gridKey := gridKey{m.cursorPos.line, uint8(i)}
+		currentNote := combinedOverlay[gridKey]
+
+		m.CurrentNotable().SetNote(gridKey, previousNote)
+		previousNote = currentNote
+	}
+
+	m.CurrentNotable().SetNote(gridKey{m.cursorPos.line, end}, firstNote)
+}
+
 func (m *model) advanceCurrentBeat() {
 	combinedPattern := m.definition.CombinedPattern(m.playingMatchedOverlays)
 	for i := range m.playState {
@@ -1710,7 +1734,7 @@ func (m model) PatternActionBoundaries() (uint8, uint8) {
 			return m.cursorPos.beat, m.visualAnchorCursor.beat
 		}
 	} else {
-		return m.cursorPos.beat, m.definition.beats
+		return m.cursorPos.beat, m.definition.beats - 1
 	}
 }
 
