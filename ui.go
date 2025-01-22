@@ -35,6 +35,7 @@ type transitiveKeyMap struct {
 	ToggleAccentModifier key.Binding
 	OverlayInputSwitch   key.Binding
 	SetupInputSwitch     key.Binding
+	AccentInputSwitch    key.Binding
 	NextOverlay          key.Binding
 	PrevOverlay          key.Binding
 	Save                 key.Binding
@@ -127,6 +128,7 @@ var transitiveKeys = transitiveKeyMap{
 	ToggleAccentModifier: Key("Toggle Accent Modifier", "a"),
 	OverlayInputSwitch:   Key("Select Overlay Indicator", "ctrl+o"),
 	SetupInputSwitch:     Key("Setup Input Indicator", "ctrl+s"),
+	AccentInputSwitch:    Key("Accent Input Indicator", "ctrl+a"),
 	NextOverlay:          Key("Next Overlay", "{"),
 	PrevOverlay:          Key("Prev Overlay", "}"),
 	Save:                 Key("Save", "ctrl+w"),
@@ -332,17 +334,9 @@ func (gk gridKey) String() string {
 
 type overlay map[gridKey]note
 
-type accentTarget uint8
-
-const (
-	ACCENT_TARGET_VELOCITY accentTarget = iota
-	ACCENT_TARGET_NOTE
-)
-
 type lineDefinition struct {
 	Channel uint8
 	Note    uint8
-	Target  accentTarget
 }
 
 func (l *lineDefinition) IncrementChannel() {
@@ -409,6 +403,9 @@ const (
 	SELECT_SETUP_NOTE
 	SELECT_RATCHETS
 	SELECT_RATCHET_SPAN
+	SELECT_ACCENT_DIFF
+	SELECT_ACCENT_TARGET
+	SELECT_ACCENT_START
 )
 
 type Undoable interface {
@@ -633,6 +630,30 @@ type Definition struct {
 	subdivisions int
 	keyline      uint8
 	metaOverlays map[overlayKey]metaOverlay
+	accents      patternAccents
+}
+
+type patternAccents struct {
+	diff   uint8
+	data   []Accent
+	start  uint8
+	target accentTarget
+}
+
+type accentTarget uint8
+
+const (
+	ACCENT_TARGET_NOTE accentTarget = iota
+	ACCENT_TARGET_VELOCITY
+)
+
+func (pa *patternAccents) ReCalc() {
+	accents := make([]Accent, 9)
+	for i, a := range pa.data[1:] {
+		a.value = pa.start - pa.diff*uint8(i)
+		accents[i+1] = a
+	}
+	pa.data = accents
 }
 
 type metaOverlay struct {
@@ -678,7 +699,7 @@ type lineNote struct {
 	line lineDefinition
 }
 
-func PlayBeat(beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate, sendFn SendFunc) []tea.Cmd {
+func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate, sendFn SendFunc) []tea.Cmd {
 	notes := make([]lineNote, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
@@ -695,7 +716,7 @@ func PlayBeat(beatInterval time.Duration, lines []lineDefinition, pattern overla
 	playCmds := make([]tea.Cmd, 0, len(lines))
 
 	playNotes := func() tea.Msg {
-		Play(notes, sendFn)
+		Play(accents, notes, sendFn)
 		return nil
 	}
 
@@ -718,36 +739,33 @@ func PlayRatchets(lineNote lineNote, beatInterval time.Duration, sendFn SendFunc
 
 type SendFunc func(msg midi.Message) error
 
-func Play(lineNotes []lineNote, sendFn SendFunc) {
+func Play(accents patternAccents, lineNotes []lineNote, sendFn SendFunc) {
 	for _, lineNote := range lineNotes {
-		onMessage := midi.NoteOn(lineNote.line.Channel, lineNote.line.Note, accents[lineNote.note.AccentIndex].value)
-		offMessage := midi.NoteOff(lineNote.line.Channel, lineNote.line.Note)
+		var note uint8
+		var velocity uint8
+		switch accents.target {
+		case ACCENT_TARGET_NOTE:
+			note = lineNote.line.Note + accents.data[lineNote.note.AccentIndex].value
+			velocity = 96
+		case ACCENT_TARGET_VELOCITY:
+			note = lineNote.line.Note
+			velocity = accents.data[lineNote.note.AccentIndex].value
+		}
+		onMessage := midi.NoteOn(lineNote.line.Channel, note, velocity)
+		fmt.Println(onMessage)
+		offMessage := midi.NoteOff(lineNote.line.Channel, note)
+		fmt.Println(offMessage)
+		time.AfterFunc(time.Millisecond*40, func() {
+			err := sendFn(offMessage)
+			if err != nil {
+				panic("note off failed")
+			}
+		})
 		err := sendFn(onMessage)
 		if err != nil {
 			panic("note on failed")
 		}
-		err = sendFn(offMessage)
-		if err != nil {
-			panic("note off failed")
-		}
 	}
-}
-
-func PlayRatchet(number uint8, timeInterval time.Duration, onMessage, offMessage midi.Message, sendFn SendFunc) {
-	fn := func() {
-		err := sendFn(onMessage)
-		if err != nil {
-			panic("ratchet note on failed")
-		}
-		err = sendFn(offMessage)
-		if err != nil {
-			panic("ratchet note off failed")
-		}
-		if number > 0 {
-			PlayRatchet(number-1, timeInterval, onMessage, offMessage, sendFn)
-		}
-	}
-	time.AfterFunc(timeInterval, fn)
 }
 
 func (m *model) EnsureOverlay() {
@@ -875,6 +893,30 @@ func (m *model) DecreaseRatchet() {
 	}
 }
 
+func (m *model) IncreaseAccent() {
+	m.definition.accents.diff = m.definition.accents.diff + 1
+	m.definition.accents.ReCalc()
+}
+
+func (m *model) DecreaseAccent() {
+	m.definition.accents.diff = m.definition.accents.diff - 1
+	m.definition.accents.ReCalc()
+}
+
+func (m *model) DecreaseAccentTarget() {
+	m.definition.accents.target = (m.definition.accents.target + 1) % 2
+}
+
+func (m *model) IncreaseAccentStart() {
+	m.definition.accents.start = m.definition.accents.start + 1
+	m.definition.accents.ReCalc()
+}
+
+func (m *model) DecreaseAccentStart() {
+	m.definition.accents.start = m.definition.accents.start - 1
+	m.definition.accents.ReCalc()
+}
+
 func (m *model) ToggleRatchetMute() {
 	currentNote := m.CurrentNote()
 	currentNote.Ratchets.hits[m.ratchetCursor] = !currentNote.Ratchets.hits[m.ratchetCursor]
@@ -887,7 +929,6 @@ func InitLines(n uint8) []lineDefinition {
 		lines[i] = lineDefinition{
 			Channel: 10,
 			Note:    C1 + i,
-			Target:  ACCENT_TARGET_VELOCITY,
 		}
 	}
 	return lines
@@ -912,6 +953,7 @@ func InitDefinition() Definition {
 		subdivisions: 2,
 		lines:        InitLines(8),
 		metaOverlays: make(map[overlayKey]metaOverlay),
+		accents:      patternAccents{diff: 15, data: accents, start: 120, target: ACCENT_TARGET_VELOCITY},
 	}
 }
 
@@ -1094,7 +1136,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				beatInterval := m.BeatInterval()
 
 				cmds := make([]tea.Cmd, 0, 10)
-				cmds = append(cmds, PlayBeat(beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn)...)
+				cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn)...)
 				cmds = append(cmds, BeatTick(beatInterval))
 				return m, tea.Batch(cmds...)
 			} else {
@@ -1110,6 +1152,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.SetupInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_NOTE}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+		case Is(msg, keys.AccentInputSwitch):
+			states := []Selection{SELECT_NOTHING, SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
+			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+			m.accentMode = true
 		case Is(msg, keys.ToggleRatchetMode):
 			states := []Selection{SELECT_NOTHING, SELECT_RATCHETS, SELECT_RATCHET_SPAN}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
@@ -1133,6 +1179,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.definition.lines[m.cursorPos.line].IncrementNote()
 			case SELECT_RATCHET_SPAN:
 				m.IncreaseSpan()
+			case SELECT_ACCENT_DIFF:
+				m.IncreaseAccent()
+			case SELECT_ACCENT_TARGET:
+				// Only two options right now, so increase and decrease would do the
+				// same thing
+				m.DecreaseAccentTarget()
+			case SELECT_ACCENT_START:
+				m.IncreaseAccentStart()
 			}
 		case Is(msg, keys.Decrease):
 			switch m.selectionIndicator {
@@ -1154,6 +1208,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.definition.lines[m.cursorPos.line].DecrementNote()
 			case SELECT_RATCHET_SPAN:
 				m.DecreaseSpan()
+			case SELECT_ACCENT_DIFF:
+				m.DecreaseAccent()
+			case SELECT_ACCENT_TARGET:
+				m.DecreaseAccentTarget()
+			case SELECT_ACCENT_START:
+				m.DecreaseAccentStart()
 			}
 		case Is(msg, keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
@@ -1198,7 +1258,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			beatInterval := m.BeatInterval()
 			cmds := make([]tea.Cmd, 0, 10)
-			cmds = append(cmds, PlayBeat(beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn)...)
+			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn)...)
 			cmds = append(cmds, BeatTick(beatInterval))
 			return m, tea.Batch(
 				cmds...,
@@ -1214,7 +1274,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if msg.Ratchets.hits[msg.iterations] {
 				playCmd = func() tea.Msg {
-					Play([]lineNote{msg.lineNote}, sendFn)
+					Play(m.definition.accents, []lineNote{msg.lineNote}, sendFn)
 					return nil
 				}
 			}
@@ -1633,7 +1693,7 @@ func (m model) View() string {
 	var sideView string
 
 	if m.accentMode {
-		sideView = AccentKeyView()
+		sideView = m.AccentKeyView()
 	} else if len(m.definition.overlays) == 0 ||
 		m.selectionIndicator == SELECT_SETUP_NOTE ||
 		m.selectionIndicator == SELECT_SETUP_CHANNEL {
@@ -1646,11 +1706,46 @@ func (m model) View() string {
 	return buf.String()
 }
 
-func AccentKeyView() string {
+func (m model) AccentKeyView() string {
 	var buf strings.Builder
-	buf.WriteString("    ACCENTS\n")
+	var accentDiffString string
+	var accentDiff = m.definition.accents.diff
+	var accentStart = m.definition.accents.start
+
+	var accentTarget string
+	if m.definition.accents.target == ACCENT_TARGET_NOTE {
+		accentTarget = "N"
+	} else if m.definition.accents.target == ACCENT_TARGET_VELOCITY {
+		accentTarget = "V"
+	}
+
+	if m.selectionIndicator == SELECT_ACCENT_DIFF {
+		accentDiffString = selectedColor.Render(fmt.Sprintf("%2d", accentDiff))
+	} else {
+		accentDiffString = numberColor.Render(fmt.Sprintf("%2d", accentDiff))
+	}
+
+	var accentTargetString string
+	if m.selectionIndicator == SELECT_ACCENT_TARGET {
+		accentTargetString = selectedColor.Render(fmt.Sprintf(" %s", accentTarget))
+	} else {
+		accentTargetString = numberColor.Render(fmt.Sprintf(" %s", accentTarget))
+	}
+
+	buf.WriteString(fmt.Sprintf(" ACCENTS %s %s\n", accentDiffString, accentTargetString))
 	buf.WriteString("———————————————\n")
-	for _, accent := range accents[1:] {
+	startAccent := m.definition.accents.data[1]
+
+	var accentStartString string
+	if m.selectionIndicator == SELECT_ACCENT_START {
+		accentStartString = selectedColor.Render(fmt.Sprintf("%2d", accentStart))
+	} else {
+		accentStartString = numberColor.Render(fmt.Sprintf("%2d", accentStart))
+	}
+
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color(startAccent.color))
+	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(startAccent.shape)), accentStartString))
+	for _, accent := range m.definition.accents.data[2:] {
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(accent.color))
 		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(accent.shape)), accent.value))
 	}
