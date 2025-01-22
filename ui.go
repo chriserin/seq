@@ -44,6 +44,7 @@ type transitiveKeyMap struct {
 	New                  key.Binding
 	ToggleRatchetMode    key.Binding
 	ToggleVisualMode     key.Binding
+	NewLine              key.Binding
 }
 
 type definitionKeyMap struct {
@@ -137,6 +138,7 @@ var transitiveKeys = transitiveKeyMap{
 	New:                  Key("New", "ctrl+n"),
 	ToggleRatchetMode:    Key("Toggle Ratchet Mode", "ctrl+r"),
 	ToggleVisualMode:     Key("Toggle Visual Mode", "v"),
+	NewLine:              Key("New Line", "ctrl+l"),
 }
 
 var definitionKeys = definitionKeyMap{
@@ -752,9 +754,7 @@ func Play(accents patternAccents, lineNotes []lineNote, sendFn SendFunc) {
 			velocity = accents.data[lineNote.note.AccentIndex].value
 		}
 		onMessage := midi.NoteOn(lineNote.line.Channel, note, velocity)
-		fmt.Println(onMessage)
 		offMessage := midi.NoteOff(lineNote.line.Channel, note)
-		fmt.Println(offMessage)
 		time.AfterFunc(time.Millisecond*40, func() {
 			err := sendFn(offMessage)
 			if err != nil {
@@ -1244,6 +1244,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.ToggleVisualMode):
 			m.visualAnchorCursor = m.cursorPos
 			m.visualMode = !m.visualMode
+		case Is(msg, keys.NewLine):
+			if len(m.definition.lines) < 16 {
+				lastline := m.definition.lines[len(m.definition.lines)-1]
+				m.definition.lines = append(m.definition.lines, lineDefinition{
+					Channel: lastline.Channel,
+					Note:    lastline.Note + 1,
+				})
+			}
 		default:
 			m = m.UpdateDefinition(msg)
 		}
@@ -1837,15 +1845,15 @@ func (m model) ViewTriggerSeq() string {
 		} else {
 			mode = " Accent Mode \u2193 "
 		}
-		buf.WriteString(fmt.Sprintf("   Seq - %s\n", accentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf("    Seq - %s\n", accentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetModeView())
 	} else if m.playing {
-		buf.WriteString(fmt.Sprintf("   Seq - Playing - %d\n", m.keyCycles))
+		buf.WriteString(fmt.Sprintf("    Seq - Playing - %d\n", m.keyCycles))
 	} else {
-		buf.WriteString("   Seq - A sequencer for your cli\n")
+		buf.WriteString("    Seq - A sequencer for your cli\n")
 	}
-	buf.WriteString("  ┌─────────────────────────────────\n")
+	buf.WriteString("   ┌─────────────────────────────────\n")
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
 		buf.WriteString(lineView(i, m, visualCombinedPattern))
 	}
@@ -1940,7 +1948,7 @@ func KeyLineIndicator(k uint8, l uint8) string {
 
 func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) string {
 	var buf strings.Builder
-	buf.WriteString(fmt.Sprintf("%d%s│", lineNumber, KeyLineIndicator(m.definition.keyline, lineNumber)))
+	buf.WriteString(fmt.Sprintf("%2d%s│", lineNumber, KeyLineIndicator(m.definition.keyline, lineNumber)))
 
 	for i := uint8(0); i < m.definition.beats; i++ {
 		currentGridKey := gridKey{uint8(lineNumber), i}
