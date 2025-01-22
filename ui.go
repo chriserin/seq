@@ -60,6 +60,7 @@ type definitionKeyMap struct {
 	ActionAddLineReverse key.Binding
 	ActionAddSkipBeat    key.Binding
 	ActionAddReset       key.Binding
+	ActionAddLineBounce  key.Binding
 	SelectKeyLine        key.Binding
 	PressDownOverlay     key.Binding
 	NumberPattern        key.Binding
@@ -76,6 +77,7 @@ var noteWiseKeys = []key.Binding{
 	definitionKeys.ActionAddLineReverse,
 	definitionKeys.ActionAddSkipBeat,
 	definitionKeys.ActionAddReset,
+	definitionKeys.ActionAddLineBounce,
 }
 
 var lineWiseKeys = []key.Binding{
@@ -156,7 +158,8 @@ var definitionKeys = definitionKeyMap{
 	ToggleRatchetMute:    Key("Toggle Ratchet Mute", "m"),
 	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
 	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
-	ActionAddSkipBeat:    Key("Add Skip Beat", "B"),
+	ActionAddLineBounce:  Key("Add Line Bounce", "B"),
+	ActionAddSkipBeat:    Key("Add Skip Beat", "b"),
 	ActionAddReset:       Key("Add Pattern Reset", "T"),
 	SelectKeyLine:        Key("Select Key Line", "K"),
 	PressDownOverlay:     Key("Press Down Overlay", "ctrl+p"),
@@ -244,6 +247,7 @@ const (
 	ACTION_LINE_REVERSE
 	ACTION_LINE_SKIP_BEAT
 	ACTION_RESET
+	ACTION_LINE_BOUNCE
 )
 
 var lineactions = map[action]lineaction{
@@ -252,6 +256,7 @@ var lineactions = map[action]lineaction{
 	ACTION_LINE_REVERSE:   {'←', "#f8730e"},
 	ACTION_LINE_SKIP_BEAT: {'⇒', "#a9e5bb"},
 	ACTION_RESET:          {'⇚', "#fcf6b1"},
+	ACTION_LINE_BOUNCE:    {'↨', "#fcf6b1"},
 }
 
 type ratchetDiacritical string
@@ -959,6 +964,7 @@ func InitPlayState(lines uint8) []linestate {
 		linestates[i].direction = 1
 		linestates[i].resetDirection = 1
 		linestates[i].resetLocation = 0
+		linestates[i].currentBeat = 0
 	}
 	return linestates
 }
@@ -1356,6 +1362,8 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.AddAction(ACTION_LINE_SKIP_BEAT)
 	case Is(msg, keys.ActionAddReset):
 		m.AddAction(ACTION_RESET)
+	case Is(msg, keys.ActionAddLineBounce):
+		m.AddAction(ACTION_LINE_BOUNCE)
 	case Is(msg, keys.SelectKeyLine):
 		undoable := UndoKeyline{m.definition.keyline}
 		m.definition.keyline = m.cursorPos.line
@@ -1561,6 +1569,10 @@ func (m *model) advancePlayState(combinedPattern overlay, i int) bool {
 	case ACTION_LINE_RESET:
 		m.playState[i].currentBeat = 0
 	case ACTION_LINE_REVERSE:
+		m.playState[i].currentBeat = uint8(max(advancedBeat-2, 0))
+		m.playState[i].direction = -1
+		m.playState[i].resetLocation = uint8(max(advancedBeat-1, 0))
+	case ACTION_LINE_BOUNCE:
 		m.playState[i].currentBeat = uint8(max(advancedBeat-1, 0))
 		m.playState[i].direction = -1
 	case ACTION_LINE_SKIP_BEAT:
@@ -1569,6 +1581,8 @@ func (m *model) advancePlayState(combinedPattern overlay, i int) bool {
 		for i := range m.playState {
 			m.playState[i].currentBeat = 0
 			m.playState[i].direction = 1
+			m.playState[i].resetLocation = 0
+			m.playState[i].resetDirection = 1
 		}
 		return false
 	}
