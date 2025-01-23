@@ -45,6 +45,7 @@ type transitiveKeyMap struct {
 	ToggleRatchetMode    key.Binding
 	ToggleVisualMode     key.Binding
 	NewLine              key.Binding
+	Yank                 key.Binding
 }
 
 type definitionKeyMap struct {
@@ -67,6 +68,7 @@ type definitionKeyMap struct {
 	NumberPattern        key.Binding
 	RotateRight          key.Binding
 	RotateLeft           key.Binding
+	Paste                key.Binding
 }
 
 var noteWiseKeys = []key.Binding{
@@ -151,6 +153,7 @@ var transitiveKeys = transitiveKeyMap{
 	ToggleRatchetMode:    Key("Toggle Ratchet Mode", "ctrl+r"),
 	ToggleVisualMode:     Key("Toggle Visual Mode", "v"),
 	NewLine:              Key("New Line", "ctrl+l"),
+	Yank:                 Key("Yank", "y"),
 }
 
 var definitionKeys = definitionKeyMap{
@@ -173,6 +176,7 @@ var definitionKeys = definitionKeyMap{
 	NumberPattern:        Key("Number Pattern", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
 	RotateRight:          Key("Right Right", "L"),
 	RotateLeft:           Key("Right Left", "H"),
+	Paste:                Key("Paste", "p"),
 }
 
 // func (k keymap) ShortHelp() []key.Binding {
@@ -436,6 +440,7 @@ type model struct {
 	playingMatchedOverlays []overlayKey
 	undoStack              UndoStack
 	redoStack              UndoStack
+	yankBuffer             Buffer
 	// save everything below here
 	definition Definition
 }
@@ -1288,6 +1293,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Note:    lastline.Note + 1,
 				})
 			}
+		case Is(msg, keys.Yank):
+			m.yankBuffer = m.Yank()
 		default:
 			m = m.UpdateDefinition(msg)
 		}
@@ -1390,6 +1397,8 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.RotateRight()
 	case Is(msg, keys.RotateLeft):
 		m.RotateLeft()
+	case Is(msg, keys.Paste):
+		m.Paste()
 	}
 	if msg.String() >= "1" && msg.String() <= "9" {
 		beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
@@ -1429,6 +1438,7 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 		redoable := m.UndoableOverlay()
 		m.PushUndo(undoable, redoable)
 	} else {
+		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 	}
 	m.visualMode = false
@@ -1594,6 +1604,58 @@ func (m *model) RotateLeft() {
 	}
 
 	m.CurrentNotable().SetNote(gridKey{m.cursorPos.line, end}, firstNote)
+}
+
+type Buffer struct {
+	gridNotes []GridNote
+}
+
+func (m model) Yank() Buffer {
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	bounds := m.VisualSelectionBounds()
+	capturedGridNotes := make([]GridNote, 0, len(combinedOverlay))
+
+	for key, note := range combinedOverlay {
+		if bounds.InBounds(key) {
+			normalizedGridKey := gridKey{key.line - bounds.top, key.beat - bounds.left}
+			capturedGridNotes = append(capturedGridNotes, GridNote{normalizedGridKey, note})
+		}
+	}
+
+	return Buffer{
+		gridNotes: capturedGridNotes,
+	}
+}
+
+func (m *model) Paste() {
+	bounds := m.CurrentBounds()
+
+	var keyModifier gridKey
+	if m.visualMode {
+		keyModifier = bounds.TopLeft()
+	} else {
+		keyModifier = m.cursorPos
+	}
+
+	for _, gridNote := range m.yankBuffer.gridNotes {
+		key := gridNote.gridKey
+		newKey := gridKey{key.line + keyModifier.line, key.beat + keyModifier.beat}
+		if bounds.InBounds(newKey) {
+			m.CurrentNotable().SetNote(newKey, gridNote.note)
+		}
+	}
+}
+
+func (m model) PatternBounds() Bounds {
+	return Bounds{0, m.definition.beats - 1, uint8(len(m.definition.lines)), 0}
+}
+
+func (m model) CurrentBounds() Bounds {
+	if m.visualMode {
+		return m.VisualSelectionBounds()
+	} else {
+		return m.PatternBounds()
+	}
 }
 
 func (m *model) advanceCurrentBeat() {
@@ -2097,15 +2159,35 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 	return buf.String()
 }
 
+type Bounds struct {
+	top    uint8
+	right  uint8
+	bottom uint8
+	left   uint8
+}
+
+func (b Bounds) InBounds(key gridKey) bool {
+	return key.line >= b.top &&
+		key.line <= b.bottom &&
+		key.beat >= b.left &&
+		key.beat <= b.right
+}
+
+func (b Bounds) TopLeft() gridKey {
+	return gridKey{b.top, b.left}
+}
+
+func (m model) VisualSelectionBounds() Bounds {
+	return Bounds{
+		top:    min(m.cursorPos.line, m.visualAnchorCursor.line),
+		bottom: max(m.cursorPos.line, m.visualAnchorCursor.line),
+		left:   min(m.cursorPos.beat, m.visualAnchorCursor.beat),
+		right:  max(m.cursorPos.beat, m.visualAnchorCursor.beat),
+	}
+}
+
 func (m model) InVisualSelection(key gridKey) bool {
-	top := min(m.cursorPos.line, m.visualAnchorCursor.line)
-	bottom := max(m.cursorPos.line, m.visualAnchorCursor.line)
-	left := min(m.cursorPos.beat, m.visualAnchorCursor.beat)
-	right := max(m.cursorPos.beat, m.visualAnchorCursor.beat)
-	return key.line >= top &&
-		key.line <= bottom &&
-		key.beat >= left &&
-		key.beat <= right
+	return m.VisualSelectionBounds().InBounds(key)
 }
 
 func (n note) ViewComponents() (string, lipgloss.Color) {
