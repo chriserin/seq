@@ -539,17 +539,16 @@ func (ulgn UndoLineGridNotes) ApplyUndo(m *model) {
 	}
 }
 
-type UndoVisualSelection struct {
+type UndoBounds struct {
 	overlayKey
-	anchorPosition gridKey
-	cursorPosition gridKey
-	gridNotes      []GridNote
+	bounds    Bounds
+	gridNotes []GridNote
 }
 
-func (uvs UndoVisualSelection) ApplyUndo(m *model) {
+func (uvs UndoBounds) ApplyUndo(m *model) {
 	m.EnsureOverlayWithKey(uvs.overlayKey)
 	overlay := m.definition.overlays[uvs.overlayKey]
-	for _, k := range GridKeysForCursors(uvs.anchorPosition, uvs.cursorPosition) {
+	for _, k := range uvs.bounds.GridKeys() {
 		delete(overlay, k)
 	}
 	for _, gridNote := range uvs.gridNotes {
@@ -843,24 +842,10 @@ func absdiff(a, b uint8) uint8 {
 
 func (m model) VisualSelectedGridKeys() []gridKey {
 	if m.visualMode {
-		return GridKeysForCursors(m.visualAnchorCursor, m.cursorPos)
+		return InitBounds(m.visualAnchorCursor, m.cursorPos).GridKeys()
 	} else {
 		return []gridKey{m.cursorPos}
 	}
-}
-
-func GridKeysForCursors(cursorA, cursorB gridKey) []gridKey {
-	top := min(cursorA.line, cursorB.line)
-	bottom := max(cursorA.line, cursorB.line)
-	left := min(cursorA.beat, cursorB.beat)
-	right := max(cursorA.beat, cursorB.beat)
-	keys := make([]gridKey, 0, int(absdiff(top, bottom)*absdiff(left, right)))
-	for i := top; i <= bottom; i++ {
-		for j := left; j <= right; j++ {
-			keys = append(keys, gridKey{i, j})
-		}
-	}
-	return keys
 }
 
 func (m *model) AddTrigger() {
@@ -1413,11 +1398,11 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 
 func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 	keys := definitionKeys
-	if m.visualMode && (keys.IsLineWiseKey(msg) || keys.IsNoteWiseKey(msg)) {
-		undoable := m.UndoableVisualSelection()
+	if m.visualMode && (keys.IsLineWiseKey(msg) || keys.IsNoteWiseKey(msg) || Is(msg, keys.Paste)) {
+		undoable := m.UndoableBounds(m.visualAnchorCursor, m.cursorPos)
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
-		redoable := m.UndoableVisualSelection()
+		redoable := m.UndoableBounds(m.visualAnchorCursor, m.cursorPos)
 		m.PushUndo(undoable, redoable)
 	} else if keys.IsNoteWiseKey(msg) {
 		undoable := m.UndoableNote()
@@ -1436,6 +1421,12 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 		redoable := m.UndoableOverlay()
+		m.PushUndo(undoable, redoable)
+	} else if Is(msg, keys.Paste) {
+		undoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRight(m.cursorPos))
+		m.EnsureOverlay()
+		m = m.UpdateDefinitionKeys(msg)
+		redoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRight(m.cursorPos))
 		m.PushUndo(undoable, redoable)
 	} else {
 		m.EnsureOverlay()
@@ -1459,19 +1450,21 @@ func (m model) UndoableNote() Undoable {
 	}
 }
 
-func (m model) UndoableVisualSelection() Undoable {
+func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
 	overlay, hasOverlay := m.definition.overlays[m.overlayKey]
 	if !hasOverlay {
 		return UndoNewOverlay{m.overlayKey}
 	}
-	gridNotes := make([]GridNote, 100)
-	for _, k := range m.VisualSelectedGridKeys() {
+	bounds := InitBounds(pointA, pointB)
+	gridKeys := bounds.GridKeys()
+	gridNotes := make([]GridNote, 0, len(gridKeys))
+	for _, k := range gridKeys {
 		currentNote, hasNote := overlay[k]
 		if hasNote {
 			gridNotes = append(gridNotes, GridNote{k, currentNote})
 		}
 	}
-	return UndoVisualSelection{m.overlayKey, m.visualAnchorCursor, m.cursorPos, gridNotes}
+	return UndoBounds{m.overlayKey, bounds, gridNotes}
 }
 
 func (m model) UndoableLine() Undoable {
@@ -1607,6 +1600,7 @@ func (m *model) RotateLeft() {
 }
 
 type Buffer struct {
+	bounds    Bounds
 	gridNotes []GridNote
 }
 
@@ -1623,6 +1617,7 @@ func (m model) Yank() Buffer {
 	}
 
 	return Buffer{
+		bounds:    bounds.Normalized(),
 		gridNotes: capturedGridNotes,
 	}
 }
@@ -2159,6 +2154,15 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 	return buf.String()
 }
 
+func InitBounds(cursorA, cursorB gridKey) Bounds {
+	return Bounds{
+		top:    min(cursorA.line, cursorB.line),
+		right:  max(cursorA.beat, cursorB.beat),
+		bottom: max(cursorA.line, cursorB.line),
+		left:   min(cursorA.beat, cursorB.beat),
+	}
+}
+
 type Bounds struct {
 	top    uint8
 	right  uint8
@@ -2166,11 +2170,33 @@ type Bounds struct {
 	left   uint8
 }
 
+func (b Bounds) Area() int {
+	return int(absdiff(b.top, b.bottom) * absdiff(b.left, b.right))
+}
+
+func (bounds Bounds) GridKeys() []gridKey {
+	keys := make([]gridKey, 0, bounds.Area())
+	for i := bounds.top; i <= bounds.bottom; i++ {
+		for j := bounds.left; j <= bounds.right; j++ {
+			keys = append(keys, gridKey{i, j})
+		}
+	}
+	return keys
+}
+
 func (b Bounds) InBounds(key gridKey) bool {
 	return key.line >= b.top &&
 		key.line <= b.bottom &&
 		key.beat >= b.left &&
 		key.beat <= b.right
+}
+
+func (b Bounds) Normalized() Bounds {
+	return Bounds{top: 0, right: b.right - b.left, bottom: b.bottom - b.top, left: 0}
+}
+
+func (b Bounds) BottomRight(key gridKey) gridKey {
+	return gridKey{key.line + b.bottom, key.beat + b.right}
 }
 
 func (b Bounds) TopLeft() gridKey {
