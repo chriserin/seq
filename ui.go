@@ -1312,8 +1312,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				panic("sendFn is broken")
 			}
 			if msg.Ratchets.hits[msg.iterations] {
-				note := msg.lineNote.note
-				message := msg.lineNote.line.Message(msg.lineNote.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
+				note := msg.note
+				message := msg.line.Message(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
 				playCmd = func() tea.Msg {
 					Play([]noteMessage{message}, sendFn)
 					return nil
@@ -1893,9 +1893,10 @@ func (m model) AccentKeyView() string {
 	var accentStart = m.definition.accents.Start
 
 	var accentTarget string
-	if m.definition.accents.Target == ACCENT_TARGET_NOTE {
+	switch m.definition.accents.Target {
+	case ACCENT_TARGET_NOTE:
 		accentTarget = "N"
-	} else if m.definition.accents.Target == ACCENT_TARGET_VELOCITY {
+	case ACCENT_TARGET_VELOCITY:
 		accentTarget = "V"
 	}
 
