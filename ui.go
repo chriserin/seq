@@ -271,7 +271,7 @@ var lineactions = map[action]lineaction{
 	ACTION_LINE_SKIP_BEAT: {'⇒', "#a9e5bb"},
 	ACTION_RESET:          {'⇚', "#fcf6b1"},
 	ACTION_LINE_BOUNCE:    {'↨', "#fcf6b1"},
-	ACTION_LINE_DELAY:     {'z', "#cc4bc2"},
+	ACTION_LINE_DELAY:     {'ℤ', "#cc4bc2"},
 }
 
 type ratchetDiacritical string
