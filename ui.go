@@ -959,15 +959,16 @@ func InitLines(n uint8) []lineDefinition {
 	return lines
 }
 
-func InitPlayState(lines uint8) []linestate {
-	linestates := make([]linestate, lines)
-	for i := range linestates {
-		linestates[i].direction = 1
-		linestates[i].resetDirection = 1
-		linestates[i].resetLocation = 0
-		linestates[i].currentBeat = 0
+func InitLineStates(lines uint8) []linestate {
+	linestates := make([]linestate, 0, lines)
+	for range lines {
+		linestates = append(linestates, InitLineState())
 	}
 	return linestates
+}
+
+func InitLineState() linestate {
+	return linestate{0, 1, 1, 0}
 }
 
 func InitDefinition() Definition {
@@ -1152,7 +1153,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.playing {
 				m.keyCycles = 0
 				m.totalBeats = 0
-				m.playState = InitPlayState(uint8(len(m.definition.lines)))
+				m.playState = InitLineStates(uint8(len(m.definition.lines)))
 				m.advanceKeyCycle()
 				m.trackTime = time.Duration(0)
 				sendFn, err := midi.SendTo(m.outport)
@@ -1280,6 +1281,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Channel: lastline.Channel,
 					Note:    lastline.Note + 1,
 				})
+				if m.playing {
+					m.playState = append(m.playState, InitLineState())
+				}
 			}
 		case Is(msg, keys.Yank):
 			m.yankBuffer = m.Yank()
