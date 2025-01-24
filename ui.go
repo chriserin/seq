@@ -290,10 +290,12 @@ var ratchets = []ratchetDiacritical{
 var zeronote note
 
 type linestate struct {
-	currentBeat    uint8
-	direction      int8
-	resetDirection int8
-	resetLocation  uint8
+	currentBeat         uint8
+	direction           int8
+	resetDirection      int8
+	resetLocation       uint8
+	resetActionLocation uint8
+	resetAction         action
 }
 
 type overlayKey struct {
@@ -968,7 +970,7 @@ func InitLineStates(lines uint8) []linestate {
 }
 
 func InitLineState() linestate {
-	return linestate{0, 1, 1, 0}
+	return linestate{0, 1, 1, 0, 0, 0}
 }
 
 func InitDefinition() Definition {
@@ -1670,32 +1672,41 @@ func (m *model) advanceCurrentBeat() {
 	}
 }
 
-func (m *model) advancePlayState(combinedPattern overlay, i int) bool {
-	currentState := m.playState[i]
+func (m *model) advancePlayState(combinedPattern overlay, lineIndex int) bool {
+	currentState := m.playState[lineIndex]
 	advancedBeat := int8(currentState.currentBeat) + currentState.direction
 
 	if advancedBeat < 0 || advancedBeat >= int8(m.definition.beats) {
-		m.playState[i].currentBeat = currentState.resetLocation
-		advancedBeat = int8(currentState.resetLocation)
-		m.playState[i].direction = currentState.resetDirection
+		// reset locations should be 1 time use.  Reset back to 0.
+		if m.playState[lineIndex].resetLocation != 0 && combinedPattern[gridKey{uint8(lineIndex), currentState.resetActionLocation}].Action == currentState.resetAction {
+			m.playState[lineIndex].currentBeat = currentState.resetLocation
+			advancedBeat = int8(currentState.resetLocation)
+		} else {
+			m.playState[lineIndex].currentBeat = 0
+			advancedBeat = int8(0)
+		}
+		m.playState[lineIndex].direction = currentState.resetDirection
+		m.playState[lineIndex].resetLocation = 0
 	} else {
-		m.playState[i].currentBeat = uint8(advancedBeat)
+		m.playState[lineIndex].currentBeat = uint8(advancedBeat)
 	}
 
-	switch combinedPattern[gridKey{uint8(i), uint8(advancedBeat)}].Action {
+	switch combinedPattern[gridKey{uint8(lineIndex), uint8(advancedBeat)}].Action {
 	case ACTION_LINE_RESET:
-		m.playState[i].currentBeat = 0
+		m.playState[lineIndex].currentBeat = 0
 	case ACTION_LINE_REVERSE:
-		m.playState[i].currentBeat = uint8(max(advancedBeat-2, 0))
-		m.playState[i].direction = -1
-		m.playState[i].resetLocation = uint8(max(advancedBeat-1, 0))
+		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-2, 0))
+		m.playState[lineIndex].direction = -1
+		m.playState[lineIndex].resetLocation = uint8(max(advancedBeat-1, 0))
+		m.playState[lineIndex].resetActionLocation = uint8(advancedBeat)
+		m.playState[lineIndex].resetAction = ACTION_LINE_REVERSE
 	case ACTION_LINE_BOUNCE:
-		m.playState[i].currentBeat = uint8(max(advancedBeat-1, 0))
-		m.playState[i].direction = -1
+		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
+		m.playState[lineIndex].direction = -1
 	case ACTION_LINE_SKIP_BEAT:
-		m.advancePlayState(combinedPattern, i)
+		m.advancePlayState(combinedPattern, lineIndex)
 	case ACTION_LINE_DELAY:
-		m.playState[i].currentBeat = uint8(max(advancedBeat-1, 0))
+		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
 	case ACTION_RESET:
 		for i := range m.playState {
 			m.playState[i].currentBeat = 0
