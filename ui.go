@@ -46,6 +46,8 @@ type transitiveKeyMap struct {
 	ToggleVisualMode     key.Binding
 	NewLine              key.Binding
 	Yank                 key.Binding
+	Mute                 key.Binding
+	Solo                 key.Binding
 }
 
 type definitionKeyMap struct {
@@ -154,6 +156,8 @@ var transitiveKeys = transitiveKeyMap{
 	ToggleVisualMode:     Key("Toggle Visual Mode", "v"),
 	NewLine:              Key("New Line", "ctrl+l"),
 	Yank:                 Key("Yank", "y"),
+	Mute:                 Key("Mute", "m"),
+	Solo:                 Key("Solo", "M"),
 }
 
 var definitionKeys = definitionKeyMap{
@@ -289,6 +293,15 @@ var ratchets = []ratchetDiacritical{
 
 var zeronote note
 
+type groupPlayState uint
+
+const (
+	PLAY_STATE_PLAY groupPlayState = iota
+	PLAY_STATE_MUTE
+	PLAY_STATE_SOLO
+	PLAY_STATE_MUTED_BY_SOLO
+)
+
 type linestate struct {
 	currentBeat         uint8
 	direction           int8
@@ -296,6 +309,7 @@ type linestate struct {
 	resetLocation       uint8
 	resetActionLocation uint8
 	resetAction         action
+	groupPlayState      groupPlayState
 }
 
 type overlayKey struct {
@@ -759,12 +773,14 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
 	for i, line := range lines {
-		currentGridKey := gridKey{uint8(i), currentBeat[i].currentBeat}
-		note, hasNote := pattern[currentGridKey]
-		if hasNote && note.Ratchets.length > 0 {
-			ratchetNotes = append(ratchetNotes, lineNote{note, line})
-		} else if hasNote && note != zeronote {
-			messages = append(messages, line.Message(note, accents.Data[note.AccentIndex].Value, accents.Target))
+		if !(currentBeat[i].groupPlayState == PLAY_STATE_MUTE || currentBeat[i].groupPlayState == PLAY_STATE_MUTED_BY_SOLO) {
+			currentGridKey := gridKey{uint8(i), currentBeat[i].currentBeat}
+			note, hasNote := pattern[currentGridKey]
+			if hasNote && note.Ratchets.length > 0 {
+				ratchetNotes = append(ratchetNotes, lineNote{note, line})
+			} else if hasNote && note != zeronote {
+				messages = append(messages, line.Message(note, accents.Data[note.AccentIndex].Value, accents.Target))
+			}
 		}
 	}
 
@@ -964,16 +980,24 @@ func InitLines(n uint8) []lineDefinition {
 	return lines
 }
 
-func InitLineStates(lines uint8) []linestate {
+func InitLineStates(lines int, previousPlayState []linestate) []linestate {
 	linestates := make([]linestate, 0, lines)
-	for range lines {
-		linestates = append(linestates, InitLineState())
+
+	for i := range lines {
+
+		var previousGroupPlayState = PLAY_STATE_PLAY
+		if len(previousPlayState) > int(i) {
+			previousState := previousPlayState[i]
+			previousGroupPlayState = previousState.groupPlayState
+		}
+
+		linestates = append(linestates, InitLineState(previousGroupPlayState))
 	}
 	return linestates
 }
 
-func InitLineState() linestate {
-	return linestate{0, 1, 1, 0, 0, 0}
+func InitLineState(previousGroupPlayState groupPlayState) linestate {
+	return linestate{0, 1, 1, 0, 0, 0, previousGroupPlayState}
 }
 
 func InitDefinition() Definition {
@@ -1015,6 +1039,7 @@ func InitModel(midiOutport drivers.Out) model {
 		accentModifier:      1,
 		overlayKey:          ROOT_OVERLAY,
 		definition:          definition,
+		playState:           InitLineStates(len(definition.lines), []linestate{}),
 	}
 }
 
@@ -1158,7 +1183,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.playing {
 				m.keyCycles = 0
 				m.totalBeats = 0
-				m.playState = InitLineStates(uint8(len(m.definition.lines)))
+				m.playState = InitLineStates(len(m.definition.lines), m.playState)
 				m.advanceKeyCycle()
 				m.trackTime = time.Duration(0)
 				sendFn, err := midi.SendTo(m.outport)
@@ -1287,11 +1312,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Note:    lastline.Note + 1,
 				})
 				if m.playing {
-					m.playState = append(m.playState, InitLineState())
+					m.playState = append(m.playState, InitLineState(m.GroupPlayStateForNewLine()))
 				}
 			}
 		case Is(msg, keys.Yank):
 			m.yankBuffer = m.Yank()
+		case Is(msg, keys.Mute):
+			m.Mute()
+		case Is(msg, keys.Solo):
+			m.Solo()
 		default:
 			m = m.UpdateDefinition(msg)
 		}
@@ -1609,6 +1638,81 @@ func (m *model) RotateLeft() {
 	}
 
 	m.CurrentNotable().SetNote(gridKey{m.cursorPos.line, end}, firstNote)
+}
+
+func (m model) GroupPlayStateForNewLine() groupPlayState {
+	for _, state := range m.playState {
+		if state.groupPlayState == PLAY_STATE_SOLO {
+			return PLAY_STATE_MUTED_BY_SOLO
+		}
+	}
+	return PLAY_STATE_PLAY
+}
+
+func (m *model) Mute() {
+	var hasOtherSolo = m.hasOtherSolo(m.cursorPos.line)
+	switch m.playState[m.cursorPos.line].groupPlayState {
+	case PLAY_STATE_PLAY:
+		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_MUTE
+	case PLAY_STATE_MUTED_BY_SOLO:
+		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_MUTE
+	case PLAY_STATE_MUTE:
+		if hasOtherSolo {
+			m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
+		} else {
+			m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_PLAY
+		}
+	case PLAY_STATE_SOLO:
+		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_MUTE
+	}
+}
+
+func (m *model) Solo() {
+	var hasOtherSolo = m.hasOtherSolo(m.cursorPos.line)
+	for i, state := range m.playState {
+		if uint8(i) != m.cursorPos.line {
+			switch state.groupPlayState {
+			case PLAY_STATE_PLAY:
+				m.playState[i].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
+			case PLAY_STATE_MUTED_BY_SOLO:
+				if hasOtherSolo {
+					m.playState[i].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
+				} else {
+					m.playState[i].groupPlayState = PLAY_STATE_PLAY
+				}
+			case PLAY_STATE_MUTE:
+				m.playState[i].groupPlayState = PLAY_STATE_MUTE
+			case PLAY_STATE_SOLO:
+				m.playState[i].groupPlayState = PLAY_STATE_SOLO
+			}
+		}
+	}
+	switch m.playState[m.cursorPos.line].groupPlayState {
+	case PLAY_STATE_PLAY:
+		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_SOLO
+	case PLAY_STATE_MUTED_BY_SOLO:
+		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_SOLO
+	case PLAY_STATE_MUTE:
+		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_SOLO
+	case PLAY_STATE_SOLO:
+		if hasOtherSolo {
+			m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
+		} else {
+			m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_PLAY
+		}
+	}
+}
+
+func (m model) hasOtherSolo(than uint8) bool {
+	for i, state := range m.playState {
+		if i == int(than) {
+			continue
+		}
+		if state.groupPlayState == PLAY_STATE_SOLO {
+			return true
+		}
+	}
+	return false
 }
 
 type Buffer struct {
@@ -2139,7 +2243,14 @@ func KeyLineIndicator(k uint8, l uint8) string {
 
 func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) string {
 	var buf strings.Builder
-	buf.WriteString(fmt.Sprintf("%2d%s│", lineNumber, KeyLineIndicator(m.definition.keyline, lineNumber)))
+	indicator := "│"
+	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PLAY_STATE_MUTE {
+		indicator = "M"
+	}
+	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PLAY_STATE_SOLO {
+		indicator = "S"
+	}
+	buf.WriteString(fmt.Sprintf("%2d%s%s", lineNumber, KeyLineIndicator(m.definition.keyline, lineNumber), indicator))
 
 	for i := uint8(0); i < m.definition.beats; i++ {
 		currentGridKey := gridKey{uint8(lineNumber), i}
