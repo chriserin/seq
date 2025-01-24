@@ -918,6 +918,9 @@ func (m *model) DecreaseRatchet() {
 		currentNote.Ratchets.length = currentRatchet - 1
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
+	if m.ratchetCursor > currentNote.Ratchets.length {
+		m.ratchetCursor = m.ratchetCursor - 1
+	}
 }
 
 func (m *model) IncreaseAccent() {
