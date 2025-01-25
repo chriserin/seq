@@ -2060,20 +2060,21 @@ func (m model) SetupView() string {
 	buf.WriteString("    Setup\n")
 	buf.WriteString("———————————————\n")
 	for i, line := range m.definition.lines {
+
 		buf.WriteString("CH ")
 		if uint8(i) == m.cursorPos.line && m.selectionIndicator == SELECT_SETUP_CHANNEL {
 			buf.WriteString(selectedColor.Render(fmt.Sprintf("%2d", line.Channel)))
 		} else {
 			buf.WriteString(numberColor.Render(fmt.Sprintf("%2d", line.Channel)))
 		}
+
 		buf.WriteString(" NOTE ")
 		if uint8(i) == m.cursorPos.line && m.selectionIndicator == SELECT_SETUP_NOTE {
 			buf.WriteString(selectedColor.Render(strconv.Itoa(int(line.Note))))
 		} else {
-
 			buf.WriteString(numberColor.Render(strconv.Itoa(int(line.Note))))
 		}
-		buf.WriteString("\n")
+		buf.WriteString(fmt.Sprintf(" %s%d\n", strings.ReplaceAll(midi.Note(line.Note).Name(), "b", "♭"), midi.Note(line.Note).Octave()-2))
 	}
 	return buf.String()
 }
