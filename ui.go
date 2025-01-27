@@ -26,6 +26,7 @@ type transitiveKeyMap struct {
 	CursorRight          key.Binding
 	CursorLineStart      key.Binding
 	CursorLineEnd        key.Binding
+	Escape               key.Binding
 	PlayStop             key.Binding
 	TempoInputSwitch     key.Binding
 	Increase             key.Binding
@@ -138,6 +139,7 @@ var transitiveKeys = transitiveKeyMap{
 	CursorRight:          Key("Right", "l"),
 	CursorLineStart:      Key("Line Start", "<"),
 	CursorLineEnd:        Key("Line End", ">"),
+	Escape:               Key("Escape", "esc"),
 	PlayStop:             Key("Play/Stop", " "),
 	TempoInputSwitch:     Key("Select Tempo Indicator", "ctrl+t"),
 	Increase:             Key("Tempo Increase", "+", "="),
@@ -1173,6 +1175,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursorPos.beat = 0
 		case Is(msg, keys.CursorLineEnd):
 			m.cursorPos.beat = m.definition.beats - 1
+		case Is(msg, keys.Escape):
+			m.selectionIndicator = 0
 		case Is(msg, keys.PlayStop):
 			if !m.playing && !m.midiConnection.IsOpen() {
 				err := m.midiConnection.ConnectAndOpen()
