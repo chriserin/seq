@@ -1,6 +1,8 @@
 package main
 
 import (
+	"sync"
+
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
 
@@ -25,7 +27,8 @@ func (mc MidiConnection) HasConnection() bool {
 func (mc *MidiConnection) Connect() bool {
 	outport, err := midi.OutPort(0)
 	if err != nil {
-		panic("Can't find outport")
+		panic(err)
+		// panic("Can't find outport")
 	}
 	mc.outport = outport
 	return true
@@ -37,6 +40,7 @@ func (mc *MidiConnection) ConnectAndOpen() error {
 		if err != nil {
 			return err
 		}
+		mc.connected = true
 	}
 	return nil
 }
@@ -53,13 +57,20 @@ func (mc MidiConnection) IsOpen() bool {
 	return mc.connected && mc.outport.IsOpen()
 }
 
+var playMutex = sync.Mutex{}
+
 func (mc MidiConnection) AcquireSendFunc() SendFunc {
 	if mc.outport.IsOpen() {
 		sendFn, err := midi.SendTo(mc.outport)
 		if err != nil {
 			panic("Could not acquire send function")
 		}
-		return sendFn
+		return func(msg midi.Message) error {
+			playMutex.Lock()
+			error := sendFn(msg)
+			playMutex.Unlock()
+			return error
+		}
 	}
 	panic("Midi outport is not open")
 }

@@ -813,16 +813,20 @@ func PlayRatchets(lineNote lineNote, beatInterval time.Duration, sendFn SendFunc
 
 func Play(messages []noteMessage, sendFn SendFunc) {
 	for _, message := range messages {
-		onMessage := midi.NoteOn(message.channel, message.note, message.velocity)
-		offMessage := midi.NoteOff(message.channel, message.note)
-		err := sendFn(onMessage)
-		if err != nil {
-			panic("note on failed")
-		}
-		err = sendFn(offMessage)
-		if err != nil {
-			panic("note off failed")
-		}
+		PlayMessage(message, sendFn)
+	}
+}
+
+func PlayMessage(message noteMessage, sendFn SendFunc) {
+	onMessage := midi.NoteOn(message.channel, message.note, message.velocity)
+	offMessage := midi.NoteOff(message.channel, message.note)
+	err := sendFn(onMessage)
+	if err != nil {
+		panic("note on failed")
+	}
+	err = sendFn(offMessage)
+	if err != nil {
+		panic("note off failed")
 	}
 }
 
@@ -1358,7 +1362,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				note := msg.note
 				message := msg.line.Message(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
 				playCmd = func() tea.Msg {
-					Play([]noteMessage{message}, sendFn)
+					PlayMessage(message, sendFn)
 					return nil
 				}
 			}
