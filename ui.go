@@ -900,12 +900,31 @@ func (m *model) OverlayRemoveTrigger() {
 }
 
 func (m *model) IncreaseRatchet() {
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	bounds := m.YankBounds()
+
+	for key, currentNote := range combinedOverlay {
+		if bounds.InBounds(key) {
+			currentRatchet := currentNote.Ratchets.Length
+			if currentNote.AccentIndex > 0 && currentNote.Action == ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
+				currentNote.Ratchets.Length = currentRatchet + 1
+				currentNote.Ratchets.Hits[currentNote.Ratchets.Length] = true
+				m.CurrentNotable().SetNote(key, currentNote)
+			}
+		}
+	}
+}
+
+func (m *model) DecreaseRatchet() {
 	currentNote := m.CurrentNote()
 	currentRatchet := currentNote.Ratchets.Length
-	if currentNote.Action == ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
-		currentNote.Ratchets.Length = currentRatchet + 1
-		currentNote.Ratchets.Hits[currentNote.Ratchets.Length] = true
+
+	if currentNote.Action == ACTION_NOTHING && currentRatchet > 0 {
+		currentNote.Ratchets.Length = currentRatchet - 1
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
+	}
+	if m.ratchetCursor > currentNote.Ratchets.Length {
+		m.ratchetCursor = m.ratchetCursor - 1
 	}
 }
 
@@ -928,19 +947,6 @@ func (m *model) DecreaseSpan() {
 			currentNote.Ratchets.Span = span - 1
 		}
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
-	}
-}
-
-func (m *model) DecreaseRatchet() {
-	currentNote := m.CurrentNote()
-	currentRatchet := currentNote.Ratchets.Length
-
-	if currentNote.Action == ACTION_NOTHING && currentRatchet > 0 {
-		currentNote.Ratchets.Length = currentRatchet - 1
-		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
-	}
-	if m.ratchetCursor > currentNote.Ratchets.Length {
-		m.ratchetCursor = m.ratchetCursor - 1
 	}
 }
 
