@@ -14,10 +14,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"gitlab.com/gomidi/midi/v2"
-	"gitlab.com/gomidi/midi/v2/drivers"
-
-	_ "gitlab.com/gomidi/midi/v2/drivers/portmididrv"
+	midi "gitlab.com/gomidi/midi/v2"
 )
 
 type transitiveKeyMap struct {
@@ -440,7 +437,7 @@ type model struct {
 	cursorPos              gridKey
 	visualAnchorCursor     gridKey
 	visualMode             bool
-	outport                drivers.Out
+	midiConnection         MidiConnection
 	logFile                *os.File
 	playing                bool
 	playTime               time.Time
@@ -808,8 +805,6 @@ func PlayRatchets(lineNote lineNote, beatInterval time.Duration, sendFn SendFunc
 	}
 }
 
-type SendFunc func(msg midi.Message) error
-
 func Play(messages []noteMessage, sendFn SendFunc) {
 	for _, message := range messages {
 		onMessage := midi.NoteOn(message.channel, message.note, message.velocity)
@@ -1013,7 +1008,7 @@ func InitDefinition() Definition {
 	}
 }
 
-func InitModel(midiOutport drivers.Out) model {
+func InitModel(midiConnection MidiConnection) model {
 	logFile, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
 		panic("could not open log file")
@@ -1033,7 +1028,7 @@ func InitModel(midiOutport drivers.Out) model {
 		definitionKeys:      definitionKeys,
 		help:                help.New(),
 		cursor:              newCursor,
-		outport:             midiOutport,
+		midiConnection:      midiConnection,
 		logFile:             logFile,
 		cursorPos:           gridKey{0, 0},
 		accentModifier:      1,
@@ -1061,8 +1056,8 @@ func (m model) LogString(message string) {
 	}
 }
 
-func RunProgram(midiOutport drivers.Out) *tea.Program {
-	p := tea.NewProgram(InitModel(midiOutport), tea.WithAltScreen())
+func RunProgram(midiConnection MidiConnection) *tea.Program {
+	p := tea.NewProgram(InitModel(midiConnection), tea.WithAltScreen())
 	return p
 }
 
@@ -1167,10 +1162,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case Is(msg, keys.PlayStop):
-			if !m.playing && !m.outport.IsOpen() {
-				err := m.outport.Open()
+			if !m.playing && !m.midiConnection.IsOpen() {
+				err := m.midiConnection.ConnectAndOpen()
 				if err != nil {
-					panic("It's not open!")
+					panic("No Open Connection")
 				}
 			}
 
@@ -1186,10 +1181,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.playState = InitLineStates(len(m.definition.lines), m.playState)
 				m.advanceKeyCycle()
 				m.trackTime = time.Duration(0)
-				sendFn, err := midi.SendTo(m.outport)
-				if err != nil {
-					panic("sendFn is broken")
-				}
+				sendFn := m.midiConnection.AcquireSendFunc()
 				beatInterval := m.BeatInterval()
 
 				cmds := make([]tea.Cmd, 0, 10)
@@ -1329,10 +1321,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.advanceCurrentBeat()
 			m.advanceKeyCycle()
 			m.totalBeats++
-			sendFn, err := midi.SendTo(m.outport)
-			if err != nil {
-				panic("sendFn is broken")
-			}
+			sendFn := m.midiConnection.AcquireSendFunc()
 			beatInterval := m.BeatInterval()
 			cmds := make([]tea.Cmd, 0, 10)
 			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn)...)
@@ -1345,10 +1334,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.playing && msg.iterations < (msg.Ratchets.length+1) {
 			var playCmd tea.Cmd
 			var ratchetTickCmd tea.Cmd
-			sendFn, err := midi.SendTo(m.outport)
-			if err != nil {
-				panic("sendFn is broken")
-			}
+
+			sendFn := m.midiConnection.AcquireSendFunc()
+
 			if msg.Ratchets.hits[msg.iterations] {
 				note := msg.note
 				message := msg.line.Message(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
