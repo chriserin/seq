@@ -181,7 +181,7 @@ var definitionKeys = definitionKeyMap{
 	ActionAddReset:       Key("Add Pattern Reset", "T"),
 	SelectKeyLine:        Key("Select Key Line", "K"),
 	PressDownOverlay:     Key("Press Down Overlay", "ctrl+p"),
-	NumberPattern:        Key("Number Pattern", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
+	NumberPattern:        Key("Number Pattern", "1", "2", "3", "4", "5", "6", "7", "8", "9", "!", "@", "#", "$", "%", "^", "&", "*", "("),
 	RotateRight:          Key("Right Right", "L"),
 	RotateLeft:           Key("Right Left", "H"),
 	Paste:                Key("Paste", "p"),
