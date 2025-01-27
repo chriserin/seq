@@ -222,22 +222,22 @@ var accents = []Accent{
 const C1 = 36
 
 type ratchet struct {
-	hits   [9]bool
-	length uint8
-	span   uint8
+	Hits   [9]bool
+	Length uint8
+	Span   uint8
 }
 
-func (r ratchet) Span() uint8 {
-	return r.span + 1
+func (r ratchet) GetSpan() uint8 {
+	return r.Span + 1
 }
 
 func (r ratchet) Interval(beatInterval time.Duration) time.Duration {
-	return (beatInterval * time.Duration(r.Span())) / time.Duration(r.length+1)
+	return (beatInterval * time.Duration(r.GetSpan())) / time.Duration(r.Length+1)
 }
 
 func InitRatchet() ratchet {
 	return ratchet{
-		hits: [9]bool{true, false, false, false, false, false, false, false, false},
+		Hits: [9]bool{true, false, false, false, false, false, false, false, false},
 	}
 }
 
@@ -779,7 +779,7 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 		if !(currentBeat[i].groupPlayState == PLAY_STATE_MUTE || currentBeat[i].groupPlayState == PLAY_STATE_MUTED_BY_SOLO) {
 			currentGridKey := gridKey{uint8(i), currentBeat[i].currentBeat}
 			note, hasNote := pattern[currentGridKey]
-			if hasNote && note.Ratchets.length > 0 {
+			if hasNote && note.Ratchets.Length > 0 {
 				ratchetNotes = append(ratchetNotes, lineNote{note, line})
 			} else if hasNote && note != zeronote {
 				messages = append(messages, line.Message(note, accents.Data[note.AccentIndex].Value, accents.Target))
@@ -897,10 +897,10 @@ func (m *model) OverlayRemoveTrigger() {
 
 func (m *model) IncreaseRatchet() {
 	currentNote := m.CurrentNote()
-	currentRatchet := currentNote.Ratchets.length
+	currentRatchet := currentNote.Ratchets.Length
 	if currentNote.Action == ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
-		currentNote.Ratchets.length = currentRatchet + 1
-		currentNote.Ratchets.hits[currentNote.Ratchets.length] = true
+		currentNote.Ratchets.Length = currentRatchet + 1
+		currentNote.Ratchets.Hits[currentNote.Ratchets.Length] = true
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
 }
@@ -908,9 +908,9 @@ func (m *model) IncreaseRatchet() {
 func (m *model) IncreaseSpan() {
 	currentNote := m.CurrentNote()
 	if currentNote != zeronote && currentNote.Action == ACTION_NOTHING {
-		span := currentNote.Ratchets.span
+		span := currentNote.Ratchets.Span
 		if span < 8 {
-			currentNote.Ratchets.span = span + 1
+			currentNote.Ratchets.Span = span + 1
 		}
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
@@ -919,9 +919,9 @@ func (m *model) IncreaseSpan() {
 func (m *model) DecreaseSpan() {
 	currentNote := m.CurrentNote()
 	if currentNote != zeronote && currentNote.Action == ACTION_NOTHING {
-		span := currentNote.Ratchets.span
+		span := currentNote.Ratchets.Span
 		if span > 0 {
-			currentNote.Ratchets.span = span - 1
+			currentNote.Ratchets.Span = span - 1
 		}
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
@@ -929,13 +929,13 @@ func (m *model) DecreaseSpan() {
 
 func (m *model) DecreaseRatchet() {
 	currentNote := m.CurrentNote()
-	currentRatchet := currentNote.Ratchets.length
+	currentRatchet := currentNote.Ratchets.Length
 
 	if currentNote.Action == ACTION_NOTHING && currentRatchet > 0 {
-		currentNote.Ratchets.length = currentRatchet - 1
+		currentNote.Ratchets.Length = currentRatchet - 1
 		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 	}
-	if m.ratchetCursor > currentNote.Ratchets.length {
+	if m.ratchetCursor > currentNote.Ratchets.Length {
 		m.ratchetCursor = m.ratchetCursor - 1
 	}
 }
@@ -966,7 +966,7 @@ func (m *model) DecreaseAccentStart() {
 
 func (m *model) ToggleRatchetMute() {
 	currentNote := m.CurrentNote()
-	currentNote.Ratchets.hits[m.ratchetCursor] = !currentNote.Ratchets.hits[m.ratchetCursor]
+	currentNote.Ratchets.Hits[m.ratchetCursor] = !currentNote.Ratchets.Hits[m.ratchetCursor]
 	m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 }
 
@@ -1160,7 +1160,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.CursorRight):
 			if m.selectionIndicator == SELECT_RATCHETS {
 				currentNote := m.CurrentNote()
-				if m.ratchetCursor < currentNote.Ratchets.length {
+				if m.ratchetCursor < currentNote.Ratchets.Length {
 					m.ratchetCursor++
 				}
 			} else if m.selectionIndicator > 0 {
@@ -1347,13 +1347,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 		}
 	case ratchetMsg:
-		if m.playing && msg.iterations < (msg.Ratchets.length+1) {
+		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
 			var playCmd tea.Cmd
 			var ratchetTickCmd tea.Cmd
 
 			sendFn := m.midiConnection.AcquireSendFunc()
 
-			if msg.Ratchets.hits[msg.iterations] {
+			if msg.Ratchets.Hits[msg.iterations] {
 				note := msg.note
 				message := msg.line.Message(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
 				playCmd = func() tea.Msg {
@@ -1361,7 +1361,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return nil
 				}
 			}
-			if msg.iterations+1 < (msg.Ratchets.length + 1) {
+			if msg.iterations+1 < (msg.Ratchets.Length + 1) {
 				ratchetTickCmd = RatchetTick(msg.lineNote, msg.iterations+1, msg.beatInterval)
 			}
 			return m, tea.Batch(playCmd, ratchetTickCmd)
@@ -2229,11 +2229,11 @@ func (m model) RatchetModeView() string {
 	buf.WriteString("   Ratchets ")
 	for i := range uint8(8) {
 		var backgroundColor lipgloss.Color
-		if i <= currentNote.Ratchets.length {
+		if i <= currentNote.Ratchets.Length {
 			if m.ratchetCursor == i && m.selectionIndicator == SELECT_RATCHETS {
 				backgroundColor = lipgloss.Color("#5cdffb")
 			}
-			if currentNote.Ratchets.hits[i] {
+			if currentNote.Ratchets.Hits[i] {
 				ratchetsBuf.WriteString(activeStyle.Background(backgroundColor).Render("\u25CF"))
 			} else {
 				ratchetsBuf.WriteString(mutedStyle.Background(backgroundColor).Render("\u25C9"))
@@ -2246,9 +2246,9 @@ func (m model) RatchetModeView() string {
 	}
 	buf.WriteString(fmt.Sprintf("%*s", 32, ratchetsBuf.String()))
 	if m.selectionIndicator == SELECT_RATCHET_SPAN {
-		buf.WriteString(fmt.Sprintf(" Span %s ", selectedColor.Render(strconv.Itoa(int(currentNote.Ratchets.Span())))))
+		buf.WriteString(fmt.Sprintf(" Span %s ", selectedColor.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
 	} else {
-		buf.WriteString(fmt.Sprintf(" Span %s ", numberColor.Render(strconv.Itoa(int(currentNote.Ratchets.Span())))))
+		buf.WriteString(fmt.Sprintf(" Span %s ", numberColor.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
 	}
 	buf.WriteString("\n")
 
@@ -2413,7 +2413,7 @@ func (n note) ViewComponents() (string, lipgloss.Color) {
 	var char string
 	var foregroundColor lipgloss.Color
 	if currentAction == ACTION_NOTHING {
-		char = string(currentAccent.Shape) + string(ratchets[currentNote.Ratchets.length])
+		char = string(currentAccent.Shape) + string(ratchets[currentNote.Ratchets.Length])
 		foregroundColor = currentAccent.Color
 	} else {
 		lineaction := lineactions[currentAction]
