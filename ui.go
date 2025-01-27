@@ -140,7 +140,7 @@ var transitiveKeys = transitiveKeyMap{
 	CursorRight:        Key("Right", "l"),
 	CursorLineStart:    Key("Line Start", "<"),
 	CursorLineEnd:      Key("Line End", ">"),
-	Escape:             Key("Escape", "esc"),
+	Escape:             Key("Escape", "esc", "enter"),
 	PlayStop:           Key("Play/Stop", " "),
 	TempoInputSwitch:   Key("Select Tempo Indicator", "ctrl+t"),
 	Increase:           Key("Tempo Increase", "+", "="),
@@ -1181,6 +1181,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.Escape):
 			m.selectionIndicator = 0
 			m.accentMode = false
+			m.visualMode = false
 		case Is(msg, keys.PlayStop):
 			if !m.playing && !m.midiConnection.IsOpen() {
 				err := m.midiConnection.ConnectAndOpen()
@@ -1326,6 +1327,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case Is(msg, keys.Yank):
 			m.yankBuffer = m.Yank()
+			m.visualMode = false
 		case Is(msg, keys.Mute):
 			if m.IsRatchetSelector() {
 				m.ToggleRatchetMute()
@@ -1396,7 +1398,9 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 	case Is(msg, keys.TriggerAdd):
 		m.AddTrigger()
 	case Is(msg, keys.TriggerRemove):
+		m.yankBuffer = m.Yank()
 		m.RemoveTrigger()
+		m.visualMode = false
 	case Is(msg, keys.AccentIncrease):
 		m.AccentModify(1)
 	case Is(msg, keys.AccentDecrease):
@@ -1520,7 +1524,6 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 	}
-	m.visualMode = false
 	m.ResetRedo()
 	return m
 }
@@ -1684,8 +1687,6 @@ func (m *model) RotateLeft() {
 	start, end := m.PatternActionBoundaries()
 	firstNote := combinedOverlay[gridKey{m.cursorPos.line, start}]
 	previousNote := zeronote
-	m.LogString(fmt.Sprintf("START %d", start))
-	m.LogString(fmt.Sprintf("END %d", end))
 	for i := int8(end); i >= int8(start); i-- {
 		gridKey := gridKey{m.cursorPos.line, uint8(i)}
 		currentNote := combinedOverlay[gridKey]
@@ -1779,7 +1780,7 @@ type Buffer struct {
 
 func (m model) Yank() Buffer {
 	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
-	bounds := m.VisualSelectionBounds()
+	bounds := m.YankBounds()
 	capturedGridNotes := make([]GridNote, 0, len(combinedOverlay))
 
 	for key, note := range combinedOverlay {
@@ -2398,11 +2399,14 @@ func (b Bounds) TopLeft() gridKey {
 }
 
 func (m model) VisualSelectionBounds() Bounds {
-	return Bounds{
-		top:    min(m.cursorPos.line, m.visualAnchorCursor.line),
-		bottom: max(m.cursorPos.line, m.visualAnchorCursor.line),
-		left:   min(m.cursorPos.beat, m.visualAnchorCursor.beat),
-		right:  max(m.cursorPos.beat, m.visualAnchorCursor.beat),
+	return InitBounds(m.cursorPos, m.visualAnchorCursor)
+}
+
+func (m model) YankBounds() Bounds {
+	if m.visualMode {
+		return m.VisualSelectionBounds()
+	} else {
+		return InitBounds(m.cursorPos, m.cursorPos)
 	}
 }
 
