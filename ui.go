@@ -59,7 +59,6 @@ type definitionKeyMap struct {
 	ClearSeq             key.Binding
 	RatchetIncrease      key.Binding
 	RatchetDecrease      key.Binding
-	ToggleRatchetMute    key.Binding
 	ActionAddLineReset   key.Binding
 	ActionAddLineReverse key.Binding
 	ActionAddSkipBeat    key.Binding
@@ -82,7 +81,6 @@ var noteWiseKeys = []key.Binding{
 	definitionKeys.OverlayTriggerRemove,
 	definitionKeys.RatchetIncrease,
 	definitionKeys.RatchetDecrease,
-	definitionKeys.ToggleRatchetMute,
 	definitionKeys.ActionAddLineReset,
 	definitionKeys.ActionAddLineReverse,
 	definitionKeys.ActionAddSkipBeat,
@@ -175,7 +173,6 @@ var definitionKeys = definitionKeyMap{
 	ClearSeq:             Key("Clear Overlay", "C"),
 	RatchetIncrease:      Key("Increase Ratchet", "R"),
 	RatchetDecrease:      Key("Decrease Ratchet", "r"),
-	ToggleRatchetMute:    Key("Toggle Ratchet Mute", "m"),
 	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
 	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
 	ActionAddLineBounce:  Key("Add Line Bounce", "B"),
@@ -1325,7 +1322,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.Yank):
 			m.yankBuffer = m.Yank()
 		case Is(msg, keys.Mute):
-			m.Mute()
+			if m.IsRatchetSelector() {
+				m.ToggleRatchetMute()
+			} else {
+				m.Mute()
+			}
 		case Is(msg, keys.Solo):
 			m.Solo()
 		default:
@@ -1403,8 +1404,6 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.IncreaseRatchet()
 	case Is(msg, keys.RatchetDecrease):
 		m.DecreaseRatchet()
-	case Is(msg, keys.ToggleRatchetMute):
-		m.ToggleRatchetMute()
 	case Is(msg, keys.ActionAddLineReset):
 		m.AddAction(ACTION_LINE_RESET)
 	case Is(msg, keys.ActionAddLineReverse):
@@ -1536,6 +1535,11 @@ func (m model) UndoableNote() Undoable {
 
 func (m model) IsAccentSelector() bool {
 	states := []Selection{SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
+	return slices.Contains(states, m.selectionIndicator)
+}
+
+func (m model) IsRatchetSelector() bool {
+	states := []Selection{SELECT_RATCHETS, SELECT_RATCHET_SPAN}
 	return slices.Contains(states, m.selectionIndicator)
 }
 
