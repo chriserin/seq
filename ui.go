@@ -1149,6 +1149,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.ratchetCursor > 0 {
 					m.ratchetCursor--
 				}
+			} else if m.selectionIndicator > 0 {
+				// Do Nothing
 			} else {
 				if m.cursorPos.beat > 0 {
 					m.cursorPos.beat--
@@ -1160,6 +1162,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.ratchetCursor < currentNote.Ratchets.length {
 					m.ratchetCursor++
 				}
+			} else if m.selectionIndicator > 0 {
+				// Do Nothing
 			} else {
 				if m.cursorPos.beat < m.definition.beats-1 {
 					m.cursorPos.beat++
