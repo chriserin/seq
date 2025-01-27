@@ -18,41 +18,42 @@ import (
 )
 
 type transitiveKeyMap struct {
-	Quit                 key.Binding
-	Help                 key.Binding
-	CursorUp             key.Binding
-	CursorDown           key.Binding
-	CursorLeft           key.Binding
-	CursorRight          key.Binding
-	CursorLineStart      key.Binding
-	CursorLineEnd        key.Binding
-	Escape               key.Binding
-	PlayStop             key.Binding
-	TempoInputSwitch     key.Binding
-	Increase             key.Binding
-	Decrease             key.Binding
-	ToggleAccentMode     key.Binding
-	ToggleAccentModifier key.Binding
-	OverlayInputSwitch   key.Binding
-	SetupInputSwitch     key.Binding
-	AccentInputSwitch    key.Binding
-	NextOverlay          key.Binding
-	PrevOverlay          key.Binding
-	Save                 key.Binding
-	Undo                 key.Binding
-	Redo                 key.Binding
-	New                  key.Binding
-	ToggleRatchetMode    key.Binding
-	ToggleVisualMode     key.Binding
-	NewLine              key.Binding
-	Yank                 key.Binding
-	Mute                 key.Binding
-	Solo                 key.Binding
+	Quit               key.Binding
+	Help               key.Binding
+	CursorUp           key.Binding
+	CursorDown         key.Binding
+	CursorLeft         key.Binding
+	CursorRight        key.Binding
+	CursorLineStart    key.Binding
+	CursorLineEnd      key.Binding
+	Escape             key.Binding
+	PlayStop           key.Binding
+	TempoInputSwitch   key.Binding
+	Increase           key.Binding
+	Decrease           key.Binding
+	ToggleAccentMode   key.Binding
+	OverlayInputSwitch key.Binding
+	SetupInputSwitch   key.Binding
+	AccentInputSwitch  key.Binding
+	NextOverlay        key.Binding
+	PrevOverlay        key.Binding
+	Save               key.Binding
+	Undo               key.Binding
+	Redo               key.Binding
+	New                key.Binding
+	ToggleRatchetMode  key.Binding
+	ToggleVisualMode   key.Binding
+	NewLine            key.Binding
+	Yank               key.Binding
+	Mute               key.Binding
+	Solo               key.Binding
 }
 
 type definitionKeyMap struct {
 	TriggerAdd           key.Binding
 	TriggerRemove        key.Binding
+	AccentIncrease       key.Binding
+	AccentDecrease       key.Binding
 	OverlayTriggerRemove key.Binding
 	ClearLine            key.Binding
 	ClearSeq             key.Binding
@@ -76,6 +77,8 @@ type definitionKeyMap struct {
 var noteWiseKeys = []key.Binding{
 	definitionKeys.TriggerAdd,
 	definitionKeys.TriggerRemove,
+	definitionKeys.AccentIncrease,
+	definitionKeys.AccentDecrease,
 	definitionKeys.OverlayTriggerRemove,
 	definitionKeys.RatchetIncrease,
 	definitionKeys.RatchetDecrease,
@@ -131,41 +134,42 @@ func Key(help string, keyboardKey ...string) key.Binding {
 }
 
 var transitiveKeys = transitiveKeyMap{
-	Quit:                 Key("Quit", "q"),
-	Help:                 Key("Expand Help", "?"),
-	CursorUp:             Key("Up", "k"),
-	CursorDown:           Key("Down", "j"),
-	CursorLeft:           Key("Left", "h"),
-	CursorRight:          Key("Right", "l"),
-	CursorLineStart:      Key("Line Start", "<"),
-	CursorLineEnd:        Key("Line End", ">"),
-	Escape:               Key("Escape", "esc"),
-	PlayStop:             Key("Play/Stop", " "),
-	TempoInputSwitch:     Key("Select Tempo Indicator", "ctrl+t"),
-	Increase:             Key("Tempo Increase", "+", "="),
-	Decrease:             Key("Tempo Decrease", "-"),
-	ToggleAccentMode:     Key("Toggle Accent Mode", "A"),
-	ToggleAccentModifier: Key("Toggle Accent Modifier", "a"),
-	OverlayInputSwitch:   Key("Select Overlay Indicator", "ctrl+o"),
-	SetupInputSwitch:     Key("Setup Input Indicator", "ctrl+s"),
-	AccentInputSwitch:    Key("Accent Input Indicator", "ctrl+a"),
-	NextOverlay:          Key("Next Overlay", "{"),
-	PrevOverlay:          Key("Prev Overlay", "}"),
-	Save:                 Key("Save", "ctrl+w"),
-	Undo:                 Key("Undo", "u"),
-	Redo:                 Key("Redo", "U"),
-	New:                  Key("New", "ctrl+n"),
-	ToggleRatchetMode:    Key("Toggle Ratchet Mode", "ctrl+r"),
-	ToggleVisualMode:     Key("Toggle Visual Mode", "v"),
-	NewLine:              Key("New Line", "ctrl+l"),
-	Yank:                 Key("Yank", "y"),
-	Mute:                 Key("Mute", "m"),
-	Solo:                 Key("Solo", "M"),
+	Quit:               Key("Quit", "q"),
+	Help:               Key("Expand Help", "?"),
+	CursorUp:           Key("Up", "k"),
+	CursorDown:         Key("Down", "j"),
+	CursorLeft:         Key("Left", "h"),
+	CursorRight:        Key("Right", "l"),
+	CursorLineStart:    Key("Line Start", "<"),
+	CursorLineEnd:      Key("Line End", ">"),
+	Escape:             Key("Escape", "esc"),
+	PlayStop:           Key("Play/Stop", " "),
+	TempoInputSwitch:   Key("Select Tempo Indicator", "ctrl+t"),
+	Increase:           Key("Tempo Increase", "+", "="),
+	Decrease:           Key("Tempo Decrease", "-"),
+	ToggleAccentMode:   Key("Toggle Accent Mode", "g"),
+	OverlayInputSwitch: Key("Select Overlay Indicator", "ctrl+o"),
+	SetupInputSwitch:   Key("Setup Input Indicator", "ctrl+s"),
+	AccentInputSwitch:  Key("Accent Input Indicator", "ctrl+a"),
+	NextOverlay:        Key("Next Overlay", "{"),
+	PrevOverlay:        Key("Prev Overlay", "}"),
+	Save:               Key("Save", "ctrl+w"),
+	Undo:               Key("Undo", "u"),
+	Redo:               Key("Redo", "U"),
+	New:                Key("New", "ctrl+n"),
+	ToggleRatchetMode:  Key("Toggle Ratchet Mode", "ctrl+r"),
+	ToggleVisualMode:   Key("Toggle Visual Mode", "v"),
+	NewLine:            Key("New Line", "ctrl+l"),
+	Yank:               Key("Yank", "y"),
+	Mute:               Key("Mute", "m"),
+	Solo:               Key("Solo", "M"),
 }
 
 var definitionKeys = definitionKeyMap{
 	TriggerAdd:           Key("Add Trigger", "f"),
 	TriggerRemove:        Key("Remove Trigger", "d"),
+	AccentIncrease:       Key("Accent Increase", "A"),
+	AccentDecrease:       Key("Accent Increase", "a"),
 	OverlayTriggerRemove: Key("Remove Overlay Note", "x"),
 	ClearLine:            Key("Clear Line", "c"),
 	ClearSeq:             Key("Clear Overlay", "C"),
@@ -452,7 +456,6 @@ type model struct {
 	playState              []linestate
 	selectionIndicator     Selection
 	accentMode             bool
-	accentModifier         int8
 	ratchetCursor          uint8
 	overlayKey             overlayKey
 	keyCycles              int
@@ -1037,7 +1040,6 @@ func InitModel(midiConnection MidiConnection) model {
 		midiConnection:      midiConnection,
 		logFile:             logFile,
 		cursorPos:           gridKey{0, 0},
-		accentModifier:      1,
 		overlayKey:          ROOT_OVERLAY,
 		definition:          definition,
 		playState:           InitLineStates(len(definition.lines), []linestate{}),
@@ -1177,6 +1179,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursorPos.beat = m.definition.beats - 1
 		case Is(msg, keys.Escape):
 			m.selectionIndicator = 0
+			m.accentMode = false
 		case Is(msg, keys.PlayStop):
 			if !m.playing && !m.midiConnection.IsOpen() {
 				err := m.midiConnection.ConnectAndOpen()
@@ -1220,7 +1223,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.AccentInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
-			m.accentMode = true
 		case Is(msg, keys.ToggleRatchetMode):
 			currentNote := m.CurrentNote()
 			if currentNote.AccentIndex > 0 {
@@ -1285,8 +1287,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case Is(msg, keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
-		case Is(msg, keys.ToggleAccentModifier):
-			m.accentModifier = -1 * m.accentModifier
 		case Is(msg, keys.PrevOverlay):
 			m.NextOverlay(-1)
 		case Is(msg, keys.NextOverlay):
@@ -1306,7 +1306,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.New):
 			m.cursorPos = gridKey{0, 0}
 			m.overlayKey = ROOT_OVERLAY
-			m.accentModifier = 1
 			m.selectionIndicator = SELECT_NOTHING
 			m.definition = InitDefinition()
 		case Is(msg, keys.ToggleVisualMode):
@@ -1392,6 +1391,10 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.AddTrigger()
 	case Is(msg, keys.TriggerRemove):
 		m.RemoveTrigger()
+	case Is(msg, keys.AccentIncrease):
+		m.AccentModify(1)
+	case Is(msg, keys.AccentDecrease):
+		m.AccentModify(-1)
 	case Is(msg, keys.OverlayTriggerRemove):
 		m.OverlayRemoveTrigger()
 	case Is(msg, keys.ClearLine):
@@ -1433,12 +1436,48 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 	if msg.String() >= "1" && msg.String() <= "9" {
 		beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
 		if m.accentMode {
-			m.incrementAccent(uint8(beatInterval))
+			m.incrementAccent(uint8(beatInterval), -1)
+		} else {
+			m.fill(uint8(beatInterval))
+		}
+	}
+	if IsShiftSymbol(msg.String()) {
+		beatInterval := convertSymbolToInt(msg.String())
+		if m.accentMode {
+			m.incrementAccent(uint8(beatInterval), 1)
 		} else {
 			m.fill(uint8(beatInterval))
 		}
 	}
 	return m
+}
+
+func IsShiftSymbol(symbol string) bool {
+	return slices.Contains([]string{"!", "@", "#", "$", "%", "^", "&", "*", "("}, symbol)
+}
+
+func convertSymbolToInt(symbol string) int64 {
+	switch symbol[0] {
+	case '!':
+		return 1
+	case '@':
+		return 2
+	case '#':
+		return 3
+	case '$':
+		return 4
+	case '%':
+		return 5
+	case '^':
+		return 6
+	case '&':
+		return 7
+	case '*':
+		return 8
+	case '(':
+		return 9
+	}
+	return 0
 }
 
 func (m model) UpdateDefinition(msg tea.KeyMsg) model {
@@ -1493,6 +1532,11 @@ func (m model) UndoableNote() Undoable {
 	} else {
 		return UndoToNothing{m.overlayKey, m.cursorPos}
 	}
+}
+
+func (m model) IsAccentSelector() bool {
+	states := []Selection{SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
+	return slices.Contains(states, m.selectionIndicator)
 }
 
 func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
@@ -1905,7 +1949,7 @@ func (m *model) fill(every uint8) {
 	}
 }
 
-func (m *model) incrementAccent(every uint8) {
+func (m *model) incrementAccent(every uint8, modifier int8) {
 	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
 
 	start, end := m.PatternActionBoundaries()
@@ -1916,8 +1960,15 @@ func (m *model) incrementAccent(every uint8) {
 		hasNote = hasNote && currentNote != zeronote
 
 		if hasNote {
-			m.CurrentNotable().SetNote(gridKey, currentNote.IncrementAccent(m.accentModifier))
+			m.CurrentNotable().SetNote(gridKey, currentNote.IncrementAccent(modifier))
 		}
+	}
+}
+
+func (m *model) AccentModify(modifier int8) {
+	currentNote := m.CurrentNote()
+	if currentNote != zeronote {
+		m.CurrentNotable().SetNote(m.cursorPos, currentNote.IncrementAccent(modifier))
 	}
 }
 
@@ -1998,7 +2049,7 @@ func (m model) View() string {
 	var buf strings.Builder
 	var sideView string
 
-	if m.accentMode {
+	if m.accentMode || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
 	} else if len(m.definition.overlays) == 0 ||
 		m.selectionIndicator == SELECT_SETUP_NOTE ||
@@ -2140,12 +2191,8 @@ func (m model) ViewTriggerSeq() string {
 	visualCombinedPattern := m.definition.VisualCombinedPattern(m.CurrentKeys())
 
 	if m.accentMode {
-		if m.accentModifier > 0 {
-			mode = " Accent Mode \u2191 "
-		} else {
-			mode = " Accent Mode \u2193 "
-		}
-		buf.WriteString(fmt.Sprintf("    Seq - %s\n", accentModeStyle.Render(mode)))
+		mode = " Accent Mode "
+		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetModeView())
 	} else if m.playing {
