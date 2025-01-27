@@ -1225,6 +1225,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if currentNote.AccentIndex > 0 {
 				states := []Selection{SELECT_NOTHING, SELECT_RATCHETS, SELECT_RATCHET_SPAN}
 				m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+				m.ratchetCursor = 0
 			}
 		case Is(msg, keys.Increase):
 			switch m.selectionIndicator {
