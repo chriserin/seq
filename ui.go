@@ -776,7 +776,7 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
 	for i, line := range lines {
-		if !(currentBeat[i].groupPlayState == PLAY_STATE_MUTE || currentBeat[i].groupPlayState == PLAY_STATE_MUTED_BY_SOLO) {
+		if currentBeat[i].groupPlayState != PLAY_STATE_MUTE && currentBeat[i].groupPlayState != PLAY_STATE_MUTED_BY_SOLO {
 			currentGridKey := gridKey{uint8(i), currentBeat[i].currentBeat}
 			note, hasNote := pattern[currentGridKey]
 			if hasNote && note.Ratchets.Length > 0 {
