@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"maps"
+	"math/rand"
 	"os"
 	"slices"
 	"strconv"
@@ -460,6 +461,7 @@ type model struct {
 	undoStack              UndoStack
 	redoStack              UndoStack
 	yankBuffer             Buffer
+	needsWrite             int
 	// save everything below here
 	definition Definition
 }
@@ -489,6 +491,7 @@ type UndoStack struct {
 	undo Undoable
 	redo Undoable
 	next *UndoStack
+	id   int
 }
 
 var NIL_STACK = UndoStack{}
@@ -629,12 +632,13 @@ func (uno UndoNewOverlay) ApplyUndo(m *model) {
 	m.cursorPos = uno.cursorPosition
 }
 
-func (m *model) PushUndo(undo Undoable, redo Undoable) {
+func (m *model) PushUndoables(undo Undoable, redo Undoable) {
 	if m.undoStack == NIL_STACK {
 		m.undoStack = UndoStack{
 			undo: undo,
 			redo: redo,
 			next: nil,
+			id:   rand.Int(),
 		}
 	} else {
 		pusheddown := m.undoStack
@@ -642,26 +646,31 @@ func (m *model) PushUndo(undo Undoable, redo Undoable) {
 			undo: undo,
 			redo: redo,
 			next: &pusheddown,
+			id:   rand.Int(),
 		}
 		m.undoStack = lastin
 	}
 }
 
-func (m *model) PushRedo(undo Undoable, redo Undoable) {
+func (m *model) PushUndo(undo UndoStack) {
+	if m.undoStack == NIL_STACK {
+		undo.next = nil
+		m.undoStack = undo
+	} else {
+		pusheddown := m.undoStack
+		undo.next = &pusheddown
+		m.undoStack = undo
+	}
+}
+
+func (m *model) PushRedo(redo UndoStack) {
 	if m.redoStack == NIL_STACK {
-		m.redoStack = UndoStack{
-			undo: undo,
-			redo: redo,
-			next: nil,
-		}
+		redo.next = nil
+		m.redoStack = redo
 	} else {
 		pusheddown := m.redoStack
-		lastin := UndoStack{
-			undo: undo,
-			redo: redo,
-			next: &pusheddown,
-		}
-		m.redoStack = lastin
+		redo.next = &pusheddown
+		m.redoStack = redo
 	}
 }
 
@@ -1322,15 +1331,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.NextOverlay(+1)
 		case Is(msg, keys.Save):
 			m.Save()
+			m.needsWrite = m.undoStack.id
 		case Is(msg, keys.Undo):
 			undoStack := m.Undo()
 			if undoStack != NIL_STACK {
-				m.PushRedo(undoStack.undo, undoStack.redo)
+				m.PushRedo(undoStack)
 			}
 		case Is(msg, keys.Redo):
 			undoStack := m.Redo()
 			if undoStack != NIL_STACK {
-				m.PushUndo(undoStack.undo, undoStack.redo)
+				m.PushUndo(undoStack)
 			}
 		case Is(msg, keys.New):
 			m.cursorPos = gridKey{0, 0}
@@ -1457,7 +1467,7 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		undoable := UndoKeyline{m.definition.keyline}
 		m.definition.keyline = m.cursorPos.line
 		redoable := UndoKeyline{m.definition.keyline}
-		m.PushUndo(undoable, redoable)
+		m.PushUndoables(undoable, redoable)
 	case Is(msg, keys.PressDownOverlay):
 		m.ToggleOverlayStackOptions(m.overlayKey)
 	case Is(msg, keys.ClearSeq):
@@ -1523,31 +1533,31 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 		redoable := m.UndoableBounds(m.visualAnchorCursor, m.cursorPos)
-		m.PushUndo(undoable, redoable)
+		m.PushUndoables(undoable, redoable)
 	} else if keys.IsNoteWiseKey(msg) {
 		undoable := m.UndoableNote()
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 		redoable := m.UndoableNote()
-		m.PushUndo(undoable, redoable)
+		m.PushUndoables(undoable, redoable)
 	} else if keys.IsLineWiseKey(msg) {
 		undoable := m.UndoableLine()
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 		redoable := m.UndoableLine()
-		m.PushUndo(undoable, redoable)
+		m.PushUndoables(undoable, redoable)
 	} else if keys.IsOverlayWiseKey(msg) {
 		undoable := m.UndoableOverlay()
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 		redoable := m.UndoableOverlay()
-		m.PushUndo(undoable, redoable)
+		m.PushUndoables(undoable, redoable)
 	} else if Is(msg, keys.Paste) {
 		undoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRightFrom(m.cursorPos))
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 		redoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRightFrom(m.cursorPos))
-		m.PushUndo(undoable, redoable)
+		m.PushUndoables(undoable, redoable)
 	} else {
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
@@ -2054,7 +2064,7 @@ func (m model) TempoView() string {
 		division = numberColor.Render(strconv.Itoa(m.definition.subdivisions))
 	}
 	heart := heartColor.Render("♡")
-	buf.WriteString(heartColor.Render("             ") + "\n")
+	buf.WriteString("             \n")
 	buf.WriteString(heartColor.Render("   ♡♡♡☆ ☆♡♡♡ ") + "\n")
 	buf.WriteString(heartColor.Render("  ♡    ◊    ♡") + "\n")
 	buf.WriteString(heartColor.Render("  ♡  TEMPO  ♡") + "\n")
@@ -2065,6 +2075,14 @@ func (m model) TempoView() string {
 	buf.WriteString(heartColor.Render("      ♡ ♡    ") + "\n")
 	buf.WriteString(heartColor.Render("       †     ") + "\n")
 	return buf.String()
+}
+
+func (m model) WriteView() string {
+	if m.needsWrite != m.undoStack.id {
+		return " [+]"
+	} else {
+		return "    "
+	}
 }
 
 func (m model) IsAccentSelector() bool {
@@ -2230,7 +2248,8 @@ func (m model) ViewTriggerSeq() string {
 	} else if m.playing {
 		buf.WriteString(fmt.Sprintf("    Seq - Playing - %d\n", m.keyCycles))
 	} else {
-		buf.WriteString("    Seq - A sequencer for your cli\n")
+		buf.WriteString(m.WriteView())
+		buf.WriteString("Seq - A sequencer for your cli\n")
 	}
 	buf.WriteString("   ┌─────────────────────────────────\n")
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
