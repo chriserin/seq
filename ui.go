@@ -916,13 +916,22 @@ func (m *model) IncreaseRatchet() {
 }
 
 func (m *model) DecreaseRatchet() {
-	currentNote := m.CurrentNote()
-	currentRatchet := currentNote.Ratchets.Length
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	bounds := m.YankBounds()
 
-	if currentNote.Action == ACTION_NOTHING && currentRatchet > 0 {
-		currentNote.Ratchets.Length = currentRatchet - 1
-		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
+	for key, currentNote := range combinedOverlay {
+		if bounds.InBounds(key) {
+			currentRatchet := currentNote.Ratchets.Length
+			if currentNote.AccentIndex > 0 && currentNote.Action == ACTION_NOTHING && currentRatchet > 0 {
+				currentNote.Ratchets.Length = currentRatchet - 1
+				m.CurrentNotable().SetNote(key, currentNote)
+			}
+		}
 	}
+}
+
+func (m *model) EnsureRatchetCursorVisisble() {
+	currentNote := m.CurrentNote()
 	if m.ratchetCursor > currentNote.Ratchets.Length {
 		m.ratchetCursor = m.ratchetCursor - 1
 	}
@@ -1419,6 +1428,7 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.IncreaseRatchet()
 	case Is(msg, keys.RatchetDecrease):
 		m.DecreaseRatchet()
+		m.EnsureRatchetCursorVisisble()
 	case Is(msg, keys.ActionAddLineReset):
 		m.AddAction(ACTION_LINE_RESET)
 	case Is(msg, keys.ActionAddLineReverse):
@@ -1803,7 +1813,7 @@ func (m model) Yank() Buffer {
 }
 
 func (m *model) Paste() {
-	bounds := m.CurrentBounds()
+	bounds := m.PasteBounds()
 
 	var keyModifier gridKey
 	if m.visualMode {
@@ -1818,18 +1828,6 @@ func (m *model) Paste() {
 		if bounds.InBounds(newKey) {
 			m.CurrentNotable().SetNote(newKey, gridNote.note)
 		}
-	}
-}
-
-func (m model) PatternBounds() Bounds {
-	return Bounds{0, m.definition.beats - 1, uint8(len(m.definition.lines)), 0}
-}
-
-func (m model) CurrentBounds() Bounds {
-	if m.visualMode {
-		return m.VisualSelectionBounds()
-	} else {
-		return m.PatternBounds()
 	}
 }
 
@@ -2406,6 +2404,18 @@ func (b Bounds) TopLeft() gridKey {
 
 func (m model) VisualSelectionBounds() Bounds {
 	return InitBounds(m.cursorPos, m.visualAnchorCursor)
+}
+
+func (m model) PatternBounds() Bounds {
+	return Bounds{0, m.definition.beats - 1, uint8(len(m.definition.lines)), 0}
+}
+
+func (m model) PasteBounds() Bounds {
+	if m.visualMode {
+		return m.VisualSelectionBounds()
+	} else {
+		return m.PatternBounds()
+	}
 }
 
 func (m model) YankBounds() Bounds {
