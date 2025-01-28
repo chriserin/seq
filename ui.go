@@ -1342,6 +1342,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case Is(msg, keys.Yank):
 			m.yankBuffer = m.Yank()
+			m.cursorPos = m.YankBounds().TopLeft()
 			m.visualMode = false
 		case Is(msg, keys.Mute):
 			if m.IsRatchetSelector() {
