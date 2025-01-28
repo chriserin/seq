@@ -1532,10 +1532,10 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 		redoable := m.UndoableOverlay()
 		m.PushUndo(undoable, redoable)
 	} else if Is(msg, keys.Paste) {
-		undoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRight(m.cursorPos))
+		undoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRightFrom(m.cursorPos))
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
-		redoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRight(m.cursorPos))
+		redoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRightFrom(m.cursorPos))
 		m.PushUndo(undoable, redoable)
 	} else {
 		m.EnsureOverlay()
@@ -2401,7 +2401,7 @@ func (b Bounds) Normalized() Bounds {
 	return Bounds{top: 0, right: b.right - b.left, bottom: b.bottom - b.top, left: 0}
 }
 
-func (b Bounds) BottomRight(key gridKey) gridKey {
+func (b Bounds) BottomRightFrom(key gridKey) gridKey {
 	return gridKey{key.line + b.bottom, key.beat + b.right}
 }
 
