@@ -532,23 +532,27 @@ type GridNote struct {
 
 type UndoGridNote struct {
 	overlayKey
-	gridNote GridNote
+	cursorPosition gridKey
+	gridNote       GridNote
 }
 
 func (ugn UndoGridNote) ApplyUndo(m *model) {
 	m.EnsureOverlayWithKey(ugn.overlayKey)
+	m.cursorPos = ugn.cursorPosition
 	overlay := m.definition.overlays[ugn.overlayKey]
 	overlay[ugn.gridNote.gridKey] = ugn.gridNote.note
 }
 
 type UndoLineGridNotes struct {
 	overlayKey
-	line      uint8
-	gridNotes []GridNote
+	cursorPosition gridKey
+	line           uint8
+	gridNotes      []GridNote
 }
 
 func (ulgn UndoLineGridNotes) ApplyUndo(m *model) {
 	m.EnsureOverlayWithKey(ulgn.overlayKey)
+	m.cursorPos = ulgn.cursorPosition
 	overlay := m.definition.overlays[ulgn.overlayKey]
 	for i := range m.definition.beats {
 		delete(overlay, gridKey{ulgn.line, i})
@@ -560,12 +564,14 @@ func (ulgn UndoLineGridNotes) ApplyUndo(m *model) {
 
 type UndoBounds struct {
 	overlayKey
-	bounds    Bounds
-	gridNotes []GridNote
+	cursorPosition gridKey
+	bounds         Bounds
+	gridNotes      []GridNote
 }
 
 func (uvs UndoBounds) ApplyUndo(m *model) {
 	m.EnsureOverlayWithKey(uvs.overlayKey)
+	m.cursorPos = uvs.cursorPosition
 	overlay := m.definition.overlays[uvs.overlayKey]
 	for _, k := range uvs.bounds.GridKeys() {
 		delete(overlay, k)
@@ -595,27 +601,32 @@ type UndoToNothing struct {
 
 func (utn UndoToNothing) ApplyUndo(m *model) {
 	overlay := m.definition.overlays[utn.overlayKey]
+	m.cursorPos = utn.location
 	delete(overlay, utn.location)
 }
 
 type UndoLineToNothing struct {
-	overlayKey overlayKey
-	line       uint8
+	overlayKey     overlayKey
+	cursorPosition gridKey
+	line           uint8
 }
 
 func (ultn UndoLineToNothing) ApplyUndo(m *model) {
 	overlay := m.definition.overlays[ultn.overlayKey]
+	m.cursorPos = ultn.cursorPosition
 	for i := range m.definition.beats {
 		delete(overlay, gridKey{ultn.line, i})
 	}
 }
 
 type UndoNewOverlay struct {
-	overlayKey overlayKey
+	overlayKey     overlayKey
+	cursorPosition gridKey
 }
 
 func (uno UndoNewOverlay) ApplyUndo(m *model) {
 	delete(m.definition.overlays, uno.overlayKey)
+	m.cursorPos = uno.cursorPosition
 }
 
 func (m *model) PushUndo(undo Undoable, redo Undoable) {
@@ -1548,30 +1559,20 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 func (m model) UndoableNote() Undoable {
 	overlay, hasOverlay := m.definition.overlays[m.overlayKey]
 	if !hasOverlay {
-		return UndoNewOverlay{m.overlayKey}
+		return UndoNewOverlay{m.overlayKey, m.cursorPos}
 	}
 	currentNote, hasNote := overlay[m.cursorPos]
 	if hasNote {
-		return UndoGridNote{m.overlayKey, GridNote{m.cursorPos, currentNote}}
+		return UndoGridNote{m.overlayKey, m.cursorPos, GridNote{m.cursorPos, currentNote}}
 	} else {
 		return UndoToNothing{m.overlayKey, m.cursorPos}
 	}
 }
 
-func (m model) IsAccentSelector() bool {
-	states := []Selection{SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
-	return slices.Contains(states, m.selectionIndicator)
-}
-
-func (m model) IsRatchetSelector() bool {
-	states := []Selection{SELECT_RATCHETS, SELECT_RATCHET_SPAN}
-	return slices.Contains(states, m.selectionIndicator)
-}
-
 func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
 	overlay, hasOverlay := m.definition.overlays[m.overlayKey]
 	if !hasOverlay {
-		return UndoNewOverlay{m.overlayKey}
+		return UndoNewOverlay{m.overlayKey, m.cursorPos}
 	}
 	bounds := InitBounds(pointA, pointB)
 	gridKeys := bounds.GridKeys()
@@ -1582,13 +1583,13 @@ func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
 			gridNotes = append(gridNotes, GridNote{k, currentNote})
 		}
 	}
-	return UndoBounds{m.overlayKey, bounds, gridNotes}
+	return UndoBounds{m.overlayKey, m.cursorPos, bounds, gridNotes}
 }
 
 func (m model) UndoableLine() Undoable {
 	overlay, hasOverlay := m.definition.overlays[m.overlayKey]
 	if !hasOverlay {
-		return UndoNewOverlay{m.overlayKey}
+		return UndoNewOverlay{m.overlayKey, m.cursorPos}
 	}
 	notesToUndo := make([]GridNote, 0, m.definition.beats)
 	for i := range m.definition.beats {
@@ -1599,15 +1600,15 @@ func (m model) UndoableLine() Undoable {
 		}
 	}
 	if len(notesToUndo) == 0 {
-		return UndoLineToNothing{m.overlayKey, m.cursorPos.line}
+		return UndoLineToNothing{m.overlayKey, m.cursorPos, m.cursorPos.line}
 	}
-	return UndoLineGridNotes{m.overlayKey, m.cursorPos.line, notesToUndo}
+	return UndoLineGridNotes{m.overlayKey, m.cursorPos, m.cursorPos.line, notesToUndo}
 }
 
 func (m model) UndoableOverlay() Undoable {
 	_, hasOverlay := m.definition.overlays[m.overlayKey]
 	if !hasOverlay {
-		return UndoNewOverlay{m.overlayKey}
+		return UndoNewOverlay{m.overlayKey, m.cursorPos}
 	}
 	notesToUndo := make([]GridNote, 0, m.definition.beats)
 	for key, note := range m.definition.overlays[m.overlayKey] {
@@ -2064,6 +2065,16 @@ func (m model) TempoView() string {
 	buf.WriteString(heartColor.Render("      ♡ ♡    ") + "\n")
 	buf.WriteString(heartColor.Render("       †     ") + "\n")
 	return buf.String()
+}
+
+func (m model) IsAccentSelector() bool {
+	states := []Selection{SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
+	return slices.Contains(states, m.selectionIndicator)
+}
+
+func (m model) IsRatchetSelector() bool {
+	states := []Selection{SELECT_RATCHETS, SELECT_RATCHET_SPAN}
+	return slices.Contains(states, m.selectionIndicator)
 }
 
 func (m model) View() string {
