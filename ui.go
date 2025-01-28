@@ -1980,9 +1980,15 @@ func (m *model) incrementAccent(every uint8, modifier int8) {
 }
 
 func (m *model) AccentModify(modifier int8) {
-	currentNote := m.CurrentNote()
-	if currentNote != zeronote {
-		m.CurrentNotable().SetNote(m.cursorPos, currentNote.IncrementAccent(modifier))
+	bounds := m.YankBounds()
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+
+	for key, currentNote := range combinedOverlay {
+		if bounds.InBounds(key) {
+			if currentNote != zeronote {
+				m.CurrentNotable().SetNote(key, currentNote.IncrementAccent(modifier))
+			}
+		}
 	}
 }
 
