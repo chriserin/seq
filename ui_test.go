@@ -4,8 +4,11 @@ import (
 	"slices"
 	"testing"
 
+	overlaykey "github.com/chriserin/seq/overlayKey"
 	"github.com/stretchr/testify/assert"
 )
+
+var OK = overlaykey.InitOverlayKey
 
 func TestGetMatchingKeys(t *testing.T) {
 	testCases := []struct {
@@ -19,70 +22,70 @@ func TestGetMatchingKeys(t *testing.T) {
 		{
 			desc:       "A",
 			keyCycles:  1,
-			keys:       []overlayKey{{2, 1}},
+			keys:       []overlayKey{OK(2, 1)},
 			expected:   []overlayKey{},
-			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{OK(1, 1): {false, false}}},
 		},
 		{
 			desc:       "B",
 			keyCycles:  5,
-			keys:       []overlayKey{{2, 1}},
+			keys:       []overlayKey{OK(2, 1)},
 			expected:   []overlayKey{},
-			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{OK(1, 1): {false, false}}},
 		},
 		{
 			desc:       "C",
 			keyCycles:  3,
-			keys:       []overlayKey{{3, 1}, {2, 1}},
-			expected:   []overlayKey{{3, 1}},
-			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			keys:       []overlayKey{OK(3, 1), OK(2, 1)},
+			expected:   []overlayKey{OK(3, 1)},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{OK(1, 1): {false, false}}},
 		},
 		{
 			desc:       "D",
 			keyCycles:  3,
-			keys:       []overlayKey{{3, 2}},
-			expected:   []overlayKey{{3, 2}},
-			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			keys:       []overlayKey{OK(3, 2)},
+			expected:   []overlayKey{OK(3, 2)},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{OK(1, 1): {false, false}}},
 		},
 		{
 			desc:       "E",
 			keyCycles:  1,
-			keys:       []overlayKey{{3, 2}},
+			keys:       []overlayKey{OK(3, 2)},
 			expected:   []overlayKey{},
-			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{OK(1, 1): {false, false}}},
 		},
 		{
 			desc:       "F",
 			keyCycles:  11,
-			keys:       []overlayKey{{3, 8}, {3, 4}},
-			expected:   []overlayKey{{3, 8}, {3, 4}},
-			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{3, 4}: {true, false}}},
+			keys:       []overlayKey{OK(3, 8), OK(3, 4)},
+			expected:   []overlayKey{OK(3, 8), OK(3, 4)},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{OK(3, 4): {true, false}}},
 		},
 		{
 			desc:       "G",
 			keyCycles:  11,
-			keys:       []overlayKey{{3, 8}, {3, 4}},
-			expected:   []overlayKey{{3, 8}},
-			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{1, 1}: {false, false}}},
+			keys:       []overlayKey{OK(3, 8), OK(3, 4)},
+			expected:   []overlayKey{OK(3, 8)},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{OK(1, 1): {false, false}}},
 		},
 		{
 			desc:      "H",
 			keyCycles: 12,
-			keys:      []overlayKey{{3, 1}, {2, 1}, {1, 1}},
-			expected:  []overlayKey{{3, 1}, {2, 1}, {1, 1}},
+			keys:      []overlayKey{OK(3, 1), OK(2, 1), OK(1, 1)},
+			expected:  []overlayKey{OK(3, 1), OK(2, 1), OK(1, 1)},
 			definition: Definition{
 				metaOverlays: map[overlayKey]metaOverlay{
-					{1, 1}: {true, false},
-					{2, 1}: {true, false},
+					OK(1, 1): {true, false},
+					OK(2, 1): {true, false},
 				},
 			},
 		},
 		{
 			desc:       "I",
 			keyCycles:  9,
-			keys:       []overlayKey{{3, 1}, {2, 1}, {1, 1}},
-			expected:   []overlayKey{{3, 1}, {2, 1}},
-			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{{3, 1}: {false, true}}},
+			keys:       []overlayKey{OK(3, 1), OK(2, 1), OK(1, 1)},
+			expected:   []overlayKey{OK(3, 1), OK(2, 1)},
+			definition: Definition{metaOverlays: map[overlayKey]metaOverlay{OK(3, 1): {false, true}}},
 		},
 	}
 	for _, tC := range testCases {
@@ -101,20 +104,20 @@ func TestOverlayKeySort(t *testing.T) {
 	}{
 		{
 			desc:     "TEST A",
-			keys:     []overlayKey{{2, 1}, {3, 1}},
-			expected: overlayKey{3, 1},
+			keys:     []overlayKey{OK(2, 1), OK(3, 1)},
+			expected: OK(3, 1),
 		},
 		{
 			desc:     "TEST B",
-			keys:     []overlayKey{{3, 1}, {2, 1}},
-			expected: overlayKey{3, 1},
+			keys:     []overlayKey{OK(3, 1), OK(2, 1)},
+			expected: OK(3, 1),
 		},
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			newSlice := make([]overlayKey, len(tC.keys))
 			copy(newSlice, tC.keys)
-			slices.SortFunc(newSlice, OverlayKeySort)
+			slices.SortFunc(newSlice, overlaykey.Sort)
 			assert.Equal(t, tC.expected, newSlice[0])
 		})
 	}
@@ -131,15 +134,15 @@ func TestCombinePattern(t *testing.T) {
 			desc: "A",
 			definition: Definition{
 				overlays: overlays{
-					{1, 1}: overlay{
+					OK(1, 1): overlay{
 						{1, 1}: note{Action: 1},
 					},
-					{1, 2}: overlay{
+					OK(1, 2): overlay{
 						{1, 2}: note{Action: 2},
 					},
 				},
 			},
-			keys: []overlayKey{{1, 2}, {1, 1}},
+			keys: []overlayKey{OK(1, 2), OK(1, 1)},
 			result: overlay{
 				{1, 1}: note{Action: 1},
 				{1, 2}: note{Action: 2},
@@ -149,18 +152,18 @@ func TestCombinePattern(t *testing.T) {
 			desc: "B",
 			definition: Definition{
 				overlays: overlays{
-					{1, 1}: overlay{
+					OK(1, 1): overlay{
 						{1, 1}: note{Action: 1},
 					},
-					{2, 1}: overlay{
+					OK(2, 1): overlay{
 						{1, 2}: note{Action: 2},
 					},
-					{3, 1}: overlay{
+					OK(3, 1): overlay{
 						{1, 3}: note{Action: 3},
 					},
 				},
 			},
-			keys: []overlayKey{{3, 1}, {2, 1}, {1, 1}},
+			keys: []overlayKey{OK(3, 1), OK(2, 1), OK(1, 1)},
 			result: overlay{
 				{1, 1}: note{Action: 1},
 				{1, 2}: note{Action: 2},
@@ -184,74 +187,74 @@ func TestEditKeys(t *testing.T) {
 	}{
 		{
 			desc:   "A",
-			m:      model{overlayKey: overlayKey{1, 1}},
-			result: []overlayKey{{1, 1}},
+			m:      model{overlayKey: OK(1, 1)},
+			result: []overlayKey{OK(1, 1)},
 		},
 		{
 			desc: "B",
 			m: model{
-				overlayKey: overlayKey{1, 1},
+				overlayKey: OK(1, 1),
 				definition: Definition{
 					overlays: overlays{
-						overlayKey{1, 1}: make(overlay),
-						overlayKey{2, 1}: make(overlay),
+						OK(1, 1): make(overlay),
+						OK(2, 1): make(overlay),
 					}}},
-			result: []overlayKey{{1, 1}},
+			result: []overlayKey{OK(1, 1)},
 		},
 		{
 			desc: "C",
 			m: model{
-				overlayKey: overlayKey{2, 1},
+				overlayKey: OK(2, 1),
 				definition: Definition{
 					overlays: overlays{
-						overlayKey{1, 1}: make(overlay),
-						overlayKey{2, 1}: make(overlay),
+						OK(1, 1): make(overlay),
+						OK(2, 1): make(overlay),
 					},
 					metaOverlays: map[overlayKey]metaOverlay{
-						{1, 1}: {PressUp: true},
+						OK(1, 1): {PressUp: true},
 					},
 				},
 			},
-			result: []overlayKey{{2, 1}, {1, 1}},
+			result: []overlayKey{OK(2, 1), OK(1, 1)},
 		},
 		{
 			desc: "D",
 			m: model{
-				overlayKey: overlayKey{3, 1},
+				overlayKey: OK(3, 1),
 				definition: Definition{
 					overlays: overlays{
-						overlayKey{1, 1}: make(overlay),
-						overlayKey{2, 1}: make(overlay),
-						overlayKey{3, 1}: make(overlay),
+						OK(1, 1): make(overlay),
+						OK(2, 1): make(overlay),
+						OK(3, 1): make(overlay),
 					}}},
-			result: []overlayKey{{3, 1}},
+			result: []overlayKey{OK(3, 1)},
 		},
 		{
 			desc: "E",
 			m: model{
-				overlayKey: overlayKey{4, 1},
+				overlayKey: OK(4, 1),
 				definition: Definition{
 					overlays: overlays{
 						// overlayKey{1, 1}: make(overlay),
 						// overlayKey{2, 1}: make(overlay),
 						// overlayKey{4, 1}: make(overlay),
 					}}},
-			result: []overlayKey{{4, 1}},
+			result: []overlayKey{OK(4, 1)},
 		},
 		{
 			desc: "F",
 			m: model{
-				overlayKey: overlayKey{2, 1},
+				overlayKey: OK(2, 1),
 				definition: Definition{
 					overlays: overlays{
-						overlayKey{1, 1}: make(overlay),
+						OK(1, 1): make(overlay),
 					},
 					metaOverlays: map[overlayKey]metaOverlay{
-						{1, 1}: {PressUp: true},
+						OK(1, 1): {PressUp: true},
 					},
 				},
 			},
-			result: []overlayKey{{2, 1}, {1, 1}},
+			result: []overlayKey{OK(2, 1), OK(1, 1)},
 		},
 	}
 	for _, tC := range testCases {

@@ -19,7 +19,7 @@ type WriteMetaOverlays map[string]metaOverlay
 func TransformOverlays(overlays overlays) WriteOverlays {
 	transformedOverlays := make(map[string]WriteOverlay)
 	for k, v := range overlays {
-		transformedOverlays[k.String()] = TransformOverlay(v)
+		transformedOverlays[k.WriteKey()] = TransformOverlay(v)
 	}
 	return transformedOverlays
 }
@@ -27,7 +27,7 @@ func TransformOverlays(overlays overlays) WriteOverlays {
 func TransformMetaOverlays(metaOverlays map[overlayKey]metaOverlay) WriteMetaOverlays {
 	transformedOverlays := make(WriteMetaOverlays)
 	for k, v := range metaOverlays {
-		transformedOverlays[k.String()] = v
+		transformedOverlays[k.WriteKey()] = v
 	}
 	return transformedOverlays
 }
@@ -92,7 +92,7 @@ func UnMarshalOverlayKey(k string) overlayKey {
 	if err != nil {
 		panic("Could not unmarshal overlaykey")
 	}
-	return overlayKey{uint8(num), uint8(denom)}
+	return overlayKey{uint8(num), uint8(denom), 0, 0}
 }
 
 func UnMarshalGridKey(k string) gridKey {

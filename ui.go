@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	overlaykey "github.com/chriserin/seq/overlayKey"
 	midi "gitlab.com/gomidi/midi/v2"
 )
 
@@ -317,54 +318,7 @@ type linestate struct {
 	groupPlayState      groupPlayState
 }
 
-type overlayKey struct {
-	num   uint8
-	denom uint8
-}
-
-func (o overlayKey) String() string {
-	return fmt.Sprintf("Overlay-%d/%d", o.num, o.denom)
-}
-
-func (o overlayKey) MarshalTOML() ([]byte, error) {
-	return []byte(fmt.Sprintf("%d/%d", o.num, o.denom)), nil
-}
-
-func OverlayKeySort(x overlayKey, y overlayKey) int {
-	var result int
-	if x.num == y.num {
-		result = int(y.denom) - int(x.denom)
-	} else {
-		result = int(y.num) - int(x.num)
-	}
-	return result
-}
-
-var ROOT_OVERLAY = overlayKey{1, 1}
-
-func (o *overlayKey) IncrementNumerator() {
-	if o.num < 9 {
-		o.num++
-	}
-}
-
-func (o *overlayKey) IncrementDenominator() {
-	if o.denom < 9 {
-		o.denom++
-	}
-}
-
-func (o *overlayKey) DecrementNumerator() {
-	if o.num > 1 {
-		o.num--
-	}
-}
-
-func (o *overlayKey) DecrementDenominator() {
-	if o.denom > 1 {
-		o.denom--
-	}
-}
+type overlayKey = overlaykey.OverlayPeriodicity
 
 type Notable interface {
 	SetNote(gridKey, note)
@@ -857,7 +811,7 @@ func (m *model) EnsureOverlay() {
 func (m *model) EnsureOverlayWithKey(key overlayKey) {
 	if len(m.definition.overlays[key]) == 0 {
 		m.definition.overlays[key] = make(overlay)
-		if key == ROOT_OVERLAY {
+		if key == overlaykey.ROOT_OVERLAY {
 			m.definition.metaOverlays[key] = metaOverlay{PressUp: true, PressDown: false}
 		} else {
 			m.definition.metaOverlays[key] = metaOverlay{PressUp: false, PressDown: false}
@@ -1076,7 +1030,7 @@ func InitModel(midiConnection MidiConnection) model {
 		midiConnection:      midiConnection,
 		logFile:             logFile,
 		cursorPos:           gridKey{0, 0},
-		overlayKey:          ROOT_OVERLAY,
+		overlayKey:          overlaykey.ROOT_OVERLAY,
 		definition:          definition,
 		playState:           InitLineStates(len(definition.lines), []linestate{}),
 	}
@@ -1115,7 +1069,7 @@ func Is(msg tea.KeyMsg, k key.Binding) bool {
 
 func GetMinimumKeyCycle(key overlayKey) int {
 	for i := 1; i < 100; i++ {
-		if DoesKeyMatch(i, key) {
+		if key.DoesMatch(i) {
 			return i
 		}
 	}
@@ -1125,11 +1079,11 @@ func GetMinimumKeyCycle(key overlayKey) int {
 func (d Definition) GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKey {
 	var matchedKeys = make([]overlayKey, 0, 5)
 
-	slices.SortFunc(keys, OverlayKeySort)
+	slices.SortFunc(keys, overlaykey.Sort)
 	var pressNext = false
 
 	for _, key := range keys {
-		matches := DoesKeyMatch(keyCycles, key)
+		matches := key.DoesMatch(keyCycles)
 		if (matches && len(matchedKeys) == 0) || pressNext {
 			matchedKeys = append(matchedKeys, key)
 			if d.metaOverlays[key].PressDown {
@@ -1145,22 +1099,6 @@ func (d Definition) GetMatchingOverlays(keyCycles int, keys []overlayKey) []over
 	}
 
 	return matchedKeys
-}
-
-func DoesKeyMatch(keyCycles int, key overlayKey) bool {
-	additional := key.num / key.denom
-	over := key.num % key.denom
-	if over > 0 {
-		rem := keyCycles % (int(key.denom) * (1 + int(additional)))
-		if rem == int(key.num) {
-			return true
-		}
-	} else {
-		if keyCycles%int(key.num) == 0 {
-			return true
-		}
-	}
-	return false
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -1278,9 +1216,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.definition.subdivisions++
 				}
 			case SELECT_OVERLAY_NUM:
-				m.overlayKey.IncrementNumerator()
+				m.overlayKey.IncrementShift()
 			case SELECT_OVERLAY_DENOM:
-				m.overlayKey.IncrementDenominator()
+				m.overlayKey.IncrementInterval()
 			case SELECT_SETUP_CHANNEL:
 				m.definition.lines[m.cursorPos.line].IncrementChannel()
 			case SELECT_SETUP_NOTE:
@@ -1307,9 +1245,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.definition.subdivisions--
 				}
 			case SELECT_OVERLAY_NUM:
-				m.overlayKey.DecrementNumerator()
+				m.overlayKey.DecrementShift()
 			case SELECT_OVERLAY_DENOM:
-				m.overlayKey.DecrementDenominator()
+				m.overlayKey.DecrementInterval()
 			case SELECT_SETUP_CHANNEL:
 				m.definition.lines[m.cursorPos.line].DecrementChannel()
 			case SELECT_SETUP_NOTE:
@@ -1344,7 +1282,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case Is(msg, keys.New):
 			m.cursorPos = gridKey{0, 0}
-			m.overlayKey = ROOT_OVERLAY
+			m.overlayKey = overlaykey.ROOT_OVERLAY
 			m.selectionIndicator = SELECT_NOTHING
 			m.definition = InitDefinition()
 		case Is(msg, keys.ToggleVisualMode):
@@ -1665,7 +1603,7 @@ func (m model) CurrentNote() note {
 }
 
 func RemoveRootKey(keys []overlayKey) []overlayKey {
-	index := slices.Index(keys, ROOT_OVERLAY)
+	index := slices.Index(keys, overlaykey.ROOT_OVERLAY)
 	if index >= 0 {
 		return append(keys[:index], keys[index+1:]...)
 	}
@@ -1674,7 +1612,7 @@ func RemoveRootKey(keys []overlayKey) []overlayKey {
 
 func (m *model) NextOverlay(direction int) {
 	keys := m.OverlayKeys()
-	slices.SortFunc(keys, OverlayKeySort)
+	slices.SortFunc(keys, overlaykey.Sort)
 	index := slices.Index(keys, m.overlayKey)
 	if index+direction < len(keys) && index+direction >= 0 {
 		m.overlayKey = keys[index+direction]
@@ -1947,7 +1885,7 @@ func (m *model) KeysBelowCurrent() []overlayKey {
 	if !slices.Contains(keys, m.overlayKey) {
 		keys = append(keys, m.overlayKey)
 	}
-	slices.SortFunc(keys, OverlayKeySort)
+	slices.SortFunc(keys, overlaykey.Sort)
 	slices.Reverse(keys)
 	indexOfCurrent := slices.Index(keys, m.overlayKey)
 	if indexOfCurrent >= 0 {
@@ -2017,8 +1955,8 @@ func (m model) PatternActionBoundaries() (uint8, uint8) {
 }
 
 func (m *model) RemoveNote(gridKey gridKey) {
-	if m.overlayKey == ROOT_OVERLAY {
-		delete(m.definition.overlays[ROOT_OVERLAY], gridKey)
+	if m.overlayKey == overlaykey.ROOT_OVERLAY {
+		delete(m.definition.overlays[overlaykey.ROOT_OVERLAY], gridKey)
 	} else {
 		m.CurrentNotable().SetNote(gridKey, zeronote)
 	}
@@ -2028,7 +1966,7 @@ func (m model) EditKeys() []overlayKey {
 	keysBelowCurrent := m.KeysBelowCurrent()
 	keysBelowCurrent = append(keysBelowCurrent, m.overlayKey)
 	matchedKeys := m.definition.GetMatchingOverlays(GetMinimumKeyCycle(m.overlayKey), keysBelowCurrent)
-	slices.SortFunc(matchedKeys, OverlayKeySort)
+	slices.SortFunc(matchedKeys, overlaykey.Sort)
 	return matchedKeys
 }
 
@@ -2194,7 +2132,7 @@ func (m model) OverlaysView() string {
 	buf.WriteString("Overlays\n")
 	buf.WriteString("——————————————\n")
 	keys := m.OverlayKeys()
-	slices.SortFunc(keys, OverlayKeySort)
+	slices.SortFunc(keys, overlaykey.Sort)
 	style := lipgloss.NewStyle().Background(seqOverlayColor)
 	for _, k := range keys {
 		var playingSpacer = "   "
@@ -2218,7 +2156,7 @@ func (m model) OverlaysView() string {
 		} else if m.definition.metaOverlays[k].PressUp {
 			stackModifier = " \u2191\u0305"
 		}
-		overlayLine := fmt.Sprintf("%d/%d%2s%2s", k.num, k.denom, stackModifier, editing)
+		overlayLine := fmt.Sprintf("%d/%d%2s%2s", k.Shift, k.Interval, stackModifier, editing)
 
 		buf.WriteString(playingSpacer)
 		if slices.Contains(m.playingMatchedOverlays, k) {
@@ -2307,14 +2245,14 @@ func (m model) ViewOverlay() string {
 
 	switch m.selectionIndicator {
 	case SELECT_OVERLAY_NUM:
-		numerator = selectedColor.Render(strconv.Itoa(int(m.overlayKey.num)))
-		denominator = numberColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
+		numerator = selectedColor.Render(strconv.Itoa(int(m.overlayKey.Shift)))
+		denominator = numberColor.Render(strconv.Itoa(int(m.overlayKey.Interval)))
 	case SELECT_OVERLAY_DENOM:
-		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.num)))
-		denominator = selectedColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
+		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.Shift)))
+		denominator = selectedColor.Render(strconv.Itoa(int(m.overlayKey.Interval)))
 	default:
-		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.num)))
-		denominator = numberColor.Render(strconv.Itoa(int(m.overlayKey.denom)))
+		numerator = numberColor.Render(strconv.Itoa(int(m.overlayKey.Shift)))
+		denominator = numberColor.Render(strconv.Itoa(int(m.overlayKey.Interval)))
 	}
 
 	return fmt.Sprintf("%s/%s", numerator, denominator)
@@ -2325,9 +2263,9 @@ func (m model) CurrentOverlayView() string {
 	if len(m.playingMatchedOverlays) > 0 {
 		matchedKey = m.playingMatchedOverlays[0]
 	} else {
-		matchedKey = overlayKey{1, 1}
+		matchedKey = overlaykey.ROOT_OVERLAY
 	}
-	return fmt.Sprintf("   Editing - %s     Playing - %d/%d", m.ViewOverlay(), matchedKey.num, matchedKey.denom)
+	return fmt.Sprintf("   Editing - %s     Playing - %d/%d", m.ViewOverlay(), matchedKey.Shift, matchedKey.Interval)
 }
 
 var altSeqColor = lipgloss.Color("#222222")
@@ -2364,7 +2302,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 			backgroundSeqColor = seqCursorColor
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
 			backgroundSeqColor = seqVisualColor
-		} else if hasNote && overlayNote.origin != ROOT_OVERLAY {
+		} else if hasNote && overlayNote.origin != overlaykey.ROOT_OVERLAY {
 			backgroundSeqColor = seqOverlayColor
 		} else if i%8 > 3 {
 			backgroundSeqColor = altSeqColor
