@@ -15,6 +15,7 @@ type keymap struct {
 	FocusInterval key.Binding
 	FocusShift    key.Binding
 	FocusStart    key.Binding
+	RemoveStart   key.Binding
 	Increase      key.Binding
 	Decrease      key.Binding
 	Escape        key.Binding
@@ -25,6 +26,7 @@ var keys = keymap{
 	FocusInterval: Key("Focus Interval", "/"),
 	FocusShift:    Key("Focus Shift", "^"),
 	FocusStart:    Key("Focus Start", "S"),
+	RemoveStart:   Key("Remove Start", "s"),
 	Increase:      Key("Increase", "+"),
 	Decrease:      Key("Decrease", "-"),
 	Escape:        Key("Escape", "esc", "enter"),
@@ -70,11 +72,17 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case msg.String() >= "1" && msg.String() <= "9":
+		case msg.String() >= "0" && msg.String() <= "9":
 			numberString := msg.String()
 			newDigit, _ := strconv.Atoi(numberString)
 			m.ApplyDigit(newDigit)
 			m.firstDigitApplied = true
+			if m.focus == FOCUS_START && m.overlayKey.StartCycle == 0 {
+				m.focus = FOCUS_SHIFT
+			}
+			if m.focus == FOCUS_WIDTH && m.overlayKey.Width == 0 {
+				m.focus = FOCUS_SHIFT
+			}
 		case key.Matches(msg, keys.Escape):
 			m.focus = FOCUS_NOTHING
 			m.firstDigitApplied = false
@@ -87,8 +95,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.focus = FOCUS_INTERVAL
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.FocusShift):
+			m.focus = FOCUS_SHIFT
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.FocusStart):
+			m.focus = FOCUS_START
+			m.overlayKey.StartCycle = 1
+			m.firstDigitApplied = false
+		case key.Matches(msg, keys.RemoveStart):
+			m.focus = FOCUS_SHIFT
+			m.overlayKey.StartCycle = 0
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.Increase):
 			switch m.focus {
@@ -184,6 +199,7 @@ func (m Model) ViewOverlay() string {
 	case FOCUS_INTERVAL:
 		interval = SelectedColor(m.overlayKey.Interval)
 	case FOCUS_START:
+		start = SelectedColor(m.overlayKey.StartCycle)
 	}
 
 	buf.WriteString(shift)
