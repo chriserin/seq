@@ -173,12 +173,12 @@ func View(ok OverlayPeriodicity) string {
 		buf.WriteString(":")
 		buf.WriteString(width)
 	}
+	buf.WriteString("/")
+	buf.WriteString(interval)
 	if ok.StartCycle > 0 {
 		buf.WriteString("S")
 		buf.WriteString(start)
 	}
-	buf.WriteString("/")
-	buf.WriteString(interval)
 	return buf.String()
 }
 
@@ -207,12 +207,12 @@ func (m Model) ViewOverlay() string {
 		buf.WriteString(":")
 		buf.WriteString(width)
 	}
+	buf.WriteString("/")
+	buf.WriteString(interval)
 	if m.overlayKey.StartCycle > 0 {
 		buf.WriteString("S")
 		buf.WriteString(start)
 	}
-	buf.WriteString("/")
-	buf.WriteString(interval)
 	return buf.String()
 }
 

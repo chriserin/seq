@@ -2270,7 +2270,9 @@ func (m model) CurrentOverlayView() string {
 	} else {
 		matchedKey = overlaykey.ROOT_OVERLAY
 	}
-	return fmt.Sprintf("   Edit - %s     Play - %s", m.ViewOverlay(), overlaykey.View(matchedKey))
+	editOverlay := fmt.Sprintf("Edit %s", lipgloss.PlaceHorizontal(11, 0, m.ViewOverlay()))
+	playOverlay := fmt.Sprintf("Play %s", lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
+	return fmt.Sprintf("   %s  %s", editOverlay, playOverlay)
 }
 
 var altSeqColor = lipgloss.Color("#222222")
