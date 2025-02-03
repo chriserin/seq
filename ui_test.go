@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	overlaykey "github.com/chriserin/seq/overlayKey"
+	overlaykey "github.com/chriserin/seq/internal/overlayKey"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -187,13 +187,13 @@ func TestEditKeys(t *testing.T) {
 	}{
 		{
 			desc:   "A",
-			m:      model{overlayKey: OK(1, 1)},
+			m:      model{currentOverlayKey: OK(1, 1)},
 			result: []overlayKey{OK(1, 1)},
 		},
 		{
 			desc: "B",
 			m: model{
-				overlayKey: OK(1, 1),
+				currentOverlayKey: OK(1, 1),
 				definition: Definition{
 					overlays: overlays{
 						OK(1, 1): make(overlay),
@@ -204,7 +204,7 @@ func TestEditKeys(t *testing.T) {
 		{
 			desc: "C",
 			m: model{
-				overlayKey: OK(2, 1),
+				currentOverlayKey: OK(2, 1),
 				definition: Definition{
 					overlays: overlays{
 						OK(1, 1): make(overlay),
@@ -220,7 +220,7 @@ func TestEditKeys(t *testing.T) {
 		{
 			desc: "D",
 			m: model{
-				overlayKey: OK(3, 1),
+				currentOverlayKey: OK(3, 1),
 				definition: Definition{
 					overlays: overlays{
 						OK(1, 1): make(overlay),
@@ -232,7 +232,7 @@ func TestEditKeys(t *testing.T) {
 		{
 			desc: "E",
 			m: model{
-				overlayKey: OK(4, 1),
+				currentOverlayKey: OK(4, 1),
 				definition: Definition{
 					overlays: overlays{
 						// overlayKey{1, 1}: make(overlay),
@@ -244,7 +244,7 @@ func TestEditKeys(t *testing.T) {
 		{
 			desc: "F",
 			m: model{
-				overlayKey: OK(2, 1),
+				currentOverlayKey: OK(2, 1),
 				definition: Definition{
 					overlays: overlays{
 						OK(1, 1): make(overlay),
