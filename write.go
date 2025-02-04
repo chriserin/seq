@@ -92,7 +92,12 @@ func UnMarshalOverlayKey(k string) overlayKey {
 	if err != nil {
 		panic("Could not unmarshal overlaykey")
 	}
-	return overlayKey{uint8(num), uint8(denom), 0, 0}
+	return overlayKey{
+		Shift:      uint8(num),
+		Interval:   uint8(denom),
+		Width:      0,
+		StartCycle: 0,
+	}
 }
 
 func UnMarshalGridKey(k string) gridKey {

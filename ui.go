@@ -225,9 +225,35 @@ var accents = []Accent{
 const C1 = 36
 
 type ratchet struct {
-	Hits   [9]bool
+	Hits   uint8
 	Length uint8
 	Span   uint8
+}
+
+func (r *ratchet) SetRatchet(value bool, index uint8) {
+	if value {
+		r.Hits = r.Hits | (1 << index)
+	} else {
+		r.Hits = r.Hits & ((1 << index) ^ 255)
+	}
+}
+
+func (r *ratchet) Toggle(index uint8) {
+	r.Hits = (r.Hits ^ (1 << index))
+}
+
+func (r ratchet) HitAt(index uint8) bool {
+	return (r.Hits & (1 << index)) != 0
+}
+
+func BoolsToUint8(bools [8]bool) uint8 {
+	var result uint8
+	for i := 0; i < 8; i++ {
+		if bools[i] {
+			result = result | (1 << i)
+		}
+	}
+	return result
 }
 
 func (r ratchet) GetSpan() uint8 {
@@ -240,7 +266,8 @@ func (r ratchet) Interval(beatInterval time.Duration) time.Duration {
 
 func InitRatchet() ratchet {
 	return ratchet{
-		Hits: [9]bool{true, false, false, false, false, false, false, false, false},
+		// We always start with one Ratchet enabled
+		Hits: BoolsToUint8([8]bool{true, false, false, false, false, false, false, false}),
 	}
 }
 
@@ -896,7 +923,7 @@ func (m *model) IncreaseRatchet() {
 			currentRatchet := currentNote.Ratchets.Length
 			if currentNote.AccentIndex > 0 && currentNote.Action == ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
 				currentNote.Ratchets.Length = currentRatchet + 1
-				currentNote.Ratchets.Hits[currentNote.Ratchets.Length] = true
+				currentNote.Ratchets.SetRatchet(true, currentNote.Ratchets.Length)
 				m.CurrentNotable().SetNote(key, currentNote)
 			}
 		}
@@ -973,7 +1000,7 @@ func (m *model) DecreaseAccentStart() {
 
 func (m *model) ToggleRatchetMute() {
 	currentNote := m.CurrentNote()
-	currentNote.Ratchets.Hits[m.ratchetCursor] = !currentNote.Ratchets.Hits[m.ratchetCursor]
+	currentNote.Ratchets.Toggle(m.ratchetCursor)
 	m.CurrentNotable().SetNote(m.cursorPos, currentNote)
 }
 
@@ -1357,7 +1384,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			sendFn := m.midiConnection.AcquireSendFunc()
 
-			if msg.Ratchets.Hits[msg.iterations] {
+			if msg.Ratchets.HitAt(msg.iterations) {
 				note := msg.note
 				message := msg.line.Message(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
 				playCmd = func() tea.Msg {
@@ -2237,7 +2264,7 @@ func (m model) RatchetModeView() string {
 			if m.ratchetCursor == i && m.selectionIndicator == SELECT_RATCHETS {
 				backgroundColor = lipgloss.Color("#5cdffb")
 			}
-			if currentNote.Ratchets.Hits[i] {
+			if currentNote.Ratchets.HitAt(i) {
 				ratchetsBuf.WriteString(activeStyle.Background(backgroundColor).Render("\u25CF"))
 			} else {
 				ratchetsBuf.WriteString(mutedStyle.Background(backgroundColor).Render("\u25C9"))
