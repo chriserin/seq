@@ -148,7 +148,7 @@ var transitiveKeys = transitiveKeyMap{
 	TempoInputSwitch:   Key("Select Tempo Indicator", "ctrl+t"),
 	Increase:           Key("Tempo Increase", "+", "="),
 	Decrease:           Key("Tempo Decrease", "-"),
-	ToggleAccentMode:   Key("Toggle Accent Mode", "g"),
+	ToggleAccentMode:   Key("Toggle Accent Mode", "t"),
 	OverlayInputSwitch: Key("Select Overlay Indicator", "ctrl+o"),
 	SetupInputSwitch:   Key("Setup Input Indicator", "ctrl+s"),
 	AccentInputSwitch:  Key("Accent Input Indicator", "ctrl+a"),
