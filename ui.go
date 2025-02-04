@@ -57,6 +57,8 @@ type definitionKeyMap struct {
 	TriggerRemove        key.Binding
 	AccentIncrease       key.Binding
 	AccentDecrease       key.Binding
+	GateIncrease         key.Binding
+	GateDecrease         key.Binding
 	OverlayTriggerRemove key.Binding
 	ClearLine            key.Binding
 	ClearSeq             key.Binding
@@ -81,6 +83,8 @@ var noteWiseKeys = []key.Binding{
 	definitionKeys.TriggerRemove,
 	definitionKeys.AccentIncrease,
 	definitionKeys.AccentDecrease,
+	definitionKeys.GateIncrease,
+	definitionKeys.GateDecrease,
 	definitionKeys.OverlayTriggerRemove,
 	definitionKeys.RatchetIncrease,
 	definitionKeys.RatchetDecrease,
@@ -171,6 +175,8 @@ var definitionKeys = definitionKeyMap{
 	TriggerRemove:        Key("Remove Trigger", "d"),
 	AccentIncrease:       Key("Accent Increase", "A"),
 	AccentDecrease:       Key("Accent Increase", "a"),
+	GateIncrease:         Key("Accent Increase", "G"),
+	GateDecrease:         Key("Accent Increase", "g"),
 	OverlayTriggerRemove: Key("Remove Overlay Note", "x"),
 	ClearLine:            Key("Clear Line", "c"),
 	ClearSeq:             Key("Clear Overlay", "C"),
@@ -275,12 +281,21 @@ type note struct {
 	AccentIndex uint8
 	Ratchets    ratchet
 	Action      action
+	GateIndex   uint8
 }
 
 func (n note) IncrementAccent(modifier int8) note {
 	var newAccent = int8(n.AccentIndex) - modifier
 	if newAccent >= 1 && newAccent < int8(len(accents)) {
 		n.AccentIndex = uint8(newAccent)
+	}
+	return n
+}
+
+func (n note) IncrementGate(modifier int8) note {
+	var newGate = int8(n.GateIndex) + modifier
+	if newGate >= 0 && newGate < int8(len(gates)) {
+		n.GateIndex = uint8(newGate)
 	}
 	return n
 }
@@ -323,6 +338,22 @@ var ratchets = []ratchetDiacritical{
 	"\u0312",
 	"\u0313",
 	"\u0344",
+}
+
+type Gate struct {
+	Shape string
+	Value uint16
+}
+
+var gates = []Gate{
+	{"", 20},
+	{"\u032A", 40},
+	{"\u032B", 80},
+	{"\u032C", 160},
+	{"\u032D", 240},
+	{"\u032E", 320},
+	{"\u032F", 480},
+	{"\u0330", 640},
 }
 
 var zeronote note
@@ -378,6 +409,7 @@ type noteMessage struct {
 	channel  uint8
 	note     uint8
 	velocity uint8
+	duration time.Duration
 }
 
 func (l lineDefinition) Message(note note, accentValue uint8, accentTarget accentTarget) noteMessage {
@@ -392,7 +424,7 @@ func (l lineDefinition) Message(note note, accentValue uint8, accentTarget accen
 		velocityValue = accentValue
 	}
 
-	return noteMessage{l.Channel, noteValue, velocityValue}
+	return noteMessage{l.Channel, noteValue, velocityValue, time.Duration(gates[note.GateIndex].Value) * time.Millisecond}
 }
 
 func (l *lineDefinition) IncrementChannel() {
@@ -839,10 +871,12 @@ func PlayMessage(message noteMessage, sendFn SendFunc) {
 	if err != nil {
 		panic("note on failed")
 	}
-	err = sendFn(offMessage)
-	if err != nil {
-		panic("note off failed")
-	}
+	time.AfterFunc(message.duration, func() {
+		err = sendFn(offMessage)
+		if err != nil {
+			panic("note off failed")
+		}
+	})
 }
 
 func (m *model) EnsureOverlay() {
@@ -889,14 +923,14 @@ func (m model) VisualSelectedGridKeys() []gridKey {
 func (m *model) AddTrigger() {
 	keys := m.VisualSelectedGridKeys()
 	for _, k := range keys {
-		m.CurrentNotable().SetNote(k, note{5, InitRatchet(), ACTION_NOTHING})
+		m.CurrentNotable().SetNote(k, note{5, InitRatchet(), ACTION_NOTHING, 0})
 	}
 }
 
 func (m *model) AddAction(act action) {
 	keys := m.VisualSelectedGridKeys()
 	for _, k := range keys {
-		m.CurrentNotable().SetNote(k, note{0, InitRatchet(), act})
+		m.CurrentNotable().SetNote(k, note{0, InitRatchet(), act, 0})
 	}
 }
 
@@ -1430,6 +1464,10 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.AccentModify(1)
 	case Is(msg, keys.AccentDecrease):
 		m.AccentModify(-1)
+	case Is(msg, keys.GateIncrease):
+		m.GateModify(1)
+	case Is(msg, keys.GateDecrease):
+		m.GateModify(-1)
 	case Is(msg, keys.OverlayTriggerRemove):
 		m.OverlayRemoveTrigger()
 	case Is(msg, keys.ClearLine):
@@ -1958,7 +1996,7 @@ func (m *model) fill(every uint8) {
 		if hasNote {
 			m.RemoveNote(gridKey)
 		} else {
-			m.CurrentNotable().SetNote(gridKey, note{5, InitRatchet(), 0})
+			m.CurrentNotable().SetNote(gridKey, note{5, InitRatchet(), ACTION_NOTHING, 0})
 		}
 	}
 }
@@ -1987,6 +2025,19 @@ func (m *model) AccentModify(modifier int8) {
 		if bounds.InBounds(key) {
 			if currentNote != zeronote {
 				m.CurrentNotable().SetNote(key, currentNote.IncrementAccent(modifier))
+			}
+		}
+	}
+}
+
+func (m *model) GateModify(modifier int8) {
+	bounds := m.YankBounds()
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+
+	for key, currentNote := range combinedOverlay {
+		if bounds.InBounds(key) {
+			if currentNote != zeronote {
+				m.CurrentNotable().SetNote(key, currentNote.IncrementGate(modifier))
 			}
 		}
 	}
@@ -2447,7 +2498,7 @@ func (n note) ViewComponents() (string, lipgloss.Color) {
 	var char string
 	var foregroundColor lipgloss.Color
 	if currentAction == ACTION_NOTHING {
-		char = string(currentAccent.Shape) + string(ratchets[currentNote.Ratchets.Length])
+		char = string(currentAccent.Shape) + string(ratchets[currentNote.Ratchets.Length]) + string(gates[currentNote.GateIndex].Shape)
 		foregroundColor = currentAccent.Color
 	} else {
 		lineaction := lineactions[currentAction]
