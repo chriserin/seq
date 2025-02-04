@@ -406,13 +406,11 @@ type lineDefinition struct {
 }
 
 type noteMessage struct {
-	channel  uint8
-	note     uint8
-	velocity uint8
-	duration time.Duration
+	midiMessage midi.Message
+	delay       time.Duration
 }
 
-func (l lineDefinition) Message(note note, accentValue uint8, accentTarget accentTarget) noteMessage {
+func (l lineDefinition) Messages(note note, accentValue uint8, accentTarget accentTarget) []noteMessage {
 	var noteValue uint8
 	var velocityValue uint8
 	switch accentTarget {
@@ -423,8 +421,11 @@ func (l lineDefinition) Message(note note, accentValue uint8, accentTarget accen
 		noteValue = l.Note
 		velocityValue = accentValue
 	}
+	duration := 0 + time.Duration(gates[note.GateIndex].Value)*time.Millisecond
 
-	return noteMessage{l.Channel, noteValue, velocityValue, time.Duration(gates[note.GateIndex].Value) * time.Millisecond}
+	onMessage := midi.NoteOn(l.Channel, noteValue, velocityValue)
+	offMessage := midi.NoteOff(l.Channel, noteValue)
+	return []noteMessage{{onMessage, 0}, {offMessage, duration}}
 }
 
 func (l *lineDefinition) IncrementChannel() {
@@ -829,19 +830,28 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 			if hasNote && note.Ratchets.Length > 0 {
 				ratchetNotes = append(ratchetNotes, lineNote{note, line})
 			} else if hasNote && note != zeronote {
-				messages = append(messages, line.Message(note, accents.Data[note.AccentIndex].Value, accents.Target))
+				messages = append(messages, line.Messages(note, accents.Data[note.AccentIndex].Value, accents.Target)...)
 			}
 		}
 	}
 
 	playCmds := make([]tea.Cmd, 0, len(lines))
 
-	playNotes := func() tea.Msg {
-		Play(messages, sendFn)
-		return nil
+	for _, message := range messages {
+		var cmd tea.Cmd
+		if message.delay == 0 {
+			cmd = func() tea.Msg {
+				PlayMessage(message, sendFn)
+				return nil
+			}
+		} else {
+			cmd = tea.Tick(
+				message.delay,
+				func(t time.Time) tea.Msg { return message },
+			)
+		}
+		playCmds = append(playCmds, cmd)
 	}
-
-	playCmds = append(playCmds, playNotes)
 
 	for _, ratchetNote := range ratchetNotes {
 		playCmds = append(playCmds, func() tea.Msg {
@@ -865,18 +875,10 @@ func Play(messages []noteMessage, sendFn SendFunc) {
 }
 
 func PlayMessage(message noteMessage, sendFn SendFunc) {
-	onMessage := midi.NoteOn(message.channel, message.note, message.velocity)
-	offMessage := midi.NoteOff(message.channel, message.note)
-	err := sendFn(onMessage)
+	err := sendFn(message.midiMessage)
 	if err != nil {
 		panic("note on failed")
 	}
-	time.AfterFunc(message.duration, func() {
-		err = sendFn(offMessage)
-		if err != nil {
-			panic("note off failed")
-		}
-	})
 }
 
 func (m *model) EnsureOverlay() {
@@ -1411,25 +1413,42 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds...,
 			)
 		}
+	case noteMessage:
+		return m, func() tea.Msg {
+			sendFn := m.midiConnection.AcquireSendFunc()
+			PlayMessage(msg, sendFn)
+			return nil
+		}
 	case ratchetMsg:
 		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
-			var playCmd tea.Cmd
-			var ratchetTickCmd tea.Cmd
 
 			sendFn := m.midiConnection.AcquireSendFunc()
 
+			cmds := make([]tea.Cmd, 0)
 			if msg.Ratchets.HitAt(msg.iterations) {
 				note := msg.note
-				message := msg.line.Message(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
-				playCmd = func() tea.Msg {
-					PlayMessage(message, sendFn)
-					return nil
+				messages := msg.line.Messages(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
+				for _, message := range messages {
+					var cmd tea.Cmd
+					if message.delay == 0 {
+						cmd = func() tea.Msg {
+							PlayMessage(message, sendFn)
+							return nil
+						}
+					} else {
+						cmd = tea.Tick(
+							message.delay,
+							func(t time.Time) tea.Msg { return message },
+						)
+					}
+					cmds = append(cmds, cmd)
 				}
 			}
 			if msg.iterations+1 < (msg.Ratchets.Length + 1) {
-				ratchetTickCmd = RatchetTick(msg.lineNote, msg.iterations+1, msg.beatInterval)
+				ratchetTickCmd := RatchetTick(msg.lineNote, msg.iterations+1, msg.beatInterval)
+				cmds = append(cmds, ratchetTickCmd)
 			}
-			return m, tea.Batch(playCmd, ratchetTickCmd)
+			return m, tea.Batch(cmds...)
 		}
 	}
 	var cmd tea.Cmd
