@@ -67,8 +67,8 @@ func (mc MidiConnection) AcquireSendFunc() SendFunc {
 		}
 		return func(msg midi.Message) error {
 			playMutex.Lock()
+			defer playMutex.Unlock()
 			error := sendFn(msg)
-			playMutex.Unlock()
 			return error
 		}
 	}
