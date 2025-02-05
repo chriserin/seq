@@ -36,6 +36,7 @@ type transitiveKeyMap struct {
 	Increase           key.Binding
 	Decrease           key.Binding
 	ToggleAccentMode   key.Binding
+	ToggleGateMode     key.Binding
 	OverlayInputSwitch key.Binding
 	SetupInputSwitch   key.Binding
 	AccentInputSwitch  key.Binding
@@ -154,6 +155,7 @@ var transitiveKeys = transitiveKeyMap{
 	Increase:           Key("Tempo Increase", "+", "="),
 	Decrease:           Key("Tempo Decrease", "-"),
 	ToggleAccentMode:   Key("Toggle Accent Mode", "t"),
+	ToggleGateMode:     Key("Toggle Gate Mode", "ctrl+g"),
 	OverlayInputSwitch: Key("Select Overlay Indicator", "ctrl+o"),
 	SetupInputSwitch:   Key("Setup Input Indicator", "ctrl+s"),
 	AccentInputSwitch:  Key("Accent Input Indicator", "ctrl+a"),
@@ -494,6 +496,7 @@ type model struct {
 	selectionIndicator     Selection
 	focus                  focus
 	accentMode             bool
+	gateMode               bool
 	ratchetCursor          uint8
 	currentOverlayKey      overlayKey
 	keyCycles              int
@@ -1360,6 +1363,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case Is(msg, keys.ToggleAccentMode):
 			m.accentMode = !m.accentMode
+		case Is(msg, keys.ToggleGateMode):
+			m.gateMode = !m.gateMode
 		case Is(msg, keys.PrevOverlay):
 			m.NextOverlay(-1)
 		case Is(msg, keys.NextOverlay):
@@ -1546,6 +1551,8 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
 		if m.accentMode {
 			m.incrementAccent(uint8(beatInterval), -1)
+		} else if m.gateMode {
+			m.incrementGate(uint8(beatInterval), -1)
 		} else {
 			m.fill(uint8(beatInterval))
 		}
@@ -1554,6 +1561,8 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		beatInterval := convertSymbolToInt(msg.String())
 		if m.accentMode {
 			m.incrementAccent(uint8(beatInterval), 1)
+		} else if m.gateMode {
+			m.incrementGate(uint8(beatInterval), 1)
 		} else {
 			m.fill(uint8(beatInterval))
 		}
@@ -2054,6 +2063,22 @@ func (m *model) incrementAccent(every uint8, modifier int8) {
 	}
 }
 
+func (m *model) incrementGate(every uint8, modifier int8) {
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+
+	start, end := m.PatternActionBoundaries()
+
+	for i := uint8(start); i <= end; i += every {
+		gridKey := gridKey{m.cursorPos.line, i}
+		currentNote, hasNote := combinedOverlay[gridKey]
+		hasNote = hasNote && currentNote != zeronote
+
+		if hasNote {
+			m.CurrentNotable().SetNote(gridKey, currentNote.IncrementGate(modifier))
+		}
+	}
+}
+
 func (m *model) AccentModify(modifier int8) {
 	bounds := m.YankBounds()
 	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
@@ -2314,6 +2339,9 @@ func (m model) ViewTriggerSeq() string {
 
 	if m.accentMode {
 		mode = " Accent Mode "
+		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
+	} else if m.gateMode {
+		mode = " Gate Mode "
 		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetModeView())
