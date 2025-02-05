@@ -16,6 +16,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	colors "github.com/chriserin/seq/internal/colors"
+	"github.com/chriserin/seq/internal/notereg"
 	overlaykey "github.com/chriserin/seq/internal/overlayKey"
 	midi "gitlab.com/gomidi/midi/v2"
 )
@@ -406,8 +407,32 @@ type lineDefinition struct {
 }
 
 type noteMessage struct {
-	midiMessage midi.Message
-	delay       time.Duration
+	midiType  midi.Type
+	channel   uint8
+	noteValue uint8
+	velocity  uint8
+	delay     time.Duration
+}
+
+func (nm noteMessage) GetKey() notereg.NoteRegKey {
+	return notereg.NoteRegKey{
+		Channel: nm.channel,
+		Note:    nm.noteValue,
+	}
+}
+
+func (nm noteMessage) GetMidi() midi.Message {
+	switch nm.midiType {
+	case midi.NoteOnMsg:
+		return midi.NoteOn(nm.channel, nm.noteValue, nm.velocity)
+	case midi.NoteOffMsg:
+		return midi.NoteOff(nm.channel, nm.noteValue)
+	}
+	panic("No message matching midiType")
+}
+
+func (nm noteMessage) OffMessage() midi.Message {
+	return midi.NoteOff(nm.channel, nm.noteValue)
 }
 
 func (l lineDefinition) Messages(note note, accentValue uint8, accentTarget accentTarget) []noteMessage {
@@ -423,9 +448,7 @@ func (l lineDefinition) Messages(note note, accentValue uint8, accentTarget acce
 	}
 	duration := 0 + time.Duration(gates[note.GateIndex].Value)*time.Millisecond
 
-	onMessage := midi.NoteOn(l.Channel, noteValue, velocityValue)
-	offMessage := midi.NoteOff(l.Channel, noteValue)
-	return []noteMessage{{onMessage, 0}, {offMessage, duration}}
+	return []noteMessage{{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, 0}, {midi.NoteOffMsg, l.Channel, noteValue, 0, duration}}
 }
 
 func (l *lineDefinition) IncrementChannel() {
@@ -838,18 +861,10 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 	playCmds := make([]tea.Cmd, 0, len(lines))
 
 	for _, message := range messages {
-		var cmd tea.Cmd
-		if message.delay == 0 {
-			cmd = func() tea.Msg {
-				PlayMessage(message, sendFn)
-				return nil
-			}
-		} else {
-			cmd = tea.Tick(
-				message.delay,
-				func(t time.Time) tea.Msg { return message },
-			)
-		}
+		cmd := tea.Tick(
+			message.delay,
+			func(t time.Time) tea.Msg { return message },
+		)
 		playCmds = append(playCmds, cmd)
 	}
 
@@ -862,20 +877,15 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 	return playCmds
 }
 
-func PlayRatchets(lineNote lineNote, beatInterval time.Duration, sendFn SendFunc) tea.Cmd {
+func PlayMessageCmd(message midi.Message, sendFn SendFunc) tea.Cmd {
 	return func() tea.Msg {
+		PlayMessage(message, sendFn)
 		return nil
 	}
 }
 
-func Play(messages []noteMessage, sendFn SendFunc) {
-	for _, message := range messages {
-		PlayMessage(message, sendFn)
-	}
-}
-
-func PlayMessage(message noteMessage, sendFn SendFunc) {
-	err := sendFn(message.midiMessage)
+func PlayMessage(message midi.Message, sendFn SendFunc) {
+	err := sendFn(message)
 	if err != nil {
 		panic("note on failed")
 	}
@@ -1055,7 +1065,6 @@ func InitLineStates(lines int, previousPlayState []linestate) []linestate {
 	linestates := make([]linestate, 0, lines)
 
 	for i := range lines {
-
 		var previousGroupPlayState = PLAY_STATE_PLAY
 		if len(previousPlayState) > int(i) {
 			previousState := previousPlayState[i]
@@ -1414,33 +1423,34 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 		}
 	case noteMessage:
-		return m, func() tea.Msg {
-			sendFn := m.midiConnection.AcquireSendFunc()
-			PlayMessage(msg, sendFn)
-			return nil
+		sendFn := m.midiConnection.AcquireSendFunc()
+		cmds := make([]tea.Cmd, 0, 2)
+		switch msg.midiType {
+		case midi.NoteOnMsg:
+			if notereg.Has(msg) {
+				cmd := PlayMessageCmd(msg.OffMessage(), sendFn)
+				cmds = append(cmds, cmd)
+			} else {
+				if err := notereg.Add(msg); err != nil {
+					panic("Added a note that was already there")
+				}
+			}
+		case midi.NoteOffMsg:
+			notereg.Remove(msg)
 		}
+		cmds = append(cmds, PlayMessageCmd(msg.GetMidi(), sendFn))
+		return m, tea.Sequence(cmds...)
 	case ratchetMsg:
 		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
-
-			sendFn := m.midiConnection.AcquireSendFunc()
-
 			cmds := make([]tea.Cmd, 0)
 			if msg.Ratchets.HitAt(msg.iterations) {
 				note := msg.note
 				messages := msg.line.Messages(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
 				for _, message := range messages {
-					var cmd tea.Cmd
-					if message.delay == 0 {
-						cmd = func() tea.Msg {
-							PlayMessage(message, sendFn)
-							return nil
-						}
-					} else {
-						cmd = tea.Tick(
-							message.delay,
-							func(t time.Time) tea.Msg { return message },
-						)
-					}
+					var cmd = tea.Tick(
+						message.delay,
+						func(t time.Time) tea.Msg { return message },
+					)
 					cmds = append(cmds, cmd)
 				}
 			}
