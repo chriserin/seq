@@ -406,7 +406,7 @@ type lineDefinition struct {
 	Note    uint8
 }
 
-type noteMessage struct {
+type noteMsg struct {
 	midiType  midi.Type
 	channel   uint8
 	noteValue uint8
@@ -414,14 +414,14 @@ type noteMessage struct {
 	delay     time.Duration
 }
 
-func (nm noteMessage) GetKey() notereg.NoteRegKey {
+func (nm noteMsg) GetKey() notereg.NoteRegKey {
 	return notereg.NoteRegKey{
 		Channel: nm.channel,
 		Note:    nm.noteValue,
 	}
 }
 
-func (nm noteMessage) GetMidi() midi.Message {
+func (nm noteMsg) GetMidi() midi.Message {
 	switch nm.midiType {
 	case midi.NoteOnMsg:
 		return midi.NoteOn(nm.channel, nm.noteValue, nm.velocity)
@@ -431,11 +431,11 @@ func (nm noteMessage) GetMidi() midi.Message {
 	panic("No message matching midiType")
 }
 
-func (nm noteMessage) OffMessage() midi.Message {
+func (nm noteMsg) OffMessage() midi.Message {
 	return midi.NoteOff(nm.channel, nm.noteValue)
 }
 
-func (l lineDefinition) Messages(note note, accentValue uint8, accentTarget accentTarget) []noteMessage {
+func (l lineDefinition) Messages(note note, accentValue uint8, accentTarget accentTarget) []noteMsg {
 	var noteValue uint8
 	var velocityValue uint8
 	switch accentTarget {
@@ -448,7 +448,7 @@ func (l lineDefinition) Messages(note note, accentValue uint8, accentTarget acce
 	}
 	duration := 0 + time.Duration(gates[note.GateIndex].Value)*time.Millisecond
 
-	return []noteMessage{{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, 0}, {midi.NoteOffMsg, l.Channel, noteValue, 0, duration}}
+	return []noteMsg{{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, 0}, {midi.NoteOffMsg, l.Channel, noteValue, 0, duration}}
 }
 
 func (l *lineDefinition) IncrementChannel() {
@@ -842,8 +842,8 @@ type lineNote struct {
 	line lineDefinition
 }
 
-func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate, sendFn SendFunc) []tea.Cmd {
-	messages := make([]noteMessage, 0, len(lines))
+func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate) []tea.Cmd {
+	messages := make([]noteMsg, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
 	for i, line := range lines {
@@ -1269,16 +1269,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.playState = InitLineStates(len(m.definition.lines), m.playState)
 				m.advanceKeyCycle()
 				m.trackTime = time.Duration(0)
-				sendFn := m.midiConnection.AcquireSendFunc()
 				beatInterval := m.BeatInterval()
 
 				cmds := make([]tea.Cmd, 0, 10)
-				cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn)...)
+				cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState)...)
 				cmds = append(cmds, BeatTick(beatInterval))
 				return m, tea.Batch(cmds...)
 			} else {
 				m.keyCycles = 0
 				m.playingMatchedOverlays = []overlayKey{}
+				notes := notereg.Clear()
+				sendFn := m.midiConnection.AcquireSendFunc()
+				cmds := make([]tea.Cmd, len(notes))
+				for i, n := range notes {
+					switch n := n.(type) {
+					case noteMsg:
+						cmds[i] = PlayMessageCmd(n.OffMessage(), sendFn)
+					}
+				}
+				return m, tea.Batch(cmds...)
 			}
 		case Is(msg, keys.OverlayInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
@@ -1413,16 +1422,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.advanceCurrentBeat()
 			m.advanceKeyCycle()
 			m.totalBeats++
-			sendFn := m.midiConnection.AcquireSendFunc()
 			beatInterval := m.BeatInterval()
 			cmds := make([]tea.Cmd, 0, 10)
-			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState, sendFn)...)
+			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState)...)
 			cmds = append(cmds, BeatTick(beatInterval))
 			return m, tea.Batch(
 				cmds...,
 			)
 		}
-	case noteMessage:
+	case noteMsg:
 		sendFn := m.midiConnection.AcquireSendFunc()
 		cmds := make([]tea.Cmd, 0, 2)
 		switch msg.midiType {
