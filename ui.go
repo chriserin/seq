@@ -61,6 +61,8 @@ type definitionKeyMap struct {
 	AccentDecrease       key.Binding
 	GateIncrease         key.Binding
 	GateDecrease         key.Binding
+	WaitIncrease         key.Binding
+	WaitDecrease         key.Binding
 	OverlayTriggerRemove key.Binding
 	ClearLine            key.Binding
 	ClearSeq             key.Binding
@@ -87,6 +89,8 @@ var noteWiseKeys = []key.Binding{
 	definitionKeys.AccentDecrease,
 	definitionKeys.GateIncrease,
 	definitionKeys.GateDecrease,
+	definitionKeys.WaitIncrease,
+	definitionKeys.WaitDecrease,
 	definitionKeys.OverlayTriggerRemove,
 	definitionKeys.RatchetIncrease,
 	definitionKeys.RatchetDecrease,
@@ -161,7 +165,7 @@ var transitiveKeys = transitiveKeyMap{
 	AccentInputSwitch:  Key("Accent Input Indicator", "ctrl+a"),
 	NextOverlay:        Key("Next Overlay", "{"),
 	PrevOverlay:        Key("Prev Overlay", "}"),
-	Save:               Key("Save", "ctrl+w"),
+	Save:               Key("Save", "ctrl+z"),
 	Undo:               Key("Undo", "u"),
 	Redo:               Key("Redo", "U"),
 	New:                Key("New", "ctrl+n"),
@@ -178,8 +182,10 @@ var definitionKeys = definitionKeyMap{
 	TriggerRemove:        Key("Remove Trigger", "d"),
 	AccentIncrease:       Key("Accent Increase", "A"),
 	AccentDecrease:       Key("Accent Increase", "a"),
-	GateIncrease:         Key("Accent Increase", "G"),
-	GateDecrease:         Key("Accent Increase", "g"),
+	GateIncrease:         Key("Gate Increase", "G"),
+	GateDecrease:         Key("Gate Increase", "g"),
+	WaitIncrease:         Key("Wait Increase", "W"),
+	WaitDecrease:         Key("Wait Increase", "w"),
 	OverlayTriggerRemove: Key("Remove Overlay Note", "x"),
 	ClearLine:            Key("Clear Line", "c"),
 	ClearSeq:             Key("Clear Overlay", "C"),
@@ -285,6 +291,7 @@ type note struct {
 	Ratchets    ratchet
 	Action      action
 	GateIndex   uint8
+	WaitIndex   uint8
 }
 
 func (n note) IncrementAccent(modifier int8) note {
@@ -299,6 +306,14 @@ func (n note) IncrementGate(modifier int8) note {
 	var newGate = int8(n.GateIndex) + modifier
 	if newGate >= 0 && newGate < int8(len(gates)) {
 		n.GateIndex = uint8(newGate)
+	}
+	return n
+}
+
+func (n note) IncrementWait(modifier int8) note {
+	var newWait = int8(n.WaitIndex) + modifier
+	if newWait >= 0 && newWait < int8(len(gates)) {
+		n.WaitIndex = uint8(newWait)
 	}
 	return n
 }
@@ -357,6 +372,19 @@ var gates = []Gate{
 	{"\u032E", 320},
 	{"\u032F", 480},
 	{"\u0330", 640},
+}
+
+type Wait int16
+
+var waitPercentages = []Wait{
+	0,
+	8,
+	16,
+	24,
+	32,
+	40,
+	48,
+	54,
 }
 
 var zeronote note
@@ -437,7 +465,7 @@ func (nm noteMsg) OffMessage() midi.Message {
 	return midi.NoteOff(nm.channel, nm.noteValue)
 }
 
-func (l lineDefinition) Messages(note note, accentValue uint8, accentTarget accentTarget) []noteMsg {
+func (l lineDefinition) Messages(note note, accentValue uint8, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool) []noteMsg {
 	var noteValue uint8
 	var velocityValue uint8
 	switch accentTarget {
@@ -450,7 +478,17 @@ func (l lineDefinition) Messages(note note, accentValue uint8, accentTarget acce
 	}
 	duration := 0 + time.Duration(gates[note.GateIndex].Value)*time.Millisecond
 
-	return []noteMsg{{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, 0}, {midi.NoteOffMsg, l.Channel, noteValue, 0, duration}}
+	var delay time.Duration
+	if includeDelay {
+		delay = time.Duration((float64(waitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
+	} else {
+		delay = 0
+	}
+
+	return []noteMsg{
+		{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, delay},
+		{midi.NoteOffMsg, l.Channel, noteValue, 0, delay + duration},
+	}
 }
 
 func (l *lineDefinition) IncrementChannel() {
@@ -833,11 +871,15 @@ func RatchetTick(ratchet lineNote, times uint8, beatInterval time.Duration) tea.
 }
 
 func (m *model) BeatInterval() time.Duration {
-	tickInterval := time.Minute / time.Duration(m.definition.tempo*m.definition.subdivisions)
+	tickInterval := m.TickInterval()
 	adjuster := time.Since(m.playTime) - m.trackTime
 	m.trackTime = m.trackTime + tickInterval
 	next := tickInterval - adjuster
 	return next
+}
+
+func (m model) TickInterval() time.Duration {
+	return time.Minute / time.Duration(m.definition.tempo*m.definition.subdivisions)
 }
 
 type lineNote struct {
@@ -856,7 +898,7 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 			if hasNote && note.Ratchets.Length > 0 {
 				ratchetNotes = append(ratchetNotes, lineNote{note, line})
 			} else if hasNote && note != zeronote {
-				messages = append(messages, line.Messages(note, accents.Data[note.AccentIndex].Value, accents.Target)...)
+				messages = append(messages, line.Messages(note, accents.Data[note.AccentIndex].Value, accents.Target, beatInterval, true)...)
 			}
 		}
 	}
@@ -938,14 +980,14 @@ func (m model) VisualSelectedGridKeys() []gridKey {
 func (m *model) AddTrigger() {
 	keys := m.VisualSelectedGridKeys()
 	for _, k := range keys {
-		m.CurrentNotable().SetNote(k, note{5, InitRatchet(), ACTION_NOTHING, 0})
+		m.CurrentNotable().SetNote(k, note{5, InitRatchet(), ACTION_NOTHING, 0, 0})
 	}
 }
 
 func (m *model) AddAction(act action) {
 	keys := m.VisualSelectedGridKeys()
 	for _, k := range keys {
-		m.CurrentNotable().SetNote(k, note{0, InitRatchet(), act, 0})
+		m.CurrentNotable().SetNote(k, note{0, InitRatchet(), act, 0, 0})
 	}
 }
 
@@ -1458,7 +1500,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds := make([]tea.Cmd, 0)
 			if msg.Ratchets.HitAt(msg.iterations) {
 				note := msg.note
-				messages := msg.line.Messages(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target)
+				messages := msg.line.Messages(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target, msg.beatInterval, false)
 				for _, message := range messages {
 					var cmd = tea.Tick(
 						message.delay,
@@ -1510,6 +1552,10 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.GateModify(1)
 	case Is(msg, keys.GateDecrease):
 		m.GateModify(-1)
+	case Is(msg, keys.WaitIncrease):
+		m.WaitModify(1)
+	case Is(msg, keys.WaitDecrease):
+		m.WaitModify(-1)
 	case Is(msg, keys.OverlayTriggerRemove):
 		m.OverlayRemoveTrigger()
 	case Is(msg, keys.ClearLine):
@@ -2042,7 +2088,7 @@ func (m *model) fill(every uint8) {
 		if hasNote {
 			m.RemoveNote(gridKey)
 		} else {
-			m.CurrentNotable().SetNote(gridKey, note{5, InitRatchet(), ACTION_NOTHING, 0})
+			m.CurrentNotable().SetNote(gridKey, note{5, InitRatchet(), ACTION_NOTHING, 0, 0})
 		}
 	}
 }
@@ -2100,6 +2146,19 @@ func (m *model) GateModify(modifier int8) {
 		if bounds.InBounds(key) {
 			if currentNote != zeronote {
 				m.CurrentNotable().SetNote(key, currentNote.IncrementGate(modifier))
+			}
+		}
+	}
+}
+
+func (m *model) WaitModify(modifier int8) {
+	bounds := m.YankBounds()
+	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+
+	for key, currentNote := range combinedOverlay {
+		if bounds.InBounds(key) {
+			if currentNote != zeronote {
+				m.CurrentNotable().SetNote(key, currentNote.IncrementWait(modifier))
 			}
 		}
 	}
@@ -2562,8 +2621,12 @@ func (n note) ViewComponents() (string, lipgloss.Color) {
 	currentAction := currentNote.Action
 	var char string
 	var foregroundColor lipgloss.Color
-	if currentAction == ACTION_NOTHING {
-		char = string(currentAccent.Shape) + string(ratchets[currentNote.Ratchets.Length]) + string(gates[currentNote.GateIndex].Shape)
+	var waitShape string
+	if currentNote.WaitIndex > 0 {
+		waitShape = "\u0320"
+	}
+	if currentAction == ACTION_NOTHING && currentNote != zeronote {
+		char = string(currentAccent.Shape) + string(ratchets[currentNote.Ratchets.Length]) + string(gates[currentNote.GateIndex].Shape) + waitShape
 		foregroundColor = currentAccent.Color
 	} else {
 		lineaction := lineactions[currentAction]
