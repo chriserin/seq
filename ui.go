@@ -309,6 +309,7 @@ const (
 )
 
 type linestate struct {
+	index               uint8
 	currentBeat         uint8
 	direction           int8
 	resetDirection      int8
@@ -316,6 +317,14 @@ type linestate struct {
 	resetActionLocation uint8
 	resetAction         action
 	groupPlayState      groupPlayState
+}
+
+func (ls linestate) IsMuted() bool {
+	return ls.groupPlayState == PLAY_STATE_MUTE || ls.groupPlayState == PLAY_STATE_MUTED_BY_SOLO
+}
+
+func (ls linestate) GridKey() grid.GridKey {
+	return grid.GridKey{Line: ls.index, Beat: ls.currentBeat}
 }
 
 type overlayKey = overlaykey.OverlayPeriodicity
@@ -418,33 +427,32 @@ func (l *lineDefinition) DecrementNote() {
 }
 
 type model struct {
-	transitiveStatekeys    transitiveKeyMap
-	definitionKeys         definitionKeyMap
-	help                   help.Model
-	cursor                 cursor.Model
-	overlayKeyEdit         overlaykey.Model
-	cursorPos              gridKey
-	visualAnchorCursor     gridKey
-	visualMode             bool
-	midiConnection         MidiConnection
-	logFile                *os.File
-	playing                bool
-	playTime               time.Time
-	trackTime              time.Duration
-	totalBeats             int
-	playState              []linestate
-	selectionIndicator     Selection
-	focus                  focus
-	accentMode             bool
-	gateMode               bool
-	ratchetCursor          uint8
-	currentOverlay         *overlays.Overlay
-	keyCycles              int
-	playingMatchedOverlays []overlayKey
-	undoStack              UndoStack
-	redoStack              UndoStack
-	yankBuffer             Buffer
-	needsWrite             int
+	transitiveStatekeys transitiveKeyMap
+	definitionKeys      definitionKeyMap
+	help                help.Model
+	cursor              cursor.Model
+	overlayKeyEdit      overlaykey.Model
+	cursorPos           gridKey
+	visualAnchorCursor  gridKey
+	visualMode          bool
+	midiConnection      MidiConnection
+	logFile             *os.File
+	playing             bool
+	playTime            time.Time
+	trackTime           time.Duration
+	totalBeats          int
+	playState           []linestate
+	selectionIndicator  Selection
+	focus               focus
+	accentMode          bool
+	gateMode            bool
+	ratchetCursor       uint8
+	currentOverlay      *overlays.Overlay
+	keyCycles           int
+	undoStack           UndoStack
+	redoStack           UndoStack
+	yankBuffer          Buffer
+	needsWrite          int
 	// save everything below here
 	definition Definition
 }
@@ -780,14 +788,13 @@ type lineNote struct {
 	line lineDefinition
 }
 
-func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDefinition, pattern grid.Pattern, currentBeat []linestate) []tea.Cmd {
+func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDefinition, pattern grid.Pattern, lineStates []linestate) []tea.Cmd {
 	messages := make([]noteMsg, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
 	for i, line := range lines {
-		if currentBeat[i].groupPlayState != PLAY_STATE_MUTE && currentBeat[i].groupPlayState != PLAY_STATE_MUTED_BY_SOLO {
-			currentGridKey := GK(uint8(i), currentBeat[i].currentBeat)
-			note, hasNote := pattern[currentGridKey]
+		if !lineStates[i].IsMuted() {
+			note, hasNote := pattern[lineStates[i].GridKey()]
 			if hasNote && note.Ratchets.Length > 0 {
 				ratchetNotes = append(ratchetNotes, lineNote{note, line})
 			} else if hasNote && note != zeronote {
@@ -989,20 +996,20 @@ func InitLines(n uint8) []lineDefinition {
 func InitLineStates(lines int, previousPlayState []linestate) []linestate {
 	linestates := make([]linestate, 0, lines)
 
-	for i := range lines {
+	for i := range uint8(lines) {
 		var previousGroupPlayState = PLAY_STATE_PLAY
 		if len(previousPlayState) > int(i) {
 			previousState := previousPlayState[i]
 			previousGroupPlayState = previousState.groupPlayState
 		}
 
-		linestates = append(linestates, InitLineState(previousGroupPlayState))
+		linestates = append(linestates, InitLineState(previousGroupPlayState, i))
 	}
 	return linestates
 }
 
-func InitLineState(previousGroupPlayState groupPlayState) linestate {
-	return linestate{0, 1, 1, 0, 0, 0, previousGroupPlayState}
+func InitLineState(previousGroupPlayState groupPlayState, index uint8) linestate {
+	return linestate{index, 0, 1, 1, 0, 0, 0, previousGroupPlayState}
 }
 
 func InitDefinition() Definition {
@@ -1163,12 +1170,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				beatInterval := m.BeatInterval()
 
 				cmds := make([]tea.Cmd, 0, 10)
-				cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedPattern(playingOverlay), m.playState)...)
+				cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState)...)
 				cmds = append(cmds, BeatTick(beatInterval))
 				return m, tea.Batch(cmds...)
 			} else {
 				m.keyCycles = 0
-				m.playingMatchedOverlays = []overlayKey{}
 				notes := notereg.Clear()
 				sendFn := m.midiConnection.AcquireSendFunc()
 				cmds := make([]tea.Cmd, len(notes))
@@ -1288,7 +1294,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Note:    lastline.Note + 1,
 				})
 				if m.playing {
-					m.playState = append(m.playState, InitLineState(m.GroupPlayStateForNewLine()))
+					m.playState = append(m.playState, InitLineState(m.GroupPlayStateForNewLine(), uint8(len(m.definition.lines)-1)))
 				}
 			}
 		case Is(msg, keys.Yank):
@@ -1319,7 +1325,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.totalBeats++
 			beatInterval := m.BeatInterval()
 			cmds := make([]tea.Cmd, 0, 10)
-			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedPattern(playingOverlay), m.playState)...)
+			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState)...)
 			cmds = append(cmds, BeatTick(beatInterval))
 			return m, tea.Batch(
 				cmds...,
@@ -1859,13 +1865,7 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 func (m *model) advanceKeyCycle() {
 	if m.playState[m.definition.keyline].currentBeat == 0 {
 		m.keyCycles++
-		m.determineMatachedOverlays()
 	}
-}
-
-func (m *model) determineMatachedOverlays() {
-	// keys := m.OverlayKeys()
-	// m.playingMatchedOverlays = m.definition.GetMatchingOverlays(m.keyCycles, keys)
 }
 
 func (m model) PlayingOverlayKeys() []overlayKey {
@@ -1880,6 +1880,24 @@ func (m model) CombinedPattern(overlay *overlays.Overlay) grid.Pattern {
 		overlay.CombinePattern(&pattern, m.keyCycles)
 	} else {
 		overlay.CombinePattern(&pattern, overlay.Key.GetMinimumKeyCycle())
+	}
+	return pattern
+}
+
+func (m model) CurrentBeatGridKeys() []grid.GridKey {
+	result := make([]grid.GridKey, 0, len(m.playState))
+	for _, linestate := range m.playState {
+		result = append(result, linestate.GridKey())
+	}
+	return result
+}
+
+func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
+	pattern := make(grid.Pattern)
+	if m.playing {
+		overlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, m.CurrentBeatGridKeys())
+	} else {
+		overlay.CurrentBeatOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle(), m.CurrentBeatGridKeys())
 	}
 	return pattern
 }
@@ -2271,8 +2289,8 @@ func (m model) ViewOverlay() string {
 
 func (m model) CurrentOverlayView() string {
 	var matchedKey overlayKey
-	if len(m.playingMatchedOverlays) > 0 {
-		matchedKey = m.playingMatchedOverlays[0]
+	if m.playing {
+		matchedKey = m.definition.overlays.HighestMatchingOverlay(m.keyCycles).Key
 	} else {
 		matchedKey = overlaykey.ROOT
 	}

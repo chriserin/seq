@@ -70,25 +70,29 @@ func (ol Overlay) CollectKeys(collection *[]Key) {
 }
 
 func (ol Overlay) CombinePattern(pattern *grid.Pattern, keyCycles int) {
-	var addFunc = func(overlayPattern grid.Pattern, key Key) {
+	var addFunc = func(overlayPattern grid.Pattern, key Key) bool {
 		for gridKey, note := range overlayPattern {
 			_, hasNote := (*pattern)[gridKey]
 			if !hasNote {
 				(*pattern)[gridKey] = note
 			}
 		}
+		return true
 	}
 	ol.combine(keyCycles, addFunc)
 }
 
 func (ol Overlay) GetMatchingOverlayKeys(keys *[]Key, keyCycles int) {
-	var addFunc = func(pattern grid.Pattern, key Key) {
+	var addFunc = func(pattern grid.Pattern, key Key) bool {
 		(*keys) = append((*keys), key)
+		return true
 	}
 	ol.combine(keyCycles, addFunc)
 }
 
-func (ol Overlay) combine(keyCycles int, addFunc func(grid.Pattern, Key)) {
+type AddFunc = func(grid.Pattern, Key) bool
+
+func (ol Overlay) combine(keyCycles int, addFunc AddFunc) {
 	previousPressDown := false
 	firstMatch := false
 	for currentOverlay := &ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
@@ -97,11 +101,29 @@ func (ol Overlay) combine(keyCycles int, addFunc func(grid.Pattern, Key)) {
 			(!firstMatch && currentOverlay.Key.DoesMatch(keyCycles)) ||
 			(currentOverlay.PressUp && currentOverlay.Key.DoesMatch(keyCycles)) {
 			firstMatch = true
-			addFunc(currentOverlay.Notes, currentOverlay.Key)
+			if !addFunc(currentOverlay.Notes, currentOverlay.Key) {
+				break
+			}
 
 			previousPressDown = currentOverlay.PressDown
 		}
 	}
+}
+
+func (ol Overlay) CurrentBeatOverlayPattern(pattern *grid.Pattern, keyCycles int, beats []grid.GridKey) {
+	var addFunc = func(overlayPattern grid.Pattern, currentKey Key) bool {
+		for _, gridKey := range beats {
+			_, hasNote := (*pattern)[gridKey]
+			if !hasNote {
+				note, hasNote := overlayPattern[gridKey]
+				if hasNote {
+					(*pattern)[gridKey] = note
+				}
+			}
+		}
+		return len(*pattern) < len(beats)
+	}
+	ol.combine(keyCycles, addFunc)
 }
 
 type OverlayNote struct {
@@ -111,13 +133,15 @@ type OverlayNote struct {
 type OverlayPattern map[grid.GridKey]OverlayNote
 
 func (ol Overlay) CombineOverlayPattern(pattern *OverlayPattern, keyCycles int) {
-	var addFunc = func(overlayPattern grid.Pattern, currentKey Key) {
+	var addFunc = func(overlayPattern grid.Pattern, currentKey Key) bool {
 		for gridKey, note := range overlayPattern {
 			_, hasNote := (*pattern)[gridKey]
 			if !hasNote {
 				(*pattern)[gridKey] = OverlayNote{OverlayKey: currentKey, Note: note}
 			}
 		}
+
+		return true
 	}
 	ol.combine(keyCycles, addFunc)
 }
