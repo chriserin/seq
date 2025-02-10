@@ -2106,7 +2106,7 @@ func (m model) View() string {
 
 	if m.accentMode || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
-	} else if m.definition.overlays.Key == overlaykey.ROOT ||
+	} else if (m.definition.overlays.Key == overlaykey.ROOT && len(m.definition.overlays.Notes) == 0) ||
 		m.selectionIndicator == SELECT_SETUP_NOTE ||
 		m.selectionIndicator == SELECT_SETUP_CHANNEL {
 		sideView = m.SetupView()
