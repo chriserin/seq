@@ -481,7 +481,7 @@ const (
 )
 
 type Undoable interface {
-	ApplyUndo(m *model)
+	ApplyUndo(m *model) (overlayKey, gridKey)
 }
 
 type UndoStack struct {
@@ -492,14 +492,6 @@ type UndoStack struct {
 }
 
 var NIL_STACK = UndoStack{}
-
-type UndoKeyline struct {
-	keyline uint8
-}
-
-func (ukl UndoKeyline) ApplyUndo(m *model) {
-	m.definition.keyline = ukl.keyline
-}
 
 type UndoBeats struct {
 	beats uint8
@@ -536,11 +528,11 @@ type UndoGridNote struct {
 	gridNote       GridNote
 }
 
-func (ugn UndoGridNote) ApplyUndo(m *model) {
+func (ugn UndoGridNote) ApplyUndo(m *model) (overlayKey, gridKey) {
 	m.EnsureOverlayWithKey(ugn.overlayKey)
-	m.cursorPos = ugn.cursorPosition
 	overlay := m.definition.overlays.FindOverlay(ugn.overlayKey)
 	overlay.SetNote(ugn.gridNote.gridKey, ugn.gridNote.note)
+	return ugn.overlayKey, ugn.gridNote.gridKey
 }
 
 type UndoLineGridNotes struct {
@@ -550,9 +542,8 @@ type UndoLineGridNotes struct {
 	gridNotes      []GridNote
 }
 
-func (ulgn UndoLineGridNotes) ApplyUndo(m *model) {
+func (ulgn UndoLineGridNotes) ApplyUndo(m *model) (overlayKey, gridKey) {
 	m.EnsureOverlayWithKey(ulgn.overlayKey)
-	m.cursorPos = ulgn.cursorPosition
 	overlay := m.definition.overlays.FindOverlay(ulgn.overlayKey)
 	for i := range m.definition.beats {
 		overlay.RemoveNote(GK(ulgn.line, i))
@@ -560,6 +551,7 @@ func (ulgn UndoLineGridNotes) ApplyUndo(m *model) {
 	for _, gridNote := range ulgn.gridNotes {
 		overlay.SetNote(gridNote.gridKey, gridNote.note)
 	}
+	return ulgn.overlayKey, ulgn.cursorPosition
 }
 
 type UndoBounds struct {
@@ -569,9 +561,8 @@ type UndoBounds struct {
 	gridNotes      []GridNote
 }
 
-func (uvs UndoBounds) ApplyUndo(m *model) {
+func (uvs UndoBounds) ApplyUndo(m *model) (overlayKey, gridKey) {
 	m.EnsureOverlayWithKey(uvs.overlayKey)
-	m.cursorPos = uvs.cursorPosition
 	overlay := m.definition.overlays.FindOverlay(uvs.overlayKey)
 	for _, k := range uvs.bounds.GridKeys() {
 		overlay.RemoveNote(k)
@@ -579,6 +570,7 @@ func (uvs UndoBounds) ApplyUndo(m *model) {
 	for _, gridNote := range uvs.gridNotes {
 		overlay.SetNote(gridNote.gridKey, gridNote.note)
 	}
+	return uvs.overlayKey, uvs.cursorPosition
 }
 
 type UndoGridNotes struct {
@@ -586,13 +578,14 @@ type UndoGridNotes struct {
 	gridNotes []GridNote
 }
 
-func (ugn UndoGridNotes) ApplyUndo(m *model) {
+func (ugn UndoGridNotes) ApplyUndo(m *model) (overlayKey, gridKey) {
 	m.EnsureOverlayWithKey(ugn.overlayKey)
 	overlay := m.definition.overlays.FindOverlay(ugn.overlayKey)
 	for _, gridNote := range ugn.gridNotes {
 
 		overlay.SetNote(gridNote.gridKey, gridNote.note)
 	}
+	return ugn.overlayKey, ugn.gridNotes[0].gridKey
 }
 
 type UndoToNothing struct {
@@ -600,10 +593,10 @@ type UndoToNothing struct {
 	location   gridKey
 }
 
-func (utn UndoToNothing) ApplyUndo(m *model) {
+func (utn UndoToNothing) ApplyUndo(m *model) (overlayKey, gridKey) {
 	overlay := m.definition.overlays.FindOverlay(utn.overlayKey)
-	m.cursorPos = utn.location
 	overlay.RemoveNote(utn.location)
+	return utn.overlayKey, utn.location
 }
 
 type UndoLineToNothing struct {
@@ -612,12 +605,13 @@ type UndoLineToNothing struct {
 	line           uint8
 }
 
-func (ultn UndoLineToNothing) ApplyUndo(m *model) {
+func (ultn UndoLineToNothing) ApplyUndo(m *model) (overlayKey, gridKey) {
 	overlay := m.definition.overlays.FindOverlay(ultn.overlayKey)
-	m.cursorPos = ultn.cursorPosition
 	for i := range m.definition.beats {
 		overlay.RemoveNote(GK(ultn.line, i))
 	}
+
+	return ultn.overlayKey, ultn.cursorPosition
 }
 
 type UndoNewOverlay struct {
@@ -625,10 +619,10 @@ type UndoNewOverlay struct {
 	cursorPosition gridKey
 }
 
-func (uno UndoNewOverlay) ApplyUndo(m *model) {
+func (uno UndoNewOverlay) ApplyUndo(m *model) (overlayKey, gridKey) {
 	newOverlay := m.definition.overlays.Remove(uno.overlayKey)
 	m.definition.overlays = newOverlay
-	m.cursorPos = uno.cursorPosition
+	return uno.overlayKey, uno.cursorPosition
 }
 
 func (m *model) PushUndoables(undo Undoable, redo Undoable) {
@@ -700,7 +694,15 @@ func (m *model) PopRedo() UndoStack {
 func (m *model) Undo() UndoStack {
 	undoStack := m.PopUndo()
 	if undoStack != NIL_STACK {
-		undoStack.undo.ApplyUndo(m)
+		ok, gk := undoStack.undo.ApplyUndo(m)
+		m.cursorPos = gk
+		overlay := m.definition.overlays.FindOverlay(ok)
+		if overlay == nil {
+			m.currentOverlay = m.definition.overlays
+		} else {
+			m.currentOverlay = overlay
+		}
+		m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 	}
 	return undoStack
 }
@@ -708,7 +710,10 @@ func (m *model) Undo() UndoStack {
 func (m *model) Redo() UndoStack {
 	undoStack := m.PopRedo()
 	if undoStack != NIL_STACK {
-		undoStack.redo.ApplyUndo(m)
+		ok, gk := undoStack.redo.ApplyUndo(m)
+		m.cursorPos = gk
+		m.currentOverlay = m.definition.overlays.FindOverlay(ok)
+		m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 	}
 	return undoStack
 }
@@ -1432,10 +1437,7 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 	case Is(msg, keys.ActionAddLineDelay):
 		m.AddAction(grid.ACTION_LINE_DELAY)
 	case Is(msg, keys.SelectKeyLine):
-		undoable := UndoKeyline{m.definition.keyline}
 		m.definition.keyline = m.cursorPos.Line
-		redoable := UndoKeyline{m.definition.keyline}
-		m.PushUndoables(undoable, redoable)
 	case Is(msg, keys.PressDownOverlay):
 		m.currentOverlay.ToggleOverlayStackOptions()
 	case Is(msg, keys.ClearSeq):
