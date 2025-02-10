@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"maps"
 	"math/rand"
 	"os"
 	"slices"
@@ -16,8 +15,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	colors "github.com/chriserin/seq/internal/colors"
+	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/notereg"
-	overlaykey "github.com/chriserin/seq/internal/overlayKey"
+	overlaykey "github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/seq/internal/overlays"
 	midi "gitlab.com/gomidi/midi/v2"
 )
 
@@ -239,110 +240,19 @@ var accents = []Accent{
 
 const C1 = 36
 
-type ratchet struct {
-	Hits   uint8
-	Length uint8
-	Span   uint8
-}
-
-func (r *ratchet) SetRatchet(value bool, index uint8) {
-	if value {
-		r.Hits = r.Hits | (1 << index)
-	} else {
-		r.Hits = r.Hits & ((1 << index) ^ 255)
-	}
-}
-
-func (r *ratchet) Toggle(index uint8) {
-	r.Hits = (r.Hits ^ (1 << index))
-}
-
-func (r ratchet) HitAt(index uint8) bool {
-	return (r.Hits & (1 << index)) != 0
-}
-
-func BoolsToUint8(bools [8]bool) uint8 {
-	var result uint8
-	for i := 0; i < 8; i++ {
-		if bools[i] {
-			result = result | (1 << i)
-		}
-	}
-	return result
-}
-
-func (r ratchet) GetSpan() uint8 {
-	return r.Span + 1
-}
-
-func (r ratchet) Interval(beatInterval time.Duration) time.Duration {
-	return (beatInterval * time.Duration(r.GetSpan())) / time.Duration(r.Length+1)
-}
-
-func InitRatchet() ratchet {
-	return ratchet{
-		// We always start with one Ratchet enabled
-		Hits: BoolsToUint8([8]bool{true, false, false, false, false, false, false, false}),
-	}
-}
-
-type note struct {
-	AccentIndex uint8
-	Ratchets    ratchet
-	Action      action
-	GateIndex   uint8
-	WaitIndex   uint8
-}
-
-func (n note) IncrementAccent(modifier int8) note {
-	var newAccent = int8(n.AccentIndex) - modifier
-	if newAccent >= 1 && newAccent < int8(len(accents)) {
-		n.AccentIndex = uint8(newAccent)
-	}
-	return n
-}
-
-func (n note) IncrementGate(modifier int8) note {
-	var newGate = int8(n.GateIndex) + modifier
-	if newGate >= 0 && newGate < int8(len(gates)) {
-		n.GateIndex = uint8(newGate)
-	}
-	return n
-}
-
-func (n note) IncrementWait(modifier int8) note {
-	var newWait = int8(n.WaitIndex) + modifier
-	if newWait >= 0 && newWait < int8(len(gates)) {
-		n.WaitIndex = uint8(newWait)
-	}
-	return n
-}
-
-type action uint8
-
 type lineaction struct {
 	shape rune
 	color lipgloss.Color
 }
 
-const (
-	ACTION_NOTHING action = iota
-	ACTION_LINE_RESET
-	ACTION_LINE_REVERSE
-	ACTION_LINE_SKIP_BEAT
-	ACTION_RESET
-	ACTION_LINE_BOUNCE
-	ACTION_LINE_DELAY
-)
-
 var lineactions = map[action]lineaction{
-	ACTION_NOTHING:        {' ', "#000000"},
-	ACTION_LINE_RESET:     {'↔', "#cf142b"},
-	ACTION_LINE_REVERSE:   {'←', "#f8730e"},
-	ACTION_LINE_SKIP_BEAT: {'⇒', "#a9e5bb"},
-	ACTION_RESET:          {'⇚', "#fcf6b1"},
-	ACTION_LINE_BOUNCE:    {'↨', "#fcf6b1"},
-	ACTION_LINE_DELAY:     {'ℤ', "#cc4bc2"},
+	grid.ACTION_NOTHING:        {' ', "#000000"},
+	grid.ACTION_LINE_RESET:     {'↔', "#cf142b"},
+	grid.ACTION_LINE_REVERSE:   {'←', "#f8730e"},
+	grid.ACTION_LINE_SKIP_BEAT: {'⇒', "#a9e5bb"},
+	grid.ACTION_RESET:          {'⇚', "#fcf6b1"},
+	grid.ACTION_LINE_BOUNCE:    {'↨', "#fcf6b1"},
+	grid.ACTION_LINE_DELAY:     {'ℤ', "#cc4bc2"},
 }
 
 type ratchetDiacritical string
@@ -410,26 +320,18 @@ type linestate struct {
 
 type overlayKey = overlaykey.OverlayPeriodicity
 
-type Notable interface {
-	SetNote(gridKey, note)
+type gridKey = grid.GridKey
+
+func GK(line uint8, beat uint8) gridKey {
+	return gridKey{
+		Line: line,
+		Beat: beat,
+	}
 }
 
-type overlays map[overlayKey]overlay
-
-func (ol *overlay) SetNote(gridKey gridKey, note note) {
-	(*ol)[gridKey] = note
-}
-
-type gridKey struct {
-	line uint8
-	beat uint8
-}
-
-func (gk gridKey) String() string {
-	return fmt.Sprintf("Grid-%0.2d-%0.2d", gk.line, gk.beat)
-}
-
-type overlay map[gridKey]note
+type note = grid.Note
+type action = grid.Action
+type overlay = overlays.Overlay
 
 type lineDefinition struct {
 	Channel uint8
@@ -536,7 +438,7 @@ type model struct {
 	accentMode             bool
 	gateMode               bool
 	ratchetCursor          uint8
-	currentOverlayKey      overlayKey
+	currentOverlay         *overlays.Overlay
 	keyCycles              int
 	playingMatchedOverlays []overlayKey
 	undoStack              UndoStack
@@ -545,11 +447,6 @@ type model struct {
 	needsWrite             int
 	// save everything below here
 	definition Definition
-}
-
-func (m *model) SetOverlayKey(ok overlaykey.OverlayPeriodicity) {
-	m.currentOverlayKey = ok
-	m.overlayKeyEdit.SetOverlayKey(ok)
 }
 
 type focus int
@@ -634,8 +531,8 @@ type UndoGridNote struct {
 func (ugn UndoGridNote) ApplyUndo(m *model) {
 	m.EnsureOverlayWithKey(ugn.overlayKey)
 	m.cursorPos = ugn.cursorPosition
-	overlay := m.definition.overlays[ugn.overlayKey]
-	overlay[ugn.gridNote.gridKey] = ugn.gridNote.note
+	overlay := m.definition.overlays.FindOverlay(ugn.overlayKey)
+	overlay.SetNote(ugn.gridNote.gridKey, ugn.gridNote.note)
 }
 
 type UndoLineGridNotes struct {
@@ -648,12 +545,12 @@ type UndoLineGridNotes struct {
 func (ulgn UndoLineGridNotes) ApplyUndo(m *model) {
 	m.EnsureOverlayWithKey(ulgn.overlayKey)
 	m.cursorPos = ulgn.cursorPosition
-	overlay := m.definition.overlays[ulgn.overlayKey]
+	overlay := m.definition.overlays.FindOverlay(ulgn.overlayKey)
 	for i := range m.definition.beats {
-		delete(overlay, gridKey{ulgn.line, i})
+		overlay.RemoveNote(GK(ulgn.line, i))
 	}
 	for _, gridNote := range ulgn.gridNotes {
-		overlay[gridNote.gridKey] = gridNote.note
+		overlay.SetNote(gridNote.gridKey, gridNote.note)
 	}
 }
 
@@ -667,12 +564,12 @@ type UndoBounds struct {
 func (uvs UndoBounds) ApplyUndo(m *model) {
 	m.EnsureOverlayWithKey(uvs.overlayKey)
 	m.cursorPos = uvs.cursorPosition
-	overlay := m.definition.overlays[uvs.overlayKey]
+	overlay := m.definition.overlays.FindOverlay(uvs.overlayKey)
 	for _, k := range uvs.bounds.GridKeys() {
-		delete(overlay, k)
+		overlay.RemoveNote(k)
 	}
 	for _, gridNote := range uvs.gridNotes {
-		overlay[gridNote.gridKey] = gridNote.note
+		overlay.SetNote(gridNote.gridKey, gridNote.note)
 	}
 }
 
@@ -683,9 +580,10 @@ type UndoGridNotes struct {
 
 func (ugn UndoGridNotes) ApplyUndo(m *model) {
 	m.EnsureOverlayWithKey(ugn.overlayKey)
-	overlay := m.definition.overlays[ugn.overlayKey]
+	overlay := m.definition.overlays.FindOverlay(ugn.overlayKey)
 	for _, gridNote := range ugn.gridNotes {
-		overlay[gridNote.gridKey] = gridNote.note
+
+		overlay.SetNote(gridNote.gridKey, gridNote.note)
 	}
 }
 
@@ -695,9 +593,9 @@ type UndoToNothing struct {
 }
 
 func (utn UndoToNothing) ApplyUndo(m *model) {
-	overlay := m.definition.overlays[utn.overlayKey]
+	overlay := m.definition.overlays.FindOverlay(utn.overlayKey)
 	m.cursorPos = utn.location
-	delete(overlay, utn.location)
+	overlay.RemoveNote(utn.location)
 }
 
 type UndoLineToNothing struct {
@@ -707,10 +605,10 @@ type UndoLineToNothing struct {
 }
 
 func (ultn UndoLineToNothing) ApplyUndo(m *model) {
-	overlay := m.definition.overlays[ultn.overlayKey]
+	overlay := m.definition.overlays.FindOverlay(ultn.overlayKey)
 	m.cursorPos = ultn.cursorPosition
 	for i := range m.definition.beats {
-		delete(overlay, gridKey{ultn.line, i})
+		overlay.RemoveNote(GK(ultn.line, i))
 	}
 }
 
@@ -720,7 +618,8 @@ type UndoNewOverlay struct {
 }
 
 func (uno UndoNewOverlay) ApplyUndo(m *model) {
-	delete(m.definition.overlays, uno.overlayKey)
+	newOverlay := m.definition.overlays.Remove(uno.overlayKey)
+	m.definition.overlays = newOverlay
 	m.cursorPos = uno.cursorPosition
 }
 
@@ -807,13 +706,12 @@ func (m *model) Redo() UndoStack {
 }
 
 type Definition struct {
-	overlays     overlays
+	overlays     *overlays.Overlay
 	lines        []lineDefinition
 	beats        uint8
 	tempo        int
 	subdivisions int
 	keyline      uint8
-	metaOverlays map[overlayKey]metaOverlay
 	accents      patternAccents
 }
 
@@ -838,11 +736,6 @@ func (pa *patternAccents) ReCalc() {
 		accents[i+1] = a
 	}
 	pa.Data = accents
-}
-
-type metaOverlay struct {
-	PressUp   bool
-	PressDown bool
 }
 
 type beatMsg struct {
@@ -887,13 +780,13 @@ type lineNote struct {
 	line lineDefinition
 }
 
-func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDefinition, pattern overlay, currentBeat []linestate) []tea.Cmd {
+func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDefinition, pattern grid.Pattern, currentBeat []linestate) []tea.Cmd {
 	messages := make([]noteMsg, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
 	for i, line := range lines {
 		if currentBeat[i].groupPlayState != PLAY_STATE_MUTE && currentBeat[i].groupPlayState != PLAY_STATE_MUTED_BY_SOLO {
-			currentGridKey := gridKey{uint8(i), currentBeat[i].currentBeat}
+			currentGridKey := GK(uint8(i), currentBeat[i].currentBeat)
 			note, hasNote := pattern[currentGridKey]
 			if hasNote && note.Ratchets.Length > 0 {
 				ratchetNotes = append(ratchetNotes, lineNote{note, line})
@@ -937,28 +830,15 @@ func PlayMessage(message midi.Message, sendFn SendFunc) {
 }
 
 func (m *model) EnsureOverlay() {
-	m.EnsureOverlayWithKey(m.currentOverlayKey)
+	m.EnsureOverlayWithKey(m.overlayKeyEdit.GetKey())
 }
 
 func (m *model) EnsureOverlayWithKey(key overlayKey) {
-	if len(m.definition.overlays[key]) == 0 {
-		m.definition.overlays[key] = make(overlay)
-		if key == overlaykey.ROOT_OVERLAY {
-			m.definition.metaOverlays[key] = metaOverlay{PressUp: true, PressDown: false}
-		} else {
-			m.definition.metaOverlays[key] = metaOverlay{PressUp: false, PressDown: false}
-		}
-		if m.playing {
-			m.determineMatachedOverlays()
-		}
+	if m.definition.overlays.FindOverlay(key) == nil {
+		newOverlay := m.definition.overlays.Add(key)
+		m.definition.overlays = newOverlay
+		m.currentOverlay = newOverlay.FindOverlay(key)
 	}
-}
-
-func (m *model) CurrentNotable() Notable {
-	var notable Notable
-	overlay := m.definition.overlays[m.currentOverlayKey]
-	notable = &overlay
-	return notable
 }
 
 func absdiff(a, b uint8) uint8 {
@@ -980,57 +860,57 @@ func (m model) VisualSelectedGridKeys() []gridKey {
 func (m *model) AddTrigger() {
 	keys := m.VisualSelectedGridKeys()
 	for _, k := range keys {
-		m.CurrentNotable().SetNote(k, note{5, InitRatchet(), ACTION_NOTHING, 0, 0})
+		m.currentOverlay.SetNote(k, grid.InitNote())
 	}
 }
 
 func (m *model) AddAction(act action) {
 	keys := m.VisualSelectedGridKeys()
 	for _, k := range keys {
-		m.CurrentNotable().SetNote(k, note{0, InitRatchet(), act, 0, 0})
+		m.currentOverlay.SetNote(k, grid.InitActionNote(act))
 	}
 }
 
 func (m *model) RemoveTrigger() {
 	keys := m.VisualSelectedGridKeys()
 	for _, k := range keys {
-		m.CurrentNotable().SetNote(k, zeronote)
+		m.currentOverlay.SetNote(k, zeronote)
 	}
 }
 
 func (m *model) OverlayRemoveTrigger() {
 	keys := m.VisualSelectedGridKeys()
-	for _, k := range keys {
-		delete(m.definition.overlays[m.currentOverlayKey], k)
+	for _, gridKey := range keys {
+		m.currentOverlay.RemoveNote(gridKey)
 	}
 }
 
 func (m *model) IncreaseRatchet() {
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedPattern := m.CombinedPattern(m.currentOverlay)
 	bounds := m.YankBounds()
 
-	for key, currentNote := range combinedOverlay {
+	for key, currentNote := range combinedPattern {
 		if bounds.InBounds(key) {
 			currentRatchet := currentNote.Ratchets.Length
-			if currentNote.AccentIndex > 0 && currentNote.Action == ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
+			if currentNote.AccentIndex > 0 && currentNote.Action == grid.ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
 				currentNote.Ratchets.Length = currentRatchet + 1
 				currentNote.Ratchets.SetRatchet(true, currentNote.Ratchets.Length)
-				m.CurrentNotable().SetNote(key, currentNote)
+				m.currentOverlay.SetNote(key, currentNote)
 			}
 		}
 	}
 }
 
 func (m *model) DecreaseRatchet() {
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedOverlay := m.CombinedPattern(m.currentOverlay)
 	bounds := m.YankBounds()
 
 	for key, currentNote := range combinedOverlay {
 		if bounds.InBounds(key) {
 			currentRatchet := currentNote.Ratchets.Length
-			if currentNote.AccentIndex > 0 && currentNote.Action == ACTION_NOTHING && currentRatchet > 0 {
+			if currentNote.AccentIndex > 0 && currentNote.Action == grid.ACTION_NOTHING && currentRatchet > 0 {
 				currentNote.Ratchets.Length = currentRatchet - 1
-				m.CurrentNotable().SetNote(key, currentNote)
+				m.currentOverlay.SetNote(key, currentNote)
 			}
 		}
 	}
@@ -1045,23 +925,23 @@ func (m *model) EnsureRatchetCursorVisisble() {
 
 func (m *model) IncreaseSpan() {
 	currentNote := m.CurrentNote()
-	if currentNote != zeronote && currentNote.Action == ACTION_NOTHING {
+	if currentNote != zeronote && currentNote.Action == grid.ACTION_NOTHING {
 		span := currentNote.Ratchets.Span
 		if span < 8 {
 			currentNote.Ratchets.Span = span + 1
 		}
-		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
+		m.currentOverlay.SetNote(m.cursorPos, currentNote)
 	}
 }
 
 func (m *model) DecreaseSpan() {
 	currentNote := m.CurrentNote()
-	if currentNote != zeronote && currentNote.Action == ACTION_NOTHING {
+	if currentNote != zeronote && currentNote.Action == grid.ACTION_NOTHING {
 		span := currentNote.Ratchets.Span
 		if span > 0 {
 			currentNote.Ratchets.Span = span - 1
 		}
-		m.CurrentNotable().SetNote(m.cursorPos, currentNote)
+		m.currentOverlay.SetNote(m.cursorPos, currentNote)
 	}
 }
 
@@ -1092,7 +972,7 @@ func (m *model) DecreaseAccentStart() {
 func (m *model) ToggleRatchetMute() {
 	currentNote := m.CurrentNote()
 	currentNote.Ratchets.Toggle(m.ratchetCursor)
-	m.CurrentNotable().SetNote(m.cursorPos, currentNote)
+	m.currentOverlay.SetNote(m.cursorPos, currentNote)
 }
 
 func InitLines(n uint8) []lineDefinition {
@@ -1127,13 +1007,12 @@ func InitLineState(previousGroupPlayState groupPlayState) linestate {
 
 func InitDefinition() Definition {
 	return Definition{
-		overlays:     make(overlays),
+		overlays:     overlays.InitOverlay(overlaykey.ROOT, nil),
 		beats:        32,
 		tempo:        120,
 		keyline:      0,
 		subdivisions: 2,
 		lines:        InitLines(8),
-		metaOverlays: make(map[overlayKey]metaOverlay),
 		accents:      patternAccents{Diff: 15, Data: accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
 	}
 }
@@ -1147,7 +1026,7 @@ func InitModel(midiConnection MidiConnection) model {
 	newCursor := cursor.New()
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
-	definition, hasDefinition := Read()
+	definition, hasDefinition := Definition{}, false // Read()
 
 	if !hasDefinition {
 		definition = InitDefinition()
@@ -1160,12 +1039,12 @@ func InitModel(midiConnection MidiConnection) model {
 		cursor:              newCursor,
 		midiConnection:      midiConnection,
 		logFile:             logFile,
-		cursorPos:           gridKey{0, 0},
+		cursorPos:           GK(0, 0),
 		//TODO: Initial overlay key should be read from file before setting to ROOT
-		currentOverlayKey: overlaykey.ROOT_OVERLAY,
-		overlayKeyEdit:    overlaykey.InitModel(),
-		definition:        definition,
-		playState:         InitLineStates(len(definition.lines), []linestate{}),
+		currentOverlay: definition.overlays,
+		overlayKeyEdit: overlaykey.InitModel(),
+		definition:     definition,
+		playState:      InitLineStates(len(definition.lines), []linestate{}),
 	}
 }
 
@@ -1200,40 +1079,6 @@ func Is(msg tea.KeyMsg, k key.Binding) bool {
 	return key.Matches(msg, k)
 }
 
-func GetMinimumKeyCycle(key overlayKey) int {
-	for i := 1; i < 100; i++ {
-		if key.DoesMatch(i) {
-			return i
-		}
-	}
-	return 100
-}
-
-func (d Definition) GetMatchingOverlays(keyCycles int, keys []overlayKey) []overlayKey {
-	var matchedKeys = make([]overlayKey, 0, 5)
-
-	slices.SortFunc(keys, overlaykey.Sort)
-	var pressNext = false
-
-	for _, key := range keys {
-		matches := key.DoesMatch(keyCycles)
-		if (matches && len(matchedKeys) == 0) || pressNext {
-			matchedKeys = append(matchedKeys, key)
-			if d.metaOverlays[key].PressDown {
-				pressNext = true
-			} else {
-				pressNext = false
-			}
-		} else if matches && len(matchedKeys) != 0 {
-			if d.metaOverlays[key].PressUp {
-				matchedKeys = append(matchedKeys, key)
-			}
-		}
-	}
-
-	return matchedKeys
-}
-
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	keys := transitiveKeys
 
@@ -1251,14 +1096,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case Is(msg, keys.CursorDown):
 			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_NOTE}, m.selectionIndicator) {
-				if m.cursorPos.line < uint8(len(m.definition.lines)-1) {
-					m.cursorPos.line++
+				if m.cursorPos.Line < uint8(len(m.definition.lines)-1) {
+					m.cursorPos.Line++
 				}
 			}
 		case Is(msg, keys.CursorUp):
 			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_NOTE}, m.selectionIndicator) {
-				if m.cursorPos.line > 0 {
-					m.cursorPos.line--
+				if m.cursorPos.Line > 0 {
+					m.cursorPos.Line--
 				}
 			}
 		case Is(msg, keys.CursorLeft):
@@ -1269,8 +1114,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.selectionIndicator > 0 {
 				// Do Nothing
 			} else {
-				if m.cursorPos.beat > 0 {
-					m.cursorPos.beat--
+				if m.cursorPos.Beat > 0 {
+					m.cursorPos.Beat--
 				}
 			}
 		case Is(msg, keys.CursorRight):
@@ -1282,14 +1127,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.selectionIndicator > 0 {
 				// Do Nothing
 			} else {
-				if m.cursorPos.beat < m.definition.beats-1 {
-					m.cursorPos.beat++
+				if m.cursorPos.Beat < m.definition.beats-1 {
+					m.cursorPos.Beat++
 				}
 			}
 		case Is(msg, keys.CursorLineStart):
-			m.cursorPos.beat = 0
+			m.cursorPos.Beat = 0
 		case Is(msg, keys.CursorLineEnd):
-			m.cursorPos.beat = m.definition.beats - 1
+			m.cursorPos.Beat = m.definition.beats - 1
 		case Is(msg, keys.Escape):
 			m.selectionIndicator = 0
 			m.accentMode = false
@@ -1314,10 +1159,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.playState = InitLineStates(len(m.definition.lines), m.playState)
 				m.advanceKeyCycle()
 				m.trackTime = time.Duration(0)
+				playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
 				beatInterval := m.BeatInterval()
 
 				cmds := make([]tea.Cmd, 0, 10)
-				cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState)...)
+				cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedPattern(playingOverlay), m.playState)...)
 				cmds = append(cmds, BeatTick(beatInterval))
 				return m, tea.Batch(cmds...)
 			} else {
@@ -1366,9 +1212,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.definition.subdivisions++
 				}
 			case SELECT_SETUP_CHANNEL:
-				m.definition.lines[m.cursorPos.line].IncrementChannel()
+				m.definition.lines[m.cursorPos.Line].IncrementChannel()
 			case SELECT_SETUP_NOTE:
-				m.definition.lines[m.cursorPos.line].IncrementNote()
+				m.definition.lines[m.cursorPos.Line].IncrementNote()
 			case SELECT_RATCHET_SPAN:
 				m.IncreaseSpan()
 			case SELECT_ACCENT_DIFF:
@@ -1391,9 +1237,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.definition.subdivisions--
 				}
 			case SELECT_SETUP_CHANNEL:
-				m.definition.lines[m.cursorPos.line].DecrementChannel()
+				m.definition.lines[m.cursorPos.Line].DecrementChannel()
 			case SELECT_SETUP_NOTE:
-				m.definition.lines[m.cursorPos.line].DecrementNote()
+				m.definition.lines[m.cursorPos.Line].DecrementNote()
 			case SELECT_RATCHET_SPAN:
 				m.DecreaseSpan()
 			case SELECT_ACCENT_DIFF:
@@ -1409,8 +1255,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.gateMode = !m.gateMode
 		case Is(msg, keys.PrevOverlay):
 			m.NextOverlay(-1)
+			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 		case Is(msg, keys.NextOverlay):
 			m.NextOverlay(+1)
+			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 		case Is(msg, keys.Save):
 			m.Save()
 			m.needsWrite = m.undoStack.id
@@ -1425,10 +1273,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.PushUndo(undoStack)
 			}
 		case Is(msg, keys.New):
-			m.cursorPos = gridKey{0, 0}
-			m.currentOverlayKey = overlaykey.ROOT_OVERLAY
-			m.selectionIndicator = SELECT_NOTHING
+			m.cursorPos = GK(0, 0)
 			m.definition = InitDefinition()
+			m.currentOverlay = m.definition.overlays
+			m.selectionIndicator = SELECT_NOTHING
 		case Is(msg, keys.ToggleVisualMode):
 			m.visualAnchorCursor = m.cursorPos
 			m.visualMode = !m.visualMode
@@ -1459,7 +1307,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m = m.UpdateDefinition(msg)
 		}
 	case overlaykey.UpdatedOverlayKey:
-		m.currentOverlayKey = msg.OverlayKey
 		if !msg.HasFocus {
 			m.focus = FOCUS_GRID
 			m.selectionIndicator = SELECT_NOTHING
@@ -1468,10 +1315,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.playing {
 			m.advanceCurrentBeat()
 			m.advanceKeyCycle()
+			playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
 			m.totalBeats++
 			beatInterval := m.BeatInterval()
 			cmds := make([]tea.Cmd, 0, 10)
-			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.definition.CombinedPattern(m.playingMatchedOverlays), m.playState)...)
+			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedPattern(playingOverlay), m.playState)...)
 			cmds = append(cmds, BeatTick(beatInterval))
 			return m, tea.Batch(
 				cmds...,
@@ -1566,24 +1414,24 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.DecreaseRatchet()
 		m.EnsureRatchetCursorVisisble()
 	case Is(msg, keys.ActionAddLineReset):
-		m.AddAction(ACTION_LINE_RESET)
+		m.AddAction(grid.ACTION_LINE_RESET)
 	case Is(msg, keys.ActionAddLineReverse):
-		m.AddAction(ACTION_LINE_REVERSE)
+		m.AddAction(grid.ACTION_LINE_REVERSE)
 	case Is(msg, keys.ActionAddSkipBeat):
-		m.AddAction(ACTION_LINE_SKIP_BEAT)
+		m.AddAction(grid.ACTION_LINE_SKIP_BEAT)
 	case Is(msg, keys.ActionAddReset):
-		m.AddAction(ACTION_RESET)
+		m.AddAction(grid.ACTION_RESET)
 	case Is(msg, keys.ActionAddLineBounce):
-		m.AddAction(ACTION_LINE_BOUNCE)
+		m.AddAction(grid.ACTION_LINE_BOUNCE)
 	case Is(msg, keys.ActionAddLineDelay):
-		m.AddAction(ACTION_LINE_DELAY)
+		m.AddAction(grid.ACTION_LINE_DELAY)
 	case Is(msg, keys.SelectKeyLine):
 		undoable := UndoKeyline{m.definition.keyline}
-		m.definition.keyline = m.cursorPos.line
+		m.definition.keyline = m.cursorPos.Line
 		redoable := UndoKeyline{m.definition.keyline}
 		m.PushUndoables(undoable, redoable)
 	case Is(msg, keys.PressDownOverlay):
-		m.ToggleOverlayStackOptions(m.currentOverlayKey)
+		m.currentOverlay.ToggleOverlayStackOptions()
 	case Is(msg, keys.ClearSeq):
 		m.ClearOverlay()
 	case Is(msg, keys.RotateRight):
@@ -1685,64 +1533,64 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 }
 
 func (m model) UndoableNote() Undoable {
-	overlay, hasOverlay := m.definition.overlays[m.currentOverlayKey]
-	if !hasOverlay {
-		return UndoNewOverlay{m.currentOverlayKey, m.cursorPos}
+	overlay := m.definition.overlays.FindOverlay(m.overlayKeyEdit.GetKey())
+	if overlay == nil {
+		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos}
 	}
-	currentNote, hasNote := overlay[m.cursorPos]
+	currentNote, hasNote := overlay.GetNote(m.cursorPos)
 	if hasNote {
-		return UndoGridNote{m.currentOverlayKey, m.cursorPos, GridNote{m.cursorPos, currentNote}}
+		return UndoGridNote{m.currentOverlay.Key, m.cursorPos, GridNote{m.cursorPos, currentNote}}
 	} else {
-		return UndoToNothing{m.currentOverlayKey, m.cursorPos}
+		return UndoToNothing{m.currentOverlay.Key, m.cursorPos}
 	}
 }
 
 func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
-	overlay, hasOverlay := m.definition.overlays[m.currentOverlayKey]
-	if !hasOverlay {
-		return UndoNewOverlay{m.currentOverlayKey, m.cursorPos}
+	overlay := m.definition.overlays.FindOverlay(m.overlayKeyEdit.GetKey())
+	if overlay == nil {
+		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos}
 	}
 	bounds := InitBounds(pointA, pointB)
 	gridKeys := bounds.GridKeys()
 	gridNotes := make([]GridNote, 0, len(gridKeys))
 	for _, k := range gridKeys {
-		currentNote, hasNote := overlay[k]
+		currentNote, hasNote := overlay.GetNote(k)
 		if hasNote {
 			gridNotes = append(gridNotes, GridNote{k, currentNote})
 		}
 	}
-	return UndoBounds{m.currentOverlayKey, m.cursorPos, bounds, gridNotes}
+	return UndoBounds{m.currentOverlay.Key, m.cursorPos, bounds, gridNotes}
 }
 
 func (m model) UndoableLine() Undoable {
-	overlay, hasOverlay := m.definition.overlays[m.currentOverlayKey]
-	if !hasOverlay {
-		return UndoNewOverlay{m.currentOverlayKey, m.cursorPos}
+	overlay := m.definition.overlays.FindOverlay(m.overlayKeyEdit.GetKey())
+	if overlay == nil {
+		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos}
 	}
 	notesToUndo := make([]GridNote, 0, m.definition.beats)
 	for i := range m.definition.beats {
-		key := gridKey{m.cursorPos.line, i}
-		currentNote, hasNote := overlay[key]
+		key := GK(m.cursorPos.Line, i)
+		currentNote, hasNote := overlay.GetNote(key)
 		if hasNote {
 			notesToUndo = append(notesToUndo, GridNote{key, currentNote})
 		}
 	}
 	if len(notesToUndo) == 0 {
-		return UndoLineToNothing{m.currentOverlayKey, m.cursorPos, m.cursorPos.line}
+		return UndoLineToNothing{m.currentOverlay.Key, m.cursorPos, m.cursorPos.Line}
 	}
-	return UndoLineGridNotes{m.currentOverlayKey, m.cursorPos, m.cursorPos.line, notesToUndo}
+	return UndoLineGridNotes{m.currentOverlay.Key, m.cursorPos, m.cursorPos.Line, notesToUndo}
 }
 
 func (m model) UndoableOverlay() Undoable {
-	_, hasOverlay := m.definition.overlays[m.currentOverlayKey]
-	if !hasOverlay {
-		return UndoNewOverlay{m.currentOverlayKey, m.cursorPos}
+	overlay := m.definition.overlays.FindOverlay(m.overlayKeyEdit.GetKey())
+	if overlay == nil {
+		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos}
 	}
 	notesToUndo := make([]GridNote, 0, m.definition.beats)
-	for key, note := range m.definition.overlays[m.currentOverlayKey] {
+	for key, note := range overlay.Notes {
 		notesToUndo = append(notesToUndo, GridNote{key, note})
 	}
-	return UndoGridNotes{m.currentOverlayKey, notesToUndo}
+	return UndoGridNotes{m.currentOverlay.Key, notesToUndo}
 }
 
 func (m model) Save() {
@@ -1762,28 +1610,13 @@ func (m model) SerializeKeyLine() string      { return "" }
 func (m model) SerializeOverlays() string     { return "" }
 func (m model) SerializeMetaOverlays() string { return "" }
 
-func (m *model) ToggleOverlayStackOptions(key overlayKey) {
-	meta, hasMeta := m.definition.metaOverlays[m.currentOverlayKey]
-
-	if !hasMeta {
-		m.definition.metaOverlays[m.currentOverlayKey] = metaOverlay{PressUp: true, PressDown: false}
-	} else if !meta.PressDown && !meta.PressUp {
-		m.definition.metaOverlays[m.currentOverlayKey] = metaOverlay{PressUp: true, PressDown: false}
-	} else if meta.PressUp {
-		m.definition.metaOverlays[m.currentOverlayKey] = metaOverlay{PressUp: false, PressDown: true}
-	} else {
-		m.definition.metaOverlays[m.currentOverlayKey] = metaOverlay{PressUp: false, PressDown: false}
-	}
-}
-
 func (m model) CurrentNote() note {
-	matchedKeys := m.EditKeys()
-	combinedOverlay := m.definition.CombinedPattern(matchedKeys)
-	return combinedOverlay[m.cursorPos]
+	note, _ := m.currentOverlay.GetNote(m.cursorPos)
+	return note
 }
 
 func RemoveRootKey(keys []overlayKey) []overlayKey {
-	index := slices.Index(keys, overlaykey.ROOT_OVERLAY)
+	index := slices.Index(keys, overlaykey.ROOT)
 	if index >= 0 {
 		return append(keys[:index], keys[index+1:]...)
 	}
@@ -1791,57 +1624,60 @@ func RemoveRootKey(keys []overlayKey) []overlayKey {
 }
 
 func (m *model) NextOverlay(direction int) {
-	keys := m.OverlayKeys()
-	slices.SortFunc(keys, overlaykey.Sort)
-	index := slices.Index(keys, m.currentOverlayKey)
-	if index+direction < len(keys) && index+direction >= 0 {
-		m.SetOverlayKey(keys[index+direction])
+	switch direction {
+	case 1:
+		overlay := m.definition.overlays.FindAboveOverlay(m.currentOverlay.Key)
+		m.currentOverlay = overlay
+	case -1:
+		if m.currentOverlay.Below != nil {
+			m.currentOverlay = m.currentOverlay.Below
+		}
+	default:
 	}
 }
 
 func (m *model) ClearOverlayLine() {
 	for i := uint8(0); i < m.definition.beats; i++ {
-		key := gridKey{m.cursorPos.line, i}
-		delete(m.definition.overlays[m.currentOverlayKey], key)
+		m.currentOverlay.RemoveNote(GK(m.cursorPos.Line, i))
 	}
 }
 
 func (m *model) ClearOverlay() {
-	delete(m.definition.overlays, m.currentOverlayKey)
+	m.definition.overlays.Remove(m.currentOverlay.Key)
 }
 
 func (m *model) RotateRight() {
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedPattern := m.CombinedPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
-	lastNote := combinedOverlay[gridKey{m.cursorPos.line, end}]
+	lastNote := combinedPattern[GK(m.cursorPos.Line, end)]
 	previousNote := zeronote
 	for i := uint8(start); i <= end; i++ {
-		gridKey := gridKey{m.cursorPos.line, i}
-		currentNote := combinedOverlay[gridKey]
+		gridKey := GK(m.cursorPos.Line, i)
+		currentNote := combinedPattern[gridKey]
 
-		m.CurrentNotable().SetNote(gridKey, previousNote)
+		m.currentOverlay.SetNote(gridKey, previousNote)
 		previousNote = currentNote
 	}
 
-	m.CurrentNotable().SetNote(gridKey{m.cursorPos.line, start}, lastNote)
+	m.currentOverlay.SetNote(GK(m.cursorPos.Line, start), lastNote)
 }
 
 func (m *model) RotateLeft() {
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedPattern := m.CombinedPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
-	firstNote := combinedOverlay[gridKey{m.cursorPos.line, start}]
+	firstNote := combinedPattern[GK(m.cursorPos.Line, start)]
 	previousNote := zeronote
 	for i := int8(end); i >= int8(start); i-- {
-		gridKey := gridKey{m.cursorPos.line, uint8(i)}
-		currentNote := combinedOverlay[gridKey]
+		gridKey := GK(m.cursorPos.Line, uint8(i))
+		currentNote := combinedPattern[gridKey]
 
-		m.CurrentNotable().SetNote(gridKey, previousNote)
+		m.currentOverlay.SetNote(gridKey, previousNote)
 		previousNote = currentNote
 	}
 
-	m.CurrentNotable().SetNote(gridKey{m.cursorPos.line, end}, firstNote)
+	m.currentOverlay.SetNote(GK(m.cursorPos.Line, end), firstNote)
 }
 
 func (m model) GroupPlayStateForNewLine() groupPlayState {
@@ -1854,27 +1690,27 @@ func (m model) GroupPlayStateForNewLine() groupPlayState {
 }
 
 func (m *model) Mute() {
-	var hasOtherSolo = m.hasOtherSolo(m.cursorPos.line)
-	switch m.playState[m.cursorPos.line].groupPlayState {
+	var hasOtherSolo = m.hasOtherSolo(m.cursorPos.Line)
+	switch m.playState[m.cursorPos.Line].groupPlayState {
 	case PLAY_STATE_PLAY:
-		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_MUTE
+		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_MUTE
 	case PLAY_STATE_MUTED_BY_SOLO:
-		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_MUTE
+		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_MUTE
 	case PLAY_STATE_MUTE:
 		if hasOtherSolo {
-			m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
+			m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
 		} else {
-			m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_PLAY
+			m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_PLAY
 		}
 	case PLAY_STATE_SOLO:
-		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_MUTE
+		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_MUTE
 	}
 }
 
 func (m *model) Solo() {
-	var hasOtherSolo = m.hasOtherSolo(m.cursorPos.line)
+	var hasOtherSolo = m.hasOtherSolo(m.cursorPos.Line)
 	for i, state := range m.playState {
-		if uint8(i) != m.cursorPos.line {
+		if uint8(i) != m.cursorPos.Line {
 			switch state.groupPlayState {
 			case PLAY_STATE_PLAY:
 				m.playState[i].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
@@ -1891,18 +1727,18 @@ func (m *model) Solo() {
 			}
 		}
 	}
-	switch m.playState[m.cursorPos.line].groupPlayState {
+	switch m.playState[m.cursorPos.Line].groupPlayState {
 	case PLAY_STATE_PLAY:
-		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_SOLO
+		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_SOLO
 	case PLAY_STATE_MUTED_BY_SOLO:
-		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_SOLO
+		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_SOLO
 	case PLAY_STATE_MUTE:
-		m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_SOLO
+		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_SOLO
 	case PLAY_STATE_SOLO:
 		if hasOtherSolo {
-			m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
+			m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
 		} else {
-			m.playState[m.cursorPos.line].groupPlayState = PLAY_STATE_PLAY
+			m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_PLAY
 		}
 	}
 }
@@ -1925,13 +1761,13 @@ type Buffer struct {
 }
 
 func (m model) Yank() Buffer {
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedPattern := m.CombinedPattern(m.currentOverlay)
 	bounds := m.YankBounds()
-	capturedGridNotes := make([]GridNote, 0, len(combinedOverlay))
+	capturedGridNotes := make([]GridNote, 0, len(combinedPattern))
 
-	for key, note := range combinedOverlay {
+	for key, note := range combinedPattern {
 		if bounds.InBounds(key) {
-			normalizedGridKey := gridKey{key.line - bounds.top, key.beat - bounds.left}
+			normalizedGridKey := GK(key.Line-bounds.top, key.Beat-bounds.left)
 			capturedGridNotes = append(capturedGridNotes, GridNote{normalizedGridKey, note})
 		}
 	}
@@ -1954,15 +1790,16 @@ func (m *model) Paste() {
 
 	for _, gridNote := range m.yankBuffer.gridNotes {
 		key := gridNote.gridKey
-		newKey := gridKey{key.line + keyModifier.line, key.beat + keyModifier.beat}
+		newKey := GK(key.Line+keyModifier.Line, key.Beat+keyModifier.Beat)
 		if bounds.InBounds(newKey) {
-			m.CurrentNotable().SetNote(newKey, gridNote.note)
+			m.currentOverlay.SetNote(newKey, gridNote.note)
 		}
 	}
 }
 
 func (m *model) advanceCurrentBeat() {
-	combinedPattern := m.definition.CombinedPattern(m.playingMatchedOverlays)
+	playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
+	combinedPattern := m.CombinedPattern(playingOverlay)
 	for i := range m.playState {
 		doContinue := m.advancePlayState(combinedPattern, i)
 		if !doContinue {
@@ -1971,13 +1808,13 @@ func (m *model) advanceCurrentBeat() {
 	}
 }
 
-func (m *model) advancePlayState(combinedPattern overlay, lineIndex int) bool {
+func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bool {
 	currentState := m.playState[lineIndex]
 	advancedBeat := int8(currentState.currentBeat) + currentState.direction
 
 	if advancedBeat < 0 || advancedBeat >= int8(m.definition.beats) {
 		// reset locations should be 1 time use.  Reset back to 0.
-		if m.playState[lineIndex].resetLocation != 0 && combinedPattern[gridKey{uint8(lineIndex), currentState.resetActionLocation}].Action == currentState.resetAction {
+		if m.playState[lineIndex].resetLocation != 0 && combinedPattern[GK(uint8(lineIndex), currentState.resetActionLocation)].Action == currentState.resetAction {
 			m.playState[lineIndex].currentBeat = currentState.resetLocation
 			advancedBeat = int8(currentState.resetLocation)
 		} else {
@@ -1990,23 +1827,23 @@ func (m *model) advancePlayState(combinedPattern overlay, lineIndex int) bool {
 		m.playState[lineIndex].currentBeat = uint8(advancedBeat)
 	}
 
-	switch combinedPattern[gridKey{uint8(lineIndex), uint8(advancedBeat)}].Action {
-	case ACTION_LINE_RESET:
+	switch combinedPattern[GK(uint8(lineIndex), uint8(advancedBeat))].Action {
+	case grid.ACTION_LINE_RESET:
 		m.playState[lineIndex].currentBeat = 0
-	case ACTION_LINE_REVERSE:
+	case grid.ACTION_LINE_REVERSE:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-2, 0))
 		m.playState[lineIndex].direction = -1
 		m.playState[lineIndex].resetLocation = uint8(max(advancedBeat-1, 0))
 		m.playState[lineIndex].resetActionLocation = uint8(advancedBeat)
-		m.playState[lineIndex].resetAction = ACTION_LINE_REVERSE
-	case ACTION_LINE_BOUNCE:
+		m.playState[lineIndex].resetAction = grid.ACTION_LINE_REVERSE
+	case grid.ACTION_LINE_BOUNCE:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
 		m.playState[lineIndex].direction = -1
-	case ACTION_LINE_SKIP_BEAT:
+	case grid.ACTION_LINE_SKIP_BEAT:
 		m.advancePlayState(combinedPattern, lineIndex)
-	case ACTION_LINE_DELAY:
+	case grid.ACTION_LINE_DELAY:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
-	case ACTION_RESET:
+	case grid.ACTION_RESET:
 		for i := range m.playState {
 			m.playState[i].currentBeat = 0
 			m.playState[i].direction = 1
@@ -2027,112 +1864,94 @@ func (m *model) advanceKeyCycle() {
 }
 
 func (m *model) determineMatachedOverlays() {
-	keys := m.OverlayKeys()
-	m.playingMatchedOverlays = m.definition.GetMatchingOverlays(m.keyCycles, keys)
+	// keys := m.OverlayKeys()
+	// m.playingMatchedOverlays = m.definition.GetMatchingOverlays(m.keyCycles, keys)
 }
 
-func (d Definition) CombinedPattern(keys []overlayKey) overlay {
-	var combinedOverlay = make(overlay)
-
-	for _, key := range slices.Backward(keys) {
-		for gridKey, note := range d.overlays[key] {
-			combinedOverlay[gridKey] = note
-		}
-	}
-	return combinedOverlay
+func (m model) PlayingOverlayKeys() []overlayKey {
+	keys := make([]overlayKey, 0, 10)
+	m.definition.overlays.GetMatchingOverlayKeys(&keys, m.keyCycles)
+	return keys
 }
 
-type VisualNote struct {
-	origin overlayKey
-	note
-}
-
-type VisualOverlay map[gridKey]VisualNote
-
-func (d Definition) VisualCombinedPattern(keys []overlayKey) VisualOverlay {
-	var combinedOverlay = make(VisualOverlay)
-
-	for _, key := range slices.Backward(keys) {
-		for gridKey, note := range d.overlays[key] {
-			combinedOverlay[gridKey] = VisualNote{key, note}
-		}
-	}
-	return combinedOverlay
-}
-
-func (m *model) KeysBelowCurrent() []overlayKey {
-	keys := m.OverlayKeys()
-	if !slices.Contains(keys, m.currentOverlayKey) {
-		keys = append(keys, m.currentOverlayKey)
-	}
-	slices.SortFunc(keys, overlaykey.Sort)
-	slices.Reverse(keys)
-	indexOfCurrent := slices.Index(keys, m.currentOverlayKey)
-	if indexOfCurrent >= 0 {
-		return keys[:indexOfCurrent]
+func (m model) CombinedPattern(overlay *overlays.Overlay) grid.Pattern {
+	pattern := make(grid.Pattern)
+	if m.playing {
+		overlay.CombinePattern(&pattern, m.keyCycles)
 	} else {
-		return []overlayKey{}
+		overlay.CombinePattern(&pattern, overlay.Key.GetMinimumKeyCycle())
 	}
+	return pattern
+}
+
+func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.OverlayPattern {
+	pattern := make(overlays.OverlayPattern)
+	if m.playing {
+		m.definition.overlays.CombineOverlayPattern(&pattern, m.keyCycles)
+	} else {
+		overlay.CombineOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle())
+	}
+	return pattern
 }
 
 func (m *model) fill(every uint8) {
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedOverlay := m.CombinedPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
 
 	for i := uint8(start); i <= end; i += every {
-		gridKey := gridKey{m.cursorPos.line, i}
+		gridKey := GK(m.cursorPos.Line, i)
 		currentNote, hasNote := combinedOverlay[gridKey]
 		hasNote = hasNote && currentNote != zeronote
 
 		if hasNote {
 			m.RemoveNote(gridKey)
 		} else {
-			m.CurrentNotable().SetNote(gridKey, note{5, InitRatchet(), ACTION_NOTHING, 0, 0})
+			m.currentOverlay.SetNote(gridKey, grid.InitNote())
 		}
 	}
 }
 
 func (m *model) incrementAccent(every uint8, modifier int8) {
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedOverlay := m.CombinedPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
 
 	for i := uint8(start); i <= end; i += every {
-		gridKey := gridKey{m.cursorPos.line, i}
+		gridKey := GK(m.cursorPos.Line, i)
 		currentNote, hasNote := combinedOverlay[gridKey]
 		hasNote = hasNote && currentNote != zeronote
 
 		if hasNote {
-			m.CurrentNotable().SetNote(gridKey, currentNote.IncrementAccent(modifier))
+			m.currentOverlay.SetNote(gridKey, currentNote.IncrementAccent(modifier))
 		}
 	}
 }
 
 func (m *model) incrementGate(every uint8, modifier int8) {
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedOverlay := m.CombinedPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
 
 	for i := uint8(start); i <= end; i += every {
-		gridKey := gridKey{m.cursorPos.line, i}
+		gridKey := GK(m.cursorPos.Line, i)
 		currentNote, hasNote := combinedOverlay[gridKey]
 		hasNote = hasNote && currentNote != zeronote
 
 		if hasNote {
-			m.CurrentNotable().SetNote(gridKey, currentNote.IncrementGate(modifier))
+			m.currentOverlay.SetNote(gridKey, currentNote.IncrementGate(modifier))
 		}
 	}
 }
 
 func (m *model) AccentModify(modifier int8) {
 	bounds := m.YankBounds()
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedOverlay := m.CombinedPattern(m.currentOverlay)
 
 	for key, currentNote := range combinedOverlay {
 		if bounds.InBounds(key) {
 			if currentNote != zeronote {
-				m.CurrentNotable().SetNote(key, currentNote.IncrementAccent(modifier))
+				m.currentOverlay.SetNote(key, currentNote.IncrementAccent(modifier))
 			}
 		}
 	}
@@ -2140,12 +1959,12 @@ func (m *model) AccentModify(modifier int8) {
 
 func (m *model) GateModify(modifier int8) {
 	bounds := m.YankBounds()
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedOverlay := m.CombinedPattern(m.currentOverlay)
 
 	for key, currentNote := range combinedOverlay {
 		if bounds.InBounds(key) {
 			if currentNote != zeronote {
-				m.CurrentNotable().SetNote(key, currentNote.IncrementGate(modifier))
+				m.currentOverlay.SetNote(key, currentNote.IncrementGate(modifier))
 			}
 		}
 	}
@@ -2153,12 +1972,12 @@ func (m *model) GateModify(modifier int8) {
 
 func (m *model) WaitModify(modifier int8) {
 	bounds := m.YankBounds()
-	combinedOverlay := m.definition.CombinedPattern(m.EditKeys())
+	combinedOverlay := m.CombinedPattern(m.currentOverlay)
 
 	for key, currentNote := range combinedOverlay {
 		if bounds.InBounds(key) {
 			if currentNote != zeronote {
-				m.CurrentNotable().SetNote(key, currentNote.IncrementWait(modifier))
+				m.currentOverlay.SetNote(key, currentNote.IncrementWait(modifier))
 			}
 		}
 	}
@@ -2166,43 +1985,28 @@ func (m *model) WaitModify(modifier int8) {
 
 func (m model) PatternActionBoundaries() (uint8, uint8) {
 	if m.visualMode {
-		if m.visualAnchorCursor.beat < m.cursorPos.beat {
-			return m.visualAnchorCursor.beat, m.cursorPos.beat
+		if m.visualAnchorCursor.Beat < m.cursorPos.Beat {
+			return m.visualAnchorCursor.Beat, m.cursorPos.Beat
 		} else {
-			return m.cursorPos.beat, m.visualAnchorCursor.beat
+			return m.cursorPos.Beat, m.visualAnchorCursor.Beat
 		}
 	} else {
-		return m.cursorPos.beat, m.definition.beats - 1
+		return m.cursorPos.Beat, m.definition.beats - 1
 	}
 }
 
 func (m *model) RemoveNote(gridKey gridKey) {
-	if m.currentOverlayKey == overlaykey.ROOT_OVERLAY {
-		delete(m.definition.overlays[overlaykey.ROOT_OVERLAY], gridKey)
+	if m.currentOverlay.Key == overlaykey.ROOT {
+		m.currentOverlay.RemoveNote(gridKey)
 	} else {
-		m.CurrentNotable().SetNote(gridKey, zeronote)
-	}
-}
-
-func (m model) EditKeys() []overlayKey {
-	keysBelowCurrent := m.KeysBelowCurrent()
-	keysBelowCurrent = append(keysBelowCurrent, m.currentOverlayKey)
-	matchedKeys := m.definition.GetMatchingOverlays(GetMinimumKeyCycle(m.currentOverlayKey), keysBelowCurrent)
-	slices.SortFunc(matchedKeys, overlaykey.Sort)
-	return matchedKeys
-}
-
-func (m *model) CurrentKeys() []overlayKey {
-	if m.playing {
-		return m.playingMatchedOverlays
-	} else {
-		return m.EditKeys()
+		m.currentOverlay.SetNote(gridKey, zeronote)
 	}
 }
 
 func (m model) OverlayKeys() []overlayKey {
-	keys := make([]overlayKey, 0, 5)
-	return slices.AppendSeq(keys, maps.Keys(m.definition.overlays))
+	keys := make([]overlayKey, 0, 10)
+	m.definition.overlays.CollectKeys(&keys)
+	return keys
 }
 
 func (m model) TempoView() string {
@@ -2257,7 +2061,7 @@ func (m model) View() string {
 
 	if m.accentMode || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
-	} else if len(m.definition.overlays) == 0 ||
+	} else if m.definition.overlays.Key == overlaykey.ROOT ||
 		m.selectionIndicator == SELECT_SETUP_NOTE ||
 		m.selectionIndicator == SELECT_SETUP_CHANNEL {
 		sideView = m.SetupView()
@@ -2323,14 +2127,14 @@ func (m model) SetupView() string {
 	for i, line := range m.definition.lines {
 
 		buf.WriteString("CH ")
-		if uint8(i) == m.cursorPos.line && m.selectionIndicator == SELECT_SETUP_CHANNEL {
+		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_CHANNEL {
 			buf.WriteString(colors.SelectedColor.Render(fmt.Sprintf("%2d", line.Channel)))
 		} else {
 			buf.WriteString(colors.NumberColor.Render(fmt.Sprintf("%2d", line.Channel)))
 		}
 
 		buf.WriteString(" NOTE ")
-		if uint8(i) == m.cursorPos.line && m.selectionIndicator == SELECT_SETUP_NOTE {
+		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_NOTE {
 			buf.WriteString(colors.SelectedColor.Render(strconv.Itoa(int(line.Note))))
 		} else {
 			buf.WriteString(colors.NumberColor.Render(strconv.Itoa(int(line.Note))))
@@ -2349,35 +2153,35 @@ func (m model) OverlaysView() string {
 	var buf strings.Builder
 	buf.WriteString("Overlays\n")
 	buf.WriteString("——————————————\n")
-	keys := m.OverlayKeys()
-	slices.SortFunc(keys, overlaykey.Sort)
 	style := lipgloss.NewStyle().Background(seqOverlayColor)
-	for _, k := range keys {
+	var playingOverlayKeys = m.PlayingOverlayKeys()
+	for currentOverlay := m.definition.overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
 		var playing = ""
-		if m.playing && m.playingMatchedOverlays[0] == k {
+		if m.playing && playingOverlayKeys[0] == currentOverlay.Key {
 			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(currentPlayingColor).Render(" \u25CF ")
 			buf.WriteString(playing)
 			playingSpacer = ""
-		} else if m.playing && slices.Contains(m.playingMatchedOverlays, k) {
+		} else if m.playing && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
 			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(activePlayingColor).Render(" \u25C9 ")
 			buf.WriteString(playing)
 			playingSpacer = ""
 		}
 		var editing = ""
-		if m.currentOverlayKey == k {
+		if m.currentOverlay.Key == currentOverlay.Key {
 			editing = " E"
 		}
 		var stackModifier = ""
-		if m.definition.metaOverlays[k].PressDown {
+		if currentOverlay.PressDown {
 			stackModifier = " \u2193\u0332"
-		} else if m.definition.metaOverlays[k].PressUp {
+		} else if currentOverlay.PressUp {
 			stackModifier = " \u2191\u0305"
 		}
-		overlayLine := fmt.Sprintf("%s%2s%2s", overlaykey.View(k), stackModifier, editing)
+
+		overlayLine := fmt.Sprintf("%s%2s%2s", overlaykey.View(currentOverlay.Key), stackModifier, editing)
 
 		buf.WriteString(playingSpacer)
-		if slices.Contains(m.playingMatchedOverlays, k) {
+		if m.playing && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
 			buf.WriteString(style.Render(overlayLine))
 		} else {
 			buf.WriteString(overlayLine)
@@ -2394,7 +2198,7 @@ var accentModeStyle = lipgloss.NewStyle().Background(accents[1].Color).Foregroun
 func (m model) ViewTriggerSeq() string {
 	var buf strings.Builder
 	var mode string
-	visualCombinedPattern := m.definition.VisualCombinedPattern(m.CurrentKeys())
+	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
 
 	if m.accentMode {
 		mode = " Accent Mode "
@@ -2470,7 +2274,7 @@ func (m model) CurrentOverlayView() string {
 	if len(m.playingMatchedOverlays) > 0 {
 		matchedKey = m.playingMatchedOverlays[0]
 	} else {
-		matchedKey = overlaykey.ROOT_OVERLAY
+		matchedKey = overlaykey.ROOT
 	}
 	editOverlay := fmt.Sprintf("Edit %s", lipgloss.PlaceHorizontal(11, 0, m.ViewOverlay()))
 	playOverlay := fmt.Sprintf("Play %s", lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
@@ -2491,7 +2295,7 @@ func KeyLineIndicator(k uint8, l uint8) string {
 	}
 }
 
-func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) string {
+func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayPattern) string {
 	var buf strings.Builder
 	indicator := "│"
 	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PLAY_STATE_MUTE {
@@ -2503,7 +2307,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 	buf.WriteString(fmt.Sprintf("%2d%s%s", lineNumber, KeyLineIndicator(m.definition.keyline, lineNumber), indicator))
 
 	for i := uint8(0); i < m.definition.beats; i++ {
-		currentGridKey := gridKey{uint8(lineNumber), i}
+		currentGridKey := GK(uint8(lineNumber), i)
 		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
 
 		var backgroundSeqColor lipgloss.Color
@@ -2511,7 +2315,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 			backgroundSeqColor = seqCursorColor
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
 			backgroundSeqColor = seqVisualColor
-		} else if hasNote && overlayNote.origin != overlaykey.ROOT_OVERLAY {
+		} else if hasNote && overlayNote.OverlayKey != overlaykey.ROOT {
 			backgroundSeqColor = seqOverlayColor
 		} else if i%8 > 3 {
 			backgroundSeqColor = altSeqColor
@@ -2519,10 +2323,10 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 			backgroundSeqColor = seqColor
 		}
 
-		char, foregroundColor := overlayNote.ViewComponents()
+		char, foregroundColor := ViewNoteComponents(overlayNote.Note)
 
 		style := lipgloss.NewStyle().Background(backgroundSeqColor)
-		if m.cursorPos.line == uint8(lineNumber) && m.cursorPos.beat == i {
+		if m.cursorPos.Line == uint8(lineNumber) && m.cursorPos.Beat == i {
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
@@ -2539,10 +2343,10 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern VisualOverlay) st
 
 func InitBounds(cursorA, cursorB gridKey) Bounds {
 	return Bounds{
-		top:    min(cursorA.line, cursorB.line),
-		right:  max(cursorA.beat, cursorB.beat),
-		bottom: max(cursorA.line, cursorB.line),
-		left:   min(cursorA.beat, cursorB.beat),
+		top:    min(cursorA.Line, cursorB.Line),
+		right:  max(cursorA.Beat, cursorB.Beat),
+		bottom: max(cursorA.Line, cursorB.Line),
+		left:   min(cursorA.Beat, cursorB.Beat),
 	}
 }
 
@@ -2561,17 +2365,17 @@ func (bounds Bounds) GridKeys() []gridKey {
 	keys := make([]gridKey, 0, bounds.Area())
 	for i := bounds.top; i <= bounds.bottom; i++ {
 		for j := bounds.left; j <= bounds.right; j++ {
-			keys = append(keys, gridKey{i, j})
+			keys = append(keys, GK(i, j))
 		}
 	}
 	return keys
 }
 
 func (b Bounds) InBounds(key gridKey) bool {
-	return key.line >= b.top &&
-		key.line <= b.bottom &&
-		key.beat >= b.left &&
-		key.beat <= b.right
+	return key.Line >= b.top &&
+		key.Line <= b.bottom &&
+		key.Beat >= b.left &&
+		key.Beat <= b.right
 }
 
 func (b Bounds) Normalized() Bounds {
@@ -2579,11 +2383,11 @@ func (b Bounds) Normalized() Bounds {
 }
 
 func (b Bounds) BottomRightFrom(key gridKey) gridKey {
-	return gridKey{key.line + b.bottom, key.beat + b.right}
+	return GK(key.Line+b.bottom, key.Beat+b.right)
 }
 
 func (b Bounds) TopLeft() gridKey {
-	return gridKey{b.top, b.left}
+	return GK(b.top, b.left)
 }
 
 func (m model) VisualSelectionBounds() Bounds {
@@ -2614,9 +2418,8 @@ func (m model) InVisualSelection(key gridKey) bool {
 	return m.VisualSelectionBounds().InBounds(key)
 }
 
-func (n note) ViewComponents() (string, lipgloss.Color) {
+func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 
-	currentNote := n
 	currentAccent := accents[currentNote.AccentIndex]
 	currentAction := currentNote.Action
 	var char string
@@ -2625,7 +2428,7 @@ func (n note) ViewComponents() (string, lipgloss.Color) {
 	if currentNote.WaitIndex > 0 {
 		waitShape = "\u0320"
 	}
-	if currentAction == ACTION_NOTHING && currentNote != zeronote {
+	if currentAction == grid.ACTION_NOTHING && currentNote != zeronote {
 		char = string(currentAccent.Shape) + string(ratchets[currentNote.Ratchets.Length]) + string(gates[currentNote.GateIndex].Shape) + waitShape
 		foregroundColor = currentAccent.Color
 	} else {

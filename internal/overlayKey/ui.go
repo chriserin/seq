@@ -43,11 +43,15 @@ type Model struct {
 }
 
 func InitModel() Model {
-	return Model{ROOT_OVERLAY, FOCUS_NOTHING, false}
+	return Model{ROOT, FOCUS_NOTHING, false}
 }
 
 func (m *Model) SetOverlayKey(op OverlayPeriodicity) {
 	m.overlayKey = op
+}
+
+func (m Model) GetKey() OverlayPeriodicity {
+	return m.overlayKey
 }
 
 func (m *Model) Focus(shouldFocus bool) {

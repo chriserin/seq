@@ -11,24 +11,17 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	overlaykey "github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/seq/internal/overlays"
 )
 
 type WriteOverlays map[string]WriteOverlay
-type WriteMetaOverlays map[string]metaOverlay
 
-func TransformOverlays(overlays overlays) WriteOverlays {
+func TransformOverlays(overlays overlay) WriteOverlays {
 	transformedOverlays := make(map[string]WriteOverlay)
-	for k, v := range overlays {
-		transformedOverlays[k.WriteKey()] = TransformOverlay(v)
-	}
-	return transformedOverlays
-}
-
-func TransformMetaOverlays(metaOverlays map[overlayKey]metaOverlay) WriteMetaOverlays {
-	transformedOverlays := make(WriteMetaOverlays)
-	for k, v := range metaOverlays {
-		transformedOverlays[k.WriteKey()] = v
-	}
+	// for k, v := range overlays {
+	// 	transformedOverlays[k.WriteKey()] = TransformOverlay(v)
+	// }
 	return transformedOverlays
 }
 
@@ -36,7 +29,7 @@ type WriteOverlay map[string]note
 
 func TransformOverlay(grid overlay) WriteOverlay {
 	transformedOverlay := make(WriteOverlay)
-	for k, v := range grid {
+	for k, v := range grid.Notes {
 		transformedOverlay[k.String()] = v
 	}
 
@@ -50,36 +43,27 @@ type AllWrite struct {
 	Tempo           int
 	Subdivisions    int
 	Keyline         uint8
-	MetaOverlays    WriteMetaOverlays
 	Accents         patternAccents
 }
 
-func (a AllWrite) UntransformOverlays() overlays {
-	untransformedOverlays := make(overlays)
-	for k, v := range a.Overlays {
+func (a AllWrite) UntransformOverlays() *overlay {
+	overlays := overlays.InitOverlay(overlaykey.ROOT, nil)
+	for k, _ := range a.Overlays {
 		unMarshalledKey := UnMarshalOverlayKey(k)
-		untransformedOverlays[unMarshalledKey] = UntransformOverlay(v)
+		newOverlay := overlays.Add(unMarshalledKey)
+		overlays = newOverlay
 	}
-	return untransformedOverlays
+	return overlays
 }
 
-func (a AllWrite) UntransformMetaOverlays() map[overlayKey]metaOverlay {
-	untransformedOverlays := make(map[overlayKey]metaOverlay)
-	for k, v := range a.MetaOverlays {
-		unMarshalledKey := UnMarshalOverlayKey(k)
-		untransformedOverlays[unMarshalledKey] = v
-	}
-	return untransformedOverlays
-}
-
-func UntransformOverlay(grid WriteOverlay) overlay {
-	untransformedOverlays := make(overlay)
-	for k, v := range grid {
-		unMarshalledKey := UnMarshalGridKey(k)
-		untransformedOverlays[unMarshalledKey] = v
-	}
-	return untransformedOverlays
-}
+// func UntransformOverlay(grid WriteOverlay) overlay {
+// 	untransformedOverlays := make(overlay)
+// 	for k, v := range grid {
+// 		unMarshalledKey := UnMarshalGridKey(k)
+// 		untransformedOverlays[unMarshalledKey] = v
+// 	}
+// 	return untransformedOverlays
+// }
 
 func UnMarshalOverlayKey(k string) overlayKey {
 	parts := strings.Split(k, "-")
@@ -111,7 +95,7 @@ func UnMarshalGridKey(k string) gridKey {
 	if err != nil {
 		panic("Unable to deserialize gridKey")
 	}
-	return gridKey{uint8(line), uint8(beat)}
+	return GK(uint8(line), uint8(beat))
 }
 
 func Read() (Definition, bool) {
@@ -129,7 +113,6 @@ func Read() (Definition, bool) {
 		tempo:        (*all).Tempo,
 		keyline:      (*all).Keyline,
 		subdivisions: (*all).Subdivisions,
-		metaOverlays: (*all).UntransformMetaOverlays(),
 		accents:      (*all).Accents,
 	}, true
 }
@@ -145,13 +128,12 @@ func Write(definition Definition) {
 	}
 	encoder := toml.NewEncoder(f)
 	all := AllWrite{
-		Overlays:        TransformOverlays(definition.overlays),
+		Overlays:        TransformOverlays(*definition.overlays),
 		LineDefinitions: definition.lines,
 		Beats:           definition.beats,
 		Tempo:           definition.tempo,
 		Subdivisions:    definition.subdivisions,
 		Keyline:         definition.keyline,
-		MetaOverlays:    TransformMetaOverlays(definition.metaOverlays),
 		Accents:         definition.accents,
 	}
 	err = encoder.Encode(all)

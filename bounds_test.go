@@ -16,19 +16,19 @@ func TestInBounds(t *testing.T) {
 		{
 			desc:   "A",
 			bounds: Bounds{1, 1, 1, 1},
-			value:  gridKey{1, 1},
+			value:  GK(1, 1),
 			result: true,
 		},
 		{
 			desc:   "B",
 			bounds: Bounds{0, 1, 1, 0},
-			value:  gridKey{1, 1},
+			value:  GK(1, 1),
 			result: true,
 		},
 		{
 			desc:   "C",
 			bounds: Bounds{0, 0, 1, 1},
-			value:  gridKey{1, 1},
+			value:  GK(1, 1),
 			result: false,
 		},
 	}

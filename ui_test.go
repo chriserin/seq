@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	overlaykey "github.com/chriserin/seq/internal/overlayKey"
+	overlaykey "github.com/chriserin/seq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -117,7 +117,7 @@ func TestOverlayKeySort(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			newSlice := make([]overlayKey, len(tC.keys))
 			copy(newSlice, tC.keys)
-			slices.SortFunc(newSlice, overlaykey.Sort)
+			slices.SortFunc(newSlice, overlaykey.Compare)
 			assert.Equal(t, tC.expected, newSlice[0])
 		})
 	}
@@ -135,17 +135,17 @@ func TestCombinePattern(t *testing.T) {
 			definition: Definition{
 				overlays: overlays{
 					OK(1, 1): overlay{
-						{1, 1}: note{Action: 1},
+						GK(1, 1): note{Action: 1},
 					},
 					OK(1, 2): overlay{
-						{1, 2}: note{Action: 2},
+						GK(1, 2): note{Action: 2},
 					},
 				},
 			},
 			keys: []overlayKey{OK(1, 2), OK(1, 1)},
 			result: overlay{
-				{1, 1}: note{Action: 1},
-				{1, 2}: note{Action: 2},
+				GK(1, 1): note{Action: 1},
+				GK(1, 2): note{Action: 2},
 			},
 		},
 		{
@@ -153,21 +153,21 @@ func TestCombinePattern(t *testing.T) {
 			definition: Definition{
 				overlays: overlays{
 					OK(1, 1): overlay{
-						{1, 1}: note{Action: 1},
+						GK(1, 1): note{Action: 1},
 					},
 					OK(2, 1): overlay{
-						{1, 2}: note{Action: 2},
+						GK(1, 2): note{Action: 2},
 					},
 					OK(3, 1): overlay{
-						{1, 3}: note{Action: 3},
+						GK(1, 3): note{Action: 3},
 					},
 				},
 			},
 			keys: []overlayKey{OK(3, 1), OK(2, 1), OK(1, 1)},
 			result: overlay{
-				{1, 1}: note{Action: 1},
-				{1, 2}: note{Action: 2},
-				{1, 3}: note{Action: 3},
+				GK(1, 1): note{Action: 1},
+				GK(1, 2): note{Action: 2},
+				GK(1, 3): note{Action: 3},
 			},
 		},
 	}
@@ -187,13 +187,13 @@ func TestEditKeys(t *testing.T) {
 	}{
 		{
 			desc:   "A",
-			m:      model{currentOverlayKey: OK(1, 1)},
+			m:      model{currentOverlay: OK(1, 1)},
 			result: []overlayKey{OK(1, 1)},
 		},
 		{
 			desc: "B",
 			m: model{
-				currentOverlayKey: OK(1, 1),
+				currentOverlay: OK(1, 1),
 				definition: Definition{
 					overlays: overlays{
 						OK(1, 1): make(overlay),
@@ -204,7 +204,7 @@ func TestEditKeys(t *testing.T) {
 		{
 			desc: "C",
 			m: model{
-				currentOverlayKey: OK(2, 1),
+				currentOverlay: OK(2, 1),
 				definition: Definition{
 					overlays: overlays{
 						OK(1, 1): make(overlay),
@@ -220,7 +220,7 @@ func TestEditKeys(t *testing.T) {
 		{
 			desc: "D",
 			m: model{
-				currentOverlayKey: OK(3, 1),
+				currentOverlay: OK(3, 1),
 				definition: Definition{
 					overlays: overlays{
 						OK(1, 1): make(overlay),
@@ -232,7 +232,7 @@ func TestEditKeys(t *testing.T) {
 		{
 			desc: "E",
 			m: model{
-				currentOverlayKey: OK(4, 1),
+				currentOverlay: OK(4, 1),
 				definition: Definition{
 					overlays: overlays{
 						// overlayKey{1, 1}: make(overlay),
@@ -244,7 +244,7 @@ func TestEditKeys(t *testing.T) {
 		{
 			desc: "F",
 			m: model{
-				currentOverlayKey: OK(2, 1),
+				currentOverlay: OK(2, 1),
 				definition: Definition{
 					overlays: overlays{
 						OK(1, 1): make(overlay),

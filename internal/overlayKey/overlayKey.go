@@ -37,7 +37,7 @@ func (o *OverlayPeriodicity) DecrementInterval() {
 	}
 }
 
-var ROOT_OVERLAY OverlayPeriodicity = OverlayPeriodicity{1, 1, 0, 0}
+var ROOT OverlayPeriodicity = OverlayPeriodicity{1, 1, 0, 0}
 
 func (op OverlayPeriodicity) MarshalTOML() ([]byte, error) {
 	return []byte(fmt.Sprintf("%d/%d", op.Shift, op.Interval)), nil
@@ -47,8 +47,8 @@ func (op OverlayPeriodicity) WriteKey() string {
 	return fmt.Sprintf("OverlayKey-%d/%d", op.Shift, op.Interval)
 }
 
-// Sort from most specific to least specific
-func Sort(a, b OverlayPeriodicity) int {
+// Compare from most specific to least specific
+func Compare(a, b OverlayPeriodicity) int {
 	intervalDiff := int(b.Interval) - int(a.Interval)
 	shiftDiff := int(b.Shift) - int(a.Shift)
 	startDiff := int(b.StartCycle) - int(a.StartCycle)
@@ -89,9 +89,9 @@ func (op OverlayPeriodicity) DoesMatch(cycle int) bool {
 }
 
 func (op OverlayPeriodicity) normalizeShiftInterval() (int, int) {
-
 	var overallInterval = op.Interval
 	var shift = op.Shift
+
 	if op.Interval < op.Shift {
 		if op.Shift%op.Interval == 0 {
 			overallInterval = op.Shift / op.Interval
@@ -100,5 +100,15 @@ func (op OverlayPeriodicity) normalizeShiftInterval() (int, int) {
 			overallInterval = op.Interval * (op.Shift/op.Interval + 1)
 		}
 	}
+
 	return int(shift), int(overallInterval)
+}
+
+func (op OverlayPeriodicity) GetMinimumKeyCycle() int {
+	for i := 1; i < 100; i++ {
+		if op.DoesMatch(i) {
+			return i
+		}
+	}
+	return 100
 }

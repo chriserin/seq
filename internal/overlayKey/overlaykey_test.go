@@ -86,7 +86,7 @@ func TestSort(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			slices.SortFunc(tC.input, Sort)
+			slices.SortFunc(tC.input, Compare)
 			assert.Equal(t, tC.output, tC.input)
 		})
 	}
