@@ -1554,7 +1554,7 @@ func (m model) UndoableNote() Undoable {
 	if overlay == nil {
 		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos}
 	}
-	currentNote, hasNote := overlay.GetNote(m.cursorPos)
+	currentNote, hasNote := overlay.Notes[m.cursorPos]
 	if hasNote {
 		return UndoGridNote{m.currentOverlay.Key, m.cursorPos, GridNote{m.cursorPos, currentNote}}
 	} else {
@@ -1571,7 +1571,7 @@ func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
 	gridKeys := bounds.GridKeys()
 	gridNotes := make([]GridNote, 0, len(gridKeys))
 	for _, k := range gridKeys {
-		currentNote, hasNote := overlay.GetNote(k)
+		currentNote, hasNote := overlay.Notes[k]
 		if hasNote {
 			gridNotes = append(gridNotes, GridNote{k, currentNote})
 		}
@@ -1587,7 +1587,7 @@ func (m model) UndoableLine() Undoable {
 	notesToUndo := make([]GridNote, 0, m.definition.beats)
 	for i := range m.definition.beats {
 		key := GK(m.cursorPos.Line, i)
-		currentNote, hasNote := overlay.GetNote(key)
+		currentNote, hasNote := overlay.Notes[key]
 		if hasNote {
 			notesToUndo = append(notesToUndo, GridNote{key, currentNote})
 		}
