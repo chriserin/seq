@@ -440,6 +440,7 @@ type model struct {
 	midiConnection      MidiConnection
 	logFile             *os.File
 	playing             bool
+	playEditing         bool
 	playTime            time.Time
 	trackTime           time.Duration
 	totalBeats          int
@@ -901,7 +902,7 @@ func (m *model) OverlayRemoveTrigger() {
 }
 
 func (m *model) IncreaseRatchet() {
-	combinedPattern := m.CombinedPattern(m.currentOverlay)
+	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
 	bounds := m.YankBounds()
 
 	for key, currentNote := range combinedPattern {
@@ -917,7 +918,7 @@ func (m *model) IncreaseRatchet() {
 }
 
 func (m *model) DecreaseRatchet() {
-	combinedOverlay := m.CombinedPattern(m.currentOverlay)
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 	bounds := m.YankBounds()
 
 	for key, currentNote := range combinedOverlay {
@@ -1167,6 +1168,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// }
 
 			m.playing = !m.playing
+			m.playEditing = false
 			m.playTime = time.Now()
 			if m.playing {
 				m.keyCycles = 0
@@ -1545,6 +1547,9 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 	}
+	if m.playing {
+		m.playEditing = true
+	}
 	m.ResetRedo()
 	return m
 }
@@ -1664,7 +1669,7 @@ func (m *model) ClearOverlay() {
 }
 
 func (m *model) RotateRight() {
-	combinedPattern := m.CombinedPattern(m.currentOverlay)
+	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
 	lastNote := combinedPattern[GK(m.cursorPos.Line, end)]
@@ -1681,7 +1686,7 @@ func (m *model) RotateRight() {
 }
 
 func (m *model) RotateLeft() {
-	combinedPattern := m.CombinedPattern(m.currentOverlay)
+	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
 	firstNote := combinedPattern[GK(m.cursorPos.Line, start)]
@@ -1778,7 +1783,7 @@ type Buffer struct {
 }
 
 func (m model) Yank() Buffer {
-	combinedPattern := m.CombinedPattern(m.currentOverlay)
+	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
 	bounds := m.YankBounds()
 	capturedGridNotes := make([]GridNote, 0, len(combinedPattern))
 
@@ -1816,7 +1821,7 @@ func (m *model) Paste() {
 
 func (m *model) advanceCurrentBeat() {
 	playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
-	combinedPattern := m.CombinedPattern(playingOverlay)
+	combinedPattern := m.CombinedEditPattern(playingOverlay)
 	for i := range m.playState {
 		doContinue := m.advancePlayState(combinedPattern, i)
 		if !doContinue {
@@ -1885,13 +1890,9 @@ func (m model) PlayingOverlayKeys() []overlayKey {
 	return keys
 }
 
-func (m model) CombinedPattern(overlay *overlays.Overlay) grid.Pattern {
+func (m model) CombinedEditPattern(overlay *overlays.Overlay) grid.Pattern {
 	pattern := make(grid.Pattern)
-	if m.playing {
-		overlay.CombinePattern(&pattern, m.keyCycles)
-	} else {
-		overlay.CombinePattern(&pattern, overlay.Key.GetMinimumKeyCycle())
-	}
+	overlay.CombinePattern(&pattern, overlay.Key.GetMinimumKeyCycle())
 	return pattern
 }
 
@@ -1915,7 +1916,7 @@ func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 
 func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.OverlayPattern {
 	pattern := make(overlays.OverlayPattern)
-	if m.playing {
+	if m.playing && !m.playEditing {
 		m.definition.overlays.CombineOverlayPattern(&pattern, m.keyCycles)
 	} else {
 		overlay.CombineOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle())
@@ -1924,7 +1925,7 @@ func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.Overla
 }
 
 func (m *model) fill(every uint8) {
-	combinedOverlay := m.CombinedPattern(m.currentOverlay)
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
 
@@ -1942,7 +1943,7 @@ func (m *model) fill(every uint8) {
 }
 
 func (m *model) incrementAccent(every uint8, modifier int8) {
-	combinedOverlay := m.CombinedPattern(m.currentOverlay)
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
 
@@ -1958,7 +1959,7 @@ func (m *model) incrementAccent(every uint8, modifier int8) {
 }
 
 func (m *model) incrementGate(every uint8, modifier int8) {
-	combinedOverlay := m.CombinedPattern(m.currentOverlay)
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
 
@@ -1974,7 +1975,7 @@ func (m *model) incrementGate(every uint8, modifier int8) {
 }
 
 func (m *model) incrementWait(every uint8, modifier int8) {
-	combinedOverlay := m.CombinedPattern(m.currentOverlay)
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	start, end := m.PatternActionBoundaries()
 
@@ -1991,7 +1992,7 @@ func (m *model) incrementWait(every uint8, modifier int8) {
 
 func (m *model) AccentModify(modifier int8) {
 	bounds := m.YankBounds()
-	combinedOverlay := m.CombinedPattern(m.currentOverlay)
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	for key, currentNote := range combinedOverlay {
 		if bounds.InBounds(key) {
@@ -2004,7 +2005,7 @@ func (m *model) AccentModify(modifier int8) {
 
 func (m *model) GateModify(modifier int8) {
 	bounds := m.YankBounds()
-	combinedOverlay := m.CombinedPattern(m.currentOverlay)
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	for key, currentNote := range combinedOverlay {
 		if bounds.InBounds(key) {
@@ -2017,7 +2018,7 @@ func (m *model) GateModify(modifier int8) {
 
 func (m *model) WaitModify(modifier int8) {
 	bounds := m.YankBounds()
-	combinedOverlay := m.CombinedPattern(m.currentOverlay)
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	for key, currentNote := range combinedOverlay {
 		if bounds.InBounds(key) {
@@ -2324,7 +2325,15 @@ func (m model) CurrentOverlayView() string {
 	} else {
 		matchedKey = overlaykey.ROOT
 	}
-	editOverlay := fmt.Sprintf("Edit %s", lipgloss.PlaceHorizontal(11, 0, m.ViewOverlay()))
+
+	var editOverlayTitle = ""
+	if m.playEditing {
+		editOverlayTitle = lipgloss.NewStyle().Background(seqOverlayColor).Render("Edit")
+	} else {
+		editOverlayTitle = "Edit"
+	}
+
+	editOverlay := fmt.Sprintf("%s %s", editOverlayTitle, lipgloss.PlaceHorizontal(11, 0, m.ViewOverlay()))
 	playOverlay := fmt.Sprintf("Play %s", lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
 	return fmt.Sprintf("   %s  %s", editOverlay, playOverlay)
 }
