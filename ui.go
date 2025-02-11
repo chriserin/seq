@@ -2334,6 +2334,7 @@ var seqColor = lipgloss.Color("#000000")
 var seqCursorColor = lipgloss.Color("#444444")
 var seqVisualColor = lipgloss.Color("#aaaaaa")
 var seqOverlayColor = lipgloss.Color("#333388")
+var seqMiddleOverlayColor = lipgloss.Color("#405810")
 
 func KeyLineIndicator(k uint8, l uint8) string {
 	if k == l {
@@ -2363,8 +2364,10 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 			backgroundSeqColor = seqCursorColor
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
 			backgroundSeqColor = seqVisualColor
-		} else if hasNote && overlayNote.OverlayKey != overlaykey.ROOT {
+		} else if hasNote && overlayNote.HighestOverlay && overlayNote.OverlayKey != overlaykey.ROOT {
 			backgroundSeqColor = seqOverlayColor
+		} else if hasNote && !overlayNote.HighestOverlay && overlayNote.OverlayKey != overlaykey.ROOT {
+			backgroundSeqColor = seqMiddleOverlayColor
 		} else if i%8 > 3 {
 			backgroundSeqColor = altSeqColor
 		} else {

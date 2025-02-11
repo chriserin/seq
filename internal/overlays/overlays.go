@@ -127,19 +127,23 @@ func (ol Overlay) CurrentBeatOverlayPattern(pattern *grid.Pattern, keyCycles int
 }
 
 type OverlayNote struct {
-	OverlayKey overlaykey.OverlayPeriodicity
-	Note       grid.Note
+	OverlayKey     overlaykey.OverlayPeriodicity
+	Note           grid.Note
+	HighestOverlay bool
 }
 type OverlayPattern map[grid.GridKey]OverlayNote
 
 func (ol Overlay) CombineOverlayPattern(pattern *OverlayPattern, keyCycles int) {
+	var firstMatch = true
 	var addFunc = func(overlayPattern grid.Pattern, currentKey Key) bool {
 		for gridKey, note := range overlayPattern {
 			_, hasNote := (*pattern)[gridKey]
 			if !hasNote {
-				(*pattern)[gridKey] = OverlayNote{OverlayKey: currentKey, Note: note}
+				(*pattern)[gridKey] = OverlayNote{OverlayKey: currentKey, Note: note, HighestOverlay: firstMatch}
 			}
 		}
+
+		firstMatch = false
 
 		return true
 	}
