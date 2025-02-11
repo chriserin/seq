@@ -34,21 +34,22 @@ type transitiveKeyMap struct {
 	Escape             key.Binding
 	PlayStop           key.Binding
 	TempoInputSwitch   key.Binding
-	Increase           key.Binding
-	Decrease           key.Binding
-	ToggleAccentMode   key.Binding
-	ToggleGateMode     key.Binding
-	ToggleWaitMode     key.Binding
 	OverlayInputSwitch key.Binding
 	SetupInputSwitch   key.Binding
 	AccentInputSwitch  key.Binding
+	RatchetInputSwitch key.Binding
+	Increase           key.Binding
+	Decrease           key.Binding
+	ToggleGateMode     key.Binding
+	ToggleWaitMode     key.Binding
+	ToggleAccentMode   key.Binding
+	ToggleRatchetMode  key.Binding
 	NextOverlay        key.Binding
 	PrevOverlay        key.Binding
 	Save               key.Binding
 	Undo               key.Binding
 	Redo               key.Binding
 	New                key.Binding
-	ToggleRatchetMode  key.Binding
 	ToggleVisualMode   key.Binding
 	NewLine            key.Binding
 	Yank               key.Binding
@@ -157,23 +158,24 @@ var transitiveKeys = transitiveKeyMap{
 	CursorLineEnd:      Key("Line End", ">"),
 	Escape:             Key("Escape", "esc", "enter"),
 	PlayStop:           Key("Play/Stop", " "),
-	TempoInputSwitch:   Key("Select Tempo Indicator", "ctrl+t"),
 	Increase:           Key("Tempo Increase", "+", "="),
 	Decrease:           Key("Tempo Decrease", "-"),
-	ToggleAccentMode:   Key("Toggle Accent Mode", "t"),
-	ToggleGateMode:     Key("Toggle Gate Mode", "ctrl+g"),
-	ToggleWaitMode:     Key("Toggle Wait Mode", "ctrl+w"),
+	TempoInputSwitch:   Key("Select Tempo Indicator", "ctrl+t"),
 	OverlayInputSwitch: Key("Select Overlay Indicator", "ctrl+o"),
 	SetupInputSwitch:   Key("Setup Input Indicator", "ctrl+s"),
-	AccentInputSwitch:  Key("Accent Input Indicator", "ctrl+a"),
+	AccentInputSwitch:  Key("Accent Input Indicator", "ctrl+e"),
+	RatchetInputSwitch: Key("Ratchet Input Indicator", "ctrl+h"),
+	ToggleRatchetMode:  Key("Toggle Ratchet Mode", "ctrl+r"),
+	ToggleGateMode:     Key("Toggle Gate Mode", "ctrl+g"),
+	ToggleWaitMode:     Key("Toggle Wait Mode", "ctrl+w"),
+	ToggleAccentMode:   Key("Toggle Wait Mode", "ctrl+a"),
 	NextOverlay:        Key("Next Overlay", "{"),
 	PrevOverlay:        Key("Prev Overlay", "}"),
-	Save:               Key("Save", "ctrl+z"),
+	Save:               Key("Save", "ctrl+v"),
 	Undo:               Key("Undo", "u"),
 	Redo:               Key("Redo", "U"),
-	New:                Key("New", "ctrl+n"),
-	ToggleRatchetMode:  Key("Toggle Ratchet Mode", "ctrl+r"),
 	ToggleVisualMode:   Key("Toggle Visual Mode", "v"),
+	New:                Key("New", "ctrl+n"),
 	NewLine:            Key("New Line", "ctrl+l"),
 	Yank:               Key("Yank", "y"),
 	Mute:               Key("Mute", "m"),
@@ -447,9 +449,7 @@ type model struct {
 	playState           []linestate
 	selectionIndicator  Selection
 	focus               focus
-	accentMode          bool
-	gateMode            bool
-	waitMode            bool
+	patternMode         PatternMode
 	ratchetCursor       uint8
 	currentOverlay      *overlays.Overlay
 	keyCycles           int
@@ -482,6 +482,16 @@ const (
 	SELECT_ACCENT_DIFF
 	SELECT_ACCENT_TARGET
 	SELECT_ACCENT_START
+)
+
+type PatternMode uint8
+
+const (
+	PATTERN_FILL PatternMode = iota
+	PATTERN_ACCENT
+	PATTERN_GATE
+	PATTERN_WAIT
+	PATTERN_RATCHET
 )
 
 type Undoable interface {
@@ -907,12 +917,7 @@ func (m *model) IncreaseRatchet() {
 
 	for key, currentNote := range combinedPattern {
 		if bounds.InBounds(key) {
-			currentRatchet := currentNote.Ratchets.Length
-			if currentNote.AccentIndex > 0 && currentNote.Action == grid.ACTION_NOTHING && currentRatchet+1 < uint8(len(ratchets)) {
-				currentNote.Ratchets.Length = currentRatchet + 1
-				currentNote.Ratchets.SetRatchet(true, currentNote.Ratchets.Length)
-				m.currentOverlay.SetNote(key, currentNote)
-			}
+			m.currentOverlay.SetNote(key, currentNote.IncrementRatchet(1))
 		}
 	}
 }
@@ -923,11 +928,7 @@ func (m *model) DecreaseRatchet() {
 
 	for key, currentNote := range combinedOverlay {
 		if bounds.InBounds(key) {
-			currentRatchet := currentNote.Ratchets.Length
-			if currentNote.AccentIndex > 0 && currentNote.Action == grid.ACTION_NOTHING && currentRatchet > 0 {
-				currentNote.Ratchets.Length = currentRatchet - 1
-				m.currentOverlay.SetNote(key, currentNote)
-			}
+			m.currentOverlay.SetNote(key, currentNote.IncrementRatchet(-1))
 		}
 	}
 }
@@ -1153,8 +1154,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursorPos.Beat = m.definition.beats - 1
 		case Is(msg, keys.Escape):
 			m.selectionIndicator = 0
-			m.accentMode = false
-			m.visualMode = false
+			m.patternMode = PATTERN_FILL
 		case Is(msg, keys.PlayStop):
 			if !m.playing && !m.midiConnection.IsOpen() {
 				err := m.midiConnection.ConnectAndOpen()
@@ -1210,7 +1210,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.AccentInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
-		case Is(msg, keys.ToggleRatchetMode):
+		case Is(msg, keys.RatchetInputSwitch):
 			currentNote := m.CurrentNote()
 			if currentNote.AccentIndex > 0 {
 				states := []Selection{SELECT_NOTHING, SELECT_RATCHETS, SELECT_RATCHET_SPAN}
@@ -1265,12 +1265,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case SELECT_ACCENT_START:
 				m.DecreaseAccentStart()
 			}
-		case Is(msg, keys.ToggleAccentMode):
-			m.accentMode = !m.accentMode
 		case Is(msg, keys.ToggleGateMode):
-			m.gateMode = !m.gateMode
+			m.patternMode = PATTERN_GATE
 		case Is(msg, keys.ToggleWaitMode):
-			m.waitMode = !m.waitMode
+			m.patternMode = PATTERN_WAIT
+		case Is(msg, keys.ToggleAccentMode):
+			m.patternMode = PATTERN_ACCENT
+		case Is(msg, keys.ToggleRatchetMode):
+			m.patternMode = PATTERN_RATCHET
 		case Is(msg, keys.PrevOverlay):
 			m.NextOverlay(-1)
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
@@ -1458,26 +1460,32 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 	}
 	if msg.String() >= "1" && msg.String() <= "9" {
 		beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
-		if m.accentMode {
-			m.incrementAccent(uint8(beatInterval), -1)
-		} else if m.gateMode {
-			m.incrementGate(uint8(beatInterval), -1)
-		} else if m.waitMode {
-			m.incrementWait(uint8(beatInterval), -1)
-		} else {
+		switch m.patternMode {
+		case PATTERN_FILL:
 			m.fill(uint8(beatInterval))
+		case PATTERN_ACCENT:
+			m.incrementAccent(uint8(beatInterval), -1)
+		case PATTERN_GATE:
+			m.incrementGate(uint8(beatInterval), -1)
+		case PATTERN_RATCHET:
+			m.incrementRatchet(uint8(beatInterval), -1)
+		case PATTERN_WAIT:
+			m.incrementWait(uint8(beatInterval), -1)
 		}
 	}
 	if IsShiftSymbol(msg.String()) {
 		beatInterval := convertSymbolToInt(msg.String())
-		if m.accentMode {
-			m.incrementAccent(uint8(beatInterval), 1)
-		} else if m.gateMode {
-			m.incrementGate(uint8(beatInterval), 1)
-		} else if m.waitMode {
-			m.incrementWait(uint8(beatInterval), 1)
-		} else {
+		switch m.patternMode {
+		case PATTERN_FILL:
 			m.fill(uint8(beatInterval))
+		case PATTERN_ACCENT:
+			m.incrementAccent(uint8(beatInterval), 1)
+		case PATTERN_GATE:
+			m.incrementGate(uint8(beatInterval), 1)
+		case PATTERN_RATCHET:
+			m.incrementRatchet(uint8(beatInterval), 1)
+		case PATTERN_WAIT:
+			m.incrementWait(uint8(beatInterval), 1)
 		}
 	}
 	return m
@@ -1987,6 +1995,20 @@ func (m *model) incrementGate(every uint8, modifier int8) {
 	m.Every(every, everyFn)
 }
 
+func (m *model) incrementRatchet(every uint8, modifier int8) {
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
+
+	everyFn := func(gridKey gridKey) {
+		currentNote, hasNote := combinedOverlay[gridKey]
+		hasNote = hasNote && currentNote != zeronote
+
+		if hasNote {
+			m.currentOverlay.SetNote(gridKey, currentNote.IncrementRatchet(modifier))
+		}
+	}
+	m.Every(every, everyFn)
+}
+
 func (m *model) incrementWait(every uint8, modifier int8) {
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
@@ -2128,7 +2150,7 @@ func (m model) View() string {
 	var buf strings.Builder
 	var sideView string
 
-	if m.accentMode || m.IsAccentSelector() {
+	if m.patternMode == PATTERN_ACCENT || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
 	} else if (m.definition.overlays.Key == overlaykey.ROOT && len(m.definition.overlays.Notes) == 0) ||
 		m.selectionIndicator == SELECT_SETUP_NOTE ||
@@ -2269,17 +2291,20 @@ func (m model) ViewTriggerSeq() string {
 	var mode string
 	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
 
-	if m.accentMode {
+	if m.patternMode == PATTERN_ACCENT {
 		mode = " Accent Mode "
 		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
-	} else if m.gateMode {
+	} else if m.patternMode == PATTERN_GATE {
 		mode = " Gate Mode "
 		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
-	} else if m.waitMode {
+	} else if m.patternMode == PATTERN_WAIT {
 		mode = " Wait Mode "
 		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
+	} else if m.patternMode == PATTERN_RATCHET {
+		mode = " Ratchet Mode "
+		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
-		buf.WriteString(m.RatchetModeView())
+		buf.WriteString(m.RatchetEditView())
 	} else if m.playing {
 		buf.WriteString(fmt.Sprintf("    Seq - Playing - %d\n", m.keyCycles))
 	} else {
@@ -2300,7 +2325,7 @@ func (m model) ViewTriggerSeq() string {
 var activeRatchetColor lipgloss.Color = "#abfaa9"
 var mutedRatchetColor lipgloss.Color = "#f34213"
 
-func (m model) RatchetModeView() string {
+func (m model) RatchetEditView() string {
 	activeStyle := lipgloss.NewStyle().Foreground(activeRatchetColor)
 	mutedStyle := lipgloss.NewStyle().Foreground(mutedRatchetColor)
 

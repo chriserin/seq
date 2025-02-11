@@ -33,7 +33,7 @@ func InitActionNote(act Action) Note {
 func (n Note) IncrementAccent(modifier int8) Note {
 	var newAccent = int8(n.AccentIndex) - modifier
 	// TODO: remove hardcoded accent length
-	accentlength := 8
+	accentlength := 9
 	if newAccent >= 1 && newAccent < int8(accentlength) {
 		n.AccentIndex = uint8(newAccent)
 	}
@@ -56,6 +56,17 @@ func (n Note) IncrementWait(modifier int8) Note {
 	waitslength := 8
 	if newWait >= 0 && newWait < int8(waitslength) {
 		n.WaitIndex = uint8(newWait)
+	}
+	return n
+}
+
+func (n Note) IncrementRatchet(modifier int8) Note {
+	currentRatchet := n.Ratchets.Length
+	// TODO: remove hardcoded ratchets length
+	var ratchetsLength uint8 = 8
+	if n.AccentIndex > 0 && n.Action == ACTION_NOTHING && currentRatchet+1 < ratchetsLength {
+		n.Ratchets.Length = uint8(int8(currentRatchet) + modifier)
+		n.Ratchets.SetRatchet(true, n.Ratchets.Length)
 	}
 	return n
 }
