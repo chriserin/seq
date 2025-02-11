@@ -1671,7 +1671,7 @@ func (m *model) ClearOverlay() {
 func (m *model) RotateRight() {
 	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
 
-	start, end := m.PatternActionBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
 	lastNote := combinedPattern[GK(m.cursorPos.Line, end)]
 	previousNote := zeronote
 	for i := uint8(start); i <= end; i++ {
@@ -1688,7 +1688,7 @@ func (m *model) RotateRight() {
 func (m *model) RotateLeft() {
 	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
 
-	start, end := m.PatternActionBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
 	firstNote := combinedPattern[GK(m.cursorPos.Line, start)]
 	previousNote := zeronote
 	for i := int8(end); i >= int8(start); i-- {
@@ -1924,13 +1924,21 @@ func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.Overla
 	return pattern
 }
 
+func (m *model) Every(every uint8, everyFn func(gridKey)) {
+	lineStart, lineEnd := m.PatternActionLineBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
+
+	for l := lineStart; l <= lineEnd; l++ {
+		for i := start; i <= end; i += every {
+			everyFn(GK(l, i))
+		}
+	}
+}
+
 func (m *model) fill(every uint8) {
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
-	start, end := m.PatternActionBoundaries()
-
-	for i := uint8(start); i <= end; i += every {
-		gridKey := GK(m.cursorPos.Line, i)
+	everyFn := func(gridKey gridKey) {
 		currentNote, hasNote := combinedOverlay[gridKey]
 		hasNote = hasNote && currentNote != zeronote
 
@@ -1940,15 +1948,14 @@ func (m *model) fill(every uint8) {
 			m.currentOverlay.SetNote(gridKey, grid.InitNote())
 		}
 	}
+
+	m.Every(every, everyFn)
 }
 
 func (m *model) incrementAccent(every uint8, modifier int8) {
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
-	start, end := m.PatternActionBoundaries()
-
-	for i := uint8(start); i <= end; i += every {
-		gridKey := GK(m.cursorPos.Line, i)
+	everyFn := func(gridKey gridKey) {
 		currentNote, hasNote := combinedOverlay[gridKey]
 		hasNote = hasNote && currentNote != zeronote
 
@@ -1956,15 +1963,13 @@ func (m *model) incrementAccent(every uint8, modifier int8) {
 			m.currentOverlay.SetNote(gridKey, currentNote.IncrementAccent(modifier))
 		}
 	}
+	m.Every(every, everyFn)
 }
 
 func (m *model) incrementGate(every uint8, modifier int8) {
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
-	start, end := m.PatternActionBoundaries()
-
-	for i := uint8(start); i <= end; i += every {
-		gridKey := GK(m.cursorPos.Line, i)
+	everyFn := func(gridKey gridKey) {
 		currentNote, hasNote := combinedOverlay[gridKey]
 		hasNote = hasNote && currentNote != zeronote
 
@@ -1972,15 +1977,13 @@ func (m *model) incrementGate(every uint8, modifier int8) {
 			m.currentOverlay.SetNote(gridKey, currentNote.IncrementGate(modifier))
 		}
 	}
+	m.Every(every, everyFn)
 }
 
 func (m *model) incrementWait(every uint8, modifier int8) {
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
-	start, end := m.PatternActionBoundaries()
-
-	for i := uint8(start); i <= end; i += every {
-		gridKey := GK(m.cursorPos.Line, i)
+	everyFn := func(gridKey gridKey) {
 		currentNote, hasNote := combinedOverlay[gridKey]
 		hasNote = hasNote && currentNote != zeronote
 
@@ -1988,6 +1991,7 @@ func (m *model) incrementWait(every uint8, modifier int8) {
 			m.currentOverlay.SetNote(gridKey, currentNote.IncrementWait(modifier))
 		}
 	}
+	m.Every(every, everyFn)
 }
 
 func (m *model) AccentModify(modifier int8) {
@@ -2029,7 +2033,7 @@ func (m *model) WaitModify(modifier int8) {
 	}
 }
 
-func (m model) PatternActionBoundaries() (uint8, uint8) {
+func (m model) PatternActionBeatBoundaries() (uint8, uint8) {
 	if m.visualMode {
 		if m.visualAnchorCursor.Beat < m.cursorPos.Beat {
 			return m.visualAnchorCursor.Beat, m.cursorPos.Beat
@@ -2038,6 +2042,18 @@ func (m model) PatternActionBoundaries() (uint8, uint8) {
 		}
 	} else {
 		return m.cursorPos.Beat, m.definition.beats - 1
+	}
+}
+
+func (m model) PatternActionLineBoundaries() (uint8, uint8) {
+	if m.visualMode {
+		if m.visualAnchorCursor.Line < m.cursorPos.Line {
+			return m.visualAnchorCursor.Line, m.cursorPos.Line
+		} else {
+			return m.cursorPos.Line, m.visualAnchorCursor.Line
+		}
+	} else {
+		return m.cursorPos.Line, m.cursorPos.Line
 	}
 }
 
@@ -2326,7 +2342,7 @@ func (m model) CurrentOverlayView() string {
 		matchedKey = overlaykey.ROOT
 	}
 
-	var editOverlayTitle = ""
+	var editOverlayTitle string
 	if m.playEditing {
 		editOverlayTitle = lipgloss.NewStyle().Background(seqOverlayColor).Render("Edit")
 	} else {
