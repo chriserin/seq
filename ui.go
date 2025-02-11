@@ -1671,35 +1671,42 @@ func (m *model) ClearOverlay() {
 func (m *model) RotateRight() {
 	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
 
+	lineStart, lineEnd := m.PatternActionLineBoundaries()
 	start, end := m.PatternActionBeatBoundaries()
-	lastNote := combinedPattern[GK(m.cursorPos.Line, end)]
-	previousNote := zeronote
-	for i := uint8(start); i <= end; i++ {
-		gridKey := GK(m.cursorPos.Line, i)
-		currentNote := combinedPattern[gridKey]
 
-		m.currentOverlay.SetNote(gridKey, previousNote)
-		previousNote = currentNote
+	for l := lineStart; l <= lineEnd; l++ {
+		lastNote := combinedPattern[GK(l, end)]
+		previousNote := zeronote
+		for i := start; i <= end; i++ {
+			gridKey := GK(l, i)
+			currentNote := combinedPattern[gridKey]
+
+			m.currentOverlay.SetNote(gridKey, previousNote)
+			previousNote = currentNote
+		}
+		m.currentOverlay.SetNote(GK(l, start), lastNote)
 	}
 
-	m.currentOverlay.SetNote(GK(m.cursorPos.Line, start), lastNote)
 }
 
 func (m *model) RotateLeft() {
 	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
 
+	lineStart, lineEnd := m.PatternActionLineBoundaries()
 	start, end := m.PatternActionBeatBoundaries()
-	firstNote := combinedPattern[GK(m.cursorPos.Line, start)]
-	previousNote := zeronote
-	for i := int8(end); i >= int8(start); i-- {
-		gridKey := GK(m.cursorPos.Line, uint8(i))
-		currentNote := combinedPattern[gridKey]
+	for l := lineStart; l <= lineEnd; l++ {
+		firstNote := combinedPattern[GK(l, start)]
+		previousNote := zeronote
+		for i := int8(end); i >= int8(start); i-- {
+			gridKey := GK(l, uint8(i))
+			currentNote := combinedPattern[gridKey]
 
-		m.currentOverlay.SetNote(gridKey, previousNote)
-		previousNote = currentNote
+			m.currentOverlay.SetNote(gridKey, previousNote)
+			previousNote = currentNote
+		}
+		m.currentOverlay.SetNote(GK(l, end), firstNote)
 	}
 
-	m.currentOverlay.SetNote(GK(m.cursorPos.Line, end), firstNote)
 }
 
 func (m model) GroupPlayStateForNewLine() groupPlayState {
