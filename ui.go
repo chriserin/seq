@@ -15,6 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	colors "github.com/chriserin/seq/internal/colors"
+	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/notereg"
 	overlaykey "github.com/chriserin/seq/internal/overlaykey"
@@ -224,85 +225,6 @@ var definitionKeys = definitionKeyMap{
 // 	}
 // }
 
-type Accent struct {
-	Shape rune
-	Color lipgloss.Color
-	Value uint8
-}
-
-var accents = []Accent{
-	{' ', "#000000", 0},
-	{'✤', "#ed3902", 120},
-	{'⎈', "#f564a9", 105},
-	{'⚙', "#f8730e", 90},
-	{'⊚', "#fcc05c", 75},
-	{'✦', "#5cdffb", 60},
-	{'❖', "#1e89ef", 45},
-	{'✥', "#164de5", 30},
-	{'❄', "#0246a7", 15},
-}
-
-const C1 = 36
-
-type lineaction struct {
-	shape rune
-	color lipgloss.Color
-}
-
-var lineactions = map[action]lineaction{
-	grid.ACTION_NOTHING:        {' ', "#000000"},
-	grid.ACTION_LINE_RESET:     {'↔', "#cf142b"},
-	grid.ACTION_LINE_REVERSE:   {'←', "#f8730e"},
-	grid.ACTION_LINE_SKIP_BEAT: {'⇒', "#a9e5bb"},
-	grid.ACTION_RESET:          {'⇚', "#fcf6b1"},
-	grid.ACTION_LINE_BOUNCE:    {'↨', "#fcf6b1"},
-	grid.ACTION_LINE_DELAY:     {'ℤ', "#cc4bc2"},
-}
-
-type ratchetDiacritical string
-
-var ratchets = []ratchetDiacritical{
-	"",
-	"\u0307",
-	"\u030A",
-	"\u030B",
-	"\u030C",
-	"\u0312",
-	"\u0313",
-	"\u0344",
-}
-
-type Gate struct {
-	Shape string
-	Value uint16
-}
-
-var gates = []Gate{
-	{"", 20},
-	{"\u032A", 40},
-	{"\u032B", 80},
-	{"\u032C", 160},
-	{"\u032D", 240},
-	{"\u032E", 320},
-	{"\u032F", 480},
-	{"\u0330", 640},
-}
-
-type Wait int16
-
-var waitPercentages = []Wait{
-	0,
-	8,
-	16,
-	24,
-	32,
-	40,
-	48,
-	54,
-}
-
-var zeronote note
-
 type groupPlayState uint
 
 const (
@@ -343,12 +265,37 @@ func GK(line uint8, beat uint8) gridKey {
 }
 
 type note = grid.Note
-type action = grid.Action
+type action = config.Action
 type overlay = overlays.Overlay
+
+var zeronote note
 
 type lineDefinition struct {
 	Channel uint8
 	Note    uint8
+	MsgType MessageType
+}
+
+func (ld lineDefinition) ValueName() string {
+	switch ld.MsgType {
+	case MESSAGE_TYPE_NOTE:
+		return fmt.Sprintf("%s%d", strings.ReplaceAll(midi.Note(ld.Note).Name(), "b", "♭"), midi.Note(ld.Note).Octave()-2)
+	case MESSAGE_TYPE_CC:
+		cc := config.FindCC(ld.Note)
+		return cc.Name
+	}
+	return ""
+}
+
+type MessageType uint8
+
+const (
+	MESSAGE_TYPE_NOTE MessageType = iota
+	MESSAGE_TYPE_CC
+)
+
+type Delayable interface {
+	Delay() time.Duration
 }
 
 type noteMsg struct {
@@ -357,6 +304,25 @@ type noteMsg struct {
 	noteValue uint8
 	velocity  uint8
 	delay     time.Duration
+}
+
+func (n noteMsg) Delay() time.Duration {
+	return n.delay
+}
+
+type controlChangeMsg struct {
+	channel uint8
+	control uint8
+	ccValue uint8
+	delay   time.Duration
+}
+
+func (ccm controlChangeMsg) MidiMessage() midi.Message {
+	return midi.ControlChange(ccm.channel, ccm.control, ccm.ccValue)
+}
+
+func (ccm controlChangeMsg) Delay() time.Duration {
+	return ccm.delay
 }
 
 func (nm noteMsg) GetKey() notereg.NoteRegKey {
@@ -380,29 +346,37 @@ func (nm noteMsg) OffMessage() midi.Message {
 	return midi.NoteOff(nm.channel, nm.noteValue)
 }
 
-func (l lineDefinition) Messages(note note, accentValue uint8, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool) []noteMsg {
-	var noteValue uint8
-	var velocityValue uint8
-	switch accentTarget {
-	case ACCENT_TARGET_NOTE:
-		noteValue = l.Note + accentValue
-		velocityValue = 96
-	case ACCENT_TARGET_VELOCITY:
-		noteValue = l.Note
-		velocityValue = accentValue
-	}
-	duration := 0 + time.Duration(gates[note.GateIndex].Value)*time.Millisecond
-
+func (l lineDefinition) Messages(note note, accents []config.Accent, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool) []Delayable {
 	var delay time.Duration
 	if includeDelay {
-		delay = time.Duration((float64(waitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
+		delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
 	} else {
 		delay = 0
 	}
 
-	return []noteMsg{
-		{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, delay},
-		{midi.NoteOffMsg, l.Channel, noteValue, 0, delay + duration},
+	if l.MsgType == MESSAGE_TYPE_NOTE {
+		var noteValue uint8
+		var velocityValue uint8
+		switch accentTarget {
+		case ACCENT_TARGET_NOTE:
+			noteValue = l.Note + accents[note.AccentIndex].Value
+			velocityValue = 96
+		case ACCENT_TARGET_VELOCITY:
+			noteValue = l.Note
+			velocityValue = accents[note.AccentIndex].Value
+		}
+		duration := 0 + time.Duration(config.Gates[note.GateIndex].Value)*time.Millisecond
+
+		return []Delayable{
+			noteMsg{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, delay},
+			noteMsg{midi.NoteOffMsg, l.Channel, noteValue, 0, delay + duration},
+		}
+	} else {
+		ccValue := uint8((float32(note.AccentIndex) / float32(len(accents))) * float32(config.FindCC(l.Note).UpperLimit))
+
+		return []Delayable{
+			controlChangeMsg{l.Channel, l.Note, ccValue, delay},
+		}
 	}
 }
 
@@ -428,6 +402,14 @@ func (l *lineDefinition) DecrementNote() {
 	if l.Note > 1 {
 		l.Note--
 	}
+}
+
+func (l *lineDefinition) IncrementMessageType() {
+	l.MsgType = (l.MsgType + 1) % 2
+}
+
+func (l *lineDefinition) DecrementMessageType() {
+	l.MsgType = (l.MsgType - 1) % 2
 }
 
 type model struct {
@@ -476,7 +458,8 @@ const (
 	SELECT_TEMPO_SUBDIVISION
 	SELECT_OVERLAY
 	SELECT_SETUP_CHANNEL
-	SELECT_SETUP_NOTE
+	SELECT_SETUP_MESSAGE_TYPE
+	SELECT_SETUP_VALUE
 	SELECT_RATCHETS
 	SELECT_RATCHET_SPAN
 	SELECT_ACCENT_DIFF
@@ -744,7 +727,7 @@ type Definition struct {
 
 type patternAccents struct {
 	Diff   uint8
-	Data   []Accent
+	Data   []config.Accent
 	Start  uint8
 	Target accentTarget
 }
@@ -757,7 +740,7 @@ const (
 )
 
 func (pa *patternAccents) ReCalc() {
-	accents := make([]Accent, 9)
+	accents := make([]config.Accent, 9)
 	for i, a := range pa.Data[1:] {
 		a.Value = pa.Start - pa.Diff*uint8(i)
 		accents[i+1] = a
@@ -808,7 +791,7 @@ type lineNote struct {
 }
 
 func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDefinition, pattern grid.Pattern, lineStates []linestate) []tea.Cmd {
-	messages := make([]noteMsg, 0, len(lines))
+	messages := make([]Delayable, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
 	for i, line := range lines {
@@ -817,7 +800,7 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 			if hasNote && note.Ratchets.Length > 0 {
 				ratchetNotes = append(ratchetNotes, lineNote{note, line})
 			} else if hasNote && note != zeronote {
-				messages = append(messages, line.Messages(note, accents.Data[note.AccentIndex].Value, accents.Target, beatInterval, true)...)
+				messages = append(messages, line.Messages(note, accents.Data, accents.Target, beatInterval, true)...)
 			}
 		}
 	}
@@ -826,7 +809,7 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 
 	for _, message := range messages {
 		cmd := tea.Tick(
-			message.delay,
+			message.Delay(),
 			func(t time.Time) tea.Msg { return message },
 		)
 		playCmds = append(playCmds, cmd)
@@ -942,7 +925,7 @@ func (m *model) EnsureRatchetCursorVisisble() {
 
 func (m *model) IncreaseSpan() {
 	currentNote := m.CurrentNote()
-	if currentNote != zeronote && currentNote.Action == grid.ACTION_NOTHING {
+	if currentNote != zeronote && currentNote.Action == config.ACTION_NOTHING {
 		span := currentNote.Ratchets.Span
 		if span < 8 {
 			currentNote.Ratchets.Span = span + 1
@@ -953,7 +936,7 @@ func (m *model) IncreaseSpan() {
 
 func (m *model) DecreaseSpan() {
 	currentNote := m.CurrentNote()
-	if currentNote != zeronote && currentNote.Action == grid.ACTION_NOTHING {
+	if currentNote != zeronote && currentNote.Action == config.ACTION_NOTHING {
 		span := currentNote.Ratchets.Span
 		if span > 0 {
 			currentNote.Ratchets.Span = span - 1
@@ -997,7 +980,8 @@ func InitLines(n uint8) []lineDefinition {
 	for i := range n {
 		lines[i] = lineDefinition{
 			Channel: 10,
-			Note:    C1 + i,
+			Note:    config.C1 + i,
+			MsgType: MESSAGE_TYPE_NOTE,
 		}
 	}
 	return lines
@@ -1030,7 +1014,7 @@ func InitDefinition() Definition {
 		keyline:      0,
 		subdivisions: 2,
 		lines:        InitLines(8),
-		accents:      patternAccents{Diff: 15, Data: accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
+		accents:      patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
 	}
 }
 
@@ -1112,13 +1096,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch {
 		case Is(msg, keys.CursorDown):
-			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_NOTE}, m.selectionIndicator) {
+			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
 				if m.cursorPos.Line < uint8(len(m.definition.lines)-1) {
 					m.cursorPos.Line++
 				}
 			}
 		case Is(msg, keys.CursorUp):
-			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_NOTE}, m.selectionIndicator) {
+			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
 				if m.cursorPos.Line > 0 {
 					m.cursorPos.Line--
 				}
@@ -1205,7 +1189,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			states := []Selection{SELECT_NOTHING, SELECT_TEMPO, SELECT_TEMPO_SUBDIVISION}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
 		case Is(msg, keys.SetupInputSwitch):
-			states := []Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_NOTE}
+			states := []Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
 		case Is(msg, keys.AccentInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
@@ -1229,7 +1213,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case SELECT_SETUP_CHANNEL:
 				m.definition.lines[m.cursorPos.Line].IncrementChannel()
-			case SELECT_SETUP_NOTE:
+			case SELECT_SETUP_MESSAGE_TYPE:
+				m.definition.lines[m.cursorPos.Line].IncrementMessageType()
+			case SELECT_SETUP_VALUE:
 				m.definition.lines[m.cursorPos.Line].IncrementNote()
 			case SELECT_RATCHET_SPAN:
 				m.IncreaseSpan()
@@ -1254,7 +1240,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case SELECT_SETUP_CHANNEL:
 				m.definition.lines[m.cursorPos.Line].DecrementChannel()
-			case SELECT_SETUP_NOTE:
+			case SELECT_SETUP_MESSAGE_TYPE:
+				m.definition.lines[m.cursorPos.Line].DecrementMessageType()
+			case SELECT_SETUP_VALUE:
 				m.definition.lines[m.cursorPos.Line].DecrementNote()
 			case SELECT_RATCHET_SPAN:
 				m.DecreaseSpan()
@@ -1363,15 +1351,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, PlayMessageCmd(msg.GetMidi(), sendFn))
 		return m, tea.Sequence(cmds...)
+	case controlChangeMsg:
+		sendFn := m.midiConnection.AcquireSendFunc()
+		cmd := PlayMessageCmd(msg.MidiMessage(), sendFn)
+		return m, cmd
 	case ratchetMsg:
 		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
 			cmds := make([]tea.Cmd, 0)
 			if msg.Ratchets.HitAt(msg.iterations) {
-				note := msg.note
-				messages := msg.line.Messages(msg.note, m.definition.accents.Data[note.AccentIndex].Value, m.definition.accents.Target, msg.beatInterval, false)
+				messages := msg.line.Messages(msg.note, m.definition.accents.Data, m.definition.accents.Target, msg.beatInterval, false)
 				for _, message := range messages {
 					var cmd = tea.Tick(
-						message.delay,
+						message.Delay(),
 						func(t time.Time) tea.Msg { return message },
 					)
 					cmds = append(cmds, cmd)
@@ -1434,17 +1425,17 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.DecreaseRatchet()
 		m.EnsureRatchetCursorVisisble()
 	case Is(msg, keys.ActionAddLineReset):
-		m.AddAction(grid.ACTION_LINE_RESET)
+		m.AddAction(config.ACTION_LINE_RESET)
 	case Is(msg, keys.ActionAddLineReverse):
-		m.AddAction(grid.ACTION_LINE_REVERSE)
+		m.AddAction(config.ACTION_LINE_REVERSE)
 	case Is(msg, keys.ActionAddSkipBeat):
-		m.AddAction(grid.ACTION_LINE_SKIP_BEAT)
+		m.AddAction(config.ACTION_LINE_SKIP_BEAT)
 	case Is(msg, keys.ActionAddReset):
-		m.AddAction(grid.ACTION_RESET)
+		m.AddAction(config.ACTION_RESET)
 	case Is(msg, keys.ActionAddLineBounce):
-		m.AddAction(grid.ACTION_LINE_BOUNCE)
+		m.AddAction(config.ACTION_LINE_BOUNCE)
 	case Is(msg, keys.ActionAddLineDelay):
-		m.AddAction(grid.ACTION_LINE_DELAY)
+		m.AddAction(config.ACTION_LINE_DELAY)
 	case Is(msg, keys.SelectKeyLine):
 		m.definition.keyline = m.cursorPos.Line
 	case Is(msg, keys.PressDownOverlay):
@@ -1865,22 +1856,22 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 	}
 
 	switch combinedPattern[GK(uint8(lineIndex), uint8(advancedBeat))].Action {
-	case grid.ACTION_LINE_RESET:
+	case config.ACTION_LINE_RESET:
 		m.playState[lineIndex].currentBeat = 0
-	case grid.ACTION_LINE_REVERSE:
+	case config.ACTION_LINE_REVERSE:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-2, 0))
 		m.playState[lineIndex].direction = -1
 		m.playState[lineIndex].resetLocation = uint8(max(advancedBeat-1, 0))
 		m.playState[lineIndex].resetActionLocation = uint8(advancedBeat)
-		m.playState[lineIndex].resetAction = grid.ACTION_LINE_REVERSE
-	case grid.ACTION_LINE_BOUNCE:
+		m.playState[lineIndex].resetAction = config.ACTION_LINE_REVERSE
+	case config.ACTION_LINE_BOUNCE:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
 		m.playState[lineIndex].direction = -1
-	case grid.ACTION_LINE_SKIP_BEAT:
+	case config.ACTION_LINE_SKIP_BEAT:
 		m.advancePlayState(combinedPattern, lineIndex)
-	case grid.ACTION_LINE_DELAY:
+	case config.ACTION_LINE_DELAY:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
-	case grid.ACTION_RESET:
+	case config.ACTION_RESET:
 		for i := range m.playState {
 			m.playState[i].currentBeat = 0
 			m.playState[i].direction = 1
@@ -2153,7 +2144,8 @@ func (m model) View() string {
 	if m.patternMode == PATTERN_ACCENT || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
 	} else if (m.definition.overlays.Key == overlaykey.ROOT && len(m.definition.overlays.Notes) == 0) ||
-		m.selectionIndicator == SELECT_SETUP_NOTE ||
+		m.selectionIndicator == SELECT_SETUP_VALUE ||
+		m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE ||
 		m.selectionIndicator == SELECT_SETUP_CHANNEL {
 		sideView = m.SetupView()
 	} else {
@@ -2224,13 +2216,28 @@ func (m model) SetupView() string {
 			buf.WriteString(colors.NumberColor.Render(fmt.Sprintf("%2d", line.Channel)))
 		}
 
-		buf.WriteString(" NOTE ")
-		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_NOTE {
+		var messageType string
+		switch line.MsgType {
+		case MESSAGE_TYPE_NOTE:
+			messageType = "NOTE"
+		case MESSAGE_TYPE_CC:
+			messageType = "CC"
+		}
+
+		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE {
+			messageType = fmt.Sprintf(" %s ", colors.SelectedColor.Render(messageType))
+		} else {
+			messageType = fmt.Sprintf(" %s ", messageType)
+		}
+
+		buf.WriteString(messageType)
+
+		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_VALUE {
 			buf.WriteString(colors.SelectedColor.Render(strconv.Itoa(int(line.Note))))
 		} else {
 			buf.WriteString(colors.NumberColor.Render(strconv.Itoa(int(line.Note))))
 		}
-		buf.WriteString(fmt.Sprintf(" %s%d\n", strings.ReplaceAll(midi.Note(line.Note).Name(), "b", "♭"), midi.Note(line.Note).Octave()-2))
+		buf.WriteString(fmt.Sprintf(" %s\n", line.ValueName()))
 	}
 	return buf.String()
 }
@@ -2284,7 +2291,7 @@ func (m model) OverlaysView() string {
 	return buf.String()
 }
 
-var accentModeStyle = lipgloss.NewStyle().Background(accents[1].Color).Foreground(lipgloss.Color("#000000"))
+var accentModeStyle = lipgloss.NewStyle().Background(config.Accents[1].Color).Foreground(lipgloss.Color("#000000"))
 
 func (m model) ViewTriggerSeq() string {
 	var buf strings.Builder
@@ -2528,7 +2535,7 @@ func (m model) InVisualSelection(key gridKey) bool {
 
 func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 
-	currentAccent := accents[currentNote.AccentIndex]
+	currentAccent := config.Accents[currentNote.AccentIndex]
 	currentAction := currentNote.Action
 	var char string
 	var foregroundColor lipgloss.Color
@@ -2536,13 +2543,13 @@ func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 	if currentNote.WaitIndex > 0 {
 		waitShape = "\u0320"
 	}
-	if currentAction == grid.ACTION_NOTHING && currentNote != zeronote {
-		char = string(currentAccent.Shape) + string(ratchets[currentNote.Ratchets.Length]) + string(gates[currentNote.GateIndex].Shape) + waitShape
+	if currentAction == config.ACTION_NOTHING && currentNote != zeronote {
+		char = string(currentAccent.Shape) + string(config.Ratchets[currentNote.Ratchets.Length]) + string(config.Gates[currentNote.GateIndex].Shape) + waitShape
 		foregroundColor = currentAccent.Color
 	} else {
-		lineaction := lineactions[currentAction]
-		char = string(lineaction.shape)
-		foregroundColor = lineaction.color
+		lineaction := config.Lineactions[currentAction]
+		char = string(lineaction.Shape)
+		foregroundColor = lineaction.Color
 	}
 
 	return char, foregroundColor

@@ -3,6 +3,8 @@ package grid
 import (
 	"fmt"
 	"time"
+
+	"github.com/chriserin/seq/internal/config"
 )
 
 type GridKey struct {
@@ -17,23 +19,23 @@ func (gk GridKey) String() string {
 type Note struct {
 	AccentIndex uint8
 	Ratchets    Ratchet
-	Action      Action
+	Action      config.Action
 	GateIndex   uint8
 	WaitIndex   uint8
 }
 
 func InitNote() Note {
-	return Note{5, InitRatchet(), ACTION_NOTHING, 0, 0}
+	return Note{5, InitRatchet(), config.ACTION_NOTHING, 0, 0}
 }
 
-func InitActionNote(act Action) Note {
+func InitActionNote(act config.Action) Note {
 	return Note{0, InitRatchet(), act, 0, 0}
 }
 
 func (n Note) IncrementAccent(modifier int8) Note {
 	var newAccent = int8(n.AccentIndex) - modifier
 	// TODO: remove hardcoded accent length
-	accentlength := 9
+	accentlength := len(config.Accents)
 	if newAccent >= 1 && newAccent < int8(accentlength) {
 		n.AccentIndex = uint8(newAccent)
 	}
@@ -63,8 +65,9 @@ func (n Note) IncrementWait(modifier int8) Note {
 func (n Note) IncrementRatchet(modifier int8) Note {
 	currentRatchet := n.Ratchets.Length
 	// TODO: remove hardcoded ratchets length
-	var ratchetsLength uint8 = 8
-	if n.AccentIndex > 0 && n.Action == ACTION_NOTHING && currentRatchet+1 < ratchetsLength {
+	var ratchetsLength int8 = 8
+	newRatchet := int8(currentRatchet) + modifier
+	if n.AccentIndex > 0 && n.Action == config.ACTION_NOTHING && newRatchet < ratchetsLength && int8(currentRatchet)+modifier >= 0 {
 		n.Ratchets.Length = uint8(int8(currentRatchet) + modifier)
 		n.Ratchets.SetRatchet(true, n.Ratchets.Length)
 	}
@@ -123,15 +126,3 @@ func (r *Ratchet) Toggle(index uint8) {
 func (r Ratchet) HitAt(index uint8) bool {
 	return (r.Hits & (1 << index)) != 0
 }
-
-type Action uint8
-
-const (
-	ACTION_NOTHING Action = iota
-	ACTION_LINE_RESET
-	ACTION_LINE_REVERSE
-	ACTION_LINE_SKIP_BEAT
-	ACTION_RESET
-	ACTION_LINE_BOUNCE
-	ACTION_LINE_DELAY
-)
