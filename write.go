@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/chriserin/seq/internal/grid"
 	overlaykey "github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/overlays"
 )
@@ -38,7 +39,7 @@ func TransformOverlay(grid overlay) WriteOverlay {
 
 type AllWrite struct {
 	Overlays        WriteOverlays
-	LineDefinitions []lineDefinition
+	LineDefinitions []grid.LineDefinition
 	Beats           uint8
 	Tempo           int
 	Subdivisions    int

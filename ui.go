@@ -265,34 +265,10 @@ func GK(line uint8, beat uint8) gridKey {
 }
 
 type note = grid.Note
-type action = config.Action
+type action = grid.Action
 type overlay = overlays.Overlay
 
 var zeronote note
-
-type lineDefinition struct {
-	Channel uint8
-	Note    uint8
-	MsgType MessageType
-}
-
-func (ld lineDefinition) ValueName() string {
-	switch ld.MsgType {
-	case MESSAGE_TYPE_NOTE:
-		return fmt.Sprintf("%s%d", strings.ReplaceAll(midi.Note(ld.Note).Name(), "b", "♭"), midi.Note(ld.Note).Octave()-2)
-	case MESSAGE_TYPE_CC:
-		cc := config.FindCC(ld.Note)
-		return cc.Name
-	}
-	return ""
-}
-
-type MessageType uint8
-
-const (
-	MESSAGE_TYPE_NOTE MessageType = iota
-	MESSAGE_TYPE_CC
-)
 
 type Delayable interface {
 	Delay() time.Duration
@@ -346,7 +322,7 @@ func (nm noteMsg) OffMessage() midi.Message {
 	return midi.NoteOff(nm.channel, nm.noteValue)
 }
 
-func (l lineDefinition) Messages(note note, accents []config.Accent, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool) []Delayable {
+func Messages(l grid.LineDefinition, note note, accents []config.Accent, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool) []Delayable {
 	var delay time.Duration
 	if includeDelay {
 		delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
@@ -354,7 +330,7 @@ func (l lineDefinition) Messages(note note, accents []config.Accent, accentTarge
 		delay = 0
 	}
 
-	if l.MsgType == MESSAGE_TYPE_NOTE {
+	if l.MsgType == grid.MESSAGE_TYPE_NOTE {
 		var noteValue uint8
 		var velocityValue uint8
 		switch accentTarget {
@@ -378,38 +354,6 @@ func (l lineDefinition) Messages(note note, accents []config.Accent, accentTarge
 			controlChangeMsg{l.Channel, l.Note, ccValue, delay},
 		}
 	}
-}
-
-func (l *lineDefinition) IncrementChannel() {
-	if l.Channel < 16 {
-		l.Channel++
-	}
-}
-
-func (l *lineDefinition) DecrementChannel() {
-	if l.Channel > 1 {
-		l.Channel--
-	}
-}
-
-func (l *lineDefinition) IncrementNote() {
-	if l.Note < 128 {
-		l.Note++
-	}
-}
-
-func (l *lineDefinition) DecrementNote() {
-	if l.Note > 1 {
-		l.Note--
-	}
-}
-
-func (l *lineDefinition) IncrementMessageType() {
-	l.MsgType = (l.MsgType + 1) % 2
-}
-
-func (l *lineDefinition) DecrementMessageType() {
-	l.MsgType = (l.MsgType - 1) % 2
 }
 
 type model struct {
@@ -717,7 +661,7 @@ func (m *model) Redo() UndoStack {
 
 type Definition struct {
 	overlays     *overlays.Overlay
-	lines        []lineDefinition
+	lines        []grid.LineDefinition
 	beats        uint8
 	tempo        int
 	subdivisions int
@@ -787,10 +731,10 @@ func (m model) TickInterval() time.Duration {
 
 type lineNote struct {
 	note
-	line lineDefinition
+	line grid.LineDefinition
 }
 
-func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDefinition, pattern grid.Pattern, lineStates []linestate) []tea.Cmd {
+func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []grid.LineDefinition, pattern grid.Pattern, lineStates []linestate) []tea.Cmd {
 	messages := make([]Delayable, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
@@ -800,7 +744,7 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []lineDe
 			if hasNote && note.Ratchets.Length > 0 {
 				ratchetNotes = append(ratchetNotes, lineNote{note, line})
 			} else if hasNote && note != zeronote {
-				messages = append(messages, line.Messages(note, accents.Data, accents.Target, beatInterval, true)...)
+				messages = append(messages, Messages(line, note, accents.Data, accents.Target, beatInterval, true)...)
 			}
 		}
 	}
@@ -925,7 +869,7 @@ func (m *model) EnsureRatchetCursorVisisble() {
 
 func (m *model) IncreaseSpan() {
 	currentNote := m.CurrentNote()
-	if currentNote != zeronote && currentNote.Action == config.ACTION_NOTHING {
+	if currentNote != zeronote && currentNote.Action == grid.ACTION_NOTHING {
 		span := currentNote.Ratchets.Span
 		if span < 8 {
 			currentNote.Ratchets.Span = span + 1
@@ -936,7 +880,7 @@ func (m *model) IncreaseSpan() {
 
 func (m *model) DecreaseSpan() {
 	currentNote := m.CurrentNote()
-	if currentNote != zeronote && currentNote.Action == config.ACTION_NOTHING {
+	if currentNote != zeronote && currentNote.Action == grid.ACTION_NOTHING {
 		span := currentNote.Ratchets.Span
 		if span > 0 {
 			currentNote.Ratchets.Span = span - 1
@@ -975,13 +919,13 @@ func (m *model) ToggleRatchetMute() {
 	m.currentOverlay.SetNote(m.cursorPos, currentNote)
 }
 
-func InitLines(n uint8) []lineDefinition {
-	var lines = make([]lineDefinition, n)
+func InitLines(n uint8) []grid.LineDefinition {
+	var lines = make([]grid.LineDefinition, n)
 	for i := range n {
-		lines[i] = lineDefinition{
+		lines[i] = grid.LineDefinition{
 			Channel: 10,
 			Note:    config.C1 + i,
-			MsgType: MESSAGE_TYPE_NOTE,
+			MsgType: grid.MESSAGE_TYPE_NOTE,
 		}
 	}
 	return lines
@@ -1291,7 +1235,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.NewLine):
 			if len(m.definition.lines) < 16 {
 				lastline := m.definition.lines[len(m.definition.lines)-1]
-				m.definition.lines = append(m.definition.lines, lineDefinition{
+				m.definition.lines = append(m.definition.lines, grid.LineDefinition{
 					Channel: lastline.Channel,
 					Note:    lastline.Note + 1,
 				})
@@ -1359,7 +1303,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
 			cmds := make([]tea.Cmd, 0)
 			if msg.Ratchets.HitAt(msg.iterations) {
-				messages := msg.line.Messages(msg.note, m.definition.accents.Data, m.definition.accents.Target, msg.beatInterval, false)
+				messages := Messages(msg.line, msg.note, m.definition.accents.Data, m.definition.accents.Target, msg.beatInterval, false)
 				for _, message := range messages {
 					var cmd = tea.Tick(
 						message.Delay(),
@@ -1425,17 +1369,17 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 		m.DecreaseRatchet()
 		m.EnsureRatchetCursorVisisble()
 	case Is(msg, keys.ActionAddLineReset):
-		m.AddAction(config.ACTION_LINE_RESET)
+		m.AddAction(grid.ACTION_LINE_RESET)
 	case Is(msg, keys.ActionAddLineReverse):
-		m.AddAction(config.ACTION_LINE_REVERSE)
+		m.AddAction(grid.ACTION_LINE_REVERSE)
 	case Is(msg, keys.ActionAddSkipBeat):
-		m.AddAction(config.ACTION_LINE_SKIP_BEAT)
+		m.AddAction(grid.ACTION_LINE_SKIP_BEAT)
 	case Is(msg, keys.ActionAddReset):
-		m.AddAction(config.ACTION_RESET)
+		m.AddAction(grid.ACTION_RESET)
 	case Is(msg, keys.ActionAddLineBounce):
-		m.AddAction(config.ACTION_LINE_BOUNCE)
+		m.AddAction(grid.ACTION_LINE_BOUNCE)
 	case Is(msg, keys.ActionAddLineDelay):
-		m.AddAction(config.ACTION_LINE_DELAY)
+		m.AddAction(grid.ACTION_LINE_DELAY)
 	case Is(msg, keys.SelectKeyLine):
 		m.definition.keyline = m.cursorPos.Line
 	case Is(msg, keys.PressDownOverlay):
@@ -1856,22 +1800,22 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 	}
 
 	switch combinedPattern[GK(uint8(lineIndex), uint8(advancedBeat))].Action {
-	case config.ACTION_LINE_RESET:
+	case grid.ACTION_LINE_RESET:
 		m.playState[lineIndex].currentBeat = 0
-	case config.ACTION_LINE_REVERSE:
+	case grid.ACTION_LINE_REVERSE:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-2, 0))
 		m.playState[lineIndex].direction = -1
 		m.playState[lineIndex].resetLocation = uint8(max(advancedBeat-1, 0))
 		m.playState[lineIndex].resetActionLocation = uint8(advancedBeat)
-		m.playState[lineIndex].resetAction = config.ACTION_LINE_REVERSE
-	case config.ACTION_LINE_BOUNCE:
+		m.playState[lineIndex].resetAction = grid.ACTION_LINE_REVERSE
+	case grid.ACTION_LINE_BOUNCE:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
 		m.playState[lineIndex].direction = -1
-	case config.ACTION_LINE_SKIP_BEAT:
+	case grid.ACTION_LINE_SKIP_BEAT:
 		m.advancePlayState(combinedPattern, lineIndex)
-	case config.ACTION_LINE_DELAY:
+	case grid.ACTION_LINE_DELAY:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
-	case config.ACTION_RESET:
+	case grid.ACTION_RESET:
 		for i := range m.playState {
 			m.playState[i].currentBeat = 0
 			m.playState[i].direction = 1
@@ -1966,7 +1910,7 @@ func (m *model) incrementAccent(every uint8, modifier int8) {
 		hasNote = hasNote && currentNote != zeronote
 
 		if hasNote {
-			m.currentOverlay.SetNote(gridKey, currentNote.IncrementAccent(modifier))
+			m.currentOverlay.SetNote(gridKey, currentNote.IncrementAccent(modifier, uint8(len(config.Accents))))
 		}
 	}
 	m.Every(every, everyFn)
@@ -2021,7 +1965,7 @@ func (m *model) AccentModify(modifier int8) {
 	for key, currentNote := range combinedOverlay {
 		if bounds.InBounds(key) {
 			if currentNote != zeronote {
-				m.currentOverlay.SetNote(key, currentNote.IncrementAccent(modifier))
+				m.currentOverlay.SetNote(key, currentNote.IncrementAccent(modifier, uint8(len(config.Accents))))
 			}
 		}
 	}
@@ -2218,9 +2162,9 @@ func (m model) SetupView() string {
 
 		var messageType string
 		switch line.MsgType {
-		case MESSAGE_TYPE_NOTE:
+		case grid.MESSAGE_TYPE_NOTE:
 			messageType = "NOTE"
-		case MESSAGE_TYPE_CC:
+		case grid.MESSAGE_TYPE_CC:
 			messageType = "CC"
 		}
 
@@ -2543,7 +2487,7 @@ func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 	if currentNote.WaitIndex > 0 {
 		waitShape = "\u0320"
 	}
-	if currentAction == config.ACTION_NOTHING && currentNote != zeronote {
+	if currentAction == grid.ACTION_NOTHING && currentNote != zeronote {
 		char = string(currentAccent.Shape) + string(config.Ratchets[currentNote.Ratchets.Length]) + string(config.Gates[currentNote.GateIndex].Shape) + waitShape
 		foregroundColor = currentAccent.Color
 	} else {

@@ -2,12 +2,13 @@ package config
 
 import (
 	"github.com/charmbracelet/lipgloss"
+	"github.com/chriserin/seq/internal/grid"
 )
 
 type Config struct {
 	Accents     []Accent
 	C1          int
-	LineActions map[Action]lineaction
+	LineActions map[grid.Action]lineaction
 }
 
 type Accent struct {
@@ -35,26 +36,14 @@ type lineaction struct {
 	Color lipgloss.Color
 }
 
-type Action uint8
-
-const (
-	ACTION_NOTHING Action = iota
-	ACTION_LINE_RESET
-	ACTION_LINE_REVERSE
-	ACTION_LINE_SKIP_BEAT
-	ACTION_RESET
-	ACTION_LINE_BOUNCE
-	ACTION_LINE_DELAY
-)
-
-var Lineactions = map[Action]lineaction{
-	ACTION_NOTHING:        {' ', "#000000"},
-	ACTION_LINE_RESET:     {'↔', "#cf142b"},
-	ACTION_LINE_REVERSE:   {'←', "#f8730e"},
-	ACTION_LINE_SKIP_BEAT: {'⇒', "#a9e5bb"},
-	ACTION_RESET:          {'⇚', "#fcf6b1"},
-	ACTION_LINE_BOUNCE:    {'↨', "#fcf6b1"},
-	ACTION_LINE_DELAY:     {'ℤ', "#cc4bc2"},
+var Lineactions = map[grid.Action]lineaction{
+	grid.ACTION_NOTHING:        {' ', "#000000"},
+	grid.ACTION_LINE_RESET:     {'↔', "#cf142b"},
+	grid.ACTION_LINE_REVERSE:   {'←', "#f8730e"},
+	grid.ACTION_LINE_SKIP_BEAT: {'⇒', "#a9e5bb"},
+	grid.ACTION_RESET:          {'⇚', "#fcf6b1"},
+	grid.ACTION_LINE_BOUNCE:    {'↨', "#fcf6b1"},
+	grid.ACTION_LINE_DELAY:     {'ℤ', "#cc4bc2"},
 }
 
 type ratchetDiacritical string

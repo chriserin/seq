@@ -2,9 +2,22 @@ package grid
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
-	"github.com/chriserin/seq/internal/config"
+	"gitlab.com/gomidi/midi/v2"
+)
+
+type Action uint8
+
+const (
+	ACTION_NOTHING Action = iota
+	ACTION_LINE_RESET
+	ACTION_LINE_REVERSE
+	ACTION_LINE_SKIP_BEAT
+	ACTION_RESET
+	ACTION_LINE_BOUNCE
+	ACTION_LINE_DELAY
 )
 
 type GridKey struct {
@@ -19,24 +32,23 @@ func (gk GridKey) String() string {
 type Note struct {
 	AccentIndex uint8
 	Ratchets    Ratchet
-	Action      config.Action
+	Action      Action
 	GateIndex   uint8
 	WaitIndex   uint8
 }
 
 func InitNote() Note {
-	return Note{5, InitRatchet(), config.ACTION_NOTHING, 0, 0}
+	return Note{5, InitRatchet(), ACTION_NOTHING, 0, 0}
 }
 
-func InitActionNote(act config.Action) Note {
+func InitActionNote(act Action) Note {
 	return Note{0, InitRatchet(), act, 0, 0}
 }
 
-func (n Note) IncrementAccent(modifier int8) Note {
+func (n Note) IncrementAccent(modifier int8, accentsLength uint8) Note {
 	var newAccent = int8(n.AccentIndex) - modifier
 	// TODO: remove hardcoded accent length
-	accentlength := len(config.Accents)
-	if newAccent >= 1 && newAccent < int8(accentlength) {
+	if newAccent >= 1 && newAccent < int8(accentsLength) {
 		n.AccentIndex = uint8(newAccent)
 	}
 	return n
@@ -67,7 +79,7 @@ func (n Note) IncrementRatchet(modifier int8) Note {
 	// TODO: remove hardcoded ratchets length
 	var ratchetsLength int8 = 8
 	newRatchet := int8(currentRatchet) + modifier
-	if n.AccentIndex > 0 && n.Action == config.ACTION_NOTHING && newRatchet < ratchetsLength && int8(currentRatchet)+modifier >= 0 {
+	if n.AccentIndex > 0 && n.Action == ACTION_NOTHING && newRatchet < ratchetsLength && int8(currentRatchet)+modifier >= 0 {
 		n.Ratchets.Length = uint8(int8(currentRatchet) + modifier)
 		n.Ratchets.SetRatchet(true, n.Ratchets.Length)
 	}
@@ -125,4 +137,59 @@ func (r *Ratchet) Toggle(index uint8) {
 
 func (r Ratchet) HitAt(index uint8) bool {
 	return (r.Hits & (1 << index)) != 0
+}
+
+type MessageType uint8
+
+const (
+	MESSAGE_TYPE_NOTE MessageType = iota
+	MESSAGE_TYPE_CC
+)
+
+type LineDefinition struct {
+	Channel uint8
+	Note    uint8
+	MsgType MessageType
+}
+
+func (ld LineDefinition) ValueName() string {
+	switch ld.MsgType {
+	case MESSAGE_TYPE_NOTE:
+		return fmt.Sprintf("%s%d", strings.ReplaceAll(midi.Note(ld.Note).Name(), "b", "♭"), midi.Note(ld.Note).Octave()-2)
+	case MESSAGE_TYPE_CC:
+		return "NAME"
+	}
+	return ""
+}
+
+func (l *LineDefinition) IncrementChannel() {
+	if l.Channel < 16 {
+		l.Channel++
+	}
+}
+
+func (l *LineDefinition) DecrementChannel() {
+	if l.Channel > 1 {
+		l.Channel--
+	}
+}
+
+func (l *LineDefinition) IncrementNote() {
+	if l.Note < 128 {
+		l.Note++
+	}
+}
+
+func (l *LineDefinition) DecrementNote() {
+	if l.Note > 1 {
+		l.Note--
+	}
+}
+
+func (l *LineDefinition) IncrementMessageType() {
+	l.MsgType = (l.MsgType + 1) % 2
+}
+
+func (l *LineDefinition) DecrementMessageType() {
+	l.MsgType = (l.MsgType - 1) % 2
 }
