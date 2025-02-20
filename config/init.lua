@@ -2,6 +2,7 @@ local seq = require("seq")
 
 local Channel = 10
 local C1 = 36
+local C3 = 60
 local MessageType = "Note"
 
 seq.addtemplate({
@@ -17,6 +18,20 @@ seq.addtemplate({
 		{ Channel, MessageType, C1 + 6 },
 		{ Channel, MessageType, C1 + 7 },
 	},
+})
+
+local pianoLines = {}
+
+local index = 1
+for noteValue = C3, C1, -1 do
+	pianoLines[index] = { 1, "Note", noteValue }
+	index = index + 1
+end
+
+seq.addtemplate({
+	name = "Piano2",
+	maxGateLength = 32,
+	lines = pianoLines,
 })
 
 seq.addinstrument({
