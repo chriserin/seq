@@ -2,10 +2,7 @@ package grid
 
 import (
 	"fmt"
-	"strings"
 	"time"
-
-	"gitlab.com/gomidi/midi/v2"
 )
 
 type Action uint8
@@ -150,16 +147,6 @@ type LineDefinition struct {
 	Channel uint8
 	Note    uint8
 	MsgType MessageType
-}
-
-func (ld LineDefinition) ValueName() string {
-	switch ld.MsgType {
-	case MESSAGE_TYPE_NOTE:
-		return fmt.Sprintf("%s%d", strings.ReplaceAll(midi.Note(ld.Note).Name(), "b", "♭"), midi.Note(ld.Note).Octave()-2)
-	case MESSAGE_TYPE_CC:
-		return "NAME"
-	}
-	return ""
 }
 
 func (l *LineDefinition) IncrementChannel() {

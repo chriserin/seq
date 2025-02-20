@@ -116,7 +116,13 @@ var StandardCCs = []ControlChange{
 	{19, 127, "General Purpose Controller 4"},
 }
 
-func FindCC(value uint8) ControlChange {
+func FindCC(value uint8, instrumentName string) ControlChange {
+	instrument := GetInstrument(instrumentName)
+	for _, cc := range instrument.CCs {
+		if cc.Value == value {
+			return cc
+		}
+	}
 	for _, cc := range StandardCCs {
 		if cc.Value == value {
 			return cc

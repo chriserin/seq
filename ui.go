@@ -322,7 +322,7 @@ func (nm noteMsg) OffMessage() midi.Message {
 	return midi.NoteOff(nm.channel, nm.noteValue)
 }
 
-func Messages(l grid.LineDefinition, note note, accents []config.Accent, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool) []Delayable {
+func Messages(l grid.LineDefinition, note note, accents []config.Accent, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool, instrument string) []Delayable {
 	var delay time.Duration
 	if includeDelay {
 		delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
@@ -348,7 +348,7 @@ func Messages(l grid.LineDefinition, note note, accents []config.Accent, accentT
 			noteMsg{midi.NoteOffMsg, l.Channel, noteValue, 0, delay + duration},
 		}
 	} else {
-		ccValue := uint8((float32(note.AccentIndex) / float32(len(accents))) * float32(config.FindCC(l.Note).UpperLimit))
+		ccValue := uint8((float32(note.AccentIndex) / float32(len(accents))) * float32(config.FindCC(l.Note, instrument).UpperLimit))
 
 		return []Delayable{
 			controlChangeMsg{l.Channel, l.Note, ccValue, delay},
@@ -660,7 +660,6 @@ func (m *model) Redo() UndoStack {
 }
 
 type Definition struct {
-	template     string
 	overlays     *overlays.Overlay
 	lines        []grid.LineDefinition
 	beats        uint8
@@ -668,6 +667,8 @@ type Definition struct {
 	subdivisions int
 	keyline      uint8
 	accents      patternAccents
+	instrument   string
+	template     string
 }
 
 type patternAccents struct {
@@ -735,7 +736,7 @@ type lineNote struct {
 	line grid.LineDefinition
 }
 
-func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []grid.LineDefinition, pattern grid.Pattern, lineStates []linestate) []tea.Cmd {
+func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []grid.LineDefinition, pattern grid.Pattern, lineStates []linestate, instrument string) []tea.Cmd {
 	messages := make([]Delayable, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
@@ -745,7 +746,7 @@ func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []grid.L
 			if hasNote && note.Ratchets.Length > 0 {
 				ratchetNotes = append(ratchetNotes, lineNote{note, line})
 			} else if hasNote && note != zeronote {
-				messages = append(messages, Messages(line, note, accents.Data, accents.Target, beatInterval, true)...)
+				messages = append(messages, Messages(line, note, accents.Data, accents.Target, beatInterval, true, instrument)...)
 			}
 		}
 	}
@@ -946,7 +947,7 @@ func InitLineState(previousGroupPlayState groupPlayState, index uint8) linestate
 	return linestate{index, 0, 1, 1, 0, 0, 0, previousGroupPlayState}
 }
 
-func InitDefinition(template string) Definition {
+func InitDefinition(template string, instrument string) Definition {
 	return Definition{
 		overlays:     overlays.InitOverlay(overlaykey.ROOT, nil),
 		beats:        32,
@@ -956,10 +957,11 @@ func InitDefinition(template string) Definition {
 		lines:        InitLines(template),
 		accents:      patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
 		template:     template,
+		instrument:   instrument,
 	}
 }
 
-func InitModel(midiConnection MidiConnection, template string) model {
+func InitModel(midiConnection MidiConnection, template string, instrument string) model {
 	logFile, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
 		panic("could not open log file")
@@ -971,7 +973,7 @@ func InitModel(midiConnection MidiConnection, template string) model {
 	definition, hasDefinition := Definition{}, false // Read()
 
 	if !hasDefinition {
-		definition = InitDefinition(template)
+		definition = InitDefinition(template, instrument)
 	}
 
 	return model{
@@ -1008,9 +1010,9 @@ func (m model) LogString(message string) {
 	}
 }
 
-func RunProgram(midiConnection MidiConnection, template string) *tea.Program {
+func RunProgram(midiConnection MidiConnection, template string, instrument string) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	p := tea.NewProgram(InitModel(midiConnection, template), tea.WithAltScreen())
+	p := tea.NewProgram(InitModel(midiConnection, template, instrument), tea.WithAltScreen())
 	return p
 }
 
@@ -1106,7 +1108,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				beatInterval := m.BeatInterval()
 
 				cmds := make([]tea.Cmd, 0, 10)
-				cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState)...)
+				cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState, m.definition.instrument)...)
 				cmds = append(cmds, BeatTick(beatInterval))
 				return m, tea.Batch(cmds...)
 			} else {
@@ -1224,7 +1226,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case Is(msg, keys.New):
 			m.cursorPos = GK(0, 0)
-			m.definition = InitDefinition(m.definition.template)
+			m.definition = InitDefinition(m.definition.template, m.definition.instrument)
 			m.currentOverlay = m.definition.overlays
 			m.selectionIndicator = SELECT_NOTHING
 		case Is(msg, keys.ToggleVisualMode):
@@ -1269,7 +1271,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.totalBeats++
 			beatInterval := m.BeatInterval()
 			cmds := make([]tea.Cmd, 0, 10)
-			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState)...)
+			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState, m.definition.instrument)...)
 			cmds = append(cmds, BeatTick(beatInterval))
 			return m, tea.Batch(
 				cmds...,
@@ -1301,7 +1303,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
 			cmds := make([]tea.Cmd, 0)
 			if msg.Ratchets.HitAt(msg.iterations) {
-				messages := Messages(msg.line, msg.note, m.definition.accents.Data, m.definition.accents.Target, msg.beatInterval, false)
+				messages := Messages(msg.line, msg.note, m.definition.accents.Data, m.definition.accents.Target, msg.beatInterval, false, m.definition.instrument)
 				for _, message := range messages {
 					var cmd = tea.Tick(
 						message.Delay(),
@@ -2179,9 +2181,19 @@ func (m model) SetupView() string {
 		} else {
 			buf.WriteString(colors.NumberColor.Render(strconv.Itoa(int(line.Note))))
 		}
-		buf.WriteString(fmt.Sprintf(" %s\n", line.ValueName()))
+		buf.WriteString(fmt.Sprintf(" %s\n", LineValueName(line, m.definition.instrument)))
 	}
 	return buf.String()
+}
+
+func LineValueName(ld grid.LineDefinition, instrument string) string {
+	switch ld.MsgType {
+	case grid.MESSAGE_TYPE_NOTE:
+		return fmt.Sprintf("%s%d", strings.ReplaceAll(midi.Note(ld.Note).Name(), "b", "♭"), midi.Note(ld.Note).Octave()-2)
+	case grid.MESSAGE_TYPE_CC:
+		return config.FindCC(ld.Note, instrument).Name
+	}
+	return ""
 }
 
 const SELECTED_OVERLAY_ARROW = "\u2192"
