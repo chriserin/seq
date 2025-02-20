@@ -4,6 +4,7 @@ go 1.23.3
 
 require (
 	github.com/BurntSushi/toml v1.4.0
+	github.com/aarzilli/golua v0.0.0-20250217091409-248753f411c4
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.2.4
 	github.com/charmbracelet/lipgloss v1.0.0
@@ -11,6 +12,8 @@ require (
 	github.com/stretchr/testify v1.10.0
 	gitlab.com/gomidi/midi/v2 v2.2.19
 )
+
+replace github.com/aarzilli/golua => ./vndr/github.com/aarzilli/golua
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect

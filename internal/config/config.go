@@ -1,6 +1,9 @@
 package config
 
 import (
+	"fmt"
+
+	"github.com/aarzilli/golua/lua"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/chriserin/seq/internal/grid"
 )
@@ -95,83 +98,184 @@ type ControlChange struct {
 }
 
 var StandardCCs = []ControlChange{
-	{1, 127, "Mod Wheel"},
-	{4, 120, "Foot Controller"},
-	{5, 120, "Portamento"},
-}
-
-var CCs = []ControlChange{
-	{3, 120, "OSC A FREQUENCY"},
-	{7, 120, "MASTER VOLUME"},
-	{9, 120, "OSC B FREQUENCY"},
-	{14, 127, "OSC B FINE TUNE"},
-	{15, 1, "OSC A SAW ON/FF"},
-	{20, 1, "OSC A SQUARE ON/OFF"},
-	{21, 120, "OSC A PULSE WIDTH"},
-	{22, 120, "OSC B PULSE WIDTH"},
-	{23, 1, "OSC SYNC ON/OFF"},
-	{24, 1, "OSC B LOW FREQ ON/OFF"},
-	{25, 1, "OSC B KEYBOARD ON/OFF"},
-	{26, 120, "GLIDE RATE"},
-	{27, 120, "OSC A LEVEL"},
-	{28, 120, "OSC B LEVEL"},
-	{29, 120, "NOISE LEVEL"},
-	{30, 1, "OSC B SAW ON/OFF"},
-	{31, 120, "RESONANCE"},
-	{35, 2, "FILTER KEYBOARD TRACK OFF/HALF/FULL"},
-	{41, 1, "FILTER REV SELECT"},
-	{46, 120, "LFO FREQUENCY"},
-	{47, 120, "LFO INITIAL AMOUNT"},
-	{52, 1, "OSC B TRI ON/OFF"},
-	{53, 120, "LFO SOURCE MIX"},
-	{54, 1, "LFO FREQ A ON/OFF"},
-	{55, 1, "LFO FREQ B ON/OFF"},
-	{56, 1, "LFO FREQ PW A ON/OFF"},
-	{57, 1, "LFO FREQ PW B ON/OFF"},
-	{58, 1, "LFO FILTER ON/OFF"},
-	{59, 127, "POLY MOD FILT ENV AMOUNT"},
-	{60, 120, "POLY MOD OSC B AMOUNT"},
-	{61, 1, "POLY MOD FREQ A ON/OFF"},
-	{62, 1, "POLY MOD PW ON/OFF"},
-	{63, 1, "POLY MOD FILTER ON/OFF"},
-	{70, 11, "PITCH WHEEL RANGE"},
-	{71, 3, "RETRIGGER AND UNISON ASSIGN"},
-	{73, 120, "CUTOFF"},
-	{74, 127, "BRIGHTNESS"},
-	{85, 127, "VINTAGE"},
-	{86, 1, "PRESSURE FILTER"},
-	{87, 1, "PRESSURE LFO"},
-	{89, 120, "ENVELOPE FILTER AMOUNT"},
-	{90, 1, "ENVELOPE FILTER VELOCITY ON/OFF"},
-	{102, 1, "ENVELOPE VCA VELOCITY ON/OFF"},
-	{103, 120, "ATTACK FILTER"},
-	{104, 120, "ATTACK VCA"},
-	{105, 120, "DECAY FILTER"},
-	{106, 120, "DECAY VCA"},
-	{107, 120, "SUSTAIN FILTER"},
-	{108, 120, "SUSTAIN VCA"},
-	{109, 120, "RELEASE FILTER"},
-	{110, 120, "RELEASE VCA"},
-	{111, 1, "RELEASE ON/OFF"},
-	{112, 1, "UNISON ON/OFF"},
-	{113, 10, "UNISON VOICE COUNT"},
-	{114, 7, "UNISON DETUNE"},
-	{116, 1, "OSC B SQUARE ON/OFF"},
-	{117, 1, "LFO SAW ON/OFF"},
-	{118, 1, "LFO TRI ON/OFF"},
-	{119, 1, "LFO SQUARE ON/OFF"},
+	{0, 127, "Bank Select"},
+	{1, 127, "Modulation Wheel or Lever"},
+	{2, 127, "Breath Controller"},
+	{4, 127, "Foot Controller"},
+	{5, 127, "Portamento Time"},
+	{6, 127, "Data Entry MSB"},
+	{7, 127, "Channel Volume"},
+	{8, 127, "Balance"},
+	{10, 127, "Pan"},
+	{11, 127, "Expression Controller"},
+	{12, 127, "Effect Control 1"},
+	{13, 127, "Effect Control 2"},
+	{16, 127, "General Purpose Controller 1"},
+	{17, 127, "General Purpose Controller 2"},
+	{18, 127, "General Purpose Controller 3"},
+	{19, 127, "General Purpose Controller 4"},
 }
 
 func FindCC(value uint8) ControlChange {
-	for _, cc := range CCs {
-		if cc.Value == value {
-			return cc
-		}
-	}
 	for _, cc := range StandardCCs {
 		if cc.Value == value {
 			return cc
 		}
 	}
-	return CCs[0]
+	return StandardCCs[0]
+}
+
+type Template struct {
+	Name  string
+	Lines []grid.LineDefinition
+}
+
+var templates []Template
+
+func GetTemplate(name string) Template {
+	for _, template := range templates {
+		if template.Name == name {
+			return template
+		}
+	}
+	return Template{}
+}
+
+type Instrument struct {
+	Name string
+	CCs  []ControlChange
+}
+
+var instruments []Instrument
+
+func GetInstrument(name string) Instrument {
+	for _, instrument := range instruments {
+		if instrument.Name == name {
+			return instrument
+		}
+	}
+	return Instrument{}
+}
+
+func ProcessConfig(luafilepath string) {
+	L := lua.NewState()
+	defer L.Close()
+
+	L.OpenPackage()
+	L.OpenLibs()
+	L.RegisterLibrary("seq", seqFunctions)
+
+	err := L.DoFile(luafilepath)
+	if err != nil {
+		fmt.Println("Do File error!!")
+		fmt.Println(err.Error())
+	} else {
+		fmt.Printf("Number of templates %d\n", len(templates))
+	}
+}
+
+// Lua Function
+func addInstrument(L *lua.State) int {
+	if L.IsTable(1) {
+		L.GetField(1, "name")
+		name := L.ToString(2)
+		instrument := Instrument{Name: name}
+
+		L.Pop(1)
+		L.GetField(1, "controlchanges")
+		if L.IsTable(2) {
+
+			for i := 1; true; i++ {
+				L.PushInteger(int64(i))
+				L.GetTable(2)
+				if L.IsTable(3) {
+					cc := ControlChange{}
+					for i := range 3 {
+						L.PushInteger(int64(i + 1))
+						L.GetTable(3)
+						switch i + 1 {
+						case 1:
+							value := L.ToNumber(4)
+							cc.Value = uint8(value)
+						case 2:
+							upperLimit := L.ToNumber(4)
+							cc.UpperLimit = uint8(upperLimit)
+						case 3:
+							name := L.ToString(4)
+							cc.Name = name
+						}
+						L.Pop(1)
+					}
+					instrument.CCs = append(instrument.CCs, cc)
+				} else {
+					break
+				}
+				L.Pop(1)
+			}
+		}
+		instruments = append(instruments, instrument)
+	} else {
+		panic("Instrument not formatted correctly")
+		// Communicate Error
+	}
+	return 0
+}
+
+// Lua Function
+func addTemplate(L *lua.State) int {
+	if L.IsTable(1) {
+		L.GetField(1, "name")
+		name := L.ToString(2)
+		template := Template{Name: name}
+
+		L.Pop(1)
+		L.GetField(1, "lines")
+		if L.IsTable(2) {
+
+			for i := 1; true; i++ {
+				L.PushInteger(int64(i))
+				L.GetTable(2)
+				if L.IsTable(3) {
+					ld := grid.LineDefinition{}
+					for i := range 3 {
+						L.PushInteger(int64(i + 1))
+						L.GetTable(3)
+						switch i + 1 {
+						case 1:
+							channel := L.ToNumber(4)
+							ld.Channel = uint8(channel)
+						case 2:
+							messageType := L.ToString(4)
+							switch messageType {
+							case "NOTE":
+								ld.MsgType = grid.MESSAGE_TYPE_NOTE
+							case "CC":
+								ld.MsgType = grid.MESSAGE_TYPE_CC
+							}
+						case 3:
+							note := L.ToNumber(4)
+							ld.Note = uint8(note)
+						}
+						L.Pop(1)
+					}
+					template.Lines = append(template.Lines, ld)
+				} else {
+					break
+				}
+				L.Pop(1)
+			}
+		}
+		templates = append(templates, template)
+	} else {
+		panic("Template not formatted correctly")
+		// Communicate Error
+	}
+	return 0
+}
+
+type LuaFn = lua.LuaGoFunction
+
+var seqFunctions = map[string]LuaFn{
+	"addtemplate":   addTemplate,
+	"addinstrument": addInstrument,
 }

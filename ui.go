@@ -660,6 +660,7 @@ func (m *model) Redo() UndoStack {
 }
 
 type Definition struct {
+	template     string
 	overlays     *overlays.Overlay
 	lines        []grid.LineDefinition
 	beats        uint8
@@ -919,16 +920,11 @@ func (m *model) ToggleRatchetMute() {
 	m.currentOverlay.SetNote(m.cursorPos, currentNote)
 }
 
-func InitLines(n uint8) []grid.LineDefinition {
-	var lines = make([]grid.LineDefinition, n)
-	for i := range n {
-		lines[i] = grid.LineDefinition{
-			Channel: 10,
-			Note:    config.C1 + i,
-			MsgType: grid.MESSAGE_TYPE_NOTE,
-		}
-	}
-	return lines
+func InitLines(template string) []grid.LineDefinition {
+	gridTemplate := config.GetTemplate(template)
+	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
+	copy(newLines, gridTemplate.Lines)
+	return newLines
 }
 
 func InitLineStates(lines int, previousPlayState []linestate) []linestate {
@@ -950,19 +946,20 @@ func InitLineState(previousGroupPlayState groupPlayState, index uint8) linestate
 	return linestate{index, 0, 1, 1, 0, 0, 0, previousGroupPlayState}
 }
 
-func InitDefinition() Definition {
+func InitDefinition(template string) Definition {
 	return Definition{
 		overlays:     overlays.InitOverlay(overlaykey.ROOT, nil),
 		beats:        32,
 		tempo:        120,
 		keyline:      0,
 		subdivisions: 2,
-		lines:        InitLines(8),
+		lines:        InitLines(template),
 		accents:      patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
+		template:     template,
 	}
 }
 
-func InitModel(midiConnection MidiConnection) model {
+func InitModel(midiConnection MidiConnection, template string) model {
 	logFile, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
 		panic("could not open log file")
@@ -974,7 +971,7 @@ func InitModel(midiConnection MidiConnection) model {
 	definition, hasDefinition := Definition{}, false // Read()
 
 	if !hasDefinition {
-		definition = InitDefinition()
+		definition = InitDefinition(template)
 	}
 
 	return model{
@@ -1011,8 +1008,9 @@ func (m model) LogString(message string) {
 	}
 }
 
-func RunProgram(midiConnection MidiConnection) *tea.Program {
-	p := tea.NewProgram(InitModel(midiConnection), tea.WithAltScreen())
+func RunProgram(midiConnection MidiConnection, template string) *tea.Program {
+	config.ProcessConfig("./config/init.lua")
+	p := tea.NewProgram(InitModel(midiConnection, template), tea.WithAltScreen())
 	return p
 }
 
@@ -1226,7 +1224,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case Is(msg, keys.New):
 			m.cursorPos = GK(0, 0)
-			m.definition = InitDefinition()
+			m.definition = InitDefinition(m.definition.template)
 			m.currentOverlay = m.definition.overlays
 			m.selectionIndicator = SELECT_NOTHING
 		case Is(msg, keys.ToggleVisualMode):
