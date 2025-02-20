@@ -660,15 +660,16 @@ func (m *model) Redo() UndoStack {
 }
 
 type Definition struct {
-	overlays     *overlays.Overlay
-	lines        []grid.LineDefinition
-	beats        uint8
-	tempo        int
-	subdivisions int
-	keyline      uint8
-	accents      patternAccents
-	instrument   string
-	template     string
+	overlays        *overlays.Overlay
+	lines           []grid.LineDefinition
+	beats           uint8
+	tempo           int
+	subdivisions    int
+	keyline         uint8
+	accents         patternAccents
+	instrument      string
+	template        string
+	templateUIStyle string
 }
 
 type patternAccents struct {
@@ -948,16 +949,21 @@ func InitLineState(previousGroupPlayState groupPlayState, index uint8) linestate
 }
 
 func InitDefinition(template string, instrument string) Definition {
+	gridTemplate := config.GetTemplate(template)
+	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
+	copy(newLines, gridTemplate.Lines)
+
 	return Definition{
-		overlays:     overlays.InitOverlay(overlaykey.ROOT, nil),
-		beats:        32,
-		tempo:        120,
-		keyline:      0,
-		subdivisions: 2,
-		lines:        InitLines(template),
-		accents:      patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
-		template:     template,
-		instrument:   instrument,
+		overlays:        overlays.InitOverlay(overlaykey.ROOT, nil),
+		beats:           32,
+		tempo:           120,
+		keyline:         0,
+		subdivisions:    2,
+		lines:           newLines,
+		accents:         patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
+		template:        template,
+		instrument:      instrument,
+		templateUIStyle: gridTemplate.UIStyle,
 	}
 }
 
@@ -2186,10 +2192,14 @@ func (m model) SetupView() string {
 	return buf.String()
 }
 
+func NoteName(note uint8) string {
+	return fmt.Sprintf("%s%d", strings.ReplaceAll(midi.Note(note).Name(), "b", "♭"), midi.Note(note).Octave()-2)
+}
+
 func LineValueName(ld grid.LineDefinition, instrument string) string {
 	switch ld.MsgType {
 	case grid.MESSAGE_TYPE_NOTE:
-		return fmt.Sprintf("%s%d", strings.ReplaceAll(midi.Note(ld.Note).Name(), "b", "♭"), midi.Note(ld.Note).Octave()-2)
+		return NoteName(ld.Note)
 	case grid.MESSAGE_TYPE_CC:
 		return config.FindCC(ld.Note, instrument).Name
 	}
@@ -2362,16 +2372,41 @@ func KeyLineIndicator(k uint8, l uint8) string {
 	}
 }
 
-func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayPattern) string {
-	var buf strings.Builder
+var blackKeyStyle = lipgloss.NewStyle().Background(lipgloss.Color("#000")).Foreground(lipgloss.Color("#fff"))
+var whiteKeyStyle = lipgloss.NewStyle().Background(lipgloss.Color("#ccc")).Foreground(lipgloss.Color("#000"))
+
+var blackNotes = []uint8{1, 3, 6, 8, 10}
+
+func (m model) LineIndicator(lineNumber uint8) string {
 	indicator := "│"
+	if lineNumber == m.cursorPos.Line {
+		indicator = colors.SelectedColor.Render("┤")
+	}
 	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PLAY_STATE_MUTE {
 		indicator = "M"
 	}
 	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PLAY_STATE_SOLO {
 		indicator = "S"
 	}
-	buf.WriteString(fmt.Sprintf("%2d%s%s", lineNumber, KeyLineIndicator(m.definition.keyline, lineNumber), indicator))
+
+	var lineName string
+	if m.definition.templateUIStyle == "blackwhite" {
+		notename := NoteName(m.definition.lines[lineNumber].Note)
+		if slices.Contains(blackNotes, m.definition.lines[lineNumber].Note%12) {
+			lineName = blackKeyStyle.Render(notename[0:4])
+		} else {
+			lineName = whiteKeyStyle.Render(notename)
+		}
+	} else {
+		lineName = fmt.Sprintf("%d", lineNumber)
+	}
+
+	return fmt.Sprintf("%2s%s%s", lineName, KeyLineIndicator(m.definition.keyline, lineNumber), indicator)
+}
+
+func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayPattern) string {
+	var buf strings.Builder
+	buf.WriteString(m.LineIndicator(lineNumber))
 
 	for i := uint8(0); i < m.definition.beats; i++ {
 		currentGridKey := GK(uint8(lineNumber), i)

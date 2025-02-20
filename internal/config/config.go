@@ -132,8 +132,9 @@ func FindCC(value uint8, instrumentName string) ControlChange {
 }
 
 type Template struct {
-	Name  string
-	Lines []grid.LineDefinition
+	Name    string
+	Lines   []grid.LineDefinition
+	UIStyle string
 }
 
 var templates []Template
@@ -232,9 +233,16 @@ func addTemplate(L *lua.State) int {
 	if L.IsTable(1) {
 		L.GetField(1, "name")
 		name := L.ToString(2)
-		template := Template{Name: name}
-
 		L.Pop(1)
+		L.GetField(1, "uistyle")
+		uistyle := L.ToString(2)
+		if uistyle == "" {
+			uistyle = "plain"
+		}
+		L.Pop(1)
+
+		template := Template{Name: name, UIStyle: uistyle}
+
 		L.GetField(1, "lines")
 		if L.IsTable(2) {
 
