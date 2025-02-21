@@ -36,3 +36,25 @@ func TestOverlayKeySort(t *testing.T) {
 		})
 	}
 }
+
+func TestSolo(t *testing.T) {
+	t.Run("First Solo", func(t *testing.T) {
+		playStates := []linestate{
+			{groupPlayState: PLAY_STATE_PLAY},
+			{groupPlayState: PLAY_STATE_PLAY},
+		}
+		newPlayStates := Solo(playStates, 0)
+		assert.Equal(t, newPlayStates[0].groupPlayState, PLAY_STATE_SOLO)
+		assert.Equal(t, newPlayStates[1].groupPlayState, PLAY_STATE_PLAY)
+	})
+
+	t.Run("First UnSolo", func(t *testing.T) {
+		playStates := []linestate{
+			{groupPlayState: PLAY_STATE_SOLO},
+			{groupPlayState: PLAY_STATE_PLAY},
+		}
+		newPlayStates := Solo(playStates, 0)
+		assert.Equal(t, newPlayStates[0].groupPlayState, PLAY_STATE_PLAY)
+		assert.Equal(t, newPlayStates[1].groupPlayState, PLAY_STATE_PLAY)
+	})
+}

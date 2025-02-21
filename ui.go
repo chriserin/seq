@@ -231,7 +231,6 @@ const (
 	PLAY_STATE_PLAY groupPlayState = iota
 	PLAY_STATE_MUTE
 	PLAY_STATE_SOLO
-	PLAY_STATE_MUTED_BY_SOLO
 )
 
 type linestate struct {
@@ -246,7 +245,11 @@ type linestate struct {
 }
 
 func (ls linestate) IsMuted() bool {
-	return ls.groupPlayState == PLAY_STATE_MUTE || ls.groupPlayState == PLAY_STATE_MUTED_BY_SOLO
+	return ls.groupPlayState == PLAY_STATE_MUTE
+}
+
+func (ls linestate) IsSolo() bool {
+	return ls.groupPlayState == PLAY_STATE_SOLO
 }
 
 func (ls linestate) GridKey() grid.GridKey {
@@ -373,6 +376,7 @@ type model struct {
 	trackTime           time.Duration
 	totalBeats          int
 	playState           []linestate
+	hasSolo             bool
 	selectionIndicator  Selection
 	focus               focus
 	patternMode         PatternMode
@@ -737,12 +741,12 @@ type lineNote struct {
 	line grid.LineDefinition
 }
 
-func PlayBeat(accents patternAccents, beatInterval time.Duration, lines []grid.LineDefinition, pattern grid.Pattern, lineStates []linestate, instrument string) []tea.Cmd {
+func PlayBeat(hasSolo bool, accents patternAccents, beatInterval time.Duration, lines []grid.LineDefinition, pattern grid.Pattern, lineStates []linestate, instrument string) []tea.Cmd {
 	messages := make([]Delayable, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
 	for i, line := range lines {
-		if !lineStates[i].IsMuted() {
+		if lineStates[i].IsSolo() || (!lineStates[i].IsMuted() && !hasSolo) {
 			note, hasNote := pattern[lineStates[i].GridKey()]
 			if hasNote && note.Ratchets.Length > 0 {
 				ratchetNotes = append(ratchetNotes, lineNote{note, line})
@@ -1114,7 +1118,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				beatInterval := m.BeatInterval()
 
 				cmds := make([]tea.Cmd, 0, 10)
-				cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState, m.definition.instrument)...)
+				cmds = append(cmds, PlayBeat(m.hasSolo, m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState, m.definition.instrument)...)
 				cmds = append(cmds, BeatTick(beatInterval))
 				return m, tea.Batch(cmds...)
 			} else {
@@ -1246,7 +1250,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Note:    lastline.Note + 1,
 				})
 				if m.playing {
-					m.playState = append(m.playState, InitLineState(m.GroupPlayStateForNewLine(), uint8(len(m.definition.lines)-1)))
+					m.playState = append(m.playState, InitLineState(PLAY_STATE_PLAY, uint8(len(m.definition.lines)-1)))
 				}
 			}
 		case Is(msg, keys.Yank):
@@ -1257,10 +1261,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.IsRatchetSelector() {
 				m.ToggleRatchetMute()
 			} else {
-				m.Mute()
+				m.playState = Mute(m.playState, m.cursorPos.Line)
+				m.hasSolo = m.HasSolo()
 			}
 		case Is(msg, keys.Solo):
-			m.Solo()
+			m.playState = Solo(m.playState, m.cursorPos.Line)
+			m.hasSolo = m.HasSolo()
 		default:
 			m = m.UpdateDefinition(msg)
 		}
@@ -1277,7 +1283,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.totalBeats++
 			beatInterval := m.BeatInterval()
 			cmds := make([]tea.Cmd, 0, 10)
-			cmds = append(cmds, PlayBeat(m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState, m.definition.instrument)...)
+			cmds = append(cmds, PlayBeat(m.hasSolo, m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState, m.definition.instrument)...)
 			cmds = append(cmds, BeatTick(beatInterval))
 			return m, tea.Batch(
 				cmds...,
@@ -1658,74 +1664,32 @@ func (m *model) RotateLeft() {
 
 }
 
-func (m model) GroupPlayStateForNewLine() groupPlayState {
+func Mute(playState []linestate, line uint8) []linestate {
+	switch playState[line].groupPlayState {
+	case PLAY_STATE_PLAY:
+		playState[line].groupPlayState = PLAY_STATE_MUTE
+	case PLAY_STATE_MUTE:
+		playState[line].groupPlayState = PLAY_STATE_PLAY
+	case PLAY_STATE_SOLO:
+		playState[line].groupPlayState = PLAY_STATE_MUTE
+	}
+	return playState
+}
+
+func Solo(playState []linestate, line uint8) []linestate {
+	switch playState[line].groupPlayState {
+	case PLAY_STATE_PLAY:
+		playState[line].groupPlayState = PLAY_STATE_SOLO
+	case PLAY_STATE_MUTE:
+		playState[line].groupPlayState = PLAY_STATE_SOLO
+	case PLAY_STATE_SOLO:
+		playState[line].groupPlayState = PLAY_STATE_PLAY
+	}
+	return playState
+}
+
+func (m model) HasSolo() bool {
 	for _, state := range m.playState {
-		if state.groupPlayState == PLAY_STATE_SOLO {
-			return PLAY_STATE_MUTED_BY_SOLO
-		}
-	}
-	return PLAY_STATE_PLAY
-}
-
-func (m *model) Mute() {
-	var hasOtherSolo = m.hasOtherSolo(m.cursorPos.Line)
-	switch m.playState[m.cursorPos.Line].groupPlayState {
-	case PLAY_STATE_PLAY:
-		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_MUTE
-	case PLAY_STATE_MUTED_BY_SOLO:
-		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_MUTE
-	case PLAY_STATE_MUTE:
-		if hasOtherSolo {
-			m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
-		} else {
-			m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_PLAY
-		}
-	case PLAY_STATE_SOLO:
-		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_MUTE
-	}
-}
-
-func (m *model) Solo() {
-	var hasOtherSolo = m.hasOtherSolo(m.cursorPos.Line)
-	for i, state := range m.playState {
-		if uint8(i) != m.cursorPos.Line {
-			switch state.groupPlayState {
-			case PLAY_STATE_PLAY:
-				m.playState[i].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
-			case PLAY_STATE_MUTED_BY_SOLO:
-				if hasOtherSolo {
-					m.playState[i].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
-				} else {
-					m.playState[i].groupPlayState = PLAY_STATE_PLAY
-				}
-			case PLAY_STATE_MUTE:
-				m.playState[i].groupPlayState = PLAY_STATE_MUTE
-			case PLAY_STATE_SOLO:
-				m.playState[i].groupPlayState = PLAY_STATE_SOLO
-			}
-		}
-	}
-	switch m.playState[m.cursorPos.Line].groupPlayState {
-	case PLAY_STATE_PLAY:
-		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_SOLO
-	case PLAY_STATE_MUTED_BY_SOLO:
-		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_SOLO
-	case PLAY_STATE_MUTE:
-		m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_SOLO
-	case PLAY_STATE_SOLO:
-		if hasOtherSolo {
-			m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_MUTED_BY_SOLO
-		} else {
-			m.playState[m.cursorPos.Line].groupPlayState = PLAY_STATE_PLAY
-		}
-	}
-}
-
-func (m model) hasOtherSolo(than uint8) bool {
-	for i, state := range m.playState {
-		if i == int(than) {
-			continue
-		}
 		if state.groupPlayState == PLAY_STATE_SOLO {
 			return true
 		}
