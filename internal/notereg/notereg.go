@@ -38,11 +38,10 @@ func Has(note Keyable) bool {
 	return existing
 }
 
-func Remove(note Keyable) bool {
+func Remove(note Keyable) {
 	noteMutex.Lock()
 	defer noteMutex.Unlock()
-	_, existing := noteReg[note.GetKey()]
-	return existing
+	delete(noteReg, note.GetKey())
 }
 
 func Clear() []Keyable {
