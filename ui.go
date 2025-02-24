@@ -1280,9 +1280,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case beatMsg:
 		m.beatTime = time.Now()
 		if m.playing {
-			m.advanceCurrentBeat()
-			m.advanceKeyCycle()
 			playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
+			m.advanceCurrentBeat(playingOverlay)
+			m.advanceKeyCycle()
 			m.totalBeats++
 			beatInterval := m.BeatInterval()
 			cmds := make([]tea.Cmd, 0, 10)
@@ -1736,11 +1736,11 @@ func (m *model) Paste() {
 	}
 }
 
-func (m *model) advanceCurrentBeat() {
-	playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
-	combinedPattern := m.CombinedEditPattern(playingOverlay)
+func (m *model) advanceCurrentBeat(playingOverlay *overlays.Overlay) {
+	pattern := make(grid.Pattern)
+	playingOverlay.CombineActionPattern(&pattern, m.keyCycles)
 	for i := range m.playState {
-		doContinue := m.advancePlayState(combinedPattern, i)
+		doContinue := m.advancePlayState(pattern, i)
 		if !doContinue {
 			break
 		}

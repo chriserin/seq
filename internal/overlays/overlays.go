@@ -82,6 +82,19 @@ func (ol Overlay) CombinePattern(pattern *grid.Pattern, keyCycles int) {
 	ol.combine(keyCycles, addFunc)
 }
 
+func (ol Overlay) CombineActionPattern(pattern *grid.Pattern, keyCycles int) {
+	var addFunc = func(overlayPattern grid.Pattern, key Key) bool {
+		for gridKey, note := range overlayPattern {
+			_, hasNote := (*pattern)[gridKey]
+			if !hasNote && note.Action != grid.ACTION_NOTHING {
+				(*pattern)[gridKey] = note
+			}
+		}
+		return true
+	}
+	ol.combine(keyCycles, addFunc)
+}
+
 func (ol Overlay) GetMatchingOverlayKeys(keys *[]Key, keyCycles int) {
 	var addFunc = func(pattern grid.Pattern, key Key) bool {
 		(*keys) = append((*keys), key)
