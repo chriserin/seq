@@ -327,7 +327,7 @@ func (nm noteMsg) OffMessage() midi.Message {
 
 func Messages(l grid.LineDefinition, note note, accents []config.Accent, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool, instrument string) []Delayable {
 	var delay time.Duration
-	if includeDelay {
+	if includeDelay && note.WaitIndex != 0 {
 		delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
 	} else {
 		delay = 0
@@ -371,6 +371,7 @@ type model struct {
 	midiConnection      MidiConnection
 	logFile             *os.File
 	playing             bool
+	beatTime            time.Time
 	playEditing         bool
 	playTime            time.Time
 	trackTime           time.Duration
@@ -741,29 +742,26 @@ type lineNote struct {
 	line grid.LineDefinition
 }
 
-func PlayBeat(hasSolo bool, accents patternAccents, beatInterval time.Duration, lines []grid.LineDefinition, pattern grid.Pattern, lineStates []linestate, instrument string) []tea.Cmd {
+func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) []tea.Cmd {
+
+	lines := m.definition.lines
 	messages := make([]Delayable, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
-	for i, line := range lines {
-		if lineStates[i].IsSolo() || (!lineStates[i].IsMuted() && !hasSolo) {
-			note, hasNote := pattern[lineStates[i].GridKey()]
-			if hasNote && note.Ratchets.Length > 0 {
-				ratchetNotes = append(ratchetNotes, lineNote{note, line})
-			} else if hasNote && note != zeronote {
-				messages = append(messages, Messages(line, note, accents.Data, accents.Target, beatInterval, true, instrument)...)
-			}
+	for gridKey, note := range pattern {
+		line := lines[gridKey.Line]
+		if note.Ratchets.Length > 0 {
+			ratchetNotes = append(ratchetNotes, lineNote{note, line})
+		} else if note != zeronote {
+			accents := m.definition.accents
+			messages = append(messages, Messages(line, note, accents.Data, accents.Target, beatInterval, true, m.definition.instrument)...)
 		}
 	}
 
 	playCmds := make([]tea.Cmd, 0, len(lines))
 
 	for _, message := range messages {
-		cmd := tea.Tick(
-			message.Delay(),
-			func(t time.Time) tea.Msg { return message },
-		)
-		playCmds = append(playCmds, cmd)
+		m.ProcessNoteMsg(message)
 	}
 
 	for _, ratchetNote := range ratchetNotes {
@@ -775,18 +773,13 @@ func PlayBeat(hasSolo bool, accents patternAccents, beatInterval time.Duration, 
 	return playCmds
 }
 
-func PlayMessageCmd(message midi.Message, sendFn SendFunc) tea.Cmd {
-	return func() tea.Msg {
-		PlayMessage(message, sendFn)
-		return nil
-	}
-}
-
-func PlayMessage(message midi.Message, sendFn SendFunc) {
-	err := sendFn(message)
-	if err != nil {
-		panic("note on failed")
-	}
+func PlayMessage(delay time.Duration, message midi.Message, sendFn SendFunc) {
+	time.AfterFunc(delay, func() {
+		err := sendFn(message)
+		if err != nil {
+			panic("midi message send failed")
+		}
+	})
 }
 
 func (m *model) EnsureOverlay() {
@@ -1020,6 +1013,13 @@ func (m model) LogString(message string) {
 	}
 }
 
+func (m model) LogFromBeatTime() {
+	_, err := fmt.Fprintf(m.logFile, "%d\n", time.Since(m.beatTime))
+	if err != nil {
+		panic("could not write to log file")
+	}
+}
+
 func RunProgram(midiConnection MidiConnection, template string, instrument string) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
 	p := tea.NewProgram(InitModel(midiConnection, template, instrument), tea.WithAltScreen())
@@ -1118,21 +1118,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				beatInterval := m.BeatInterval()
 
 				cmds := make([]tea.Cmd, 0, 10)
-				cmds = append(cmds, PlayBeat(m.hasSolo, m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState, m.definition.instrument)...)
+				cmds = append(cmds, m.PlayBeat(beatInterval, m.CombinedBeatPattern(playingOverlay))...)
 				cmds = append(cmds, BeatTick(beatInterval))
 				return m, tea.Batch(cmds...)
 			} else {
 				m.keyCycles = 0
 				notes := notereg.Clear()
 				sendFn := m.midiConnection.AcquireSendFunc()
-				cmds := make([]tea.Cmd, len(notes))
-				for i, n := range notes {
+				for _, n := range notes {
 					switch n := n.(type) {
 					case noteMsg:
-						cmds[i] = PlayMessageCmd(n.OffMessage(), sendFn)
+						PlayMessage(time.Duration(0), n.OffMessage(), sendFn)
 					}
 				}
-				return m, tea.Batch(cmds...)
 			}
 		case Is(msg, keys.OverlayInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
@@ -1276,6 +1274,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectionIndicator = SELECT_NOTHING
 		}
 	case beatMsg:
+		m.beatTime = time.Now()
 		if m.playing {
 			m.advanceCurrentBeat()
 			m.advanceKeyCycle()
@@ -1283,34 +1282,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.totalBeats++
 			beatInterval := m.BeatInterval()
 			cmds := make([]tea.Cmd, 0, 10)
-			cmds = append(cmds, PlayBeat(m.hasSolo, m.definition.accents, beatInterval, m.definition.lines, m.CombinedBeatPattern(playingOverlay), m.playState, m.definition.instrument)...)
+			cmds = append(cmds, m.PlayBeat(beatInterval, m.CombinedBeatPattern(playingOverlay))...)
 			cmds = append(cmds, BeatTick(beatInterval))
 			return m, tea.Batch(
 				cmds...,
 			)
 		}
-	case noteMsg:
-		sendFn := m.midiConnection.AcquireSendFunc()
-		cmds := make([]tea.Cmd, 0, 2)
-		switch msg.midiType {
-		case midi.NoteOnMsg:
-			if notereg.Has(msg) {
-				cmd := PlayMessageCmd(msg.OffMessage(), sendFn)
-				cmds = append(cmds, cmd)
-			} else {
-				if err := notereg.Add(msg); err != nil {
-					panic("Added a note that was already there")
-				}
-			}
-		case midi.NoteOffMsg:
-			notereg.Remove(msg)
-		}
-		cmds = append(cmds, PlayMessageCmd(msg.GetMidi(), sendFn))
-		return m, tea.Sequence(cmds...)
-	case controlChangeMsg:
-		sendFn := m.midiConnection.AcquireSendFunc()
-		cmd := PlayMessageCmd(msg.MidiMessage(), sendFn)
-		return m, cmd
 	case ratchetMsg:
 		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
 			cmds := make([]tea.Cmd, 0)
@@ -1336,6 +1313,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.cursor = cursor
 
 	return m, cmd
+}
+
+func (m model) ProcessNoteMsg(msg Delayable) {
+	sendFn := m.midiConnection.AcquireSendFunc()
+	switch msg := msg.(type) {
+	case noteMsg:
+		switch msg.midiType {
+		case midi.NoteOnMsg:
+			if notereg.Has(msg) {
+				PlayMessage(msg.delay, msg.OffMessage(), sendFn)
+			} else {
+				if err := notereg.Add(msg); err != nil {
+					panic("Added a note that was already there")
+				}
+			}
+			m.LogFromBeatTime()
+		case midi.NoteOffMsg:
+			notereg.Remove(msg)
+		}
+		PlayMessage(msg.delay, msg.GetMidi(), sendFn)
+	case controlChangeMsg:
+		PlayMessage(msg.delay, msg.MidiMessage(), sendFn)
+	}
 }
 
 func AdvanceSelectionState(states []Selection, currentSelection Selection) Selection {
@@ -1819,18 +1819,16 @@ func (m model) CombinedEditPattern(overlay *overlays.Overlay) grid.Pattern {
 func (m model) CurrentBeatGridKeys() []grid.GridKey {
 	result := make([]grid.GridKey, 0, len(m.playState))
 	for _, linestate := range m.playState {
-		result = append(result, linestate.GridKey())
+		if linestate.IsSolo() || (!linestate.IsMuted() && !m.hasSolo) {
+			result = append(result, linestate.GridKey())
+		}
 	}
 	return result
 }
 
 func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 	pattern := make(grid.Pattern)
-	if m.playing {
-		overlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, m.CurrentBeatGridKeys())
-	} else {
-		overlay.CurrentBeatOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle(), m.CurrentBeatGridKeys())
-	}
+	overlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, m.CurrentBeatGridKeys())
 	return pattern
 }
 
