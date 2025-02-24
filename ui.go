@@ -1283,8 +1283,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.advanceKeyCycle()
 			beatInterval := m.BeatInterval()
 
+			gridKeys := make([]grid.GridKey, 0, len(m.playState))
+			m.CurrentBeatGridKeys(&gridKeys)
 			pattern := make(grid.Pattern)
-			playingOverlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, m.CurrentBeatGridKeys())
+			playingOverlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, gridKeys)
 			cmds := make([]tea.Cmd, 0, len(pattern)+1)
 			m.PlayBeat(beatInterval, pattern, &cmds)
 			if len(cmds) > 0 {
@@ -1751,6 +1753,14 @@ func (m *model) advanceCurrentBeat(playingOverlay *overlays.Overlay) {
 	}
 }
 
+func (m model) CurrentBeatGridKeys(gridKeys *[]grid.GridKey) {
+	for _, linestate := range m.playState {
+		if linestate.IsSolo() || (!linestate.IsMuted() && !m.hasSolo) {
+			*gridKeys = append(*gridKeys, linestate.GridKey())
+		}
+	}
+}
+
 func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bool {
 	currentState := m.playState[lineIndex]
 	advancedBeat := int8(currentState.currentBeat) + currentState.direction
@@ -1819,19 +1829,11 @@ func (m model) CombinedEditPattern(overlay *overlays.Overlay) grid.Pattern {
 	return pattern
 }
 
-func (m model) CurrentBeatGridKeys() []grid.GridKey {
-	result := make([]grid.GridKey, 0, len(m.playState))
-	for _, linestate := range m.playState {
-		if linestate.IsSolo() || (!linestate.IsMuted() && !m.hasSolo) {
-			result = append(result, linestate.GridKey())
-		}
-	}
-	return result
-}
-
 func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 	pattern := make(grid.Pattern)
-	overlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, m.CurrentBeatGridKeys())
+	gridKeys := make([]grid.GridKey, 0, len(m.playState))
+	m.CurrentBeatGridKeys(&gridKeys)
+	overlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, gridKeys)
 	return pattern
 }
 
