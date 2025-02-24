@@ -738,7 +738,7 @@ type lineNote struct {
 	line grid.LineDefinition
 }
 
-func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) []tea.Cmd {
+func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *[]tea.Cmd) {
 
 	lines := m.definition.lines
 	ratchetNotes := make([]lineNote, 0, len(lines))
@@ -767,14 +767,11 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) []tea.
 		}
 	}
 
-	playCmds := make([]tea.Cmd, 0, len(ratchetNotes))
 	for _, ratchetNote := range ratchetNotes {
-		playCmds = append(playCmds, func() tea.Msg {
+		*cmds = append(*cmds, func() tea.Msg {
 			return ratchetMsg{ratchetNote, 0, beatInterval}
 		})
 	}
-
-	return playCmds
 }
 
 func PlayMessage(delay time.Duration, message midi.Message, sendFn SendFunc) {
@@ -1121,8 +1118,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
 				beatInterval := m.BeatInterval()
 
-				cmds := make([]tea.Cmd, 0, 10)
-				cmds = append(cmds, m.PlayBeat(beatInterval, m.CombinedBeatPattern(playingOverlay))...)
+				pattern := m.CombinedBeatPattern(playingOverlay)
+				cmds := make([]tea.Cmd, 0, len(pattern))
+				m.PlayBeat(beatInterval, pattern, &cmds)
 				cmds = append(cmds, BeatTick(beatInterval))
 				return m, tea.Batch(cmds...)
 			} else {
@@ -1283,14 +1281,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
 			m.advanceCurrentBeat(playingOverlay)
 			m.advanceKeyCycle()
-			m.totalBeats++
 			beatInterval := m.BeatInterval()
-			cmds := make([]tea.Cmd, 0, 10)
-			cmds = append(cmds, m.PlayBeat(beatInterval, m.CombinedBeatPattern(playingOverlay))...)
-			cmds = append(cmds, BeatTick(beatInterval))
-			return m, tea.Batch(
-				cmds...,
-			)
+
+			pattern := make(grid.Pattern)
+			playingOverlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, m.CurrentBeatGridKeys())
+			cmds := make([]tea.Cmd, 0, len(pattern)+1)
+			m.PlayBeat(beatInterval, pattern, &cmds)
+			if len(cmds) > 0 {
+				cmds = append(cmds, BeatTick(beatInterval))
+				return m, tea.Batch(
+					cmds...,
+				)
+			} else {
+				return m, BeatTick(beatInterval)
+			}
 		}
 	case ratchetMsg:
 		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
@@ -1751,7 +1755,7 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 	currentState := m.playState[lineIndex]
 	advancedBeat := int8(currentState.currentBeat) + currentState.direction
 
-	if advancedBeat < 0 || advancedBeat >= int8(m.definition.beats) {
+	if advancedBeat >= int8(m.definition.beats) || advancedBeat < 0 {
 		// reset locations should be 1 time use.  Reset back to 0.
 		if m.playState[lineIndex].resetLocation != 0 && combinedPattern[GK(uint8(lineIndex), currentState.resetActionLocation)].Action == currentState.resetAction {
 			m.playState[lineIndex].currentBeat = currentState.resetLocation
@@ -1767,6 +1771,8 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 	}
 
 	switch combinedPattern[GK(uint8(lineIndex), uint8(advancedBeat))].Action {
+	case grid.ACTION_NOTHING:
+		return true
 	case grid.ACTION_LINE_RESET:
 		m.playState[lineIndex].currentBeat = 0
 	case grid.ACTION_LINE_REVERSE:
