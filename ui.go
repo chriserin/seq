@@ -362,9 +362,6 @@ type model struct {
 	playing             bool
 	beatTime            time.Time
 	playEditing         bool
-	playTime            time.Time
-	trackTime           time.Duration
-	totalBeats          int
 	playState           []linestate
 	hasSolo             bool
 	selectionIndicator  Selection
@@ -724,14 +721,6 @@ func RatchetTick(ratchet lineNote, times uint8, beatInterval time.Duration) tea.
 	)
 }
 
-func (m *model) BeatInterval() time.Duration {
-	tickInterval := m.TickInterval()
-	adjuster := time.Since(m.playTime) - m.trackTime
-	m.trackTime = m.trackTime + tickInterval
-	next := tickInterval - adjuster
-	return next
-}
-
 func (m model) TickInterval() time.Duration {
 	return time.Minute / time.Duration(m.definition.tempo*m.definition.subdivisions)
 }
@@ -1005,7 +994,7 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 func (m model) LogTeaMsg(msg tea.Msg) {
 	switch msg := msg.(type) {
 	case beatMsg:
-		m.LogString(fmt.Sprintf("beatMsg %d %d %d\n", msg.interval, m.totalBeats, m.definition.tempo))
+		m.LogString(fmt.Sprintf("beatMsg %d %d\n", msg.interval, m.definition.tempo))
 	case tea.KeyMsg:
 		m.LogString(fmt.Sprintf("keyMsg %s\n", msg.String()))
 	case cursor.BlinkMsg:
@@ -1174,19 +1163,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			m.playing = !m.playing
 			m.playEditing = false
-			m.playTime = time.Now()
 			if m.playing {
 				m.keyCycles = 0
-				m.totalBeats = 0
 				m.playState = InitLineStates(len(m.definition.lines), m.playState)
 				m.advanceKeyCycle()
-				m.trackTime = time.Duration(0)
 				playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
-				beatInterval := m.BeatInterval()
+				tickInterval := m.TickInterval()
 
 				pattern := m.CombinedBeatPattern(playingOverlay)
 				cmds := make([]tea.Cmd, 0, len(pattern))
-				m.PlayBeat(beatInterval, pattern, &cmds)
+				m.PlayBeat(tickInterval, pattern, &cmds)
 				m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 			} else {
 				m.programChannel <- stopMsg{}
@@ -1347,14 +1333,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
 			m.advanceCurrentBeat(playingOverlay)
 			m.advanceKeyCycle()
-			beatInterval := m.BeatInterval()
+			tickInterval := m.TickInterval()
 
 			gridKeys := make([]grid.GridKey, 0, len(m.playState))
 			m.CurrentBeatGridKeys(&gridKeys)
 			pattern := make(grid.Pattern)
 			playingOverlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, gridKeys)
 			cmds := make([]tea.Cmd, 0, len(pattern)+1)
-			m.PlayBeat(beatInterval, pattern, &cmds)
+			m.PlayBeat(tickInterval, pattern, &cmds)
 			if len(cmds) > 0 {
 				return m, tea.Batch(
 					cmds...,
