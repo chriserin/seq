@@ -387,6 +387,17 @@ type startMsg struct {
 
 type stopMsg struct {
 }
+type tempoMsg struct {
+	tempo        int
+	subdivisions int
+}
+
+func (m model) SyncTempo() {
+	m.programChannel <- tempoMsg{
+		tempo:        m.definition.tempo,
+		subdivisions: m.definition.subdivisions,
+	}
+}
 
 type focus int
 
@@ -1072,6 +1083,9 @@ func MidiEventLoop(model model, program *tea.Program) {
 				case stopMsg:
 					timing.started = false
 					// m.playing should be false now.
+				case tempoMsg:
+					timing.tempo = command.tempo
+					timing.subdivisions = command.subdivisions
 				}
 			case <-tickChannel:
 				if timing.started {
@@ -1213,10 +1227,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.definition.tempo < 300 {
 					m.definition.tempo++
 				}
+				m.SyncTempo()
 			case SELECT_TEMPO_SUBDIVISION:
 				if m.definition.subdivisions < 8 {
 					m.definition.subdivisions++
 				}
+				m.SyncTempo()
 			case SELECT_SETUP_CHANNEL:
 				m.definition.lines[m.cursorPos.Line].IncrementChannel()
 			case SELECT_SETUP_MESSAGE_TYPE:
@@ -1240,10 +1256,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.definition.tempo > 30 {
 					m.definition.tempo--
 				}
+				m.SyncTempo()
 			case SELECT_TEMPO_SUBDIVISION:
 				if m.definition.subdivisions > 1 {
 					m.definition.subdivisions--
 				}
+				m.SyncTempo()
 			case SELECT_SETUP_CHANNEL:
 				m.definition.lines[m.cursorPos.Line].DecrementChannel()
 			case SELECT_SETUP_MESSAGE_TYPE:
