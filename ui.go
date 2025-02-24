@@ -325,7 +325,7 @@ func (nm noteMsg) OffMessage() midi.Message {
 	return midi.NoteOff(nm.channel, nm.noteValue)
 }
 
-func Messages(l grid.LineDefinition, note note, accents []config.Accent, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool, instrument string) []Delayable {
+func NoteMessages(l grid.LineDefinition, note note, accents []config.Accent, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool) (noteMsg, noteMsg) {
 	var delay time.Duration
 	if includeDelay && note.WaitIndex != 0 {
 		delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
@@ -333,30 +333,33 @@ func Messages(l grid.LineDefinition, note note, accents []config.Accent, accentT
 		delay = 0
 	}
 
-	if l.MsgType == grid.MESSAGE_TYPE_NOTE {
-		var noteValue uint8
-		var velocityValue uint8
-		switch accentTarget {
-		case ACCENT_TARGET_NOTE:
-			noteValue = l.Note + accents[note.AccentIndex].Value
-			velocityValue = 96
-		case ACCENT_TARGET_VELOCITY:
-			noteValue = l.Note
-			velocityValue = accents[note.AccentIndex].Value
-		}
-		duration := 0 + time.Duration(config.Gates[note.GateIndex].Value)*time.Millisecond
-
-		return []Delayable{
-			noteMsg{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, delay},
-			noteMsg{midi.NoteOffMsg, l.Channel, noteValue, 0, delay + duration},
-		}
-	} else {
-		ccValue := uint8((float32(note.AccentIndex) / float32(len(accents))) * float32(config.FindCC(l.Note, instrument).UpperLimit))
-
-		return []Delayable{
-			controlChangeMsg{l.Channel, l.Note, ccValue, delay},
-		}
+	var noteValue uint8
+	var velocityValue uint8
+	switch accentTarget {
+	case ACCENT_TARGET_NOTE:
+		noteValue = l.Note + accents[note.AccentIndex].Value
+		velocityValue = 96
+	case ACCENT_TARGET_VELOCITY:
+		noteValue = l.Note
+		velocityValue = accents[note.AccentIndex].Value
 	}
+	duration := 0 + time.Duration(config.Gates[note.GateIndex].Value)*time.Millisecond
+
+	return noteMsg{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, delay},
+		noteMsg{midi.NoteOffMsg, l.Channel, noteValue, 0, delay + duration}
+}
+
+func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, beatInterval time.Duration, includeDelay bool, instrument string) controlChangeMsg {
+	var delay time.Duration
+	if includeDelay && note.WaitIndex != 0 {
+		delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
+	} else {
+		delay = 0
+	}
+
+	ccValue := uint8((float32(note.AccentIndex) / float32(len(accents))) * float32(config.FindCC(l.Note, instrument).UpperLimit))
+
+	return controlChangeMsg{l.Channel, l.Note, ccValue, delay}
 }
 
 type model struct {
@@ -745,7 +748,6 @@ type lineNote struct {
 func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) []tea.Cmd {
 
 	lines := m.definition.lines
-	messages := make([]Delayable, 0, len(lines))
 	ratchetNotes := make([]lineNote, 0, len(lines))
 
 	for gridKey, note := range pattern {
@@ -754,16 +756,19 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) []tea.
 			ratchetNotes = append(ratchetNotes, lineNote{note, line})
 		} else if note != zeronote {
 			accents := m.definition.accents
-			messages = append(messages, Messages(line, note, accents.Data, accents.Target, beatInterval, true, m.definition.instrument)...)
+			switch line.MsgType {
+			case grid.MESSAGE_TYPE_NOTE:
+				onMessage, offMessage := NoteMessages(line, note, accents.Data, accents.Target, beatInterval, true)
+				m.ProcessNoteMsg(onMessage)
+				m.ProcessNoteMsg(offMessage)
+			case grid.MESSAGE_TYPE_CC:
+				ccMessage := CCMessage(line, note, accents.Data, beatInterval, true, m.definition.instrument)
+				m.ProcessNoteMsg(ccMessage)
+			}
 		}
 	}
 
-	playCmds := make([]tea.Cmd, 0, len(lines))
-
-	for _, message := range messages {
-		m.ProcessNoteMsg(message)
-	}
-
+	playCmds := make([]tea.Cmd, 0, len(ratchetNotes))
 	for _, ratchetNote := range ratchetNotes {
 		playCmds = append(playCmds, func() tea.Msg {
 			return ratchetMsg{ratchetNote, 0, beatInterval}
@@ -1290,22 +1295,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case ratchetMsg:
 		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
-			cmds := make([]tea.Cmd, 0)
 			if msg.Ratchets.HitAt(msg.iterations) {
-				messages := Messages(msg.line, msg.note, m.definition.accents.Data, m.definition.accents.Target, msg.beatInterval, false, m.definition.instrument)
-				for _, message := range messages {
-					var cmd = tea.Tick(
-						message.Delay(),
-						func(t time.Time) tea.Msg { return message },
-					)
-					cmds = append(cmds, cmd)
-				}
+				onMessage, offMessage := NoteMessages(msg.line, msg.note, m.definition.accents.Data, m.definition.accents.Target, msg.beatInterval, false)
+				m.ProcessNoteMsg(onMessage)
+				m.ProcessNoteMsg(offMessage)
 			}
 			if msg.iterations+1 < (msg.Ratchets.Length + 1) {
 				ratchetTickCmd := RatchetTick(msg.lineNote, msg.iterations+1, msg.beatInterval)
-				cmds = append(cmds, ratchetTickCmd)
+				return m, ratchetTickCmd
 			}
-			return m, tea.Batch(cmds...)
 		}
 	}
 	var cmd tea.Cmd
