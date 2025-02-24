@@ -342,14 +342,7 @@ func NoteMessages(l grid.LineDefinition, accentValue uint8, gateIndex uint8, acc
 		noteMsg{midi.NoteOffMsg, l.Channel, noteValue, 0, delay + duration}
 }
 
-func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, beatInterval time.Duration, includeDelay bool, instrument string) controlChangeMsg {
-	var delay time.Duration
-	if includeDelay && note.WaitIndex != 0 {
-		delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
-	} else {
-		delay = 0
-	}
-
+func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) controlChangeMsg {
 	ccValue := uint8((float32(note.AccentIndex) / float32(len(accents))) * float32(config.FindCC(l.Note, instrument).UpperLimit))
 
 	return controlChangeMsg{l.Channel, l.Note, ccValue, delay}
@@ -384,8 +377,18 @@ type model struct {
 	redoStack           UndoStack
 	yankBuffer          Buffer
 	needsWrite          int
+	programChannel      chan midiEventLoopMsg
 	// save everything below here
 	definition Definition
+}
+
+type midiEventLoopMsg = interface{}
+type startMsg struct {
+	tempo        int
+	subdivisions int
+}
+
+type stopMsg struct {
 }
 
 type focus int
@@ -749,19 +752,20 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *
 			ratchetNotes = append(ratchetNotes, lineNote{note, line})
 		} else if note != zeronote {
 			accents := m.definition.accents
+
+			var delay time.Duration
+			if note.WaitIndex != 0 {
+				delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
+			} else {
+				delay = 0
+			}
 			switch line.MsgType {
 			case grid.MESSAGE_TYPE_NOTE:
-				var delay time.Duration
-				if note.WaitIndex != 0 {
-					delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
-				} else {
-					delay = 0
-				}
 				onMessage, offMessage := NoteMessages(line, m.definition.accents.Data[note.AccentIndex].Value, note.GateIndex, accents.Target, delay)
 				m.ProcessNoteMsg(onMessage)
 				m.ProcessNoteMsg(offMessage)
 			case grid.MESSAGE_TYPE_CC:
-				ccMessage := CCMessage(line, note, accents.Data, beatInterval, true, m.definition.instrument)
+				ccMessage := CCMessage(line, note, accents.Data, delay, true, m.definition.instrument)
 				m.ProcessNoteMsg(ccMessage)
 			}
 		}
@@ -980,7 +984,9 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 		definition = InitDefinition(template, instrument)
 	}
 
+	programChannel := make(chan midiEventLoopMsg)
 	return model{
+		programChannel:      programChannel,
 		transitiveStatekeys: transitiveKeys,
 		definitionKeys:      definitionKeys,
 		help:                help.New(),
@@ -1002,6 +1008,7 @@ func (m model) LogTeaMsg(msg tea.Msg) {
 		m.LogString(fmt.Sprintf("beatMsg %d %d %d\n", msg.interval, m.totalBeats, m.definition.tempo))
 	case tea.KeyMsg:
 		m.LogString(fmt.Sprintf("keyMsg %s\n", msg.String()))
+	case cursor.BlinkMsg:
 	default:
 		m.LogString(fmt.Sprintf("%T\n", msg))
 	}
@@ -1023,8 +1030,67 @@ func (m model) LogFromBeatTime() {
 
 func RunProgram(midiConnection MidiConnection, template string, instrument string) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	p := tea.NewProgram(InitModel(midiConnection, template, instrument), tea.WithAltScreen())
+	model := InitModel(midiConnection, template, instrument)
+	p := tea.NewProgram(model, tea.WithAltScreen())
+	MidiEventLoop(model, p)
 	return p
+}
+
+func (t *Timing) BeatInterval() time.Duration {
+	tickInterval := t.TickInterval()
+	adjuster := time.Since(t.playTime) - t.trackTime
+	t.trackTime = t.trackTime + tickInterval
+	next := tickInterval - adjuster
+	return next
+}
+
+func (t Timing) TickInterval() time.Duration {
+	return time.Minute / time.Duration(t.tempo*t.subdivisions)
+}
+
+type Timing struct {
+	playTime     time.Time
+	trackTime    time.Duration
+	tempo        int
+	subdivisions int
+	started      bool
+}
+
+func MidiEventLoop(model model, program *tea.Program) {
+	tickChannel := make(chan Timing)
+	var command midiEventLoopMsg
+
+	tick := func(adjustedInterval time.Duration) {
+		time.AfterFunc(adjustedInterval, func() {
+			tickChannel <- Timing{}
+			program.Send(beatMsg{adjustedInterval})
+		})
+	}
+
+	go func() {
+		timing := Timing{}
+		for {
+			select {
+			case command = <-model.programChannel:
+				switch command := command.(type) {
+				case startMsg:
+					timing.started = true
+					timing.playTime = time.Now()
+					timing.tempo = command.tempo
+					timing.subdivisions = command.subdivisions
+					timing.trackTime = time.Duration(0)
+					tick(timing.BeatInterval())
+				case stopMsg:
+					timing.started = false
+					// m.playing should be false now.
+				}
+			case <-tickChannel:
+				if timing.started {
+					tick(timing.BeatInterval())
+				}
+			}
+		}
+	}()
 }
 
 func (m model) Init() tea.Cmd {
@@ -1121,9 +1187,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				pattern := m.CombinedBeatPattern(playingOverlay)
 				cmds := make([]tea.Cmd, 0, len(pattern))
 				m.PlayBeat(beatInterval, pattern, &cmds)
-				cmds = append(cmds, BeatTick(beatInterval))
-				return m, tea.Batch(cmds...)
+				m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 			} else {
+				m.programChannel <- stopMsg{}
 				m.keyCycles = 0
 				notes := notereg.Clear()
 				sendFn := m.midiConnection.AcquireSendFunc()
@@ -1290,12 +1356,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds := make([]tea.Cmd, 0, len(pattern)+1)
 			m.PlayBeat(beatInterval, pattern, &cmds)
 			if len(cmds) > 0 {
-				cmds = append(cmds, BeatTick(beatInterval))
 				return m, tea.Batch(
 					cmds...,
 				)
-			} else {
-				return m, BeatTick(beatInterval)
 			}
 		}
 	case ratchetMsg:
