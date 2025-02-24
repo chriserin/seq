@@ -325,25 +325,18 @@ func (nm noteMsg) OffMessage() midi.Message {
 	return midi.NoteOff(nm.channel, nm.noteValue)
 }
 
-func NoteMessages(l grid.LineDefinition, note note, accents []config.Accent, accentTarget accentTarget, beatInterval time.Duration, includeDelay bool) (noteMsg, noteMsg) {
-	var delay time.Duration
-	if includeDelay && note.WaitIndex != 0 {
-		delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
-	} else {
-		delay = 0
-	}
-
+func NoteMessages(l grid.LineDefinition, accentValue uint8, gateIndex uint8, accentTarget accentTarget, delay time.Duration) (noteMsg, noteMsg) {
 	var noteValue uint8
 	var velocityValue uint8
 	switch accentTarget {
 	case ACCENT_TARGET_NOTE:
-		noteValue = l.Note + accents[note.AccentIndex].Value
+		noteValue = l.Note + accentValue
 		velocityValue = 96
 	case ACCENT_TARGET_VELOCITY:
 		noteValue = l.Note
-		velocityValue = accents[note.AccentIndex].Value
+		velocityValue = accentValue
 	}
-	duration := 0 + time.Duration(config.Gates[note.GateIndex].Value)*time.Millisecond
+	duration := time.Duration(config.Gates[gateIndex].Value) * time.Millisecond
 
 	return noteMsg{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, delay},
 		noteMsg{midi.NoteOffMsg, l.Channel, noteValue, 0, delay + duration}
@@ -758,7 +751,13 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) []tea.
 			accents := m.definition.accents
 			switch line.MsgType {
 			case grid.MESSAGE_TYPE_NOTE:
-				onMessage, offMessage := NoteMessages(line, note, accents.Data, accents.Target, beatInterval, true)
+				var delay time.Duration
+				if note.WaitIndex != 0 {
+					delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
+				} else {
+					delay = 0
+				}
+				onMessage, offMessage := NoteMessages(line, m.definition.accents.Data[note.AccentIndex].Value, note.GateIndex, accents.Target, delay)
 				m.ProcessNoteMsg(onMessage)
 				m.ProcessNoteMsg(offMessage)
 			case grid.MESSAGE_TYPE_CC:
@@ -1296,7 +1295,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ratchetMsg:
 		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
 			if msg.Ratchets.HitAt(msg.iterations) {
-				onMessage, offMessage := NoteMessages(msg.line, msg.note, m.definition.accents.Data, m.definition.accents.Target, msg.beatInterval, false)
+				onMessage, offMessage := NoteMessages(msg.line, m.definition.accents.Data[msg.AccentIndex].Value, msg.GateIndex, m.definition.accents.Target, 0)
 				m.ProcessNoteMsg(onMessage)
 				m.ProcessNoteMsg(offMessage)
 			}
