@@ -338,8 +338,8 @@ func NoteMessages(l grid.LineDefinition, accentValue uint8, gateIndex uint8, acc
 	}
 	duration := time.Duration(config.Gates[gateIndex].Value) * time.Millisecond
 
-	return noteMsg{midi.NoteOnMsg, l.Channel, noteValue, velocityValue, delay},
-		noteMsg{midi.NoteOffMsg, l.Channel, noteValue, 0, delay + duration}
+	return noteMsg{midi.NoteOnMsg, l.Channel - 1, noteValue, velocityValue, delay},
+		noteMsg{midi.NoteOffMsg, l.Channel - 1, noteValue, 0, delay + duration}
 }
 
 func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) controlChangeMsg {
