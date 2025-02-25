@@ -1351,14 +1351,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
 			m.advanceCurrentBeat(playingOverlay)
 			m.advanceKeyCycle()
-			tickInterval := m.TickInterval()
 
 			gridKeys := make([]grid.GridKey, 0, len(m.playState))
 			m.CurrentBeatGridKeys(&gridKeys)
 			pattern := make(grid.Pattern)
 			playingOverlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, gridKeys)
 			cmds := make([]tea.Cmd, 0, len(pattern)+1)
-			m.PlayBeat(tickInterval, pattern, &cmds)
+			m.PlayBeat(msg.interval, pattern, &cmds)
 			if len(cmds) > 0 {
 				return m, tea.Batch(
 					cmds...,
