@@ -141,11 +141,11 @@ func TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program)
 type ListenFn func(msg []byte, milliseconds int32)
 
 func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
-	inport, err := midi.FindInPort(TRANSMITTER_NAME)
+	transmitPort, err := midi.FindInPort(TRANSMITTER_NAME)
 	if err != nil {
 		panic("Could not find transmitter")
 	}
-	err = inport.Open()
+	err = transmitPort.Open()
 	if err != nil {
 		panic("Could not open transmitter connection")
 	} else {
@@ -166,7 +166,7 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 			println(midiMessage.Type().String())
 		}
 	}
-	inport.Listen(ReceiverFunc, drivers.ListenConfig{TimeCode: true})
+	transmitPort.Listen(ReceiverFunc, drivers.ListenConfig{TimeCode: true})
 	var command midiEventLoopMsg
 	go func() {
 		timing := Timing{}
