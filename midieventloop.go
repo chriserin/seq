@@ -113,6 +113,7 @@ func TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program)
 					timing.tempo = command.tempo
 					timing.subdivisions = command.subdivisions
 					timing.trackTime = time.Duration(0)
+					timing.pulseCount = 0
 					pulse(timing.PulseInterval())
 					transmitter.Start()
 				case stopMsg:
@@ -125,12 +126,12 @@ func TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program)
 				}
 			case pulseTiming := <-tickChannel:
 				if timing.started {
-					pulse(timing.PulseInterval())
 					transmitter.Pulse()
+					timing.pulseCount++
 					if timing.pulseCount%(pulseTiming.subdivisions/timing.subdivisions) == 0 {
 						program.Send(beatMsg{timing.BeatInterval()})
 					}
-					timing.pulseCount++
+					pulse(timing.PulseInterval())
 				}
 			}
 		}
@@ -177,9 +178,11 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 					timing.started = true
 					timing.playTime = time.Now()
 					timing.trackTime = time.Duration(0)
+					timing.pulseCount = 0
 					program.Send(uiStartMsg{})
 				case stopMsg:
 					timing.started = false
+					program.Send(uiStopMsg{})
 					// m.playing should be false now.
 				case tempoMsg:
 					timing.tempo = command.tempo
@@ -187,10 +190,10 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 				}
 			case pulseTiming := <-tickChannel:
 				if timing.started {
+					timing.pulseCount++
 					if timing.pulseCount%(pulseTiming.subdivisions/timing.subdivisions) == 0 {
 						program.Send(beatMsg{timing.BeatInterval()})
 					}
-					timing.pulseCount++
 				}
 			}
 		}

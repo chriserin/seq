@@ -6,7 +6,7 @@ import (
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
 
-	_ "gitlab.com/gomidi/midi/v2/drivers/portmididrv"
+	_ "gitlab.com/gomidi/midi/v2/drivers/rtmididrv"
 )
 
 type MidiConnection struct {

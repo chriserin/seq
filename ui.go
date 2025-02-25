@@ -697,8 +697,8 @@ func (pa *patternAccents) ReCalc() {
 type beatMsg struct {
 	interval time.Duration
 }
-type uiStartMsg struct {
-}
+type uiStartMsg struct{}
+type uiStopMsg struct{}
 
 func BeatTick(beatInterval time.Duration) tea.Cmd {
 	return tea.Tick(
@@ -1242,6 +1242,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectionIndicator = SELECT_NOTHING
 		}
 	case uiStartMsg:
+		m.StartStop(true)
+	case uiStopMsg:
 		m.StartStop(true)
 	case beatMsg:
 		m.beatTime = time.Now()
