@@ -379,19 +379,6 @@ type model struct {
 	definition Definition
 }
 
-type midiEventLoopMsg = interface{}
-type startMsg struct {
-	tempo        int
-	subdivisions int
-}
-
-type stopMsg struct {
-}
-type tempoMsg struct {
-	tempo        int
-	subdivisions int
-}
-
 func (m model) SyncTempo() {
 	m.programChannel <- tempoMsg{
 		tempo:        m.definition.tempo,
@@ -710,6 +697,8 @@ func (pa *patternAccents) ReCalc() {
 type beatMsg struct {
 	interval time.Duration
 }
+type uiStartMsg struct {
+}
 
 func BeatTick(beatInterval time.Duration) tea.Cmd {
 	return tea.Tick(
@@ -985,6 +974,7 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 	}
 
 	programChannel := make(chan midiEventLoopMsg)
+
 	return model{
 		programChannel:      programChannel,
 		transitiveStatekeys: transitiveKeys,
@@ -1028,72 +1018,13 @@ func (m model) LogFromBeatTime() {
 	}
 }
 
-func RunProgram(midiConnection MidiConnection, template string, instrument string) *tea.Program {
+func RunProgram(midiConnection MidiConnection, template string, instrument string, loopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
 	model := InitModel(midiConnection, template, instrument)
-	p := tea.NewProgram(model, tea.WithAltScreen())
-	MidiEventLoop(model, p)
-	return p
-}
-
-func (t *Timing) BeatInterval() time.Duration {
-	tickInterval := t.TickInterval()
-	adjuster := time.Since(t.playTime) - t.trackTime
-	t.trackTime = t.trackTime + tickInterval
-	next := tickInterval - adjuster
-	return next
-}
-
-func (t Timing) TickInterval() time.Duration {
-	return time.Minute / time.Duration(t.tempo*t.subdivisions)
-}
-
-type Timing struct {
-	playTime     time.Time
-	trackTime    time.Duration
-	tempo        int
-	subdivisions int
-	started      bool
-}
-
-func MidiEventLoop(model model, program *tea.Program) {
-	tickChannel := make(chan Timing)
-	var command midiEventLoopMsg
-
-	tick := func(adjustedInterval time.Duration) {
-		time.AfterFunc(adjustedInterval, func() {
-			tickChannel <- Timing{}
-			program.Send(beatMsg{adjustedInterval})
-		})
-	}
-
-	go func() {
-		timing := Timing{}
-		for {
-			select {
-			case command = <-model.programChannel:
-				switch command := command.(type) {
-				case startMsg:
-					timing.started = true
-					timing.playTime = time.Now()
-					timing.tempo = command.tempo
-					timing.subdivisions = command.subdivisions
-					timing.trackTime = time.Duration(0)
-					tick(timing.BeatInterval())
-				case stopMsg:
-					timing.started = false
-					// m.playing should be false now.
-				case tempoMsg:
-					timing.tempo = command.tempo
-					timing.subdivisions = command.subdivisions
-				}
-			case <-tickChannel:
-				if timing.started {
-					tick(timing.BeatInterval())
-				}
-			}
-		}
-	}()
+	program := tea.NewProgram(model, tea.WithAltScreen())
+	MidiEventLoop(loopMode, model.programChannel, program)
+	model.SyncTempo()
+	return program
 }
 
 func (m model) Init() tea.Cmd {
@@ -1164,42 +1095,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectionIndicator = 0
 			m.patternMode = PATTERN_FILL
 		case Is(msg, keys.PlayStop):
-			if !m.playing && !m.midiConnection.IsOpen() {
-				err := m.midiConnection.ConnectAndOpen()
-				if err != nil {
-					panic("No Open Connection")
-				}
-			}
-
-			// if m.playing && m.outport.IsOpen() {
-			// 	m.outport.Close()
-			// }
-
-			m.playing = !m.playing
-			m.playEditing = false
-			if m.playing {
-				m.keyCycles = 0
-				m.playState = InitLineStates(len(m.definition.lines), m.playState)
-				m.advanceKeyCycle()
-				playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
-				tickInterval := m.TickInterval()
-
-				pattern := m.CombinedBeatPattern(playingOverlay)
-				cmds := make([]tea.Cmd, 0, len(pattern))
-				m.PlayBeat(tickInterval, pattern, &cmds)
-				m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
-			} else {
-				m.programChannel <- stopMsg{}
-				m.keyCycles = 0
-				notes := notereg.Clear()
-				sendFn := m.midiConnection.AcquireSendFunc()
-				for _, n := range notes {
-					switch n := n.(type) {
-					case noteMsg:
-						PlayMessage(time.Duration(0), n.OffMessage(), sendFn)
-					}
-				}
-			}
+			m.StartStop(false)
 		case Is(msg, keys.OverlayInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
@@ -1345,6 +1241,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.focus = FOCUS_GRID
 			m.selectionIndicator = SELECT_NOTHING
 		}
+	case uiStartMsg:
+		m.StartStop(true)
 	case beatMsg:
 		m.beatTime = time.Now()
 		if m.playing {
@@ -1382,6 +1280,49 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.cursor = cursor
 
 	return m, cmd
+}
+
+func (m *model) StartStop(asReceiver bool) {
+	if !m.playing && !m.midiConnection.IsOpen() {
+		err := m.midiConnection.ConnectAndOpen()
+		if err != nil {
+			panic("No Open Connection")
+		}
+	}
+
+	// if m.playing && m.outport.IsOpen() {
+	// 	m.outport.Close()
+	// }
+
+	m.playing = !m.playing
+	m.playEditing = false
+	if m.playing {
+		m.keyCycles = 0
+		m.playState = InitLineStates(len(m.definition.lines), m.playState)
+		m.advanceKeyCycle()
+		playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
+		tickInterval := m.TickInterval()
+
+		pattern := m.CombinedBeatPattern(playingOverlay)
+		cmds := make([]tea.Cmd, 0, len(pattern))
+		m.PlayBeat(tickInterval, pattern, &cmds)
+		if !asReceiver {
+			m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
+		}
+	} else {
+		if !asReceiver {
+			m.programChannel <- stopMsg{}
+		}
+		m.keyCycles = 0
+		notes := notereg.Clear()
+		sendFn := m.midiConnection.AcquireSendFunc()
+		for _, n := range notes {
+			switch n := n.(type) {
+			case noteMsg:
+				PlayMessage(time.Duration(0), n.OffMessage(), sendFn)
+			}
+		}
+	}
 }
 
 func (m model) ProcessNoteMsg(msg Delayable) {

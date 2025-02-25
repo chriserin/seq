@@ -12,6 +12,8 @@ const VERSION = "0.1.0-alpha"
 
 var template string
 var instrument string
+var transmitter bool
+var receiver bool
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -22,7 +24,13 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			midiConnection := InitMidiConnection()
 			defer midiConnection.Close()
-			p := RunProgram(midiConnection, template, instrument)
+			loopMode := MLM_STAND_ALONE
+			if transmitter {
+				loopMode = MLM_TRANSMITTER
+			} else if receiver {
+				loopMode = MLM_RECEIVER
+			}
+			p := RunProgram(midiConnection, template, instrument, loopMode)
 			var err error
 			_, err = p.Run()
 			if err != nil {
@@ -56,6 +64,8 @@ func main() {
 	rootCmd.AddCommand(cmdVersion)
 	rootCmd.Flags().StringVar(&template, "template", "Drums", "Choose a template (default: Drums)")
 	rootCmd.Flags().StringVar(&instrument, "instrument", "Standard", "Choose an instrument for CC integration (default: Standard)")
+	rootCmd.Flags().BoolVar(&transmitter, "transmitter", false, "Seq will run in transmitter mode")
+	rootCmd.Flags().BoolVar(&receiver, "receiver", false, "Seq will run in receiver mode")
 
 	err := rootCmd.Execute()
 	if err != nil {
