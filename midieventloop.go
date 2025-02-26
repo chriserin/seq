@@ -32,6 +32,7 @@ type Timing struct {
 	subdivisions int
 	started      bool
 	pulseCount   int
+	lastActivity time.Time
 }
 
 type MidiLoopMode uint8
@@ -182,6 +183,8 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 			programChannel <- stopMsg{}
 		case midi.TimingClockMsg:
 			tickChannel <- Timing{subdivisions: 24}
+		case midi.ActiveSenseMsg:
+			tickChannel <- Timing{lastActivity: time.Now()}
 		default:
 			println("receiving unknown msg")
 			println(midiMessage.Type().String())
@@ -215,6 +218,13 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 					if timing.pulseCount%(pulseTiming.subdivisions/timing.subdivisions) == 0 {
 						program.Send(beatMsg{timing.BeatInterval()})
 					}
+				}
+			case activeSenseTiming := <-tickChannel:
+				if time.Since(timing.lastActivity) < 300*time.Millisecond {
+					timing.lastActivity = activeSenseTiming.lastActivity
+					program.Send(uiConnected{})
+				} else {
+					program.Send(uiNotConnected{})
 				}
 			}
 		}

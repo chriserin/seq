@@ -705,6 +705,8 @@ type beatMsg struct {
 }
 type uiStartMsg struct{}
 type uiStopMsg struct{}
+type uiConnectedMsg struct{}
+type uiNotConnectedMsg struct{}
 
 func BeatTick(beatInterval time.Duration) tea.Cmd {
 	return tea.Tick(
