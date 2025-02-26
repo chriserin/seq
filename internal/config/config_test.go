@@ -16,6 +16,7 @@ func TestProcessConfig(t *testing.T) {
 		assert.Equal(t, uint8(41), template.Lines[5].Note)
 		assert.Equal(t, grid.MESSAGE_TYPE_NOTE, template.Lines[4].MsgType)
 		assert.Equal(t, "plain", template.UIStyle)
+		assert.Equal(t, 32, template.MaxGateLength)
 	})
 
 	t.Run("adds instruments", func(t *testing.T) {

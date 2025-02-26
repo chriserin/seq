@@ -44,18 +44,15 @@ func InitActionNote(act Action) Note {
 
 func (n Note) IncrementAccent(modifier int8, accentsLength uint8) Note {
 	var newAccent = int8(n.AccentIndex) - modifier
-	// TODO: remove hardcoded accent length
 	if newAccent >= 1 && newAccent < int8(accentsLength) {
 		n.AccentIndex = uint8(newAccent)
 	}
 	return n
 }
 
-func (n Note) IncrementGate(modifier int8) Note {
+func (n Note) IncrementGate(modifier int8, gatesLength int) Note {
 	var newGate = int8(n.GateIndex) + modifier
-	// TODO: remove hardcoded gates length
-	gateslength := 8
-	if newGate >= 0 && newGate < int8(gateslength) {
+	if newGate >= 0 && int(newGate) < gatesLength {
 		n.GateIndex = uint8(newGate)
 	}
 	return n

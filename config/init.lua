@@ -7,7 +7,7 @@ local MessageType = "Note"
 
 seq.addtemplate({
 	name = "Drums",
-	maxGateLength = 32,
+	maxgatelength = 1,
 	uistyle = "plain",
 	lines = {
 		{ Channel, MessageType, C1 },
@@ -31,7 +31,7 @@ end
 
 seq.addtemplate({
 	name = "Piano2",
-	maxGateLength = 32,
+	maxgatelength = 32,
 	uistyle = "blackwhite",
 	lines = pianoLines,
 })

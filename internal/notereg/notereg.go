@@ -13,6 +13,7 @@ type NoteRegKey struct {
 
 type Keyable interface {
 	GetKey() NoteRegKey
+	GetId() int
 }
 
 var noteMutex = &sync.Mutex{}
@@ -42,6 +43,18 @@ func Remove(note Keyable) {
 	noteMutex.Lock()
 	defer noteMutex.Unlock()
 	delete(noteReg, note.GetKey())
+}
+
+func RemoveId(note Keyable) bool {
+	noteMutex.Lock()
+	defer noteMutex.Unlock()
+	original, existing := noteReg[note.GetKey()]
+	if existing && original.GetId() == note.GetId() {
+		delete(noteReg, note.GetKey())
+		return true
+	} else {
+		return false
+	}
 }
 
 func Clear() []Keyable {

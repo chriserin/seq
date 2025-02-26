@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aarzilli/golua/lua"
 	"github.com/charmbracelet/lipgloss"
@@ -64,10 +65,10 @@ var Ratchets = []ratchetDiacritical{
 
 type Gate struct {
 	Shape string
-	Value uint16
+	Value float32
 }
 
-var Gates = []Gate{
+var ShortGates = []Gate{
 	{"", 20},
 	{"\u032A", 40},
 	{"\u032B", 80},
@@ -78,7 +79,9 @@ var Gates = []Gate{
 	{"\u0330", 640},
 }
 
-type Wait int16
+var LongGates = []Gate{}
+
+type Wait float32
 
 var WaitPercentages = []Wait{
 	0,
@@ -132,9 +135,29 @@ func FindCC(value uint8, instrumentName string) ControlChange {
 }
 
 type Template struct {
-	Name    string
-	Lines   []grid.LineDefinition
-	UIStyle string
+	Name          string
+	Lines         []grid.LineDefinition
+	UIStyle       string
+	MaxGateLength int
+}
+
+func (t Template) GetGateLengths() []Gate {
+	gateMarkers := []float32{0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875}
+	chars := []string{"\u258F", "\u258E", "\u258D", "\u258C", "\u258B", "\u258A", "\u2589", "\u2588"}
+	result := make([]Gate, 0, t.MaxGateLength*8)
+
+	for i := range t.MaxGateLength {
+		if i > 0 {
+			for j, v := range gateMarkers {
+				newGate := Gate{
+					Shape: strings.Repeat("\u2588", i-1) + chars[j],
+					Value: float32(i) + v,
+				}
+				result = append(result, newGate)
+			}
+		}
+	}
+	return result
 }
 
 var templates []Template
@@ -240,8 +263,14 @@ func addTemplate(L *lua.State) int {
 			uistyle = "plain"
 		}
 		L.Pop(1)
+		L.GetField(1, "maxgatelength")
+		maxGateLength := L.ToInteger(2)
+		if maxGateLength == 0 {
+			maxGateLength = 1
+		}
+		L.Pop(1)
 
-		template := Template{Name: name, UIStyle: uistyle}
+		template := Template{Name: name, UIStyle: uistyle, MaxGateLength: maxGateLength}
 
 		L.GetField(1, "lines")
 		if L.IsTable(2) {

@@ -278,6 +278,7 @@ type Delayable interface {
 }
 
 type noteMsg struct {
+	id        int
 	midiType  midi.Type
 	channel   uint8
 	noteValue uint8
@@ -311,6 +312,10 @@ func (nm noteMsg) GetKey() notereg.NoteRegKey {
 	}
 }
 
+func (nm noteMsg) GetId() int {
+	return nm.id
+}
+
 func (nm noteMsg) GetMidi() midi.Message {
 	switch nm.midiType {
 	case midi.NoteOnMsg:
@@ -325,7 +330,7 @@ func (nm noteMsg) OffMessage() midi.Message {
 	return midi.NoteOff(nm.channel, nm.noteValue)
 }
 
-func NoteMessages(l grid.LineDefinition, accentValue uint8, gateIndex uint8, accentTarget accentTarget, delay time.Duration) (noteMsg, noteMsg) {
+func NoteMessages(l grid.LineDefinition, accentValue uint8, gateLength time.Duration, accentTarget accentTarget, delay time.Duration) (noteMsg, noteMsg) {
 	var noteValue uint8
 	var velocityValue uint8
 	switch accentTarget {
@@ -336,10 +341,10 @@ func NoteMessages(l grid.LineDefinition, accentValue uint8, gateIndex uint8, acc
 		noteValue = l.Note
 		velocityValue = accentValue
 	}
-	duration := time.Duration(config.Gates[gateIndex].Value) * time.Millisecond
 
-	return noteMsg{midi.NoteOnMsg, l.Channel - 1, noteValue, velocityValue, delay},
-		noteMsg{midi.NoteOffMsg, l.Channel - 1, noteValue, 0, delay + duration}
+	id := rand.Int()
+	return noteMsg{id, midi.NoteOnMsg, l.Channel - 1, noteValue, velocityValue, delay},
+		noteMsg{id, midi.NoteOffMsg, l.Channel - 1, noteValue, 0, delay + gateLength}
 }
 
 func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) controlChangeMsg {
@@ -742,15 +747,18 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *
 		} else if note != zeronote {
 			accents := m.definition.accents
 
-			var delay time.Duration
-			if note.WaitIndex != 0 {
-				delay = time.Duration((float64(config.WaitPercentages[note.WaitIndex])) / float64(100) * float64(beatInterval))
-			} else {
-				delay = 0
-			}
+			delay := Delay(note.WaitIndex, beatInterval)
+			gateLength := GateLength(note.GateIndex, beatInterval)
+
 			switch line.MsgType {
 			case grid.MESSAGE_TYPE_NOTE:
-				onMessage, offMessage := NoteMessages(line, m.definition.accents.Data[note.AccentIndex].Value, note.GateIndex, accents.Target, delay)
+				onMessage, offMessage := NoteMessages(
+					line,
+					m.definition.accents.Data[note.AccentIndex].Value,
+					gateLength,
+					accents.Target,
+					delay,
+				)
 				m.ProcessNoteMsg(onMessage)
 				m.ProcessNoteMsg(offMessage)
 			case grid.MESSAGE_TYPE_CC:
@@ -767,11 +775,43 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *
 	}
 }
 
+func Delay(waitIndex uint8, beatInterval time.Duration) time.Duration {
+	var delay time.Duration
+	if waitIndex != 0 {
+		delay = time.Duration((float64(config.WaitPercentages[waitIndex])) / float64(100) * float64(beatInterval))
+	} else {
+		delay = 0
+	}
+	return delay
+}
+
+func GateLength(gateIndex uint8, beatInterval time.Duration) time.Duration {
+	var delay time.Duration
+	if gateIndex < 8 {
+		delay = time.Duration(config.ShortGates[gateIndex].Value) * time.Millisecond
+		return delay
+	} else if gateIndex >= 8 {
+		return time.Duration(float64(config.LongGates[gateIndex].Value) * float64(beatInterval))
+	}
+	return delay
+}
+
 func PlayMessage(delay time.Duration, message midi.Message, sendFn SendFunc) {
 	time.AfterFunc(delay, func() {
 		err := sendFn(message)
 		if err != nil {
 			panic("midi message send failed")
+		}
+	})
+}
+
+func PlayOffMessage(nm noteMsg, sendFn SendFunc) {
+	time.AfterFunc(nm.delay, func() {
+		if notereg.RemoveId(nm) {
+			err := sendFn(nm.GetMidi())
+			if err != nil {
+				panic("midi message send failed")
+			}
 		}
 	})
 }
@@ -941,6 +981,7 @@ func InitLineState(previousGroupPlayState groupPlayState, index uint8) linestate
 
 func InitDefinition(template string, instrument string) Definition {
 	gridTemplate := config.GetTemplate(template)
+	config.LongGates = gridTemplate.GetGateLengths()
 	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
 	copy(newLines, gridTemplate.Lines)
 
@@ -1267,7 +1308,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ratchetMsg:
 		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
 			if msg.Ratchets.HitAt(msg.iterations) {
-				onMessage, offMessage := NoteMessages(msg.line, m.definition.accents.Data[msg.AccentIndex].Value, msg.GateIndex, m.definition.accents.Target, 0)
+				shortGateLength := 20 * time.Millisecond
+				onMessage, offMessage := NoteMessages(msg.line, m.definition.accents.Data[msg.AccentIndex].Value, shortGateLength, m.definition.accents.Target, 0)
 				m.ProcessNoteMsg(onMessage)
 				m.ProcessNoteMsg(offMessage)
 			}
@@ -1334,17 +1376,17 @@ func (m model) ProcessNoteMsg(msg Delayable) {
 		switch msg.midiType {
 		case midi.NoteOnMsg:
 			if notereg.Has(msg) {
-				PlayMessage(msg.delay, msg.OffMessage(), sendFn)
-			} else {
-				if err := notereg.Add(msg); err != nil {
-					panic("Added a note that was already there")
-				}
+				notereg.Remove(msg)
+				PlayMessage(0, msg.OffMessage(), sendFn)
+			}
+			if err := notereg.Add(msg); err != nil {
+				panic("Added a note that was already there")
 			}
 			m.LogFromBeatTime()
+			PlayMessage(msg.delay, msg.GetMidi(), sendFn)
 		case midi.NoteOffMsg:
-			notereg.Remove(msg)
+			PlayOffMessage(msg, sendFn)
 		}
-		PlayMessage(msg.delay, msg.GetMidi(), sendFn)
 	case controlChangeMsg:
 		PlayMessage(msg.delay, msg.MidiMessage(), sendFn)
 	}
@@ -1906,7 +1948,7 @@ func (m *model) incrementGate(every uint8, modifier int8) {
 		hasNote = hasNote && currentNote != zeronote
 
 		if hasNote {
-			m.currentOverlay.SetNote(gridKey, currentNote.IncrementGate(modifier))
+			m.currentOverlay.SetNote(gridKey, currentNote.IncrementGate(modifier, len(config.ShortGates)+len(config.LongGates)))
 		}
 	}
 	m.Every(every, everyFn)
@@ -1960,7 +2002,7 @@ func (m *model) GateModify(modifier int8) {
 	for key, currentNote := range combinedOverlay {
 		if bounds.InBounds(key) {
 			if currentNote != zeronote {
-				m.currentOverlay.SetNote(key, currentNote.IncrementGate(modifier))
+				m.currentOverlay.SetNote(key, currentNote.IncrementGate(modifier, len(config.ShortGates)+len(config.LongGates)))
 			}
 		}
 	}
@@ -2380,10 +2422,33 @@ func (m model) LineIndicator(lineNumber uint8) string {
 	return fmt.Sprintf("%2s%s%s", lineName, KeyLineIndicator(m.definition.keyline, lineNumber), indicator)
 }
 
+type GateSpace struct {
+	StringValue []rune
+	Color       lipgloss.Color
+}
+
+func (gs GateSpace) HasMore() bool {
+	return len(gs.StringValue) > 0
+}
+func (gs *GateSpace) ShiftString() string {
+	if len(gs.StringValue) == 1 {
+		v := gs.StringValue
+		gs.StringValue = []rune{}
+		return string(v)
+	} else if len(gs.StringValue) > 1 {
+		v := gs.StringValue[0]
+		gs.StringValue = gs.StringValue[1:]
+		return string(v)
+	} else {
+		return ""
+	}
+}
+
 func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayPattern) string {
 	var buf strings.Builder
 	buf.WriteString(m.LineIndicator(lineNumber))
 
+	gateSpace := GateSpace{}
 	for i := uint8(0); i < m.definition.beats; i++ {
 		currentGridKey := GK(uint8(lineNumber), i)
 		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
@@ -2404,6 +2469,13 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		}
 
 		char, foregroundColor := ViewNoteComponents(overlayNote.Note)
+		var hasGateTail = false
+		if (!hasNote || overlayNote.Note == zeronote) && gateSpace.HasMore() {
+			char = gateSpace.ShiftString()
+			hasGateTail = true
+		} else if gateSpace.HasMore() {
+			gateSpace = GateSpace{}
+		}
 
 		style := lipgloss.NewStyle().Background(backgroundSeqColor)
 		if m.cursorPos.Line == uint8(lineNumber) && m.cursorPos.Beat == i {
@@ -2411,9 +2483,18 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 			char = m.cursor.View()
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
 			style = style.Foreground(lipgloss.Color("#000000"))
+		} else if hasGateTail {
+			style = style.Foreground(gateSpace.Color)
 		} else {
 			style = style.Foreground(foregroundColor)
 		}
+
+		if overlayNote.Note.GateIndex > uint8(len(config.ShortGates))-1 && int(overlayNote.Note.GateIndex) < int(len(config.ShortGates)+len(config.LongGates)) {
+			gateSpaceValue := config.LongGates[overlayNote.Note.GateIndex-8].Shape
+			gateSpace.StringValue = []rune(gateSpaceValue)
+			gateSpace.Color = foregroundColor
+		}
+
 		buf.WriteString(style.Render(char))
 	}
 
@@ -2509,7 +2590,10 @@ func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 		waitShape = "\u0320"
 	}
 	if currentAction == grid.ACTION_NOTHING && currentNote != zeronote {
-		char = string(currentAccent.Shape) + string(config.Ratchets[currentNote.Ratchets.Length]) + string(config.Gates[currentNote.GateIndex].Shape) + waitShape
+		char = string(currentAccent.Shape) +
+			string(config.Ratchets[currentNote.Ratchets.Length]) +
+			ShortGate(currentNote) +
+			waitShape
 		foregroundColor = currentAccent.Color
 	} else {
 		lineaction := config.Lineactions[currentAction]
@@ -2518,4 +2602,12 @@ func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 	}
 
 	return char, foregroundColor
+}
+
+func ShortGate(note note) string {
+	if note.GateIndex < uint8(len(config.ShortGates)) {
+		return string(config.ShortGates[note.GateIndex].Shape)
+	} else {
+		return ""
+	}
 }
