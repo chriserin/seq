@@ -78,6 +78,13 @@ func (tmtr Transmitter) Pulse() {
 	}
 }
 
+func (tmtr Transmitter) ActiveSense() {
+	err := tmtr.out.Send(midi.Activesense())
+	if err != nil {
+		panic("could not send activesense")
+	}
+}
+
 const TRANSMITTER_NAME string = "seq-transmitter"
 
 func TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
@@ -93,11 +100,18 @@ func TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program)
 	transmitter := Transmitter{out}
 
 	tickChannel := make(chan Timing)
+	activeSenseChannel := make(chan bool)
 	var command midiEventLoopMsg
 
 	pulse := func(adjustedInterval time.Duration) {
 		time.AfterFunc(adjustedInterval, func() {
 			tickChannel <- Timing{subdivisions: 24}
+		})
+	}
+
+	activesense := func() {
+		time.AfterFunc(300*time.Millisecond, func() {
+			activeSenseChannel <- true
 		})
 	}
 
@@ -133,9 +147,16 @@ func TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program)
 					}
 					pulse(timing.PulseInterval())
 				}
+			case <-activeSenseChannel:
+				if !timing.started {
+					transmitter.ActiveSense()
+				}
+				activesense()
 			}
 		}
 	}()
+	// Start active sense loop
+	activesense()
 }
 
 type ListenFn func(msg []byte, milliseconds int32)
