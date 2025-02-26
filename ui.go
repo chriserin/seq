@@ -354,6 +354,7 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 type model struct {
+	hasUIFocus          bool
 	transitiveStatekeys transitiveKeyMap
 	definitionKeys      definitionKeyMap
 	help                help.Model
@@ -1006,6 +1007,7 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 	}
 
 	newCursor := cursor.New()
+	newCursor.BlinkSpeed = 600 * time.Millisecond
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
 	definition, hasDefinition := Definition{}, false // Read()
@@ -1062,7 +1064,7 @@ func (m model) LogFromBeatTime() {
 func RunProgram(midiConnection MidiConnection, template string, instrument string, loopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
 	model := InitModel(midiConnection, template, instrument)
-	program := tea.NewProgram(model, tea.WithAltScreen())
+	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(loopMode, model.programChannel, program)
 	model.SyncTempo()
 	return program
@@ -1277,6 +1279,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			m = m.UpdateDefinition(msg)
 		}
+	case tea.FocusMsg:
+		m.hasUIFocus = true
+	case tea.BlurMsg:
+		m.hasUIFocus = false
 	case overlaykey.UpdatedOverlayKey:
 		if !msg.HasFocus {
 			m.focus = FOCUS_GRID
@@ -2074,7 +2080,11 @@ func (m model) TempoView() string {
 		division = colors.NumberColor.Render(strconv.Itoa(m.definition.subdivisions))
 	}
 	heart := colors.HeartColor.Render("♡")
-	buf.WriteString("             \n")
+	if m.hasUIFocus {
+		buf.WriteString(fmt.Sprintf("       %s     \n", heart))
+	} else {
+		buf.WriteString("             \n")
+	}
 	buf.WriteString(colors.HeartColor.Render("   ♡♡♡☆ ☆♡♡♡ ") + "\n")
 	buf.WriteString(colors.HeartColor.Render("  ♡    ◊    ♡") + "\n")
 	buf.WriteString(colors.HeartColor.Render("  ♡  TEMPO  ♡") + "\n")
