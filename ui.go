@@ -354,7 +354,9 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 type model struct {
+	loopMode            MidiLoopMode
 	hasUIFocus          bool
+	connected           bool
 	transitiveStatekeys transitiveKeyMap
 	definitionKeys      definitionKeyMap
 	help                help.Model
@@ -1002,7 +1004,7 @@ func InitDefinition(template string, instrument string) Definition {
 	}
 }
 
-func InitModel(midiConnection MidiConnection, template string, instrument string) model {
+func InitModel(midiConnection MidiConnection, template string, instrument string, loopMode MidiLoopMode) model {
 	logFile, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
 		panic("could not open log file")
@@ -1021,6 +1023,7 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 	programChannel := make(chan midiEventLoopMsg)
 
 	return model{
+		loopMode:            loopMode,
 		programChannel:      programChannel,
 		transitiveStatekeys: transitiveKeys,
 		definitionKeys:      definitionKeys,
@@ -1065,7 +1068,7 @@ func (m model) LogFromBeatTime() {
 
 func RunProgram(midiConnection MidiConnection, template string, instrument string, loopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	model := InitModel(midiConnection, template, instrument)
+	model := InitModel(midiConnection, template, instrument, loopMode)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(loopMode, model.programChannel, program)
 	model.SyncTempo()
@@ -1086,6 +1089,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if Is(msg, keys.Quit) {
+			m.programChannel <- quitMsg{}
 			m.logFile.Close()
 			return m, tea.Quit
 		}
@@ -1294,6 +1298,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.StartStop(true)
 	case uiStopMsg:
 		m.StartStop(true)
+	case uiConnectedMsg:
+		m.LogString("uiConnectedMsg")
+		m.connected = true
+	case uiNotConnectedMsg:
+		m.LogString("uiNotConnectedMsg")
+		m.connected = false
 	case beatMsg:
 		m.beatTime = time.Now()
 		if m.playing {
@@ -2096,6 +2106,13 @@ func (m model) TempoView() string {
 	buf.WriteString(colors.HeartColor.Render("     ♡   ♡   ") + "\n")
 	buf.WriteString(colors.HeartColor.Render("      ♡ ♡    ") + "\n")
 	buf.WriteString(colors.HeartColor.Render("       †     ") + "\n")
+	if m.loopMode == MLM_RECEIVER {
+		if m.connected {
+			buf.WriteString(colors.HeartColor.Render("Connected") + "\n")
+		} else {
+			buf.WriteString(colors.HeartColor.Render("Not Connected") + "\n")
+		}
+	}
 	return buf.String()
 }
 

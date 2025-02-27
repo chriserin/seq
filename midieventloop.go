@@ -97,7 +97,10 @@ func TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program)
 	if err != nil {
 		panic("Could not open virtual In")
 	}
-	out.Send(midi.Activesense())
+	err = out.Send(midi.Activesense())
+	if err != nil {
+		panic("Could not send active sense")
+	}
 	transmitter := Transmitter{out}
 
 	tickChannel := make(chan Timing)
@@ -170,10 +173,9 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 	err = transmitPort.Open()
 	if err != nil {
 		panic("Could not open transmitter connection")
-	} else {
-		println("successful open")
 	}
 	tickChannel := make(chan Timing)
+	activeSenseChannel := make(chan bool)
 	var ReceiverFunc ListenFn = func(msg []byte, milliseconds int32) {
 		midiMessage := midi.Message(msg)
 		switch midiMessage.Type() {
@@ -184,13 +186,20 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 		case midi.TimingClockMsg:
 			tickChannel <- Timing{subdivisions: 24}
 		case midi.ActiveSenseMsg:
-			tickChannel <- Timing{lastActivity: time.Now()}
+			activeSenseChannel <- true
 		default:
 			println("receiving unknown msg")
 			println(midiMessage.Type().String())
 		}
 	}
-	transmitPort.Listen(ReceiverFunc, drivers.ListenConfig{TimeCode: true})
+	stopFn, err := transmitPort.Listen(ReceiverFunc, drivers.ListenConfig{TimeCode: true, ActiveSense: true})
+	if err != nil {
+		panic("error in setting up midi listener for transmitter")
+	}
+	timer := time.AfterFunc(330*time.Millisecond, func() {
+		program.Send(uiNotConnectedMsg{})
+		activeSenseChannel <- false
+	})
 	var command midiEventLoopMsg
 	go func() {
 		timing := Timing{}
@@ -211,20 +220,24 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 				case tempoMsg:
 					timing.tempo = command.tempo
 					timing.subdivisions = command.subdivisions
+				case quitMsg:
+					timer.Stop()
+					stopFn()
 				}
 			case pulseTiming := <-tickChannel:
+				timer.Reset(330 * time.Millisecond)
 				if timing.started {
 					timing.pulseCount++
 					if timing.pulseCount%(pulseTiming.subdivisions/timing.subdivisions) == 0 {
 						program.Send(beatMsg{timing.BeatInterval()})
 					}
 				}
-			case activeSenseTiming := <-tickChannel:
-				if time.Since(timing.lastActivity) < 300*time.Millisecond {
-					timing.lastActivity = activeSenseTiming.lastActivity
-					program.Send(uiConnected{})
+			case isGood := <-activeSenseChannel:
+				timer.Reset(330 * time.Millisecond)
+				if isGood {
+					program.Send(uiConnectedMsg{})
 				} else {
-					program.Send(uiNotConnected{})
+					program.Send(uiNotConnectedMsg{})
 				}
 			}
 		}
@@ -278,6 +291,8 @@ type startMsg struct {
 }
 
 type stopMsg struct {
+}
+type quitMsg struct {
 }
 type tempoMsg struct {
 	tempo        int
