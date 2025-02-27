@@ -32,7 +32,6 @@ type Timing struct {
 	subdivisions int
 	started      bool
 	pulseCount   int
-	lastActivity time.Time
 }
 
 type MidiLoopMode uint8
@@ -43,14 +42,16 @@ const (
 	MLM_RECEIVER
 )
 
-func MidiEventLoop(mode MidiLoopMode, programChannel chan midiEventLoopMsg, program *tea.Program) {
+func MidiEventLoop(mode MidiLoopMode, lockRecieverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) {
+	timing := Timing{}
 	switch mode {
 	case MLM_STAND_ALONE:
-		StandAloneLoop(programChannel, program)
+		timing.StandAloneLoop(programChannel, program)
 	case MLM_TRANSMITTER:
-		TransmitterLoop(programChannel, program)
+		timing.TransmitterLoop(programChannel, program)
 	case MLM_RECEIVER:
-		ReceiverLoop(programChannel, program)
+		timing.ReceiverLoop(lockRecieverChannel, unlockReceiverChannel, programChannel, program)
+		timing.StandAloneLoop(programChannel, program)
 	}
 }
 
@@ -88,7 +89,7 @@ func (tmtr Transmitter) ActiveSense() {
 
 const TRANSMITTER_NAME string = "seq-transmitter"
 
-func TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
+func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 	driver, err := rtmididrv.New()
 	if err != nil {
 		panic("Could not get driver")
@@ -120,7 +121,6 @@ func TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program)
 	}
 
 	go func() {
-		timing := Timing{}
 		for {
 			select {
 			case command = <-programChannel:
@@ -165,7 +165,7 @@ func TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program)
 
 type ListenFn func(msg []byte, milliseconds int32)
 
-func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
+func (timing *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) {
 	transmitPort, err := midi.FindInPort(TRANSMITTER_NAME)
 	if err != nil {
 		panic("Could not find transmitter")
@@ -174,15 +174,16 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 	if err != nil {
 		panic("Could not open transmitter connection")
 	}
+	receiverChannel := make(chan midiEventLoopMsg)
 	tickChannel := make(chan Timing)
 	activeSenseChannel := make(chan bool)
 	var ReceiverFunc ListenFn = func(msg []byte, milliseconds int32) {
 		midiMessage := midi.Message(msg)
 		switch midiMessage.Type() {
 		case midi.StartMsg:
-			programChannel <- startMsg{}
+			receiverChannel <- startMsg{}
 		case midi.StopMsg:
-			programChannel <- stopMsg{}
+			receiverChannel <- stopMsg{}
 		case midi.TimingClockMsg:
 			tickChannel <- Timing{subdivisions: 24}
 		case midi.ActiveSenseMsg:
@@ -202,11 +203,12 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 	})
 	var command midiEventLoopMsg
 	go func() {
-		timing := Timing{}
 		for {
 			select {
-			case command = <-programChannel:
-				switch command := command.(type) {
+			case <-lockReceiverChannel:
+				<-unlockReceiverChannel
+			case command = <-receiverChannel:
+				switch command.(type) {
 				case startMsg:
 					timing.started = true
 					timing.playTime = time.Now()
@@ -217,6 +219,9 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 					timing.started = false
 					program.Send(uiStopMsg{})
 					// m.playing should be false now.
+				}
+			case command = <-programChannel:
+				switch command := command.(type) {
 				case tempoMsg:
 					timing.tempo = command.tempo
 					timing.subdivisions = command.subdivisions
@@ -244,7 +249,7 @@ func ReceiverLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 	}()
 }
 
-func StandAloneLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
+func (timing *Timing) StandAloneLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
 	tickChannel := make(chan Timing)
 	var command midiEventLoopMsg
 
@@ -256,7 +261,6 @@ func StandAloneLoop(programChannel chan midiEventLoopMsg, program *tea.Program) 
 	}
 
 	go func() {
-		timing := Timing{}
 		for {
 			select {
 			case command = <-programChannel:

@@ -354,35 +354,37 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 type model struct {
-	loopMode            MidiLoopMode
-	hasUIFocus          bool
-	connected           bool
-	transitiveStatekeys transitiveKeyMap
-	definitionKeys      definitionKeyMap
-	help                help.Model
-	cursor              cursor.Model
-	overlayKeyEdit      overlaykey.Model
-	cursorPos           gridKey
-	visualAnchorCursor  gridKey
-	visualMode          bool
-	midiConnection      MidiConnection
-	logFile             *os.File
-	playing             bool
-	beatTime            time.Time
-	playEditing         bool
-	playState           []linestate
-	hasSolo             bool
-	selectionIndicator  Selection
-	focus               focus
-	patternMode         PatternMode
-	ratchetCursor       uint8
-	currentOverlay      *overlays.Overlay
-	keyCycles           int
-	undoStack           UndoStack
-	redoStack           UndoStack
-	yankBuffer          Buffer
-	needsWrite          int
-	programChannel      chan midiEventLoopMsg
+	loopMode              MidiLoopMode
+	hasUIFocus            bool
+	connected             bool
+	transitiveStatekeys   transitiveKeyMap
+	definitionKeys        definitionKeyMap
+	help                  help.Model
+	cursor                cursor.Model
+	overlayKeyEdit        overlaykey.Model
+	cursorPos             gridKey
+	visualAnchorCursor    gridKey
+	visualMode            bool
+	midiConnection        MidiConnection
+	logFile               *os.File
+	playing               bool
+	beatTime              time.Time
+	playEditing           bool
+	playState             []linestate
+	hasSolo               bool
+	selectionIndicator    Selection
+	focus                 focus
+	patternMode           PatternMode
+	ratchetCursor         uint8
+	currentOverlay        *overlays.Overlay
+	keyCycles             int
+	undoStack             UndoStack
+	redoStack             UndoStack
+	yankBuffer            Buffer
+	needsWrite            int
+	programChannel        chan midiEventLoopMsg
+	lockReceiverChannel   chan bool
+	unlockReceiverChannel chan bool
 	// save everything below here
 	definition Definition
 }
@@ -1021,17 +1023,21 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 	}
 
 	programChannel := make(chan midiEventLoopMsg)
+	lockReceiverChannel := make(chan bool)
+	unlockReceiverChannel := make(chan bool)
 
 	return model{
-		loopMode:            loopMode,
-		programChannel:      programChannel,
-		transitiveStatekeys: transitiveKeys,
-		definitionKeys:      definitionKeys,
-		help:                help.New(),
-		cursor:              newCursor,
-		midiConnection:      midiConnection,
-		logFile:             logFile,
-		cursorPos:           GK(0, 0),
+		loopMode:              loopMode,
+		programChannel:        programChannel,
+		lockReceiverChannel:   lockReceiverChannel,
+		unlockReceiverChannel: unlockReceiverChannel,
+		transitiveStatekeys:   transitiveKeys,
+		definitionKeys:        definitionKeys,
+		help:                  help.New(),
+		cursor:                newCursor,
+		midiConnection:        midiConnection,
+		logFile:               logFile,
+		cursorPos:             GK(0, 0),
 		//TODO: Initial overlay key should be read from file before setting to ROOT
 		currentOverlay: definition.overlays,
 		overlayKeyEdit: overlaykey.InitModel(),
@@ -1070,7 +1076,7 @@ func RunProgram(midiConnection MidiConnection, template string, instrument strin
 	config.ProcessConfig("./config/init.lua")
 	model := InitModel(midiConnection, template, instrument, loopMode)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
-	MidiEventLoop(loopMode, model.programChannel, program)
+	MidiEventLoop(loopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
 	model.SyncTempo()
 	return program
 }
@@ -1369,10 +1375,16 @@ func (m *model) StartStop(asReceiver bool) {
 		cmds := make([]tea.Cmd, 0, len(pattern))
 		m.PlayBeat(tickInterval, pattern, &cmds)
 		if !asReceiver {
+			if m.loopMode == MLM_RECEIVER {
+				m.lockReceiverChannel <- true
+			}
 			m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 		}
 	} else {
 		if !asReceiver {
+			if m.loopMode == MLM_RECEIVER {
+				m.unlockReceiverChannel <- true
+			}
 			m.programChannel <- stopMsg{}
 		}
 		m.keyCycles = 0
@@ -2105,13 +2117,10 @@ func (m model) TempoView() string {
 	buf.WriteString(fmt.Sprintf("    %s  %s  %s  \n", heart, division, heart))
 	buf.WriteString(colors.HeartColor.Render("     ♡   ♡   ") + "\n")
 	buf.WriteString(colors.HeartColor.Render("      ♡ ♡    ") + "\n")
-	buf.WriteString(colors.HeartColor.Render("       †     ") + "\n")
-	if m.loopMode == MLM_RECEIVER {
-		if m.connected {
-			buf.WriteString(colors.HeartColor.Render("Connected") + "\n")
-		} else {
-			buf.WriteString(colors.HeartColor.Render("Not Connected") + "\n")
-		}
+	if m.loopMode == MLM_RECEIVER && !m.connected {
+		buf.WriteString(colors.HeartColor.Render("       ╳     ") + "\n")
+	} else {
+		buf.WriteString(colors.HeartColor.Render("       †     ") + "\n")
 	}
 	return buf.String()
 }
