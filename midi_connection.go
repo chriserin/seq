@@ -60,6 +60,10 @@ func (mc MidiConnection) IsOpen() bool {
 var playMutex = sync.Mutex{}
 
 func (mc MidiConnection) AcquireSendFunc() SendFunc {
+	err := mc.ConnectAndOpen()
+	if err != nil {
+		panic("Could not connect")
+	}
 	if mc.outport.IsOpen() {
 		sendFn, err := midi.SendTo(mc.outport)
 		if err != nil {

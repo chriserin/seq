@@ -168,7 +168,6 @@ type ListenFn func(msg []byte, milliseconds int32)
 func (timing *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) {
 	go func() {
 		for {
-			println("Top of Receiver Loop")
 			transmitPort, err := midi.FindInPort(TRANSMITTER_NAME)
 			if err != nil {
 				panic("Could not find transmitter")
