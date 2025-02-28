@@ -367,7 +367,7 @@ type model struct {
 	visualMode            bool
 	midiConnection        MidiConnection
 	logFile               *os.File
-	playing               bool
+	playing               PlayMode
 	beatTime              time.Time
 	playEditing           bool
 	playState             []linestate
@@ -388,6 +388,14 @@ type model struct {
 	// save everything below here
 	definition Definition
 }
+
+type PlayMode int
+
+const (
+	PLAY_STOPPED PlayMode = iota
+	PLAY_STANDARD
+	PLAY_RECEIVER
+)
 
 func (m model) SyncTempo() {
 	m.programChannel <- tempoMsg{
@@ -1150,7 +1158,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectionIndicator = 0
 			m.patternMode = PATTERN_FILL
 		case Is(msg, keys.PlayStop):
-			m.StartStop(false)
+			m.StartStop()
 		case Is(msg, keys.OverlayInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
@@ -1270,7 +1278,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Channel: lastline.Channel,
 					Note:    lastline.Note + 1,
 				})
-				if m.playing {
+				if m.playing != PLAY_STOPPED {
 					m.playState = append(m.playState, InitLineState(PLAY_STATE_PLAY, uint8(len(m.definition.lines)-1)))
 				}
 			}
@@ -1301,9 +1309,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectionIndicator = SELECT_NOTHING
 		}
 	case uiStartMsg:
-		m.StartStop(true)
+		if m.playing == PLAY_STOPPED {
+			m.playing = PLAY_RECEIVER
+		} else {
+			panic("Corrupted play state when starting")
+		}
+		m.Start()
 	case uiStopMsg:
-		m.StartStop(true)
+		m.playing = PLAY_STOPPED
+		m.Stop()
 	case uiConnectedMsg:
 		m.LogString("uiConnectedMsg")
 		m.connected = true
@@ -1312,7 +1326,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.connected = false
 	case beatMsg:
 		m.beatTime = time.Now()
-		if m.playing {
+		if m.playing != PLAY_STOPPED {
 			playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
 			m.advanceCurrentBeat(playingOverlay)
 			m.advanceKeyCycle()
@@ -1330,7 +1344,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case ratchetMsg:
-		if m.playing && msg.iterations < (msg.Ratchets.Length+1) {
+		if m.playing != PLAY_STOPPED && msg.iterations < (msg.Ratchets.Length+1) {
 			if msg.Ratchets.HitAt(msg.iterations) {
 				shortGateLength := 20 * time.Millisecond
 				onMessage, offMessage := NoteMessages(msg.line, m.definition.accents.Data[msg.AccentIndex].Value, shortGateLength, m.definition.accents.Target, 0)
@@ -1350,52 +1364,67 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *model) StartStop(asReceiver bool) {
-	if !m.playing && !m.midiConnection.IsOpen() {
+func (m *model) Start() {
+	if !m.midiConnection.IsOpen() {
+		err := m.midiConnection.ConnectAndOpen()
+		if err != nil {
+			panic("No Open Connection")
+		}
+	}
+	m.keyCycles = 0
+	m.playState = InitLineStates(len(m.definition.lines), m.playState)
+	m.advanceKeyCycle()
+	playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
+	tickInterval := m.TickInterval()
+
+	pattern := m.CombinedBeatPattern(playingOverlay)
+	cmds := make([]tea.Cmd, 0, len(pattern))
+	m.PlayBeat(tickInterval, pattern, &cmds)
+	if m.playing == PLAY_STANDARD {
+		m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
+	}
+}
+
+func (m *model) Stop() {
+	m.keyCycles = 0
+	notes := notereg.Clear()
+	sendFn := m.midiConnection.AcquireSendFunc()
+	for _, n := range notes {
+		switch n := n.(type) {
+		case noteMsg:
+			PlayMessage(time.Duration(0), n.OffMessage(), sendFn)
+		}
+	}
+}
+
+func (m *model) StartStop() {
+	if m.playing == PLAY_STOPPED && !m.midiConnection.IsOpen() {
 		err := m.midiConnection.ConnectAndOpen()
 		if err != nil {
 			panic("No Open Connection")
 		}
 	}
 
-	// if m.playing && m.outport.IsOpen() {
-	// 	m.outport.Close()
-	// }
-
-	m.playing = !m.playing
-	m.playEditing = false
-	if m.playing {
-		m.keyCycles = 0
-		m.playState = InitLineStates(len(m.definition.lines), m.playState)
-		m.advanceKeyCycle()
-		playingOverlay := m.definition.overlays.HighestMatchingOverlay(m.keyCycles)
-		tickInterval := m.TickInterval()
-
-		pattern := m.CombinedBeatPattern(playingOverlay)
-		cmds := make([]tea.Cmd, 0, len(pattern))
-		m.PlayBeat(tickInterval, pattern, &cmds)
-		if !asReceiver {
-			if m.loopMode == MLM_RECEIVER {
-				m.lockReceiverChannel <- true
-			}
-			m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
+	if m.playing == PLAY_STOPPED {
+		m.playing = PLAY_STANDARD
+		if m.loopMode == MLM_RECEIVER {
+			m.lockReceiverChannel <- true
 		}
 	} else {
-		if !asReceiver {
+		if m.playing == PLAY_STANDARD {
+			m.programChannel <- stopMsg{}
 			if m.loopMode == MLM_RECEIVER {
 				m.unlockReceiverChannel <- true
 			}
-			m.programChannel <- stopMsg{}
 		}
-		m.keyCycles = 0
-		notes := notereg.Clear()
-		sendFn := m.midiConnection.AcquireSendFunc()
-		for _, n := range notes {
-			switch n := n.(type) {
-			case noteMsg:
-				PlayMessage(time.Duration(0), n.OffMessage(), sendFn)
-			}
-		}
+		m.playing = PLAY_STOPPED
+	}
+
+	m.playEditing = false
+	if m.playing != PLAY_STOPPED {
+		m.Start()
+	} else {
+		m.Stop()
 	}
 }
 
@@ -1586,7 +1615,7 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 		m.EnsureOverlay()
 		m = m.UpdateDefinitionKeys(msg)
 	}
-	if m.playing {
+	if m.playing != PLAY_STOPPED {
 		m.playEditing = true
 	}
 	m.ResetRedo()
@@ -1920,7 +1949,7 @@ func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 
 func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.OverlayPattern {
 	pattern := make(overlays.OverlayPattern)
-	if m.playing && !m.playEditing {
+	if m.playing != PLAY_STOPPED && !m.playEditing {
 		m.definition.overlays.CombineOverlayPattern(&pattern, m.keyCycles)
 	} else {
 		overlay.CombineOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle())
@@ -2276,11 +2305,11 @@ func (m model) OverlaysView() string {
 	for currentOverlay := m.definition.overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
 		var playing = ""
-		if m.playing && playingOverlayKeys[0] == currentOverlay.Key {
+		if m.playing != PLAY_STOPPED && playingOverlayKeys[0] == currentOverlay.Key {
 			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(currentPlayingColor).Render(" \u25CF ")
 			buf.WriteString(playing)
 			playingSpacer = ""
-		} else if m.playing && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
+		} else if m.playing != PLAY_STOPPED && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
 			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(activePlayingColor).Render(" \u25C9 ")
 			buf.WriteString(playing)
 			playingSpacer = ""
@@ -2299,7 +2328,7 @@ func (m model) OverlaysView() string {
 		overlayLine := fmt.Sprintf("%s%2s%2s", overlaykey.View(currentOverlay.Key), stackModifier, editing)
 
 		buf.WriteString(playingSpacer)
-		if m.playing && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
+		if m.playing != PLAY_STOPPED && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
 			buf.WriteString(style.Render(overlayLine))
 		} else {
 			buf.WriteString(overlayLine)
@@ -2332,7 +2361,7 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetEditView())
-	} else if m.playing {
+	} else if m.playing != PLAY_STOPPED {
 		buf.WriteString(fmt.Sprintf("    Seq - Playing - %d\n", m.keyCycles))
 	} else {
 		buf.WriteString(m.WriteView())
@@ -2395,7 +2424,7 @@ func (m model) ViewOverlay() string {
 
 func (m model) CurrentOverlayView() string {
 	var matchedKey overlayKey
-	if m.playing {
+	if m.playing != PLAY_STOPPED {
 		matchedKey = m.definition.overlays.HighestMatchingOverlay(m.keyCycles).Key
 	} else {
 		matchedKey = overlaykey.ROOT
@@ -2492,7 +2521,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
 
 		var backgroundSeqColor lipgloss.Color
-		if m.playing && m.playState[lineNumber].currentBeat == i {
+		if m.playing != PLAY_STOPPED && m.playState[lineNumber].currentBeat == i {
 			backgroundSeqColor = seqCursorColor
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
 			backgroundSeqColor = seqVisualColor

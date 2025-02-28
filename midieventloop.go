@@ -166,83 +166,92 @@ func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, prog
 type ListenFn func(msg []byte, milliseconds int32)
 
 func (timing *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) {
-	transmitPort, err := midi.FindInPort(TRANSMITTER_NAME)
-	if err != nil {
-		panic("Could not find transmitter")
-	}
-	err = transmitPort.Open()
-	if err != nil {
-		panic("Could not open transmitter connection")
-	}
-	receiverChannel := make(chan midiEventLoopMsg)
-	tickChannel := make(chan Timing)
-	activeSenseChannel := make(chan bool)
-	var ReceiverFunc ListenFn = func(msg []byte, milliseconds int32) {
-		midiMessage := midi.Message(msg)
-		switch midiMessage.Type() {
-		case midi.StartMsg:
-			receiverChannel <- startMsg{}
-		case midi.StopMsg:
-			receiverChannel <- stopMsg{}
-		case midi.TimingClockMsg:
-			tickChannel <- Timing{subdivisions: 24}
-		case midi.ActiveSenseMsg:
-			activeSenseChannel <- true
-		default:
-			println("receiving unknown msg")
-			println(midiMessage.Type().String())
-		}
-	}
-	stopFn, err := transmitPort.Listen(ReceiverFunc, drivers.ListenConfig{TimeCode: true, ActiveSense: true})
-	if err != nil {
-		panic("error in setting up midi listener for transmitter")
-	}
-	timer := time.AfterFunc(330*time.Millisecond, func() {
-		program.Send(uiNotConnectedMsg{})
-		activeSenseChannel <- false
-	})
-	var command midiEventLoopMsg
 	go func() {
 		for {
-			select {
-			case <-lockReceiverChannel:
-				<-unlockReceiverChannel
-			case command = <-receiverChannel:
-				switch command.(type) {
-				case startMsg:
-					timing.started = true
-					timing.playTime = time.Now()
-					timing.trackTime = time.Duration(0)
-					timing.pulseCount = 0
-					program.Send(uiStartMsg{})
-				case stopMsg:
-					timing.started = false
-					program.Send(uiStopMsg{})
-					// m.playing should be false now.
+			println("Top of Receiver Loop")
+			transmitPort, err := midi.FindInPort(TRANSMITTER_NAME)
+			if err != nil {
+				panic("Could not find transmitter")
+			}
+			err = transmitPort.Open()
+			if err != nil {
+				panic("Could not open transmitter connection")
+			}
+
+			receiverChannel := make(chan midiEventLoopMsg)
+			tickChannel := make(chan Timing)
+			activeSenseChannel := make(chan bool)
+			var ReceiverFunc ListenFn = func(msg []byte, milliseconds int32) {
+				midiMessage := midi.Message(msg)
+				switch midiMessage.Type() {
+				case midi.StartMsg:
+					receiverChannel <- startMsg{}
+				case midi.StopMsg:
+					receiverChannel <- stopMsg{}
+				case midi.TimingClockMsg:
+					tickChannel <- Timing{subdivisions: 24}
+				case midi.ActiveSenseMsg:
+					activeSenseChannel <- true
+				default:
+					println("receiving unknown msg")
+					println(midiMessage.Type().String())
 				}
-			case command = <-programChannel:
-				switch command := command.(type) {
-				case tempoMsg:
-					timing.tempo = command.tempo
-					timing.subdivisions = command.subdivisions
-				case quitMsg:
-					timer.Stop()
+			}
+			stopFn, err := transmitPort.Listen(ReceiverFunc, drivers.ListenConfig{TimeCode: true, ActiveSense: true})
+			if err != nil {
+				panic("error in setting up midi listener for transmitter")
+			}
+			timer := time.AfterFunc(330*time.Millisecond, func() {
+				program.Send(uiNotConnectedMsg{})
+				activeSenseChannel <- false
+			})
+			var command midiEventLoopMsg
+		inner:
+			for {
+				select {
+				case <-lockReceiverChannel:
 					stopFn()
-				}
-			case pulseTiming := <-tickChannel:
-				timer.Reset(330 * time.Millisecond)
-				if timing.started {
-					timing.pulseCount++
-					if timing.pulseCount%(pulseTiming.subdivisions/timing.subdivisions) == 0 {
-						program.Send(beatMsg{timing.BeatInterval()})
+					transmitPort.Close()
+					timer.Stop()
+					<-unlockReceiverChannel
+					break inner
+				case command = <-receiverChannel:
+					switch command.(type) {
+					case startMsg:
+						timing.started = true
+						timing.playTime = time.Now()
+						timing.trackTime = time.Duration(0)
+						timing.pulseCount = 0
+						program.Send(uiStartMsg{})
+					case stopMsg:
+						timing.started = false
+						program.Send(uiStopMsg{})
+						// m.playing should be false now.
 					}
-				}
-			case isGood := <-activeSenseChannel:
-				timer.Reset(330 * time.Millisecond)
-				if isGood {
-					program.Send(uiConnectedMsg{})
-				} else {
-					program.Send(uiNotConnectedMsg{})
+				case command = <-programChannel:
+					switch command := command.(type) {
+					case tempoMsg:
+						timing.tempo = command.tempo
+						timing.subdivisions = command.subdivisions
+					case quitMsg:
+						timer.Stop()
+						stopFn()
+					}
+				case pulseTiming := <-tickChannel:
+					timer.Reset(330 * time.Millisecond)
+					if timing.started {
+						timing.pulseCount++
+						if timing.pulseCount%(pulseTiming.subdivisions/timing.subdivisions) == 0 {
+							program.Send(beatMsg{timing.BeatInterval()})
+						}
+					}
+				case isGood := <-activeSenseChannel:
+					timer.Reset(330 * time.Millisecond)
+					if isGood {
+						program.Send(uiConnectedMsg{})
+					} else {
+						program.Send(uiNotConnectedMsg{})
+					}
 				}
 			}
 		}
