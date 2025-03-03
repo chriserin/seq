@@ -39,6 +39,7 @@ type transitiveKeyMap struct {
 	SetupInputSwitch   key.Binding
 	AccentInputSwitch  key.Binding
 	RatchetInputSwitch key.Binding
+	BeatsInputSwitch   key.Binding
 	Increase           key.Binding
 	Decrease           key.Binding
 	ToggleGateMode     key.Binding
@@ -166,6 +167,7 @@ var transitiveKeys = transitiveKeyMap{
 	SetupInputSwitch:   Key("Setup Input Indicator", "ctrl+s"),
 	AccentInputSwitch:  Key("Accent Input Indicator", "ctrl+e"),
 	RatchetInputSwitch: Key("Ratchet Input Indicator", "ctrl+h"),
+	BeatsInputSwitch:   Key("Beats Input Indicator", "ctrl+b"),
 	ToggleRatchetMode:  Key("Toggle Ratchet Mode", "ctrl+r"),
 	ToggleGateMode:     Key("Toggle Gate Mode", "ctrl+g"),
 	ToggleWaitMode:     Key("Toggle Wait Mode", "ctrl+w"),
@@ -426,6 +428,7 @@ const (
 	SELECT_ACCENT_DIFF
 	SELECT_ACCENT_TARGET
 	SELECT_ACCENT_START
+	SELECT_BEATS
 )
 
 type PatternMode uint8
@@ -970,6 +973,20 @@ func (m *model) DecreaseAccentStart() {
 	m.definition.accents.ReCalc()
 }
 
+func (m *model) IncreaseBeats() {
+	newBeats := m.CurrentPart().beats + 1
+	if newBeats < 128 {
+		m.definition.parts[m.currentPart].beats = newBeats
+	}
+}
+
+func (m *model) DecreaseBeats() {
+	newBeats := int(m.CurrentPart().beats) - 1
+	if newBeats >= 0 {
+		m.definition.parts[m.currentPart].beats = uint8(newBeats)
+	}
+}
+
 func (m *model) ToggleRatchetMute() {
 	currentNote := m.CurrentNote()
 	currentNote.Ratchets.Toggle(m.ratchetCursor)
@@ -1193,6 +1210,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
 				m.ratchetCursor = 0
 			}
+		case Is(msg, keys.BeatsInputSwitch):
+			states := []Selection{SELECT_NOTHING, SELECT_BEATS}
+			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
 		case Is(msg, keys.Increase):
 			switch m.selectionIndicator {
 			case SELECT_TEMPO:
@@ -1221,6 +1241,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.DecreaseAccentTarget()
 			case SELECT_ACCENT_START:
 				m.IncreaseAccentStart()
+			case SELECT_BEATS:
+				m.IncreaseBeats()
 			}
 		case Is(msg, keys.Decrease):
 			switch m.selectionIndicator {
@@ -1248,6 +1270,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.DecreaseAccentTarget()
 			case SELECT_ACCENT_START:
 				m.DecreaseAccentStart()
+			case SELECT_BEATS:
+				m.DecreaseBeats()
 			}
 		case Is(msg, keys.ToggleGateMode):
 			m.patternMode = PATTERN_GATE
@@ -2123,6 +2147,22 @@ func (m model) OverlayKeys() []overlayKey {
 	return keys
 }
 
+func (m model) PartView() string {
+	var buf strings.Builder
+	beats := m.CurrentPart().beats
+	var beatsInput string
+	switch m.selectionIndicator {
+	case SELECT_BEATS:
+		beatsInput = colors.SelectedColor.Render(strconv.Itoa(int(beats)))
+	default:
+		beatsInput = colors.NumberColor.Render(strconv.Itoa(int(beats)))
+	}
+	buf.WriteString("            \n")
+	buf.WriteString("  BEATS     \n")
+	buf.WriteString(fmt.Sprintf("    %s       \n", beatsInput))
+	return buf.String()
+}
+
 func (m model) TempoView() string {
 	var buf strings.Builder
 	var tempo, division string
@@ -2192,7 +2232,14 @@ func (m model) View() string {
 		sideView = m.OverlaysView()
 	}
 
-	buf.WriteString(lipgloss.JoinHorizontal(0, m.TempoView(), "  ", m.ViewTriggerSeq(), "  ", sideView))
+	var leftSideView string
+	if m.selectionIndicator == SELECT_BEATS {
+		leftSideView = m.PartView()
+	} else {
+		leftSideView = m.TempoView()
+	}
+
+	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "  ", m.ViewTriggerSeq(), "  ", sideView))
 	return buf.String()
 }
 
@@ -2372,7 +2419,9 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(m.WriteView())
 		buf.WriteString("Seq - A sequencer for your cli\n")
 	}
-	buf.WriteString("   ┌─────────────────────────────────\n")
+	beats := m.CurrentPart().beats
+	topLine := strings.Repeat("─", max(32, int(beats)))
+	buf.WriteString(fmt.Sprintf("   ┌%s\n", topLine))
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
 		buf.WriteString(lineView(i, m, visualCombinedPattern))
 	}
