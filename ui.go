@@ -54,6 +54,7 @@ type transitiveKeyMap struct {
 	New                key.Binding
 	ToggleVisualMode   key.Binding
 	NewLine            key.Binding
+	NewPart            key.Binding
 	Yank               key.Binding
 	Mute               key.Binding
 	Solo               key.Binding
@@ -180,6 +181,7 @@ var transitiveKeys = transitiveKeyMap{
 	ToggleVisualMode:   Key("Toggle Visual Mode", "v"),
 	New:                Key("New", "ctrl+n"),
 	NewLine:            Key("New Line", "ctrl+l"),
+	NewPart:            Key("New Part", "ctrl+]"),
 	Yank:               Key("Yank", "y"),
 	Mute:               Key("Mute", "m"),
 	Solo:               Key("Solo", "M"),
@@ -1038,8 +1040,12 @@ func InitDefinition(template string, instrument string) Definition {
 	}
 }
 
+func InitPart() Part {
+	return Part{overlays: overlays.InitOverlay(overlaykey.ROOT, nil), beats: 32}
+}
+
 func InitParts() []Part {
-	firstPart := Part{overlays: overlays.InitOverlay(overlaykey.ROOT, nil), beats: 32}
+	firstPart := InitPart()
 	return []Part{firstPart}
 }
 
@@ -1319,6 +1325,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.playState = append(m.playState, InitLineState(PLAY_STATE_PLAY, uint8(len(m.definition.lines)-1)))
 				}
 			}
+		case Is(msg, keys.NewPart):
+			m.definition.parts = append(m.definition.parts, InitPart())
+			m.currentPart++
+			m.currentOverlay = m.CurrentPart().overlays
 		case Is(msg, keys.Yank):
 			m.yankBuffer = m.Yank()
 			m.cursorPos = m.YankBounds().TopLeft()
