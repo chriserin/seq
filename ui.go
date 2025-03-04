@@ -381,6 +381,7 @@ type model struct {
 	ratchetCursor         uint8
 	currentOverlay        *overlays.Overlay
 	currentPart           int
+	currentSongSection    int
 	keyCycles             int
 	undoStack             UndoStack
 	redoStack             UndoStack
@@ -431,6 +432,9 @@ const (
 	SELECT_ACCENT_TARGET
 	SELECT_ACCENT_START
 	SELECT_BEATS
+	SELECT_CYCLES
+	SELECT_START_BEATS
+	SELECT_START_CYCLES
 )
 
 type PatternMode uint8
@@ -686,8 +690,16 @@ type Part struct {
 	beats    uint8
 }
 
+type SongSection struct {
+	part        Part
+	cycles      int
+	startBeat   int
+	startCycles int
+}
+
 type Definition struct {
 	parts           []Part
+	arrangement     []SongSection
 	lines           []grid.LineDefinition
 	tempo           int
 	subdivisions    int
@@ -989,6 +1001,48 @@ func (m *model) DecreaseBeats() {
 	}
 }
 
+func (m *model) IncreaseCycles() {
+	newCycles := m.CurrentSongSection().cycles + 1
+	if newCycles < 128 {
+		m.definition.arrangement[m.currentSongSection].cycles = newCycles
+	}
+}
+
+func (m *model) DecreaseCycles() {
+	newCycles := int(m.CurrentSongSection().cycles) - 1
+	if newCycles >= 0 {
+		m.definition.arrangement[m.currentSongSection].cycles = newCycles
+	}
+}
+
+func (m *model) IncreaseStartBeats() {
+	newStartBeats := m.CurrentSongSection().startBeat + 1
+	if newStartBeats < 128 {
+		m.definition.arrangement[m.currentSongSection].startBeat = newStartBeats
+	}
+}
+
+func (m *model) DecreaseStartBeats() {
+	newStartBeats := m.CurrentSongSection().startBeat - 1
+	if newStartBeats >= 0 {
+		m.definition.arrangement[m.currentSongSection].startBeat = newStartBeats
+	}
+}
+
+func (m *model) IncreaseStartCycles() {
+	newStartCycles := m.CurrentSongSection().startCycles + 1
+	if newStartCycles < 128 {
+		m.definition.arrangement[m.currentSongSection].startCycles = newStartCycles
+	}
+}
+
+func (m *model) DecreaseStartCycles() {
+	newStartCycles := m.CurrentSongSection().startCycles - 1
+	if newStartCycles >= 0 {
+		m.definition.arrangement[m.currentSongSection].startCycles = newStartCycles
+	}
+}
+
 func (m *model) ToggleRatchetMute() {
 	currentNote := m.CurrentNote()
 	currentNote.Ratchets.Toggle(m.ratchetCursor)
@@ -1027,8 +1081,10 @@ func InitDefinition(template string, instrument string) Definition {
 	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
 	copy(newLines, gridTemplate.Lines)
 
+	parts := InitParts()
 	return Definition{
-		parts:           InitParts(),
+		parts:           parts,
+		arrangement:     InitArrangement(parts),
 		tempo:           120,
 		keyline:         0,
 		subdivisions:    2,
@@ -1037,6 +1093,24 @@ func InitDefinition(template string, instrument string) Definition {
 		template:        template,
 		instrument:      instrument,
 		templateUIStyle: gridTemplate.UIStyle,
+	}
+}
+
+func InitArrangement(parts []Part) []SongSection {
+	songSections := make([]SongSection, 0, len(parts))
+	for _, part := range parts {
+		newSongSection := InitSongSection(part)
+		songSections = append(songSections, newSongSection)
+	}
+	return songSections
+}
+
+func InitSongSection(part Part) SongSection {
+	return SongSection{
+		part:        part,
+		cycles:      1,
+		startBeat:   0,
+		startCycles: 0,
 	}
 }
 
@@ -1081,12 +1155,12 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 		midiConnection:        midiConnection,
 		logFile:               logFile,
 		cursorPos:             GK(0, 0),
-		//TODO: Initial overlay key should be read from file before setting to ROOT
-		currentPart:    0,
-		currentOverlay: definition.parts[0].overlays,
-		overlayKeyEdit: overlaykey.InitModel(),
-		definition:     definition,
-		playState:      InitLineStates(len(definition.lines), []linestate{}),
+		currentPart:           0,
+		currentSongSection:    0,
+		currentOverlay:        definition.parts[0].overlays,
+		overlayKeyEdit:        overlaykey.InitModel(),
+		definition:            definition,
+		playState:             InitLineStates(len(definition.lines), []linestate{}),
 	}
 }
 
@@ -1217,7 +1291,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.ratchetCursor = 0
 			}
 		case Is(msg, keys.BeatsInputSwitch):
-			states := []Selection{SELECT_NOTHING, SELECT_BEATS}
+			states := []Selection{SELECT_NOTHING, SELECT_BEATS, SELECT_CYCLES, SELECT_START_BEATS, SELECT_START_CYCLES}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
 		case Is(msg, keys.Increase):
 			switch m.selectionIndicator {
@@ -1249,6 +1323,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.IncreaseAccentStart()
 			case SELECT_BEATS:
 				m.IncreaseBeats()
+			case SELECT_CYCLES:
+				m.IncreaseCycles()
+			case SELECT_START_BEATS:
+				m.IncreaseStartBeats()
+			case SELECT_START_CYCLES:
+				m.IncreaseStartCycles()
 			}
 		case Is(msg, keys.Decrease):
 			switch m.selectionIndicator {
@@ -1278,6 +1358,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.DecreaseAccentStart()
 			case SELECT_BEATS:
 				m.DecreaseBeats()
+			case SELECT_CYCLES:
+				m.DecreaseCycles()
+			case SELECT_START_BEATS:
+				m.DecreaseStartBeats()
+			case SELECT_START_CYCLES:
+				m.DecreaseStartCycles()
 			}
 		case Is(msg, keys.ToggleGateMode):
 			m.patternMode = PATTERN_GATE
@@ -1328,6 +1414,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.NewPart):
 			m.definition.parts = append(m.definition.parts, InitPart())
 			m.currentPart++
+			m.definition.arrangement = append(m.definition.arrangement, InitSongSection(m.CurrentPart()))
+			m.currentSongSection++
 			m.currentOverlay = m.CurrentPart().overlays
 		case Is(msg, keys.Yank):
 			m.yankBuffer = m.Yank()
@@ -1737,6 +1825,10 @@ func (m model) Save() {
 
 func (m model) CurrentPart() Part {
 	return m.definition.parts[m.currentPart]
+}
+
+func (m model) CurrentSongSection() SongSection {
+	return m.definition.arrangement[m.currentSongSection]
 }
 
 func (m model) CurrentNote() note {
@@ -2160,16 +2252,33 @@ func (m model) OverlayKeys() []overlayKey {
 func (m model) PartView() string {
 	var buf strings.Builder
 	beats := m.CurrentPart().beats
-	var beatsInput string
+	cycles := m.CurrentSongSection().cycles
+	startBeats := m.CurrentSongSection().startBeat
+	startCycles := m.CurrentSongSection().startCycles
+
+	beatsInput := colors.NumberColor.Render(strconv.Itoa(int(beats)))
+	cyclesInput := colors.NumberColor.Render(strconv.Itoa(int(cycles)))
+	startBeatsInput := colors.NumberColor.Render(strconv.Itoa(int(startBeats)))
+	startCyclesInput := colors.NumberColor.Render(strconv.Itoa(int(startCycles)))
 	switch m.selectionIndicator {
 	case SELECT_BEATS:
 		beatsInput = colors.SelectedColor.Render(strconv.Itoa(int(beats)))
-	default:
-		beatsInput = colors.NumberColor.Render(strconv.Itoa(int(beats)))
+	case SELECT_CYCLES:
+		cyclesInput = colors.SelectedColor.Render(strconv.Itoa(int(cycles)))
+	case SELECT_START_BEATS:
+		startBeatsInput = colors.SelectedColor.Render(strconv.Itoa(int(startBeats)))
+	case SELECT_START_CYCLES:
+		startCyclesInput = colors.SelectedColor.Render(strconv.Itoa(int(startCycles)))
 	}
 	buf.WriteString("            \n")
 	buf.WriteString("  BEATS     \n")
 	buf.WriteString(fmt.Sprintf("    %s       \n", beatsInput))
+	buf.WriteString("  CYCLES    \n")
+	buf.WriteString(fmt.Sprintf("    %s       \n", cyclesInput))
+	buf.WriteString("START BEATS \n")
+	buf.WriteString(fmt.Sprintf("    %s       \n", startBeatsInput))
+	buf.WriteString("START CYCLE \n")
+	buf.WriteString(fmt.Sprintf("    %s       \n", startCyclesInput))
 	return buf.String()
 }
 
@@ -2243,7 +2352,7 @@ func (m model) View() string {
 	}
 
 	var leftSideView string
-	if m.selectionIndicator == SELECT_BEATS {
+	if slices.Contains([]Selection{SELECT_BEATS, SELECT_CYCLES, SELECT_START_BEATS, SELECT_START_CYCLES}, m.selectionIndicator) {
 		leftSideView = m.PartView()
 	} else {
 		leftSideView = m.TempoView()
