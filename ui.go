@@ -691,7 +691,7 @@ type Part struct {
 }
 
 type SongSection struct {
-	part        Part
+	part        int
 	cycles      int
 	startBeat   int
 	startCycles int
@@ -1056,7 +1056,7 @@ func InitLines(template string) []grid.LineDefinition {
 	return newLines
 }
 
-func InitLineStates(lines int, previousPlayState []linestate) []linestate {
+func InitLineStates(lines int, previousPlayState []linestate, startBeat uint8) []linestate {
 	linestates := make([]linestate, 0, lines)
 
 	for i := range uint8(lines) {
@@ -1066,13 +1066,13 @@ func InitLineStates(lines int, previousPlayState []linestate) []linestate {
 			previousGroupPlayState = previousState.groupPlayState
 		}
 
-		linestates = append(linestates, InitLineState(previousGroupPlayState, i))
+		linestates = append(linestates, InitLineState(previousGroupPlayState, i, startBeat))
 	}
 	return linestates
 }
 
-func InitLineState(previousGroupPlayState groupPlayState, index uint8) linestate {
-	return linestate{index, 0, 1, 1, 0, 0, 0, previousGroupPlayState}
+func InitLineState(previousGroupPlayState groupPlayState, index uint8, startBeat uint8) linestate {
+	return linestate{index, startBeat, 1, 1, 0, 0, 0, previousGroupPlayState}
 }
 
 func InitDefinition(template string, instrument string) Definition {
@@ -1098,19 +1098,19 @@ func InitDefinition(template string, instrument string) Definition {
 
 func InitArrangement(parts []Part) []SongSection {
 	songSections := make([]SongSection, 0, len(parts))
-	for _, part := range parts {
-		newSongSection := InitSongSection(part)
+	for i := range parts {
+		newSongSection := InitSongSection(i)
 		songSections = append(songSections, newSongSection)
 	}
 	return songSections
 }
 
-func InitSongSection(part Part) SongSection {
+func InitSongSection(part int) SongSection {
 	return SongSection{
 		part:        part,
 		cycles:      1,
 		startBeat:   0,
-		startCycles: 0,
+		startCycles: 1,
 	}
 }
 
@@ -1160,7 +1160,7 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 		currentOverlay:        definition.parts[0].overlays,
 		overlayKeyEdit:        overlaykey.InitModel(),
 		definition:            definition,
-		playState:             InitLineStates(len(definition.lines), []linestate{}),
+		playState:             InitLineStates(len(definition.lines), []linestate{}, 0),
 	}
 }
 
@@ -1408,13 +1408,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Note:    lastline.Note + 1,
 				})
 				if m.playing != PLAY_STOPPED {
-					m.playState = append(m.playState, InitLineState(PLAY_STATE_PLAY, uint8(len(m.definition.lines)-1)))
+					m.playState = append(m.playState, InitLineState(PLAY_STATE_PLAY, uint8(len(m.definition.lines)-1), 0))
 				}
 			}
 		case Is(msg, keys.NewPart):
 			m.definition.parts = append(m.definition.parts, InitPart())
 			m.currentPart++
-			m.definition.arrangement = append(m.definition.arrangement, InitSongSection(m.CurrentPart()))
+			m.definition.arrangement = append(m.definition.arrangement, InitSongSection(m.currentPart))
 			m.currentSongSection++
 			m.currentOverlay = m.CurrentPart().overlays
 		case Is(msg, keys.Yank):
@@ -1454,17 +1454,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.playing = PLAY_STOPPED
 		m.Stop()
 	case uiConnectedMsg:
-		m.LogString("uiConnectedMsg")
 		m.connected = true
 	case uiNotConnectedMsg:
-		m.LogString("uiNotConnectedMsg")
 		m.connected = false
 	case beatMsg:
 		m.beatTime = time.Now()
+		playingOverlay := m.CurrentPart().overlays.HighestMatchingOverlay(m.keyCycles)
 		if m.playing != PLAY_STOPPED {
-			playingOverlay := m.CurrentPart().overlays.HighestMatchingOverlay(m.keyCycles)
 			m.advanceCurrentBeat(playingOverlay)
 			m.advanceKeyCycle()
+		}
+		if m.playing != PLAY_STOPPED {
 
 			gridKeys := make([]grid.GridKey, 0, len(m.playState))
 			m.CurrentBeatGridKeys(&gridKeys)
@@ -1506,9 +1506,9 @@ func (m *model) Start() {
 			panic("No Open Connection")
 		}
 	}
-	m.keyCycles = 0
-	m.playState = InitLineStates(len(m.definition.lines), m.playState)
-	m.advanceKeyCycle()
+	m.currentSongSection = 0
+	m.keyCycles = m.CurrentSongSection().startCycles
+	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().startBeat))
 	playingOverlay := m.CurrentPart().overlays.HighestMatchingOverlay(m.keyCycles)
 	tickInterval := m.TickInterval()
 
@@ -1540,11 +1540,13 @@ func (m *model) StartStop() {
 		}
 	}
 
+	m.playEditing = false
 	if m.playing == PLAY_STOPPED {
 		m.playing = PLAY_STANDARD
 		if m.loopMode == MLM_RECEIVER {
 			m.lockReceiverChannel <- true
 		}
+		m.Start()
 	} else {
 		if m.playing == PLAY_STANDARD {
 			m.programChannel <- stopMsg{}
@@ -1553,12 +1555,6 @@ func (m *model) StartStop() {
 			}
 		}
 		m.playing = PLAY_STOPPED
-	}
-
-	m.playEditing = false
-	if m.playing != PLAY_STOPPED {
-		m.Start()
-	} else {
 		m.Stop()
 	}
 }
@@ -1824,7 +1820,8 @@ func (m model) Save() {
 }
 
 func (m model) CurrentPart() Part {
-	return m.definition.parts[m.currentPart]
+	part := m.CurrentSongSection().part
+	return m.definition.parts[part]
 }
 
 func (m model) CurrentSongSection() SongSection {
@@ -2055,6 +2052,12 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 func (m *model) advanceKeyCycle() {
 	if m.playState[m.definition.keyline].currentBeat == 0 {
 		m.keyCycles++
+		songSection := m.CurrentSongSection()
+		if songSection.cycles+songSection.startCycles <= m.keyCycles {
+			m.StartStop()
+		}
+		// 	m.playing = PLAY_STOPPED
+		// }
 	}
 }
 
