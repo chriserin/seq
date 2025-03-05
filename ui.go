@@ -2358,15 +2358,16 @@ func (m model) PartView() string {
 	case SELECT_START_CYCLES:
 		startCyclesInput = colors.SelectedColor.Render(strconv.Itoa(int(startCycles)))
 	}
-	buf.WriteString("            \n")
-	buf.WriteString("  BEATS     \n")
-	buf.WriteString(fmt.Sprintf("    %s       \n", beatsInput))
-	buf.WriteString("  CYCLES    \n")
-	buf.WriteString(fmt.Sprintf("    %s       \n", cyclesInput))
-	buf.WriteString("START BEATS \n")
-	buf.WriteString(fmt.Sprintf("    %s       \n", startBeatsInput))
-	buf.WriteString("START CYCLE \n")
-	buf.WriteString(fmt.Sprintf("    %s       \n", startCyclesInput))
+	buf.WriteString("             \n")
+	buf.WriteString("             \n")
+	buf.WriteString("     BEATS   \n")
+	buf.WriteString(fmt.Sprintf("      %3s    \n", beatsInput))
+	buf.WriteString("    CYCLES   \n")
+	buf.WriteString(fmt.Sprintf("      %s      \n", cyclesInput))
+	buf.WriteString("  START BEATS\n")
+	buf.WriteString(fmt.Sprintf("      %s      \n", startBeatsInput))
+	buf.WriteString("  START CYCLE\n")
+	buf.WriteString(fmt.Sprintf("      %s      \n", startCyclesInput))
 	return buf.String()
 }
 
