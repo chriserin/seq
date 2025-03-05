@@ -57,7 +57,9 @@ type transitiveKeyMap struct {
 	New                key.Binding
 	ToggleVisualMode   key.Binding
 	NewLine            key.Binding
-	NewPart            key.Binding
+	NewSection         key.Binding
+	NextSection        key.Binding
+	PrevSection        key.Binding
 	Yank               key.Binding
 	Mute               key.Binding
 	Solo               key.Binding
@@ -187,7 +189,9 @@ var transitiveKeys = transitiveKeyMap{
 	ToggleVisualMode:   Key("Toggle Visual Mode", "v"),
 	New:                Key("New", "ctrl+n"),
 	NewLine:            Key("New Line", "ctrl+l"),
-	NewPart:            Key("New Part", "ctrl+]"),
+	NewSection:         Key("New Part", "ctrl+]"),
+	NextSection:        Key("Next Section", "]"),
+	PrevSection:        Key("Prev Section", "["),
 	Yank:               Key("Yank", "y"),
 	Mute:               Key("Mute", "m"),
 	Solo:               Key("Solo", "M"),
@@ -1452,8 +1456,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.playState = append(m.playState, InitLineState(PLAY_STATE_PLAY, uint8(len(m.definition.lines)-1), 0))
 				}
 			}
-		case Is(msg, keys.NewPart):
+		case Is(msg, keys.NewSection):
 			m.selectionIndicator = SELECT_PART
+		case Is(msg, keys.NextSection):
+			m.NextSection()
+		case Is(msg, keys.PrevSection):
+			m.PrevSection()
 		case Is(msg, keys.Yank):
 			m.yankBuffer = m.Yank()
 			m.cursorPos = m.YankBounds().TopLeft()
@@ -1539,6 +1547,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) Escape() {
 	m.selectionIndicator = SELECT_NOTHING
 	m.patternMode = PATTERN_FILL
+}
+
+func (m *model) NextSection() {
+	newIndex := m.currentSongSection + 1
+	if newIndex < len(m.definition.arrangement) {
+		m.currentSongSection = newIndex
+		m.currentPart = m.definition.arrangement[m.currentSongSection].part
+		m.currentOverlay = m.definition.parts[m.currentPart].overlays
+	}
+}
+
+func (m *model) PrevSection() {
+	newIndex := m.currentSongSection - 1
+	if newIndex >= 0 {
+		m.currentSongSection = newIndex
+		m.currentPart = m.definition.arrangement[m.currentSongSection].part
+		m.currentOverlay = m.definition.parts[m.currentPart].overlays
+	}
 }
 
 func (m *model) NewPart(index int) {
@@ -2430,7 +2456,15 @@ func (m model) View() string {
 func (m model) ArrangementView() string {
 	var buf strings.Builder
 	for i, songSection := range m.definition.arrangement {
-		buf.WriteString(fmt.Sprintf("%d) %s \n", i+1, m.definition.parts[songSection.part].Name()))
+		section := fmt.Sprintf("%d) %s", i+1, m.definition.parts[songSection.part].Name())
+		var sectionOutput string
+		if m.currentSongSection == i {
+			sectionOutput = colors.SelectedColor.Render(section)
+		} else {
+			sectionOutput = section
+		}
+		buf.WriteString(sectionOutput)
+		buf.WriteString("\n")
 	}
 	return buf.String()
 }
