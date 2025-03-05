@@ -44,6 +44,7 @@ type transitiveKeyMap struct {
 	BeatsInputSwitch   key.Binding
 	Increase           key.Binding
 	Decrease           key.Binding
+	Enter              key.Binding
 	ToggleGateMode     key.Binding
 	ToggleWaitMode     key.Binding
 	ToggleAccentMode   key.Binding
@@ -161,12 +162,13 @@ var transitiveKeys = transitiveKeyMap{
 	CursorRight:        Key("Right", "l"),
 	CursorLineStart:    Key("Line Start", "<"),
 	CursorLineEnd:      Key("Line End", ">"),
-	Escape:             Key("Escape", "esc", "enter"),
+	Escape:             Key("Escape", "esc"),
 	PlayStop:           Key("Play/Stop", " "),
 	PlayPart:           Key("PlayPart", "ctrl+@"),
 	PlayLoop:           Key("PlayLoop", "alt+ "),
 	Increase:           Key("Tempo Increase", "+", "="),
 	Decrease:           Key("Tempo Decrease", "-"),
+	Enter:              Key("Enter", "enter"),
 	TempoInputSwitch:   Key("Select Tempo Indicator", "ctrl+t"),
 	OverlayInputSwitch: Key("Select Overlay Indicator", "ctrl+o"),
 	SetupInputSwitch:   Key("Setup Input Indicator", "ctrl+s"),
@@ -361,6 +363,7 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 type model struct {
+	partSelectorIndex     int
 	loopMode              MidiLoopMode
 	hasUIFocus            bool
 	connected             bool
@@ -439,6 +442,7 @@ const (
 	SELECT_CYCLES
 	SELECT_START_BEATS
 	SELECT_START_CYCLES
+	SELECT_PART
 )
 
 type PatternMode uint8
@@ -692,6 +696,11 @@ func (m *model) Redo() UndoStack {
 type Part struct {
 	overlays *overlays.Overlay
 	beats    uint8
+	name     string
+}
+
+func (p Part) Name() string {
+	return p.name
 }
 
 type SongSection struct {
@@ -1047,6 +1056,20 @@ func (m *model) DecreaseStartCycles() {
 	}
 }
 
+func (m *model) IncreasePartSelector() {
+	newIndex := m.partSelectorIndex + 1
+	if newIndex < len(m.definition.parts) {
+		m.partSelectorIndex = newIndex
+	}
+}
+
+func (m *model) DecreasePartSelector() {
+	newIndex := m.partSelectorIndex - 1
+	if newIndex > -2 {
+		m.partSelectorIndex = newIndex
+	}
+}
+
 func (m *model) ToggleRatchetMute() {
 	currentNote := m.CurrentNote()
 	currentNote.Ratchets.Toggle(m.ratchetCursor)
@@ -1118,12 +1141,12 @@ func InitSongSection(part int) SongSection {
 	}
 }
 
-func InitPart() Part {
-	return Part{overlays: overlays.InitOverlay(overlaykey.ROOT, nil), beats: 32}
+func InitPart(name string) Part {
+	return Part{overlays: overlays.InitOverlay(overlaykey.ROOT, nil), beats: 32, name: name}
 }
 
 func InitParts() []Part {
-	firstPart := InitPart()
+	firstPart := InitPart("Part 1")
 	return []Part{firstPart}
 }
 
@@ -1269,8 +1292,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.CursorLineEnd):
 			m.cursorPos.Beat = m.CurrentPart().beats - 1
 		case Is(msg, keys.Escape):
-			m.selectionIndicator = 0
-			m.patternMode = PATTERN_FILL
+			m.Escape()
 		case Is(msg, keys.PlayStop):
 			m.StartStop()
 		case Is(msg, keys.PlayPart):
@@ -1337,6 +1359,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.IncreaseStartBeats()
 			case SELECT_START_CYCLES:
 				m.IncreaseStartCycles()
+			case SELECT_PART:
+				m.IncreasePartSelector()
 			}
 		case Is(msg, keys.Decrease):
 			switch m.selectionIndicator {
@@ -1372,6 +1396,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.DecreaseStartBeats()
 			case SELECT_START_CYCLES:
 				m.DecreaseStartCycles()
+			case SELECT_PART:
+				m.DecreasePartSelector()
+			}
+		case Is(msg, keys.Enter):
+			if m.selectionIndicator == SELECT_PART {
+				m.NewPart(m.partSelectorIndex)
+				m.selectionIndicator = SELECT_NOTHING
+			} else {
+				m.Escape()
 			}
 		case Is(msg, keys.ToggleGateMode):
 			m.patternMode = PATTERN_GATE
@@ -1420,11 +1453,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case Is(msg, keys.NewPart):
-			m.definition.parts = append(m.definition.parts, InitPart())
-			m.currentPart++
-			m.definition.arrangement = append(m.definition.arrangement, InitSongSection(m.currentPart))
-			m.currentSongSection++
-			m.currentOverlay = m.CurrentPart().overlays
+			m.selectionIndicator = SELECT_PART
 		case Is(msg, keys.Yank):
 			m.yankBuffer = m.Yank()
 			m.cursorPos = m.YankBounds().TopLeft()
@@ -1505,6 +1534,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.cursor = cursor
 
 	return m, cmd
+}
+
+func (m *model) Escape() {
+	m.selectionIndicator = SELECT_NOTHING
+	m.patternMode = PATTERN_FILL
+}
+
+func (m *model) NewPart(index int) {
+	if index >= 0 {
+		m.currentPart = index
+	} else {
+		m.currentPart = len(m.definition.parts)
+		m.definition.parts = append(m.definition.parts, InitPart(fmt.Sprintf("Part %d", m.currentPart+1)))
+	}
+	m.definition.arrangement = append(m.definition.arrangement, InitSongSection(m.currentPart))
+	m.currentSongSection++
+	m.currentOverlay = m.CurrentPart().overlays
 }
 
 func (m *model) Start() {
@@ -2384,7 +2430,7 @@ func (m model) View() string {
 func (m model) ArrangementView() string {
 	var buf strings.Builder
 	for i, songSection := range m.definition.arrangement {
-		buf.WriteString(fmt.Sprintf("%d) Part %d\n", i+1, songSection.part))
+		buf.WriteString(fmt.Sprintf("%d) %s \n", i+1, m.definition.parts[songSection.part].Name()))
 	}
 	return buf.String()
 }
@@ -2559,6 +2605,8 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetEditView())
+	} else if m.selectionIndicator == SELECT_PART {
+		buf.WriteString(m.ChoosePartView())
 	} else if m.playing != PLAY_STOPPED {
 		buf.WriteString(fmt.Sprintf("    Seq - Playing - %d\n", m.keyCycles))
 	} else {
@@ -2575,6 +2623,20 @@ func (m model) ViewTriggerSeq() string {
 	buf.WriteString("\n")
 	// buf.WriteString(m.help.View(m.keys))
 	// buf.WriteString("\n")
+	return buf.String()
+}
+
+func (m model) ChoosePartView() string {
+	var buf strings.Builder
+	buf.WriteString("   Choose Part: ")
+	var name string
+	if m.partSelectorIndex < 0 {
+		name = "New Part"
+	} else {
+		name = m.definition.parts[m.partSelectorIndex].Name()
+	}
+	buf.WriteString(colors.SelectedColor.Render(name))
+	buf.WriteString("\n")
 	return buf.String()
 }
 
