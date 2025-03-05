@@ -1465,7 +1465,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.advanceKeyCycle()
 		}
 		if m.playing != PLAY_STOPPED {
-
+			playingOverlay := m.CurrentPart().overlays.HighestMatchingOverlay(m.keyCycles)
 			gridKeys := make([]grid.GridKey, 0, len(m.playState))
 			m.CurrentBeatGridKeys(&gridKeys)
 			pattern := make(grid.Pattern)
@@ -1522,6 +1522,7 @@ func (m *model) Start() {
 
 func (m *model) Stop() {
 	m.keyCycles = 0
+	m.currentSongSection = 0
 	notes := notereg.Clear()
 	sendFn := m.midiConnection.AcquireSendFunc()
 	for _, n := range notes {
@@ -2054,10 +2055,14 @@ func (m *model) advanceKeyCycle() {
 		m.keyCycles++
 		songSection := m.CurrentSongSection()
 		if songSection.cycles+songSection.startCycles <= m.keyCycles {
-			m.StartStop()
+			m.currentSongSection++
+			if len(m.definition.arrangement) <= m.currentSongSection {
+				m.StartStop()
+			} else {
+				m.keyCycles = m.CurrentSongSection().startCycles
+				m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().startBeat))
+			}
 		}
-		// 	m.playing = PLAY_STOPPED
-		// }
 	}
 }
 

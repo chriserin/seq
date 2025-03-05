@@ -108,8 +108,9 @@ func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, prog
 	activeSenseChannel := make(chan bool)
 	var command midiEventLoopMsg
 
+	var tickTimer *time.Timer
 	pulse := func(adjustedInterval time.Duration) {
-		time.AfterFunc(adjustedInterval, func() {
+		tickTimer = time.AfterFunc(adjustedInterval, func() {
 			tickChannel <- Timing{subdivisions: 24}
 		})
 	}
@@ -136,6 +137,7 @@ func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, prog
 					transmitter.Start()
 				case stopMsg:
 					timing.started = false
+					tickTimer.Stop()
 					transmitter.Stop()
 					// m.playing should be false now.
 				case tempoMsg:
@@ -261,10 +263,10 @@ func (timing *Timing) StandAloneLoop(programChannel chan midiEventLoopMsg, progr
 	tickChannel := make(chan Timing)
 	var command midiEventLoopMsg
 
+	var tickTimer *time.Timer
 	tick := func(adjustedInterval time.Duration) {
-		time.AfterFunc(adjustedInterval, func() {
+		tickTimer = time.AfterFunc(adjustedInterval, func() {
 			tickChannel <- Timing{}
-			program.Send(beatMsg{adjustedInterval})
 		})
 	}
 
@@ -282,14 +284,16 @@ func (timing *Timing) StandAloneLoop(programChannel chan midiEventLoopMsg, progr
 					tick(timing.BeatInterval())
 				case stopMsg:
 					timing.started = false
-					// m.playing should be false now.
+					tickTimer.Stop()
 				case tempoMsg:
 					timing.tempo = command.tempo
 					timing.subdivisions = command.subdivisions
 				}
 			case <-tickChannel:
 				if timing.started {
-					tick(timing.BeatInterval())
+					adjustedInterval := timing.BeatInterval()
+					program.Send(beatMsg{adjustedInterval})
+					tick(adjustedInterval)
 				}
 			}
 		}
