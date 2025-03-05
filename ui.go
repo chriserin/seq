@@ -2374,7 +2374,18 @@ func (m model) View() string {
 		leftSideView = m.TempoView()
 	}
 
-	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "  ", m.ViewTriggerSeq(), "  ", sideView))
+	seqView := m.ViewTriggerSeq()
+	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "  ", seqView, "  ", sideView))
+	buf.WriteString("\n")
+	buf.WriteString(m.ArrangementView())
+	return buf.String()
+}
+
+func (m model) ArrangementView() string {
+	var buf strings.Builder
+	for i, songSection := range m.definition.arrangement {
+		buf.WriteString(fmt.Sprintf("%d) Part %d\n", i+1, songSection.part))
+	}
 	return buf.String()
 }
 
