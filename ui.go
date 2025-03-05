@@ -34,6 +34,8 @@ type transitiveKeyMap struct {
 	CursorLineEnd      key.Binding
 	Escape             key.Binding
 	PlayStop           key.Binding
+	PlayPart           key.Binding
+	PlayLoop           key.Binding
 	TempoInputSwitch   key.Binding
 	OverlayInputSwitch key.Binding
 	SetupInputSwitch   key.Binding
@@ -161,6 +163,8 @@ var transitiveKeys = transitiveKeyMap{
 	CursorLineEnd:      Key("Line End", ">"),
 	Escape:             Key("Escape", "esc", "enter"),
 	PlayStop:           Key("Play/Stop", " "),
+	PlayPart:           Key("PlayPart", "ctrl+@"),
+	PlayLoop:           Key("PlayLoop", "alt+ "),
 	Increase:           Key("Tempo Increase", "+", "="),
 	Decrease:           Key("Tempo Decrease", "-"),
 	TempoInputSwitch:   Key("Select Tempo Indicator", "ctrl+t"),
@@ -1269,6 +1273,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.patternMode = PATTERN_FILL
 		case Is(msg, keys.PlayStop):
 			m.StartStop()
+		case Is(msg, keys.PlayPart):
+			println("PlayPart")
+		case Is(msg, keys.PlayLoop):
+			println("PlayLoop")
 		case Is(msg, keys.OverlayInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
