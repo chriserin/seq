@@ -1589,7 +1589,9 @@ func (m *model) NewPart(index int) {
 		m.currentPart = len(m.definition.parts)
 		m.definition.parts = append(m.definition.parts, InitPart(fmt.Sprintf("Part %d", m.currentPart+1)))
 	}
-	m.definition.arrangement = append(m.definition.arrangement, InitSongSection(m.currentPart))
+	currentIndex := m.currentSongSection
+	newSongSection := InitSongSection(m.currentPart)
+	m.definition.arrangement = slices.Insert(m.definition.arrangement, currentIndex+1, newSongSection)
 	m.currentSongSection++
 	m.currentOverlay = m.CurrentPart().overlays
 }
