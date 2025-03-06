@@ -57,7 +57,8 @@ type transitiveKeyMap struct {
 	New                key.Binding
 	ToggleVisualMode   key.Binding
 	NewLine            key.Binding
-	NewSection         key.Binding
+	NewSectionAfter    key.Binding
+	NewSectionBefore   key.Binding
 	NextSection        key.Binding
 	PrevSection        key.Binding
 	Yank               key.Binding
@@ -189,7 +190,8 @@ var transitiveKeys = transitiveKeyMap{
 	ToggleVisualMode:   Key("Toggle Visual Mode", "v"),
 	New:                Key("New", "ctrl+n"),
 	NewLine:            Key("New Line", "ctrl+l"),
-	NewSection:         Key("New Part", "ctrl+]"),
+	NewSectionAfter:    Key("New Part After", "ctrl+]"),
+	NewSectionBefore:   Key("New Part Before", "ctrl+p"),
 	NextSection:        Key("Next Section", "]"),
 	PrevSection:        Key("Prev Section", "["),
 	Yank:               Key("Yank", "y"),
@@ -368,6 +370,7 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 
 type model struct {
 	partSelectorIndex     int
+	sectionSideIndicator  bool
 	loopMode              MidiLoopMode
 	hasUIFocus            bool
 	connected             bool
@@ -1461,8 +1464,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.playState = append(m.playState, InitLineState(PLAY_STATE_PLAY, uint8(len(m.definition.lines)-1), 0))
 				}
 			}
-		case Is(msg, keys.NewSection):
+		case Is(msg, keys.NewSectionAfter):
 			m.selectionIndicator = SELECT_PART
+			m.sectionSideIndicator = true
+		case Is(msg, keys.NewSectionBefore):
+			m.selectionIndicator = SELECT_PART
+			m.sectionSideIndicator = false
 		case Is(msg, keys.NextSection):
 			m.NextSection()
 		case Is(msg, keys.PrevSection):
@@ -1591,7 +1598,13 @@ func (m *model) NewPart(index int) {
 	}
 	currentIndex := m.currentSongSection
 	newSongSection := InitSongSection(m.currentPart)
-	m.definition.arrangement = slices.Insert(m.definition.arrangement, currentIndex+1, newSongSection)
+	var placementModifier int
+	if m.sectionSideIndicator {
+		placementModifier = 1
+	} else {
+		placementModifier = 0
+	}
+	m.definition.arrangement = slices.Insert(m.definition.arrangement, currentIndex+placementModifier, newSongSection)
 	m.currentSongSection++
 	m.currentOverlay = m.CurrentPart().overlays
 }
