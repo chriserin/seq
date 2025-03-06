@@ -447,6 +447,8 @@ const (
 	SELECT_START_BEATS
 	SELECT_START_CYCLES
 	SELECT_PART
+	SELECT_CONFIRM_NEW
+	SELECT_CONFIRM_QUIT
 )
 
 type PatternMode uint8
@@ -1244,9 +1246,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if Is(msg, keys.Quit) {
-			m.programChannel <- quitMsg{}
-			m.logFile.Close()
-			return m, tea.Quit
+			m.selectionIndicator = SELECT_CONFIRM_QUIT
 		}
 		if m.focus == FOCUS_OVERLAY_KEY {
 			okModel, cmd := m.overlayKeyEdit.Update(msg)
@@ -1404,10 +1404,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.DecreasePartSelector()
 			}
 		case Is(msg, keys.Enter):
-			if m.selectionIndicator == SELECT_PART {
+			switch m.selectionIndicator {
+			case SELECT_PART:
 				m.NewPart(m.partSelectorIndex)
 				m.selectionIndicator = SELECT_NOTHING
-			} else {
+			case SELECT_CONFIRM_NEW:
+				m.NewSequence()
+				m.selectionIndicator = SELECT_NOTHING
+			case SELECT_CONFIRM_QUIT:
+				m.programChannel <- quitMsg{}
+				m.logFile.Close()
+				return m, tea.Quit
+			default:
 				m.Escape()
 			}
 		case Is(msg, keys.ToggleGateMode):
@@ -1438,10 +1446,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.PushUndo(undoStack)
 			}
 		case Is(msg, keys.New):
-			m.cursorPos = GK(0, 0)
-			m.definition = InitDefinition(m.definition.template, m.definition.instrument)
-			m.currentOverlay = m.CurrentPart().overlays
-			m.selectionIndicator = SELECT_NOTHING
+			m.selectionIndicator = SELECT_CONFIRM_NEW
 		case Is(msg, keys.ToggleVisualMode):
 			m.visualAnchorCursor = m.cursorPos
 			m.visualMode = !m.visualMode
@@ -1542,6 +1547,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.cursor = cursor
 
 	return m, cmd
+}
+
+func (m *model) NewSequence() {
+	m.cursorPos = GK(0, 0)
+	m.definition = InitDefinition(m.definition.template, m.definition.instrument)
+	m.currentOverlay = m.CurrentPart().overlays
+}
+
+func (m model) NeedsWrite() bool {
+	return m.needsWrite != m.undoStack.id
 }
 
 func (m *model) Escape() {
@@ -2408,7 +2423,7 @@ func (m model) TempoView() string {
 }
 
 func (m model) WriteView() string {
-	if m.needsWrite != m.undoStack.id {
+	if m.NeedsWrite() {
 		return " [+]"
 	} else {
 		return "    "
@@ -2642,6 +2657,10 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(m.RatchetEditView())
 	} else if m.selectionIndicator == SELECT_PART {
 		buf.WriteString(m.ChoosePartView())
+	} else if m.selectionIndicator == SELECT_CONFIRM_NEW {
+		buf.WriteString(m.ConfirmNewSequenceView())
+	} else if m.selectionIndicator == SELECT_CONFIRM_QUIT {
+		buf.WriteString(m.ConfirmQuitView())
 	} else if m.playing != PLAY_STOPPED {
 		buf.WriteString(fmt.Sprintf("    Seq - Playing - %d\n", m.keyCycles))
 	} else {
@@ -2671,6 +2690,22 @@ func (m model) ChoosePartView() string {
 		name = m.definition.parts[m.partSelectorIndex].Name()
 	}
 	buf.WriteString(colors.SelectedColor.Render(name))
+	buf.WriteString("\n")
+	return buf.String()
+}
+
+func (m model) ConfirmNewSequenceView() string {
+	var buf strings.Builder
+	buf.WriteString("   New Sequence: ")
+	buf.WriteString(colors.SelectedColor.Render("Confirm"))
+	buf.WriteString("\n")
+	return buf.String()
+}
+
+func (m model) ConfirmQuitView() string {
+	var buf strings.Builder
+	buf.WriteString("   Quit: ")
+	buf.WriteString(colors.SelectedColor.Render("Confirm"))
 	buf.WriteString("\n")
 	return buf.String()
 }
