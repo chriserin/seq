@@ -1182,6 +1182,7 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 	unlockReceiverChannel := make(chan bool)
 
 	return model{
+		partSelectorIndex:     -1,
 		loopMode:              loopMode,
 		programChannel:        programChannel,
 		lockReceiverChannel:   lockReceiverChannel,
