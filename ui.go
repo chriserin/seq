@@ -2623,8 +2623,6 @@ func (m model) OverlaysView() string {
 	return buf.String()
 }
 
-var accentModeStyle = lipgloss.NewStyle().Background(config.Accents[1].Color).Foreground(lipgloss.Color("#000000"))
-
 func (m model) ViewTriggerSeq() string {
 	var buf strings.Builder
 	var mode string
@@ -2632,16 +2630,16 @@ func (m model) ViewTriggerSeq() string {
 
 	if m.patternMode == PATTERN_ACCENT {
 		mode = " Accent Mode "
-		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf("    %s\n", colors.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_GATE {
 		mode = " Gate Mode "
-		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf("    %s\n", colors.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_WAIT {
 		mode = " Wait Mode "
-		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf("    %s\n", colors.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_RATCHET {
 		mode = " Ratchet Mode "
-		buf.WriteString(fmt.Sprintf("    %s\n", accentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf("    %s\n", colors.AccentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetEditView())
 	} else if m.selectionIndicator == SELECT_PART {
@@ -2699,13 +2697,7 @@ func (m model) ConfirmQuitView() string {
 	return buf.String()
 }
 
-var activeRatchetColor lipgloss.Color = "#abfaa9"
-var mutedRatchetColor lipgloss.Color = "#f34213"
-
 func (m model) RatchetEditView() string {
-	activeStyle := lipgloss.NewStyle().Foreground(activeRatchetColor)
-	mutedStyle := lipgloss.NewStyle().Foreground(mutedRatchetColor)
-
 	currentNote := m.CurrentNote()
 
 	var buf strings.Builder
@@ -2715,12 +2707,12 @@ func (m model) RatchetEditView() string {
 		var backgroundColor lipgloss.Color
 		if i <= currentNote.Ratchets.Length {
 			if m.ratchetCursor == i && m.selectionIndicator == SELECT_RATCHETS {
-				backgroundColor = lipgloss.Color("#5cdffb")
+				backgroundColor = colors.SelectedAttributeColor
 			}
 			if currentNote.Ratchets.HitAt(i) {
-				ratchetsBuf.WriteString(activeStyle.Background(backgroundColor).Render("\u25CF"))
+				ratchetsBuf.WriteString(colors.ActiveStyle.Background(backgroundColor).Render("\u25CF"))
 			} else {
-				ratchetsBuf.WriteString(mutedStyle.Background(backgroundColor).Render("\u25C9"))
+				ratchetsBuf.WriteString(colors.MutedStyle.Background(backgroundColor).Render("\u25C9"))
 			}
 			ratchetsBuf.WriteString(" ")
 		} else {
@@ -2771,9 +2763,6 @@ func KeyLineIndicator(k uint8, l uint8) string {
 	}
 }
 
-var blackKeyStyle = lipgloss.NewStyle().Background(lipgloss.Color("#000")).Foreground(lipgloss.Color("#fff"))
-var whiteKeyStyle = lipgloss.NewStyle().Background(lipgloss.Color("#ccc")).Foreground(lipgloss.Color("#000"))
-
 var blackNotes = []uint8{1, 3, 6, 8, 10}
 
 func (m model) LineIndicator(lineNumber uint8) string {
@@ -2792,9 +2781,9 @@ func (m model) LineIndicator(lineNumber uint8) string {
 	if m.definition.templateUIStyle == "blackwhite" {
 		notename := NoteName(m.definition.lines[lineNumber].Note)
 		if slices.Contains(blackNotes, m.definition.lines[lineNumber].Note%12) {
-			lineName = blackKeyStyle.Render(notename[0:4])
+			lineName = colors.BlackKeyStyle.Render(notename[0:4])
 		} else {
-			lineName = whiteKeyStyle.Render(notename)
+			lineName = colors.WhiteKeyStyle.Render(notename)
 		}
 	} else {
 		lineName = fmt.Sprintf("%d", lineNumber)
@@ -2863,7 +2852,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
-			style = style.Foreground(lipgloss.Color("#000000"))
+			style = style.Foreground(colors.Black)
 		} else if hasGateTail {
 			style = style.Foreground(gateSpace.Color)
 		} else {
