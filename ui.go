@@ -25,46 +25,47 @@ import (
 )
 
 type transitiveKeyMap struct {
-	Quit               key.Binding
-	Help               key.Binding
-	CursorUp           key.Binding
-	CursorDown         key.Binding
-	CursorLeft         key.Binding
-	CursorRight        key.Binding
-	CursorLineStart    key.Binding
-	CursorLineEnd      key.Binding
-	Escape             key.Binding
-	PlayStop           key.Binding
-	PlayPart           key.Binding
-	PlayLoop           key.Binding
-	TempoInputSwitch   key.Binding
-	OverlayInputSwitch key.Binding
-	SetupInputSwitch   key.Binding
-	AccentInputSwitch  key.Binding
-	RatchetInputSwitch key.Binding
-	BeatsInputSwitch   key.Binding
-	Increase           key.Binding
-	Decrease           key.Binding
-	Enter              key.Binding
-	ToggleGateMode     key.Binding
-	ToggleWaitMode     key.Binding
-	ToggleAccentMode   key.Binding
-	ToggleRatchetMode  key.Binding
-	NextOverlay        key.Binding
-	PrevOverlay        key.Binding
-	Save               key.Binding
-	Undo               key.Binding
-	Redo               key.Binding
-	New                key.Binding
-	ToggleVisualMode   key.Binding
-	NewLine            key.Binding
-	NewSectionAfter    key.Binding
-	NewSectionBefore   key.Binding
-	NextSection        key.Binding
-	PrevSection        key.Binding
-	Yank               key.Binding
-	Mute               key.Binding
-	Solo               key.Binding
+	Quit                   key.Binding
+	Help                   key.Binding
+	CursorUp               key.Binding
+	CursorDown             key.Binding
+	CursorLeft             key.Binding
+	CursorRight            key.Binding
+	CursorLineStart        key.Binding
+	CursorLineEnd          key.Binding
+	Escape                 key.Binding
+	PlayStop               key.Binding
+	PlayPart               key.Binding
+	PlayLoop               key.Binding
+	TempoInputSwitch       key.Binding
+	OverlayInputSwitch     key.Binding
+	SetupInputSwitch       key.Binding
+	AccentInputSwitch      key.Binding
+	RatchetInputSwitch     key.Binding
+	BeatsInputSwitch       key.Binding
+	ArrangementInputSwitch key.Binding
+	Increase               key.Binding
+	Decrease               key.Binding
+	Enter                  key.Binding
+	ToggleGateMode         key.Binding
+	ToggleWaitMode         key.Binding
+	ToggleAccentMode       key.Binding
+	ToggleRatchetMode      key.Binding
+	NextOverlay            key.Binding
+	PrevOverlay            key.Binding
+	Save                   key.Binding
+	Undo                   key.Binding
+	Redo                   key.Binding
+	New                    key.Binding
+	ToggleVisualMode       key.Binding
+	NewLine                key.Binding
+	NewSectionAfter        key.Binding
+	NewSectionBefore       key.Binding
+	NextSection            key.Binding
+	PrevSection            key.Binding
+	Yank                   key.Binding
+	Mute                   key.Binding
+	Solo                   key.Binding
 }
 
 type definitionKeyMap struct {
@@ -158,46 +159,47 @@ func Key(help string, keyboardKey ...string) key.Binding {
 }
 
 var transitiveKeys = transitiveKeyMap{
-	Quit:               Key("Quit", "q"),
-	Help:               Key("Expand Help", "?"),
-	CursorUp:           Key("Up", "k"),
-	CursorDown:         Key("Down", "j"),
-	CursorLeft:         Key("Left", "h"),
-	CursorRight:        Key("Right", "l"),
-	CursorLineStart:    Key("Line Start", "<"),
-	CursorLineEnd:      Key("Line End", ">"),
-	Escape:             Key("Escape", "esc"),
-	PlayStop:           Key("Play/Stop", " "),
-	PlayPart:           Key("PlayPart", "ctrl+@"),
-	PlayLoop:           Key("PlayLoop", "alt+ "),
-	Increase:           Key("Tempo Increase", "+", "="),
-	Decrease:           Key("Tempo Decrease", "-"),
-	Enter:              Key("Enter", "enter"),
-	TempoInputSwitch:   Key("Select Tempo Indicator", "ctrl+t"),
-	OverlayInputSwitch: Key("Select Overlay Indicator", "ctrl+o"),
-	SetupInputSwitch:   Key("Setup Input Indicator", "ctrl+s"),
-	AccentInputSwitch:  Key("Accent Input Indicator", "ctrl+e"),
-	RatchetInputSwitch: Key("Ratchet Input Indicator", "ctrl+h"),
-	BeatsInputSwitch:   Key("Beats Input Indicator", "ctrl+b"),
-	ToggleRatchetMode:  Key("Toggle Ratchet Mode", "ctrl+r"),
-	ToggleGateMode:     Key("Toggle Gate Mode", "ctrl+g"),
-	ToggleWaitMode:     Key("Toggle Wait Mode", "ctrl+w"),
-	ToggleAccentMode:   Key("Toggle Wait Mode", "ctrl+a"),
-	NextOverlay:        Key("Next Overlay", "{"),
-	PrevOverlay:        Key("Prev Overlay", "}"),
-	Save:               Key("Save", "ctrl+v"),
-	Undo:               Key("Undo", "u"),
-	Redo:               Key("Redo", "U"),
-	ToggleVisualMode:   Key("Toggle Visual Mode", "v"),
-	New:                Key("New", "ctrl+n"),
-	NewLine:            Key("New Line", "ctrl+l"),
-	NewSectionAfter:    Key("New Part After", "ctrl+]"),
-	NewSectionBefore:   Key("New Part Before", "ctrl+p"),
-	NextSection:        Key("Next Section", "]"),
-	PrevSection:        Key("Prev Section", "["),
-	Yank:               Key("Yank", "y"),
-	Mute:               Key("Mute", "m"),
-	Solo:               Key("Solo", "M"),
+	Quit:                   Key("Quit", "q"),
+	Help:                   Key("Expand Help", "?"),
+	CursorUp:               Key("Up", "k"),
+	CursorDown:             Key("Down", "j"),
+	CursorLeft:             Key("Left", "h"),
+	CursorRight:            Key("Right", "l"),
+	CursorLineStart:        Key("Line Start", "<"),
+	CursorLineEnd:          Key("Line End", ">"),
+	Escape:                 Key("Escape", "esc"),
+	PlayStop:               Key("Play/Stop", " "),
+	PlayPart:               Key("PlayPart", "ctrl+@"),
+	PlayLoop:               Key("PlayLoop", "alt+ "),
+	Increase:               Key("Tempo Increase", "+", "="),
+	Decrease:               Key("Tempo Decrease", "-"),
+	Enter:                  Key("Enter", "enter"),
+	TempoInputSwitch:       Key("Select Tempo Indicator", "ctrl+t"),
+	OverlayInputSwitch:     Key("Select Overlay Indicator", "ctrl+o"),
+	SetupInputSwitch:       Key("Setup Input Indicator", "ctrl+s"),
+	AccentInputSwitch:      Key("Accent Input Indicator", "ctrl+e"),
+	RatchetInputSwitch:     Key("Ratchet Input Indicator", "ctrl+h"),
+	BeatsInputSwitch:       Key("Beats Input Indicator", "ctrl+b"),
+	ArrangementInputSwitch: Key("Arrangement Input Indicator", "ctrl+d"),
+	ToggleRatchetMode:      Key("Toggle Ratchet Mode", "ctrl+r"),
+	ToggleGateMode:         Key("Toggle Gate Mode", "ctrl+g"),
+	ToggleWaitMode:         Key("Toggle Wait Mode", "ctrl+w"),
+	ToggleAccentMode:       Key("Toggle Wait Mode", "ctrl+a"),
+	NextOverlay:            Key("Next Overlay", "{"),
+	PrevOverlay:            Key("Prev Overlay", "}"),
+	Save:                   Key("Save", "ctrl+v"),
+	Undo:                   Key("Undo", "u"),
+	Redo:                   Key("Redo", "U"),
+	ToggleVisualMode:       Key("Toggle Visual Mode", "v"),
+	New:                    Key("New", "ctrl+n"),
+	NewLine:                Key("New Line", "ctrl+l"),
+	NewSectionAfter:        Key("New Part After", "ctrl+]"),
+	NewSectionBefore:       Key("New Part Before", "ctrl+p"),
+	NextSection:            Key("Next Section", "]"),
+	PrevSection:            Key("Prev Section", "["),
+	Yank:                   Key("Yank", "y"),
+	Mute:                   Key("Mute", "m"),
+	Solo:                   Key("Solo", "M"),
 }
 
 var definitionKeys = definitionKeyMap{
@@ -453,6 +455,7 @@ const (
 	SELECT_PART
 	SELECT_CONFIRM_NEW
 	SELECT_CONFIRM_QUIT
+	SELECT_ARRANGEMENT_EDITOR
 )
 
 type PatternMode uint8
@@ -1317,6 +1320,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case Is(msg, keys.BeatsInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_BEATS, SELECT_CYCLES, SELECT_START_BEATS, SELECT_START_CYCLES}
+			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+		case Is(msg, keys.ArrangementInputSwitch):
+			states := []Selection{SELECT_NOTHING, SELECT_ARRANGEMENT_EDITOR}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
 		case Is(msg, keys.Increase):
 			switch m.selectionIndicator {
@@ -2573,26 +2579,21 @@ func LineValueName(ld grid.LineDefinition, instrument string) string {
 	return ""
 }
 
-const SELECTED_OVERLAY_ARROW = "\u2192"
-
-var currentPlayingColor lipgloss.Color = "#abfaa9"
-var activePlayingColor lipgloss.Color = "#f34213"
-
 func (m model) OverlaysView() string {
 	var buf strings.Builder
 	buf.WriteString("Overlays\n")
 	buf.WriteString("——————————————\n")
-	style := lipgloss.NewStyle().Background(seqOverlayColor)
+	style := lipgloss.NewStyle().Background(colors.SeqOverlayColor)
 	var playingOverlayKeys = m.PlayingOverlayKeys()
 	for currentOverlay := m.CurrentPart().Overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
 		var playing = ""
 		if m.playing != PLAY_STOPPED && playingOverlayKeys[0] == currentOverlay.Key {
-			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(currentPlayingColor).Render(" \u25CF ")
+			playing = colors.OverlayCurrentlyPlayingDot
 			buf.WriteString(playing)
 			playingSpacer = ""
 		} else if m.playing != PLAY_STOPPED && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
-			playing = lipgloss.NewStyle().Background(seqOverlayColor).Foreground(activePlayingColor).Render(" \u25C9 ")
+			playing = colors.ActiveDot
 			buf.WriteString(playing)
 			playingSpacer = ""
 		}
@@ -2752,7 +2753,7 @@ func (m model) CurrentOverlayView() string {
 
 	var editOverlayTitle string
 	if m.playEditing {
-		editOverlayTitle = lipgloss.NewStyle().Background(seqOverlayColor).Render("Edit")
+		editOverlayTitle = lipgloss.NewStyle().Background(colors.SeqOverlayColor).Render("Edit")
 	} else {
 		editOverlayTitle = "Edit"
 	}
@@ -2761,13 +2762,6 @@ func (m model) CurrentOverlayView() string {
 	playOverlay := fmt.Sprintf("Play %s", lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
 	return fmt.Sprintf("   %s  %s", editOverlay, playOverlay)
 }
-
-var altSeqColor = lipgloss.Color("#222222")
-var seqColor = lipgloss.Color("#000000")
-var seqCursorColor = lipgloss.Color("#444444")
-var seqVisualColor = lipgloss.Color("#aaaaaa")
-var seqOverlayColor = lipgloss.Color("#333388")
-var seqMiddleOverlayColor = lipgloss.Color("#405810")
 
 func KeyLineIndicator(k uint8, l uint8) string {
 	if k == l {
@@ -2842,17 +2836,17 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 
 		var backgroundSeqColor lipgloss.Color
 		if m.playing != PLAY_STOPPED && m.playState[lineNumber].currentBeat == i {
-			backgroundSeqColor = seqCursorColor
+			backgroundSeqColor = colors.SeqCursorColor
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
-			backgroundSeqColor = seqVisualColor
+			backgroundSeqColor = colors.SeqVisualColor
 		} else if hasNote && overlayNote.HighestOverlay && overlayNote.OverlayKey != overlaykey.ROOT {
-			backgroundSeqColor = seqOverlayColor
+			backgroundSeqColor = colors.SeqOverlayColor
 		} else if hasNote && !overlayNote.HighestOverlay && overlayNote.OverlayKey != overlaykey.ROOT {
-			backgroundSeqColor = seqMiddleOverlayColor
+			backgroundSeqColor = colors.SeqMiddleOverlayColor
 		} else if i%8 > 3 {
-			backgroundSeqColor = altSeqColor
+			backgroundSeqColor = colors.AltSeqColor
 		} else {
-			backgroundSeqColor = seqColor
+			backgroundSeqColor = colors.SeqColor
 		}
 
 		char, foregroundColor := ViewNoteComponents(overlayNote.Note)

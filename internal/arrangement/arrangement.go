@@ -41,9 +41,9 @@ func (m Model) View(currentSongSection int) string {
 		section := fmt.Sprintf("%d) %s", i+1, (*m.parts)[songSection.Part].GetName())
 		var sectionOutput string
 		if currentSongSection == i {
-			sectionOutput = colors.SelectedColor.Render(section)
+			sectionOutput = fmt.Sprintf("%s %s %s", colors.CurrentlyPlayingDot, section, colors.CurrentlyPlayingDot)
 		} else {
-			sectionOutput = section
+			sectionOutput = fmt.Sprintf("%s %s %s", "   ", section, "   ")
 		}
 		buf.WriteString(sectionOutput)
 		buf.WriteString("\n")
