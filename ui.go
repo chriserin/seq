@@ -431,6 +431,7 @@ type focus int
 const (
 	FOCUS_GRID focus = iota
 	FOCUS_OVERLAY_KEY
+	FOCUS_ARRANGEMENT_EDITOR
 )
 
 type Selection uint8
@@ -1247,6 +1248,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.overlayKeyEdit = okModel
 			return m, cmd
 		}
+		if m.focus == FOCUS_ARRANGEMENT_EDITOR {
+			arrangmementModel, cmd := m.arrangement.Update(msg)
+			m.arrangement = arrangmementModel
+			return m, cmd
+		}
 		switch {
 		case Is(msg, keys.CursorDown):
 			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
@@ -1324,6 +1330,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.ArrangementInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_ARRANGEMENT_EDITOR}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+			m.focus = FOCUS_ARRANGEMENT_EDITOR
 		case Is(msg, keys.Increase):
 			switch m.selectionIndicator {
 			case SELECT_TEMPO:
