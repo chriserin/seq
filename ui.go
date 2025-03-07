@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/chriserin/seq/internal/arrangement"
 	colors "github.com/chriserin/seq/internal/colors"
 	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
@@ -379,6 +380,7 @@ type model struct {
 	help                  help.Model
 	cursor                cursor.Model
 	overlayKeyEdit        overlaykey.Model
+	arrangement           arrangement.Model
 	cursorPos             gridKey
 	visualAnchorCursor    gridKey
 	visualMode            bool
@@ -482,7 +484,7 @@ type UndoBeats struct {
 }
 
 func (ub UndoBeats) ApplyUndo(m *model) {
-	m.definition.parts[ub.partId].beats = ub.beats
+	(*m.definition.parts)[ub.partId].Beats = ub.beats
 }
 
 type UndoTempo struct {
@@ -514,7 +516,7 @@ type UndoGridNote struct {
 
 func (ugn UndoGridNote) ApplyUndo(m *model) (overlayKey, gridKey) {
 	m.EnsureOverlayWithKey(ugn.overlayKey)
-	overlay := m.CurrentPart().overlays.FindOverlay(ugn.overlayKey)
+	overlay := m.CurrentPart().Overlays.FindOverlay(ugn.overlayKey)
 	overlay.SetNote(ugn.gridNote.gridKey, ugn.gridNote.note)
 	return ugn.overlayKey, ugn.gridNote.gridKey
 }
@@ -528,8 +530,8 @@ type UndoLineGridNotes struct {
 
 func (ulgn UndoLineGridNotes) ApplyUndo(m *model) (overlayKey, gridKey) {
 	m.EnsureOverlayWithKey(ulgn.overlayKey)
-	overlay := m.CurrentPart().overlays.FindOverlay(ulgn.overlayKey)
-	for i := range m.CurrentPart().beats {
+	overlay := m.CurrentPart().Overlays.FindOverlay(ulgn.overlayKey)
+	for i := range m.CurrentPart().Beats {
 		overlay.RemoveNote(GK(ulgn.line, i))
 	}
 	for _, gridNote := range ulgn.gridNotes {
@@ -547,7 +549,7 @@ type UndoBounds struct {
 
 func (uvs UndoBounds) ApplyUndo(m *model) (overlayKey, gridKey) {
 	m.EnsureOverlayWithKey(uvs.overlayKey)
-	overlay := m.CurrentPart().overlays.FindOverlay(uvs.overlayKey)
+	overlay := m.CurrentPart().Overlays.FindOverlay(uvs.overlayKey)
 	for _, k := range uvs.bounds.GridKeys() {
 		overlay.RemoveNote(k)
 	}
@@ -564,7 +566,7 @@ type UndoGridNotes struct {
 
 func (ugn UndoGridNotes) ApplyUndo(m *model) (overlayKey, gridKey) {
 	m.EnsureOverlayWithKey(ugn.overlayKey)
-	overlay := m.CurrentPart().overlays.FindOverlay(ugn.overlayKey)
+	overlay := m.CurrentPart().Overlays.FindOverlay(ugn.overlayKey)
 	for _, gridNote := range ugn.gridNotes {
 
 		overlay.SetNote(gridNote.gridKey, gridNote.note)
@@ -578,7 +580,7 @@ type UndoToNothing struct {
 }
 
 func (utn UndoToNothing) ApplyUndo(m *model) (overlayKey, gridKey) {
-	overlay := m.CurrentPart().overlays.FindOverlay(utn.overlayKey)
+	overlay := m.CurrentPart().Overlays.FindOverlay(utn.overlayKey)
 	overlay.RemoveNote(utn.location)
 	return utn.overlayKey, utn.location
 }
@@ -590,8 +592,8 @@ type UndoLineToNothing struct {
 }
 
 func (ultn UndoLineToNothing) ApplyUndo(m *model) (overlayKey, gridKey) {
-	overlay := m.CurrentPart().overlays.FindOverlay(ultn.overlayKey)
-	for i := range m.CurrentPart().beats {
+	overlay := m.CurrentPart().Overlays.FindOverlay(ultn.overlayKey)
+	for i := range m.CurrentPart().Beats {
 		overlay.RemoveNote(GK(ultn.line, i))
 	}
 
@@ -605,8 +607,8 @@ type UndoNewOverlay struct {
 }
 
 func (uno UndoNewOverlay) ApplyUndo(m *model) (overlayKey, gridKey) {
-	newOverlay := m.CurrentPart().overlays.Remove(uno.overlayKey)
-	m.definition.parts[uno.partId].overlays = newOverlay
+	newOverlay := m.CurrentPart().Overlays.Remove(uno.overlayKey)
+	(*m.definition.parts)[uno.partId].Overlays = newOverlay
 	return uno.overlayKey, uno.cursorPosition
 }
 
@@ -681,9 +683,9 @@ func (m *model) Undo() UndoStack {
 	if undoStack != NIL_STACK {
 		ok, gk := undoStack.undo.ApplyUndo(m)
 		m.cursorPos = gk
-		overlay := m.CurrentPart().overlays.FindOverlay(ok)
+		overlay := m.CurrentPart().Overlays.FindOverlay(ok)
 		if overlay == nil {
-			m.currentOverlay = m.CurrentPart().overlays
+			m.currentOverlay = m.CurrentPart().Overlays
 		} else {
 			m.currentOverlay = overlay
 		}
@@ -697,32 +699,15 @@ func (m *model) Redo() UndoStack {
 	if undoStack != NIL_STACK {
 		ok, gk := undoStack.redo.ApplyUndo(m)
 		m.cursorPos = gk
-		m.currentOverlay = m.CurrentPart().overlays.FindOverlay(ok)
+		m.currentOverlay = m.CurrentPart().Overlays.FindOverlay(ok)
 		m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 	}
 	return undoStack
 }
 
-type Part struct {
-	overlays *overlays.Overlay
-	beats    uint8
-	name     string
-}
-
-func (p Part) Name() string {
-	return p.name
-}
-
-type SongSection struct {
-	part        int
-	cycles      int
-	startBeat   int
-	startCycles int
-}
-
 type Definition struct {
-	parts           []Part
-	arrangement     []SongSection
+	parts           *[]arrangement.Part
+	arrangement     *[]arrangement.SongSection
 	lines           []grid.LineDefinition
 	tempo           int
 	subdivisions    int
@@ -879,15 +864,15 @@ func (m *model) EnsureOverlay() {
 	m.EnsureOverlayWithKey(m.overlayKeyEdit.GetKey())
 }
 
-func (d Definition) FindOverlay(currentPart int, key overlayKey) *overlays.Overlay {
-	return d.parts[currentPart].overlays.FindOverlay(key)
+func (m model) FindOverlay(currentPart int, key overlayKey) *overlays.Overlay {
+	return m.CurrentPart().Overlays.FindOverlay(key)
 }
 
 func (m *model) EnsureOverlayWithKey(key overlayKey) {
 	partId := m.CurrentPartId()
-	if m.definition.FindOverlay(m.CurrentPartId(), key) == nil {
-		newOverlay := m.definition.parts[partId].overlays.Add(key)
-		m.definition.parts[partId].overlays = newOverlay
+	if m.FindOverlay(m.CurrentPartId(), key) == nil {
+		newOverlay := m.CurrentPart().Overlays.Add(key)
+		(*m.definition.parts)[partId].Overlays = newOverlay
 		m.currentOverlay = newOverlay.FindOverlay(key)
 	}
 }
@@ -1012,64 +997,64 @@ func (m *model) DecreaseAccentStart() {
 }
 
 func (m *model) IncreaseBeats() {
-	newBeats := m.CurrentPart().beats + 1
+	newBeats := m.CurrentPart().Beats + 1
 	if newBeats < 128 {
-		m.definition.parts[m.CurrentPartId()].beats = newBeats
+		(*m.definition.parts)[m.CurrentPartId()].Beats = newBeats
 	}
 }
 
 func (m *model) DecreaseBeats() {
-	newBeats := int(m.CurrentPart().beats) - 1
+	newBeats := int(m.CurrentPart().Beats) - 1
 	if newBeats >= 0 {
-		m.definition.parts[m.CurrentPartId()].beats = uint8(newBeats)
+		(*m.definition.parts)[m.CurrentPartId()].Beats = uint8(newBeats)
 	}
 }
 
 func (m *model) IncreaseCycles() {
-	newCycles := m.CurrentSongSection().cycles + 1
+	newCycles := m.CurrentSongSection().Cycles + 1
 	if newCycles < 128 {
-		m.definition.arrangement[m.currentSongSection].cycles = newCycles
+		(*m.definition.arrangement)[m.currentSongSection].Cycles = newCycles
 	}
 }
 
 func (m *model) DecreaseCycles() {
-	newCycles := int(m.CurrentSongSection().cycles) - 1
+	newCycles := int(m.CurrentSongSection().Cycles) - 1
 	if newCycles >= 0 {
-		m.definition.arrangement[m.currentSongSection].cycles = newCycles
+		(*m.definition.arrangement)[m.currentSongSection].Cycles = newCycles
 	}
 }
 
 func (m *model) IncreaseStartBeats() {
-	newStartBeats := m.CurrentSongSection().startBeat + 1
+	newStartBeats := m.CurrentSongSection().StartBeat + 1
 	if newStartBeats < 128 {
-		m.definition.arrangement[m.currentSongSection].startBeat = newStartBeats
+		(*m.definition.arrangement)[m.currentSongSection].StartBeat = newStartBeats
 	}
 }
 
 func (m *model) DecreaseStartBeats() {
-	newStartBeats := m.CurrentSongSection().startBeat - 1
+	newStartBeats := m.CurrentSongSection().StartBeat - 1
 	if newStartBeats >= 0 {
-		m.definition.arrangement[m.currentSongSection].startBeat = newStartBeats
+		(*m.definition.arrangement)[m.currentSongSection].StartBeat = newStartBeats
 	}
 }
 
 func (m *model) IncreaseStartCycles() {
-	newStartCycles := m.CurrentSongSection().startCycles + 1
+	newStartCycles := m.CurrentSongSection().StartCycles + 1
 	if newStartCycles < 128 {
-		m.definition.arrangement[m.currentSongSection].startCycles = newStartCycles
+		(*m.definition.arrangement)[m.currentSongSection].StartCycles = newStartCycles
 	}
 }
 
 func (m *model) DecreaseStartCycles() {
-	newStartCycles := m.CurrentSongSection().startCycles - 1
+	newStartCycles := m.CurrentSongSection().StartCycles - 1
 	if newStartCycles >= 0 {
-		m.definition.arrangement[m.currentSongSection].startCycles = newStartCycles
+		(*m.definition.arrangement)[m.currentSongSection].StartCycles = newStartCycles
 	}
 }
 
 func (m *model) IncreasePartSelector() {
 	newIndex := m.partSelectorIndex + 1
-	if newIndex < len(m.definition.parts) {
+	if newIndex < len(*m.definition.parts) {
 		m.partSelectorIndex = newIndex
 	}
 }
@@ -1121,7 +1106,7 @@ func InitDefinition(template string, instrument string) Definition {
 
 	parts := InitParts()
 	return Definition{
-		parts:           parts,
+		parts:           &parts,
 		arrangement:     InitArrangement(parts),
 		tempo:           120,
 		keyline:         0,
@@ -1134,31 +1119,31 @@ func InitDefinition(template string, instrument string) Definition {
 	}
 }
 
-func InitArrangement(parts []Part) []SongSection {
-	songSections := make([]SongSection, 0, len(parts))
+func InitArrangement(parts []arrangement.Part) *[]arrangement.SongSection {
+	songSections := make([]arrangement.SongSection, 0, len(parts))
 	for i := range parts {
 		newSongSection := InitSongSection(i)
 		songSections = append(songSections, newSongSection)
 	}
-	return songSections
+	return &songSections
 }
 
-func InitSongSection(part int) SongSection {
-	return SongSection{
-		part:        part,
-		cycles:      1,
-		startBeat:   0,
-		startCycles: 1,
+func InitSongSection(part int) arrangement.SongSection {
+	return arrangement.SongSection{
+		Part:        part,
+		Cycles:      1,
+		StartBeat:   0,
+		StartCycles: 1,
 	}
 }
 
-func InitPart(name string) Part {
-	return Part{overlays: overlays.InitOverlay(overlaykey.ROOT, nil), beats: 32, name: name}
+func InitPart(name string) arrangement.Part {
+	return arrangement.Part{Overlays: overlays.InitOverlay(overlaykey.ROOT, nil), Beats: 32, Name: name}
 }
 
-func InitParts() []Part {
+func InitParts() []arrangement.Part {
 	firstPart := InitPart("Part 1")
-	return []Part{firstPart}
+	return []arrangement.Part{firstPart}
 }
 
 func InitModel(midiConnection MidiConnection, template string, instrument string, loopMode MidiLoopMode) model {
@@ -1195,8 +1180,9 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 		logFile:               logFile,
 		cursorPos:             GK(0, 0),
 		currentSongSection:    0,
-		currentOverlay:        definition.parts[0].overlays,
+		currentOverlay:        (*definition.parts)[0].Overlays,
 		overlayKeyEdit:        overlaykey.InitModel(),
+		arrangement:           arrangement.InitModel(definition.arrangement, definition.parts),
 		definition:            definition,
 		playState:             InitLineStates(len(definition.lines), []linestate{}, 0),
 	}
@@ -1292,14 +1278,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.selectionIndicator > 0 {
 				// Do Nothing
 			} else {
-				if m.cursorPos.Beat < m.CurrentPart().beats-1 {
+				if m.cursorPos.Beat < m.CurrentPart().Beats-1 {
 					m.cursorPos.Beat++
 				}
 			}
 		case Is(msg, keys.CursorLineStart):
 			m.cursorPos.Beat = 0
 		case Is(msg, keys.CursorLineEnd):
-			m.cursorPos.Beat = m.CurrentPart().beats - 1
+			m.cursorPos.Beat = m.CurrentPart().Beats - 1
 		case Is(msg, keys.Escape):
 			m.Escape()
 		case Is(msg, keys.PlayStop):
@@ -1518,13 +1504,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.connected = false
 	case beatMsg:
 		m.beatTime = time.Now()
-		playingOverlay := m.CurrentPart().overlays.HighestMatchingOverlay(m.keyCycles)
+		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.keyCycles)
 		if m.playing != PLAY_STOPPED {
 			m.advanceCurrentBeat(playingOverlay)
 			m.advanceKeyCycle()
 		}
 		if m.playing != PLAY_STOPPED {
-			playingOverlay := m.CurrentPart().overlays.HighestMatchingOverlay(m.keyCycles)
+			playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.keyCycles)
 			gridKeys := make([]grid.GridKey, 0, len(m.playState))
 			m.CurrentBeatGridKeys(&gridKeys)
 			pattern := make(grid.Pattern)
@@ -1561,7 +1547,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) NewSequence() {
 	m.cursorPos = GK(0, 0)
 	m.definition = InitDefinition(m.definition.template, m.definition.instrument)
-	m.currentOverlay = m.CurrentPart().overlays
+	m.currentOverlay = m.CurrentPart().Overlays
 }
 
 func (m model) NeedsWrite() bool {
@@ -1575,9 +1561,9 @@ func (m *model) Escape() {
 
 func (m *model) NextSection() {
 	newIndex := m.currentSongSection + 1
-	if newIndex < len(m.definition.arrangement) {
+	if newIndex < len(*m.definition.arrangement) {
 		m.currentSongSection = newIndex
-		m.currentOverlay = m.definition.parts[m.CurrentPartId()].overlays
+		m.currentOverlay = (*m.definition.parts)[m.CurrentPartId()].Overlays
 	}
 }
 
@@ -1585,15 +1571,15 @@ func (m *model) PrevSection() {
 	newIndex := m.currentSongSection - 1
 	if newIndex >= 0 {
 		m.currentSongSection = newIndex
-		m.currentOverlay = m.definition.parts[m.CurrentPartId()].overlays
+		m.currentOverlay = (*m.definition.parts)[m.CurrentPartId()].Overlays
 	}
 }
 
 func (m *model) NewPart(index int) {
 	partId := index
 	if index < 0 {
-		partId = len(m.definition.parts)
-		m.definition.parts = append(m.definition.parts, InitPart(fmt.Sprintf("Part %d", partId+1)))
+		partId = len(*m.definition.parts)
+		*m.definition.parts = append(*m.definition.parts, InitPart(fmt.Sprintf("Part %d", partId+1)))
 	}
 	currentIndex := m.currentSongSection
 	newSongSection := InitSongSection(partId)
@@ -1603,9 +1589,9 @@ func (m *model) NewPart(index int) {
 	} else {
 		placementModifier = 0
 	}
-	m.definition.arrangement = slices.Insert(m.definition.arrangement, currentIndex+placementModifier, newSongSection)
+	*m.definition.arrangement = slices.Insert(*m.definition.arrangement, currentIndex+placementModifier, newSongSection)
 	m.currentSongSection++
-	m.currentOverlay = m.CurrentPart().overlays
+	m.currentOverlay = m.CurrentPart().Overlays
 }
 
 func (m *model) Start() {
@@ -1616,9 +1602,9 @@ func (m *model) Start() {
 		}
 	}
 	m.currentSongSection = 0
-	m.keyCycles = m.CurrentSongSection().startCycles
-	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().startBeat))
-	playingOverlay := m.CurrentPart().overlays.HighestMatchingOverlay(m.keyCycles)
+	m.keyCycles = m.CurrentSongSection().StartCycles
+	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().StartBeat))
+	playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.keyCycles)
 	tickInterval := m.TickInterval()
 
 	pattern := m.CombinedBeatPattern(playingOverlay)
@@ -1864,7 +1850,7 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 }
 
 func (m model) UndoableNote() Undoable {
-	overlay := m.CurrentPart().overlays.FindOverlay(m.overlayKeyEdit.GetKey())
+	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
 	if overlay == nil {
 		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.CurrentPartId()}
 	}
@@ -1877,7 +1863,7 @@ func (m model) UndoableNote() Undoable {
 }
 
 func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
-	overlay := m.CurrentPart().overlays.FindOverlay(m.overlayKeyEdit.GetKey())
+	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
 	if overlay == nil {
 		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.CurrentPartId()}
 	}
@@ -1894,11 +1880,11 @@ func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
 }
 
 func (m model) UndoableLine() Undoable {
-	overlay := m.CurrentPart().overlays.FindOverlay(m.overlayKeyEdit.GetKey())
+	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
 	if overlay == nil {
 		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.CurrentPartId()}
 	}
-	beats := m.CurrentPart().beats
+	beats := m.CurrentPart().Beats
 	notesToUndo := make([]GridNote, 0, beats)
 	for i := range beats {
 		key := GK(m.cursorPos.Line, i)
@@ -1914,11 +1900,11 @@ func (m model) UndoableLine() Undoable {
 }
 
 func (m model) UndoableOverlay() Undoable {
-	overlay := m.CurrentPart().overlays.FindOverlay(m.overlayKeyEdit.GetKey())
+	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
 	if overlay == nil {
 		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.CurrentPartId()}
 	}
-	notesToUndo := make([]GridNote, 0, m.CurrentPart().beats)
+	notesToUndo := make([]GridNote, 0, m.CurrentPart().Beats)
 	for key, note := range overlay.Notes {
 		notesToUndo = append(notesToUndo, GridNote{key, note})
 	}
@@ -1929,17 +1915,17 @@ func (m model) Save() {
 	//Write(m.definition)
 }
 
-func (m model) CurrentPart() Part {
-	part := m.CurrentSongSection().part
-	return m.definition.parts[part]
+func (m model) CurrentPart() arrangement.Part {
+	part := m.CurrentSongSection().Part
+	return (*m.definition.parts)[part]
 }
 
 func (m model) CurrentPartId() int {
-	return m.CurrentSongSection().part
+	return m.CurrentSongSection().Part
 }
 
-func (m model) CurrentSongSection() SongSection {
-	return m.definition.arrangement[m.currentSongSection]
+func (m model) CurrentSongSection() arrangement.SongSection {
+	return (*m.definition.arrangement)[m.currentSongSection]
 }
 
 func (m model) CurrentNote() note {
@@ -1958,7 +1944,7 @@ func RemoveRootKey(keys []overlayKey) []overlayKey {
 func (m *model) NextOverlay(direction int) {
 	switch direction {
 	case 1:
-		overlay := m.CurrentPart().overlays.FindAboveOverlay(m.currentOverlay.Key)
+		overlay := m.CurrentPart().Overlays.FindAboveOverlay(m.currentOverlay.Key)
 		m.currentOverlay = overlay
 	case -1:
 		if m.currentOverlay.Below != nil {
@@ -1969,13 +1955,13 @@ func (m *model) NextOverlay(direction int) {
 }
 
 func (m *model) ClearOverlayLine() {
-	for i := uint8(0); i < m.CurrentPart().beats; i++ {
+	for i := uint8(0); i < m.CurrentPart().Beats; i++ {
 		m.currentOverlay.RemoveNote(GK(m.cursorPos.Line, i))
 	}
 }
 
 func (m *model) ClearOverlay() {
-	m.definition.parts[m.CurrentPartId()].overlays.Remove(m.currentOverlay.Key)
+	(*m.definition.parts)[m.CurrentPartId()].Overlays.Remove(m.currentOverlay.Key)
 }
 
 func (m *model) RotateRight() {
@@ -2117,7 +2103,7 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 	currentState := m.playState[lineIndex]
 	advancedBeat := int8(currentState.currentBeat) + currentState.direction
 
-	if advancedBeat >= int8(m.CurrentPart().beats) || advancedBeat < 0 {
+	if advancedBeat >= int8(m.CurrentPart().Beats) || advancedBeat < 0 {
 		// reset locations should be 1 time use.  Reset back to 0.
 		if m.playState[lineIndex].resetLocation != 0 && combinedPattern[GK(uint8(lineIndex), currentState.resetActionLocation)].Action == currentState.resetAction {
 			m.playState[lineIndex].currentBeat = currentState.resetLocation
@@ -2167,13 +2153,13 @@ func (m *model) advanceKeyCycle() {
 	if m.playState[m.definition.keyline].currentBeat == 0 {
 		m.keyCycles++
 		songSection := m.CurrentSongSection()
-		if songSection.cycles+songSection.startCycles <= m.keyCycles {
+		if songSection.Cycles+songSection.StartCycles <= m.keyCycles {
 			m.currentSongSection++
-			if len(m.definition.arrangement) <= m.currentSongSection {
+			if len(*m.definition.arrangement) <= m.currentSongSection {
 				m.StartStop()
 			} else {
-				m.keyCycles = m.CurrentSongSection().startCycles
-				m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().startBeat))
+				m.keyCycles = m.CurrentSongSection().StartCycles
+				m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().StartBeat))
 			}
 		}
 	}
@@ -2181,7 +2167,7 @@ func (m *model) advanceKeyCycle() {
 
 func (m model) PlayingOverlayKeys() []overlayKey {
 	keys := make([]overlayKey, 0, 10)
-	m.CurrentPart().overlays.GetMatchingOverlayKeys(&keys, m.keyCycles)
+	m.CurrentPart().Overlays.GetMatchingOverlayKeys(&keys, m.keyCycles)
 	return keys
 }
 
@@ -2202,7 +2188,7 @@ func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.OverlayPattern {
 	pattern := make(overlays.OverlayPattern)
 	if m.playing != PLAY_STOPPED && !m.playEditing {
-		m.CurrentPart().overlays.CombineOverlayPattern(&pattern, m.keyCycles)
+		m.CurrentPart().Overlays.CombineOverlayPattern(&pattern, m.keyCycles)
 	} else {
 		overlay.CombineOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle())
 	}
@@ -2340,7 +2326,7 @@ func (m model) PatternActionBeatBoundaries() (uint8, uint8) {
 			return m.cursorPos.Beat, m.visualAnchorCursor.Beat
 		}
 	} else {
-		return m.cursorPos.Beat, m.CurrentPart().beats - 1
+		return m.cursorPos.Beat, m.CurrentPart().Beats - 1
 	}
 }
 
@@ -2366,16 +2352,16 @@ func (m *model) RemoveNote(gridKey gridKey) {
 
 func (m model) OverlayKeys() []overlayKey {
 	keys := make([]overlayKey, 0, 10)
-	m.CurrentPart().overlays.CollectKeys(&keys)
+	m.CurrentPart().Overlays.CollectKeys(&keys)
 	return keys
 }
 
 func (m model) PartView() string {
 	var buf strings.Builder
-	beats := m.CurrentPart().beats
-	cycles := m.CurrentSongSection().cycles
-	startBeats := m.CurrentSongSection().startBeat
-	startCycles := m.CurrentSongSection().startCycles
+	beats := m.CurrentPart().Beats
+	cycles := m.CurrentSongSection().Cycles
+	startBeats := m.CurrentSongSection().StartBeat
+	startCycles := m.CurrentSongSection().StartCycles
 
 	beatsInput := colors.NumberColor.Render(strconv.Itoa(int(beats)))
 	cyclesInput := colors.NumberColor.Render(strconv.Itoa(int(cycles)))
@@ -2464,7 +2450,7 @@ func (m model) View() string {
 
 	if m.patternMode == PATTERN_ACCENT || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
-	} else if (m.CurrentPart().overlays.Key == overlaykey.ROOT && len(m.CurrentPart().overlays.Notes) == 0) ||
+	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && len(m.CurrentPart().Overlays.Notes) == 0) ||
 		m.selectionIndicator == SELECT_SETUP_VALUE ||
 		m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE ||
 		m.selectionIndicator == SELECT_SETUP_CHANNEL {
@@ -2483,23 +2469,7 @@ func (m model) View() string {
 	seqView := m.ViewTriggerSeq()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "  ", seqView, "  ", sideView))
 	buf.WriteString("\n")
-	buf.WriteString(m.ArrangementView())
-	return buf.String()
-}
-
-func (m model) ArrangementView() string {
-	var buf strings.Builder
-	for i, songSection := range m.definition.arrangement {
-		section := fmt.Sprintf("%d) %s", i+1, m.definition.parts[songSection.part].Name())
-		var sectionOutput string
-		if m.currentSongSection == i {
-			sectionOutput = colors.SelectedColor.Render(section)
-		} else {
-			sectionOutput = section
-		}
-		buf.WriteString(sectionOutput)
-		buf.WriteString("\n")
-	}
+	buf.WriteString(m.arrangement.View(m.currentSongSection))
 	return buf.String()
 }
 
@@ -2614,7 +2584,7 @@ func (m model) OverlaysView() string {
 	buf.WriteString("——————————————\n")
 	style := lipgloss.NewStyle().Background(seqOverlayColor)
 	var playingOverlayKeys = m.PlayingOverlayKeys()
-	for currentOverlay := m.CurrentPart().overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
+	for currentOverlay := m.CurrentPart().Overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
 		var playing = ""
 		if m.playing != PLAY_STOPPED && playingOverlayKeys[0] == currentOverlay.Key {
@@ -2685,7 +2655,7 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(m.WriteView())
 		buf.WriteString("Seq - A sequencer for your cli\n")
 	}
-	beats := m.CurrentPart().beats
+	beats := m.CurrentPart().Beats
 	topLine := strings.Repeat("─", max(32, int(beats)))
 	buf.WriteString(fmt.Sprintf("   ┌%s\n", topLine))
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
@@ -2705,7 +2675,7 @@ func (m model) ChoosePartView() string {
 	if m.partSelectorIndex < 0 {
 		name = "New Part"
 	} else {
-		name = m.definition.parts[m.partSelectorIndex].Name()
+		name = (*m.definition.parts)[m.partSelectorIndex].GetName()
 	}
 	buf.WriteString(colors.SelectedColor.Render(name))
 	buf.WriteString("\n")
@@ -2775,7 +2745,7 @@ func (m model) ViewOverlay() string {
 func (m model) CurrentOverlayView() string {
 	var matchedKey overlayKey
 	if m.playing != PLAY_STOPPED {
-		matchedKey = m.CurrentPart().overlays.HighestMatchingOverlay(m.keyCycles).Key
+		matchedKey = m.CurrentPart().Overlays.HighestMatchingOverlay(m.keyCycles).Key
 	} else {
 		matchedKey = overlaykey.ROOT
 	}
@@ -2866,7 +2836,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 	buf.WriteString(m.LineIndicator(lineNumber))
 
 	gateSpace := GateSpace{}
-	for i := uint8(0); i < m.CurrentPart().beats; i++ {
+	for i := uint8(0); i < m.CurrentPart().Beats; i++ {
 		currentGridKey := GK(uint8(lineNumber), i)
 		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
 
@@ -2973,7 +2943,7 @@ func (m model) VisualSelectionBounds() Bounds {
 }
 
 func (m model) PatternBounds() Bounds {
-	return Bounds{0, m.CurrentPart().beats - 1, uint8(len(m.definition.lines)), 0}
+	return Bounds{0, m.CurrentPart().Beats - 1, uint8(len(m.definition.lines)), 0}
 }
 
 func (m model) PasteBounds() Bounds {
