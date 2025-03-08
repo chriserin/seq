@@ -1240,6 +1240,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if Is(msg, keys.Enter) {
+			switch m.selectionIndicator {
+			case SELECT_PART:
+				m.NewPart(m.partSelectorIndex)
+				m.selectionIndicator = SELECT_NOTHING
+			case SELECT_CONFIRM_NEW:
+				m.NewSequence()
+				m.selectionIndicator = SELECT_NOTHING
+			case SELECT_CONFIRM_QUIT:
+				m.programChannel <- quitMsg{}
+				m.logFile.Close()
+				return m, tea.Quit
+			default:
+				m.Escape()
+			}
+		}
 		if Is(msg, keys.Quit) {
 			m.selectionIndicator = SELECT_CONFIRM_QUIT
 		}
@@ -1331,6 +1347,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			states := []Selection{SELECT_NOTHING, SELECT_ARRANGEMENT_EDITOR}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
 			m.focus = FOCUS_ARRANGEMENT_EDITOR
+			m.arrangement.Focus = true
 		case Is(msg, keys.Increase):
 			switch m.selectionIndicator {
 			case SELECT_TEMPO:
@@ -1406,21 +1423,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.DecreaseStartCycles()
 			case SELECT_PART:
 				m.DecreasePartSelector()
-			}
-		case Is(msg, keys.Enter):
-			switch m.selectionIndicator {
-			case SELECT_PART:
-				m.NewPart(m.partSelectorIndex)
-				m.selectionIndicator = SELECT_NOTHING
-			case SELECT_CONFIRM_NEW:
-				m.NewSequence()
-				m.selectionIndicator = SELECT_NOTHING
-			case SELECT_CONFIRM_QUIT:
-				m.programChannel <- quitMsg{}
-				m.logFile.Close()
-				return m, tea.Quit
-			default:
-				m.Escape()
 			}
 		case Is(msg, keys.ToggleGateMode):
 			m.patternMode = PATTERN_GATE
@@ -1570,6 +1572,8 @@ func (m model) NeedsWrite() bool {
 func (m *model) Escape() {
 	m.selectionIndicator = SELECT_NOTHING
 	m.patternMode = PATTERN_FILL
+	m.focus = FOCUS_GRID
+	m.arrangement.Focus = false
 }
 
 func (m *model) NextSection() {

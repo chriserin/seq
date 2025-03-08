@@ -11,7 +11,26 @@ import (
 	"github.com/chriserin/seq/internal/overlays"
 )
 
+type cursor struct {
+	section   int
+	attribute SectionAttribute
+}
+
+func (c cursor) Matches(section int, attribute SectionAttribute) bool {
+	return c.section == section && c.attribute == attribute
+}
+
+type SectionAttribute int
+
+const (
+	SECTION_START_BEAT SectionAttribute = iota
+	SECTION_START_CYCLE
+	SECTION_CYCLES
+)
+
 type Model struct {
+	Focus       bool
+	cursor      cursor
 	arrangement *[]SongSection
 	parts       *[]Part
 }
@@ -44,6 +63,21 @@ func Key(help string, keyboardKey ...string) key.Binding {
 func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch {
 	case Is(msg, keys.CursorDown):
+		if m.cursor.section+1 < len(*m.arrangement) {
+			m.cursor.section++
+		}
+	case Is(msg, keys.CursorUp):
+		if m.cursor.section > 0 {
+			m.cursor.section--
+		}
+	case Is(msg, keys.CursorLeft):
+		if m.cursor.attribute > 0 {
+			m.cursor.attribute--
+		}
+	case Is(msg, keys.CursorRight):
+		if m.cursor.attribute < 2 {
+			m.cursor.attribute++
+		}
 	}
 	return m, nil
 }
@@ -73,25 +107,40 @@ func (m Model) View(currentSongSection int) string {
 	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Cycles"))
 	buf.WriteString("\n")
 	for i, songSection := range *m.arrangement {
-		buf.WriteString(fmt.Sprintf("%*s", 15, m.SectionOutput(i, currentSongSection, songSection)))
-		buf.WriteString(fmt.Sprintf("%*s", 15, m.StartBeatsOutput(i)))
-		buf.WriteString(fmt.Sprintf("%*s", 15, m.StartCyclesOutput(i)))
-		buf.WriteString(fmt.Sprintf("%*s", 15, m.CyclesOutput(i)))
+		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, m.SectionOutput(i, currentSongSection, songSection)))
+		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, m.StartBeatsOutput(i, m.cursor)))
+		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, m.StartCyclesOutput(i, m.cursor)))
+		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, m.CyclesOutput(i, m.cursor)))
 		buf.WriteString("\n")
 	}
 	return buf.String()
 }
 
-func (m Model) CyclesOutput(index int) string {
-	return fmt.Sprintf("%d", (*m.arrangement)[index].Cycles)
+func (m Model) CyclesOutput(index int, cursor cursor) string {
+	cycles := (*m.arrangement)[index].Cycles
+	if m.Focus && cursor.Matches(index, SECTION_CYCLES) {
+		return colors.SelectedColor.Render(fmt.Sprintf("%d", cycles))
+	} else {
+		return colors.NumberColor.Render(fmt.Sprintf("%d", cycles))
+	}
 }
 
-func (m Model) StartBeatsOutput(index int) string {
-	return fmt.Sprintf("%d", (*m.arrangement)[index].StartBeat)
+func (m Model) StartBeatsOutput(index int, cursor cursor) string {
+	startBeat := (*m.arrangement)[index].StartBeat
+	if m.Focus && cursor.Matches(index, SECTION_START_BEAT) {
+		return colors.SelectedColor.Render(fmt.Sprintf("%d", startBeat))
+	} else {
+		return colors.NumberColor.Render(fmt.Sprintf("%d", startBeat))
+	}
 }
 
-func (m Model) StartCyclesOutput(index int) string {
-	return fmt.Sprintf("%d", (*m.arrangement)[index].StartCycles)
+func (m Model) StartCyclesOutput(index int, cursor cursor) string {
+	startCycle := (*m.arrangement)[index].StartBeat
+	if m.Focus && cursor.Matches(index, SECTION_START_CYCLE) {
+		return colors.SelectedColor.Render(fmt.Sprintf("%d", startCycle))
+	} else {
+		return colors.NumberColor.Render(fmt.Sprintf("%d", startCycle))
+	}
 }
 
 func (m Model) SectionOutput(index int, currentSongSection int, songSection SongSection) string {
