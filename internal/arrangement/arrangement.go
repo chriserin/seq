@@ -47,6 +47,8 @@ type keymap struct {
 	CursorDown  key.Binding
 	CursorLeft  key.Binding
 	CursorRight key.Binding
+	Increase    key.Binding
+	Decrease    key.Binding
 }
 
 var keys = keymap{
@@ -54,6 +56,8 @@ var keys = keymap{
 	CursorDown:  Key("Down", "j"),
 	CursorLeft:  Key("Left", "h"),
 	CursorRight: Key("Right", "l"),
+	Increase:    Key("Increase", "+", "="),
+	Decrease:    Key("Decrease", "-", "_"),
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -78,6 +82,24 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 		if m.cursor.attribute < 2 {
 			m.cursor.attribute++
 		}
+	case Is(msg, keys.Increase):
+		switch m.cursor.attribute {
+		case SECTION_START_BEAT:
+			(*m.arrangement)[m.cursor.section].IncreaseStartBeats()
+		case SECTION_START_CYCLE:
+			(*m.arrangement)[m.cursor.section].IncreaseStartCycles()
+		case SECTION_CYCLES:
+			(*m.arrangement)[m.cursor.section].IncreaseCycles()
+		}
+	case Is(msg, keys.Decrease):
+		switch m.cursor.attribute {
+		case SECTION_START_BEAT:
+			(*m.arrangement)[m.cursor.section].DecreaseStartBeats()
+		case SECTION_START_CYCLE:
+			(*m.arrangement)[m.cursor.section].DecreaseStartCycles()
+		case SECTION_CYCLES:
+			(*m.arrangement)[m.cursor.section].DecreaseCycles()
+		}
 	}
 	return m, nil
 }
@@ -91,6 +113,48 @@ type SongSection struct {
 	Cycles      int
 	StartBeat   int
 	StartCycles int
+}
+
+func (ss *SongSection) IncreaseStartBeats() {
+	newStartBeats := ss.StartBeat + 1
+	if newStartBeats < 128 {
+		ss.StartBeat = newStartBeats
+	}
+}
+
+func (ss *SongSection) IncreaseStartCycles() {
+	newStartCycle := ss.StartCycles + 1
+	if newStartCycle < 128 {
+		ss.StartCycles = newStartCycle
+	}
+}
+
+func (ss *SongSection) IncreaseCycles() {
+	newCycle := ss.Cycles + 1
+	if newCycle < 128 {
+		ss.Cycles = newCycle
+	}
+}
+
+func (ss *SongSection) DecreaseStartBeats() {
+	newStartBeats := ss.StartBeat - 1
+	if newStartBeats >= 0 {
+		ss.StartBeat = newStartBeats
+	}
+}
+
+func (ss *SongSection) DecreaseStartCycles() {
+	newStartCycle := ss.StartCycles - 1
+	if newStartCycle >= 0 {
+		ss.StartCycles = newStartCycle
+	}
+}
+
+func (ss *SongSection) DecreaseCycles() {
+	newCycle := ss.Cycles - 1
+	if newCycle >= 0 {
+		ss.Cycles = newCycle
+	}
 }
 
 type Part struct {
@@ -135,7 +199,7 @@ func (m Model) StartBeatsOutput(index int, cursor cursor) string {
 }
 
 func (m Model) StartCyclesOutput(index int, cursor cursor) string {
-	startCycle := (*m.arrangement)[index].StartBeat
+	startCycle := (*m.arrangement)[index].StartCycles
 	if m.Focus && cursor.Matches(index, SECTION_START_CYCLE) {
 		return colors.SelectedColor.Render(fmt.Sprintf("%d", startCycle))
 	} else {

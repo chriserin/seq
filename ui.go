@@ -1014,46 +1014,28 @@ func (m *model) DecreaseBeats() {
 	}
 }
 
-func (m *model) IncreaseCycles() {
-	newCycles := m.CurrentSongSection().Cycles + 1
-	if newCycles < 128 {
-		(*m.definition.arrangement)[m.currentSongSection].Cycles = newCycles
-	}
-}
-
-func (m *model) DecreaseCycles() {
-	newCycles := int(m.CurrentSongSection().Cycles) - 1
-	if newCycles >= 0 {
-		(*m.definition.arrangement)[m.currentSongSection].Cycles = newCycles
-	}
-}
-
 func (m *model) IncreaseStartBeats() {
-	newStartBeats := m.CurrentSongSection().StartBeat + 1
-	if newStartBeats < 128 {
-		(*m.definition.arrangement)[m.currentSongSection].StartBeat = newStartBeats
-	}
+	(*m.definition.arrangement)[m.currentSongSection].IncreaseStartBeats()
 }
 
 func (m *model) DecreaseStartBeats() {
-	newStartBeats := m.CurrentSongSection().StartBeat - 1
-	if newStartBeats >= 0 {
-		(*m.definition.arrangement)[m.currentSongSection].StartBeat = newStartBeats
-	}
+	(*m.definition.arrangement)[m.currentSongSection].DecreaseStartBeats()
 }
 
 func (m *model) IncreaseStartCycles() {
-	newStartCycles := m.CurrentSongSection().StartCycles + 1
-	if newStartCycles < 128 {
-		(*m.definition.arrangement)[m.currentSongSection].StartCycles = newStartCycles
-	}
+	(*m.definition.arrangement)[m.currentSongSection].IncreaseStartCycles()
 }
 
 func (m *model) DecreaseStartCycles() {
-	newStartCycles := m.CurrentSongSection().StartCycles - 1
-	if newStartCycles >= 0 {
-		(*m.definition.arrangement)[m.currentSongSection].StartCycles = newStartCycles
-	}
+	(*m.definition.arrangement)[m.currentSongSection].DecreaseStartCycles()
+}
+
+func (m *model) IncreaseCycles() {
+	(*m.definition.arrangement)[m.currentSongSection].IncreaseCycles()
+}
+
+func (m *model) DecreaseCycles() {
+	(*m.definition.arrangement)[m.currentSongSection].DecreaseCycles()
 }
 
 func (m *model) IncreasePartSelector() {
