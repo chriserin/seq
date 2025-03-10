@@ -49,6 +49,7 @@ type keymap struct {
 	CursorRight key.Binding
 	Increase    key.Binding
 	Decrease    key.Binding
+	Escape      key.Binding
 }
 
 var keys = keymap{
@@ -58,6 +59,7 @@ var keys = keymap{
 	CursorRight: Key("Right", "l"),
 	Increase:    Key("Increase", "+", "="),
 	Decrease:    Key("Decrease", "-", "_"),
+	Escape:      Key("Escape", "esc", "enter"),
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -100,9 +102,14 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 		case SECTION_CYCLES:
 			(*m.arrangement)[m.cursor.section].DecreaseCycles()
 		}
+	case Is(msg, keys.Escape):
+		m.Focus = false
+		return m, func() tea.Msg { return GiveBackFocus{} }
 	}
 	return m, nil
 }
+
+type GiveBackFocus struct{}
 
 func Is(msg tea.KeyMsg, k key.Binding) bool {
 	return key.Matches(msg, k)

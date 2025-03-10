@@ -1533,6 +1533,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, ratchetTickCmd
 			}
 		}
+	case arrangement.GiveBackFocus:
+		m.selectionIndicator = SELECT_NOTHING
+		m.focus = FOCUS_GRID
 	}
 	var cmd tea.Cmd
 	cursor, cmd := m.cursor.Update(msg)
@@ -1554,8 +1557,6 @@ func (m model) NeedsWrite() bool {
 func (m *model) Escape() {
 	m.selectionIndicator = SELECT_NOTHING
 	m.patternMode = PATTERN_FILL
-	m.focus = FOCUS_GRID
-	m.arrangement.Focus = false
 }
 
 func (m *model) NextSection() {
