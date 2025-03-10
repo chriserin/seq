@@ -2,7 +2,7 @@ package overlays
 
 import (
 	"github.com/chriserin/seq/internal/grid"
-	overlaykey "github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/seq/internal/overlaykey"
 )
 
 // type gridKey = int

@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	overlaykey "github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
 

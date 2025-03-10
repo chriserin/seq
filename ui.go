@@ -19,7 +19,7 @@ import (
 	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/notereg"
-	overlaykey "github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/overlays"
 	midi "gitlab.com/gomidi/midi/v2"
 )
