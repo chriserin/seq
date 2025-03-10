@@ -711,7 +711,7 @@ func (m *model) Redo() UndoStack {
 
 type Definition struct {
 	parts           *[]arrangement.Part
-	arrangement     *[]arrangement.SongSection
+	arrangement     *arrangement.Arrangement
 	lines           []grid.LineDefinition
 	tempo           int
 	subdivisions    int
@@ -1015,27 +1015,53 @@ func (m *model) DecreaseBeats() {
 }
 
 func (m *model) IncreaseStartBeats() {
-	(*m.definition.arrangement)[m.currentSongSection].IncreaseStartBeats()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	if currentNode != nil && currentNode.IsEndNode() {
+		currentNode.Section.IncreaseStartBeats()
+	}
 }
 
 func (m *model) DecreaseStartBeats() {
-	(*m.definition.arrangement)[m.currentSongSection].DecreaseStartBeats()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	if currentNode != nil && currentNode.IsEndNode() {
+		currentNode.Section.DecreaseStartBeats()
+	}
 }
 
 func (m *model) IncreaseStartCycles() {
-	(*m.definition.arrangement)[m.currentSongSection].IncreaseStartCycles()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	if currentNode != nil && currentNode.IsEndNode() {
+		currentNode.Section.IncreaseStartCycles()
+	}
 }
 
 func (m *model) DecreaseStartCycles() {
-	(*m.definition.arrangement)[m.currentSongSection].DecreaseStartCycles()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	if currentNode != nil && currentNode.IsEndNode() {
+		currentNode.Section.DecreaseStartCycles()
+	}
 }
 
 func (m *model) IncreaseCycles() {
-	(*m.definition.arrangement)[m.currentSongSection].IncreaseCycles()
+	currentNode := m.arrangement.Cursor.GetCurrentNode() 
+	if currentNode != nil {
+		if currentNode.IsEndNode() {
+			currentNode.Section.IncreaseCycles()
+		} else {
+			m.arrangement.Cursor.IncreaseIterations()
+		}
+	}
 }
 
 func (m *model) DecreaseCycles() {
-	(*m.definition.arrangement)[m.currentSongSection].DecreaseCycles()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	if currentNode != nil {
+		if currentNode.IsEndNode() {
+			currentNode.Section.DecreaseCycles()
+		} else {
+			m.arrangement.Cursor.DecreaseIterations()
+		}
+	}
 }
 
 func (m *model) IncreasePartSelector() {
@@ -1105,13 +1131,30 @@ func InitDefinition(template string, instrument string) Definition {
 	}
 }
 
-func InitArrangement(parts []arrangement.Part) *[]arrangement.SongSection {
-	songSections := make([]arrangement.SongSection, 0, len(parts))
-	for i := range parts {
-		newSongSection := InitSongSection(i)
-		songSections = append(songSections, newSongSection)
+func InitArrangement(parts []arrangement.Part) *arrangement.Arrangement {
+	root := &arrangement.Arrangement{
+		Iterations: 1,
+		Nodes:      make([]*arrangement.Arrangement, 0, len(parts)),
 	}
-	return &songSections
+	
+	// Create end nodes for each part
+	for i := range parts {
+		section := arrangement.SongSection{
+			Part:        i,
+			Cycles:      1,
+			StartBeat:   0,
+			StartCycles: 1,
+		}
+		
+		node := &arrangement.Arrangement{
+			Section:    section,
+			Iterations: 1,
+		}
+		
+		root.Nodes = append(root.Nodes, node)
+	}
+	
+	return root
 }
 
 func InitSongSection(part int) arrangement.SongSection {
@@ -1560,18 +1603,22 @@ func (m *model) Escape() {
 }
 
 func (m *model) NextSection() {
-	newIndex := m.currentSongSection + 1
-	if newIndex < len(*m.definition.arrangement) {
-		m.currentSongSection = newIndex
-		m.currentOverlay = (*m.definition.parts)[m.CurrentPartId()].Overlays
+	if m.arrangement.Cursor.MoveNext() {
+		currentNode := m.arrangement.Cursor.GetCurrentNode()
+		if currentNode != nil && currentNode.IsEndNode() {
+			partId := currentNode.Section.Part
+			m.currentOverlay = (*m.definition.parts)[partId].Overlays
+		}
 	}
 }
 
 func (m *model) PrevSection() {
-	newIndex := m.currentSongSection - 1
-	if newIndex >= 0 {
-		m.currentSongSection = newIndex
-		m.currentOverlay = (*m.definition.parts)[m.CurrentPartId()].Overlays
+	if m.arrangement.Cursor.MovePrev() {
+		currentNode := m.arrangement.Cursor.GetCurrentNode()
+		if currentNode != nil && currentNode.IsEndNode() {
+			partId := currentNode.Section.Part
+			m.currentOverlay = (*m.definition.parts)[partId].Overlays
+		}
 	}
 }
 
@@ -1581,16 +1628,56 @@ func (m *model) NewPart(index int) {
 		partId = len(*m.definition.parts)
 		*m.definition.parts = append(*m.definition.parts, InitPart(fmt.Sprintf("Part %d", partId+1)))
 	}
-	currentIndex := m.currentSongSection
-	newSongSection := InitSongSection(partId)
-	var placementModifier int
-	if m.sectionSideIndicator {
-		placementModifier = 1
-	} else {
-		placementModifier = 0
+	
+	// Create new section node
+	section := InitSongSection(partId)
+	newNode := &arrangement.Arrangement{
+		Section:    section,
+		Iterations: 1,
 	}
-	*m.definition.arrangement = slices.Insert(*m.definition.arrangement, currentIndex+placementModifier, newSongSection)
-	m.currentSongSection++
+	
+	// Add to the tree
+	if len(m.arrangement.Cursor) >= 2 {
+		currentNode := m.arrangement.Cursor[len(m.arrangement.Cursor)-1]
+		parentNode := m.arrangement.Cursor[len(m.arrangement.Cursor)-2]
+		
+		// Find current node's index in parent
+		var currentIndex int
+		for i, node := range parentNode.Nodes {
+			if node == currentNode {
+				currentIndex = i
+				break
+			}
+		}
+		
+		// Insert new node after current node if sectionSideIndicator is true,
+		// or before current node if false
+		insertAt := currentIndex
+		if m.sectionSideIndicator {
+			insertAt++
+		}
+		
+		// Insert the new node
+		if insertAt > len(parentNode.Nodes) {
+			parentNode.Nodes = append(parentNode.Nodes, newNode)
+		} else {
+			parentNode.Nodes = slices.Insert(parentNode.Nodes, insertAt, newNode)
+		}
+		
+		// Update cursor to point to new node
+		newCursor := make(arrangement.ArrCursor, len(m.arrangement.Cursor)-1)
+		copy(newCursor, m.arrangement.Cursor[:len(m.arrangement.Cursor)-1])
+		newCursor = append(newCursor, newNode)
+		m.arrangement.Cursor = newCursor
+	} else if len(m.arrangement.Cursor) == 1 {
+		// Add to root node
+		m.definition.arrangement.Nodes = append(m.definition.arrangement.Nodes, newNode)
+		
+		// Update cursor to point to new node
+		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement, newNode}
+	}
+	
+	// Update overlay
 	m.currentOverlay = m.CurrentPart().Overlays
 }
 
@@ -1601,23 +1688,37 @@ func (m *model) Start() {
 			panic("No Open Connection")
 		}
 	}
-	m.currentSongSection = 0
-	m.keyCycles = m.CurrentSongSection().StartCycles
-	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().StartBeat))
-	playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.keyCycles)
-	tickInterval := m.TickInterval()
+	
+	// Reset to first node for playback
+	if len(m.definition.arrangement.Nodes) > 0 {
+		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement, m.definition.arrangement.Nodes[0]}
+	}
+	
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	if currentNode != nil && currentNode.IsEndNode() {
+		m.keyCycles = currentNode.Section.StartCycles
+		m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(currentNode.Section.StartBeat))
+		
+		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.keyCycles)
+		tickInterval := m.TickInterval()
 
-	pattern := m.CombinedBeatPattern(playingOverlay)
-	cmds := make([]tea.Cmd, 0, len(pattern))
-	m.PlayBeat(tickInterval, pattern, &cmds)
-	if m.playing == PLAY_STANDARD {
-		m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
+		pattern := m.CombinedBeatPattern(playingOverlay)
+		cmds := make([]tea.Cmd, 0, len(pattern))
+		m.PlayBeat(tickInterval, pattern, &cmds)
+		if m.playing == PLAY_STANDARD {
+			m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
+		}
 	}
 }
 
 func (m *model) Stop() {
 	m.keyCycles = 0
-	m.currentSongSection = 0
+	
+	// Reset cursor to the first node
+	if m.definition.arrangement != nil && len(m.definition.arrangement.Nodes) > 0 {
+		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement, m.definition.arrangement.Nodes[0]}
+	}
+	
 	notes := notereg.Clear()
 	sendFn := m.midiConnection.AcquireSendFunc()
 	for _, n := range notes {
@@ -1916,16 +2017,37 @@ func (m model) Save() {
 }
 
 func (m model) CurrentPart() arrangement.Part {
-	part := m.CurrentSongSection().Part
-	return (*m.definition.parts)[part]
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	if currentNode != nil && currentNode.IsEndNode() {
+		partId := currentNode.Section.Part
+		return (*m.definition.parts)[partId]
+	}
+	// Default to first part if no valid node is selected
+	return (*m.definition.parts)[0]
 }
 
 func (m model) CurrentPartId() int {
-	return m.CurrentSongSection().Part
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	if currentNode != nil && currentNode.IsEndNode() {
+		return currentNode.Section.Part
+	}
+	// Default to 0 if no valid node is selected
+	return 0
 }
 
 func (m model) CurrentSongSection() arrangement.SongSection {
-	return (*m.definition.arrangement)[m.currentSongSection]
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	if currentNode != nil && currentNode.IsEndNode() {
+		return currentNode.Section
+	}
+	
+	// Return a default section if no valid node is selected
+	return arrangement.SongSection{
+		Part:        0,
+		Cycles:      1,
+		StartBeat:   0,
+		StartCycles: 1,
+	}
 }
 
 func (m model) CurrentNote() note {
@@ -2152,14 +2274,61 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 func (m *model) advanceKeyCycle() {
 	if m.playState[m.definition.keyline].currentBeat == 0 {
 		m.keyCycles++
-		songSection := m.CurrentSongSection()
-		if songSection.Cycles+songSection.StartCycles <= m.keyCycles {
-			m.currentSongSection++
-			if len(*m.definition.arrangement) <= m.currentSongSection {
-				m.StartStop()
+		
+		currentNode := m.arrangement.Cursor.GetCurrentNode()
+		if currentNode != nil && currentNode.IsEndNode() {
+			songSection := currentNode.Section
+			
+			if songSection.Cycles+songSection.StartCycles <= m.keyCycles {
+				// Need to move to next section
+				if m.arrangement.Cursor.MoveNext() {
+					currentNode = m.arrangement.Cursor.GetCurrentNode()
+					
+					// Check if this is an end node or a parent node
+					if currentNode != nil && currentNode.IsEndNode() {
+						// It's an end node, start playing it
+						m.keyCycles = currentNode.Section.StartCycles
+						m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(currentNode.Section.StartBeat))
+					} else if currentNode != nil {
+						// It's a parent node, handle iteration and traverse into its children
+						// For simplicity we'll just move to its first child
+						if len(currentNode.Nodes) > 0 {
+							// Add first child to cursor path
+							m.arrangement.Cursor = append(m.arrangement.Cursor, currentNode.Nodes[0])
+							currentNode = currentNode.Nodes[0]
+							
+							// Set up to play this node
+							if currentNode.IsEndNode() {
+								m.keyCycles = currentNode.Section.StartCycles
+								m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(currentNode.Section.StartBeat))
+							}
+						} else {
+							// No children, stop playback
+							m.StartStop()
+						}
+					} else {
+						// Invalid state, stop playback
+						m.StartStop()
+					}
+				} else {
+					// No more sections, stop playback
+					m.StartStop()
+				}
+			}
+		} else {
+			// Not on an end node, try to find one
+			if m.arrangement.Cursor.MoveNext() {
+				currentNode = m.arrangement.Cursor.GetCurrentNode()
+				if currentNode != nil && currentNode.IsEndNode() {
+					m.keyCycles = currentNode.Section.StartCycles
+					m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(currentNode.Section.StartBeat))
+				} else {
+					// Not an end node, stop playback
+					m.StartStop()
+				}
 			} else {
-				m.keyCycles = m.CurrentSongSection().StartCycles
-				m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().StartBeat))
+				// No more nodes, stop playback
+				m.StartStop()
 			}
 		}
 	}
