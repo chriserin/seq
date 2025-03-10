@@ -2,6 +2,7 @@ package arrangement
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -36,82 +37,125 @@ func (ac ArrCursor) GetCurrentNode() *Arrangement {
 
 // MoveNext moves to the next node in the arrangement
 func (ac *ArrCursor) MoveNext() bool {
-	if len(*ac) == 0 {
-		return false
-	}
-
-	// If we only have the root node, we can't move next
-	if len(*ac) == 1 {
-		return false
-	}
-
-	currentNode := (*ac)[len(*ac)-1]
-	parentNode := (*ac)[len(*ac)-2]
-
-	// Find current node's index in parent's Nodes
-	var currentIndex int
-	for i, node := range parentNode.Nodes {
-		if node == currentNode {
-			currentIndex = i
-			break
-		}
-	}
-
-	// If there's a next sibling, move to it
-	if currentIndex+1 < len(parentNode.Nodes) {
-		// Remove current node from cursor
-		*ac = (*ac)[:len(*ac)-1]
-		// Add next sibling
-		*ac = append(*ac, parentNode.Nodes[currentIndex+1])
-		return true
-	}
-
-	// Otherwise, try to move up and then to next sibling
-	*ac = (*ac)[:len(*ac)-1] // Move up
-	
-	// If we're at the root after moving up, we can't go further
+	var workingCursor ArrCursor = make([]*Arrangement, len(*ac))
+	copy(workingCursor, *ac)
 	if len(*ac) <= 1 {
-		return false
+		return MoveToFirstChild(ac, &workingCursor)
 	}
-	
-	return ac.MoveNext() // Try again
+	return MoveToNextEndNode(ac, &workingCursor)
 }
 
-// MovePrev moves to the previous node in the arrangement
-func (ac *ArrCursor) MovePrev() bool {
-	if len(*ac) == 0 {
+func MoveToNextEndNode(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
+	cursorLength := len(*workingCursor)
+	if cursorLength == 0 {
 		return false
 	}
 
-	// If we only have the root node, we can't move prev
-	if len(*ac) == 1 {
-		return false
-	}
+	var scopeCursor ArrCursor = make([]*Arrangement, len(*workingCursor))
+	copy(scopeCursor, *workingCursor)
 
-	currentNode := (*ac)[len(*ac)-1]
-	parentNode := (*ac)[len(*ac)-2]
-
-	// Find current node's index in parent's Nodes
-	var currentIndex int
-	for i, node := range parentNode.Nodes {
-		if node == currentNode {
-			currentIndex = i
-			break
-		}
-	}
-
-	// If there's a previous sibling, move to it
-	if currentIndex > 0 {
-		// Remove current node from cursor
-		*ac = (*ac)[:len(*ac)-1]
-		// Add previous sibling
-		*ac = append(*ac, parentNode.Nodes[currentIndex-1])
+	if MoveToSibling(currentCursor, workingCursor) {
 		return true
+	} else {
+		scopeCursor = scopeCursor[:len(scopeCursor)-1]
+		return MoveToNextEndNode(currentCursor, &scopeCursor)
+	}
+}
+
+func MoveToSibling(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
+	cursorLength := len(*workingCursor)
+	if cursorLength == 0 {
+		return false
+	}
+	leaf := (*workingCursor)[cursorLength-1]
+	if cursorLength >= 2 {
+		parent := (*workingCursor)[cursorLength-2]
+		index := slices.Index(parent.Nodes, leaf)
+		if index+1 < len(parent.Nodes) {
+			*workingCursor = (*workingCursor)[:len(*workingCursor)-1]
+			*workingCursor = append(*workingCursor, parent.Nodes[index+1])
+			return MoveToFirstChild(currentCursor, workingCursor)
+		} else {
+			return false
+		}
+	} else {
+		return false
+	}
+}
+
+func MoveToFirstChild(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
+	cursorLength := len(*workingCursor)
+	leaf := (*workingCursor)[cursorLength-1]
+	if leaf.IsEndNode() {
+		*currentCursor = *workingCursor
+		return true
+	} else if len(leaf.Nodes) > 0 {
+		*workingCursor = append(*workingCursor, leaf.Nodes[0])
+		return MoveToFirstChild(currentCursor, workingCursor)
+	} else {
+		panic("Malformed arrangement tree")
+	}
+}
+
+func (ac *ArrCursor) MovePrev() bool {
+	var workingCursor ArrCursor = make([]*Arrangement, len(*ac))
+	copy(workingCursor, *ac)
+	if len(*ac) <= 1 {
+		return MoveToLastChild(ac, &workingCursor)
+	}
+	return MoveToPrevEndNode(ac, &workingCursor)
+}
+
+func MoveToPrevEndNode(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
+	cursorLength := len(*workingCursor)
+	if cursorLength == 0 {
+		return false
 	}
 
-	// Otherwise, we're the first child, so move up to parent
-	*ac = (*ac)[:len(*ac)-1] // Move up
-	return false             // No more previous nodes
+	var scopeCursor ArrCursor = make([]*Arrangement, len(*workingCursor))
+	copy(scopeCursor, *workingCursor)
+
+	if MoveToPrevSibling(currentCursor, workingCursor) {
+		return true
+	} else {
+		scopeCursor = scopeCursor[:len(scopeCursor)-1]
+		return MoveToPrevEndNode(currentCursor, &scopeCursor)
+	}
+}
+
+func MoveToPrevSibling(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
+	cursorLength := len(*workingCursor)
+	if cursorLength == 0 {
+		return false
+	}
+	leaf := (*workingCursor)[cursorLength-1]
+	if cursorLength >= 2 {
+		parent := (*workingCursor)[cursorLength-2]
+		index := slices.Index(parent.Nodes, leaf)
+		if index-1 >= 0 {
+			*workingCursor = (*workingCursor)[:len(*workingCursor)-1]
+			*workingCursor = append(*workingCursor, parent.Nodes[index-1])
+			return MoveToLastChild(currentCursor, workingCursor)
+		} else {
+			return false
+		}
+	} else {
+		return false
+	}
+}
+
+func MoveToLastChild(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
+	cursorLength := len(*workingCursor)
+	leaf := (*workingCursor)[cursorLength-1]
+	if leaf.IsEndNode() {
+		*currentCursor = *workingCursor
+		return true
+	} else if len(leaf.Nodes) > 0 {
+		*workingCursor = append(*workingCursor, leaf.Nodes[len(leaf.Nodes)-1])
+		return MoveToLastChild(currentCursor, workingCursor)
+	} else {
+		panic("Malformed arrangement tree")
+	}
 }
 
 func (ac *ArrCursor) Matches(node *Arrangement) bool {
