@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
+	"github.com/chriserin/seq/internal/arrangement"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
@@ -56,5 +58,90 @@ func TestSolo(t *testing.T) {
 		newPlayStates := Solo(playStates, 0)
 		assert.Equal(t, newPlayStates[0].groupPlayState, PLAY_STATE_PLAY)
 		assert.Equal(t, newPlayStates[1].groupPlayState, PLAY_STATE_PLAY)
+	})
+}
+
+func TestAdvanceKeyCycles(t *testing.T) {
+	t.Run("1 cycle song", func(t *testing.T) {
+		var counter int
+		var parts = InitParts()
+		var arr *arrangement.Arrangement = InitArrangement(parts)
+		def := Definition{
+			arrangement: arr,
+			parts:       &parts,
+			keyline:     0,
+		}
+		m := model{
+			arrangement:    arrangement.InitModel(def.arrangement, def.parts),
+			definition:     def,
+			programChannel: make(chan midiEventLoopMsg),
+			playState:      InitLineStates(1, []linestate{}, 0),
+		}
+		go func() {
+			<-m.programChannel
+		}()
+		m.playing = PLAY_STANDARD
+		for m.playing != PLAY_STOPPED {
+			m.advanceKeyCycle()
+			counter++
+		}
+		fmt.Println(counter)
+		assert.Equal(t, 1, counter)
+	})
+
+	t.Run("2 iteration song", func(t *testing.T) {
+		var counter int
+		var parts = InitParts()
+		var arr *arrangement.Arrangement = InitArrangement(parts)
+		def := Definition{
+			arrangement: arr,
+			parts:       &parts,
+			keyline:     0,
+		}
+		m := model{
+			arrangement:    arrangement.InitModel(def.arrangement, def.parts),
+			definition:     def,
+			programChannel: make(chan midiEventLoopMsg),
+			playState:      InitLineStates(1, []linestate{}, 0),
+		}
+		m.arrangement.Cursor.IncreaseIterations()
+		go func() {
+			<-m.programChannel
+		}()
+		m.playing = PLAY_STANDARD
+		for m.playing != PLAY_STOPPED {
+			m.advanceKeyCycle()
+			counter++
+		}
+		fmt.Println(counter)
+		assert.Equal(t, 2, counter)
+	})
+
+	t.Run("2 cycle song", func(t *testing.T) {
+		var counter int
+		var parts = InitParts()
+		var arr *arrangement.Arrangement = InitArrangement(parts)
+		def := Definition{
+			arrangement: arr,
+			parts:       &parts,
+			keyline:     0,
+		}
+		m := model{
+			arrangement:    arrangement.InitModel(def.arrangement, def.parts),
+			definition:     def,
+			programChannel: make(chan midiEventLoopMsg),
+			playState:      InitLineStates(1, []linestate{}, 0),
+		}
+		arr = m.arrangement.Cursor.GetCurrentNode()
+		(*arr).Section.Cycles = 2
+		go func() {
+			<-m.programChannel
+		}()
+		m.playing = PLAY_STANDARD
+		for m.playing != PLAY_STOPPED {
+			m.advanceKeyCycle()
+			counter++
+		}
+		assert.Equal(t, 2, counter)
 	})
 }
