@@ -488,3 +488,51 @@ func TestModelView(t *testing.T) {
 	assert.Contains(t, groupOutput, "  ", "Group rendering should include indentation")
 }
 
+func TestIsFirstChild(t *testing.T) {
+	root := &Arrangement{
+		Iterations: 1,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	nodeA := &Arrangement{
+		Section:    SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations: 1,
+	}
+
+	nodeB := &Arrangement{
+		Section:    SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2},
+		Iterations: 1,
+	}
+
+	group1 := &Arrangement{
+		Iterations: 2,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	nodeC := &Arrangement{
+		Section:    SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations: 1,
+	}
+
+	nodeD := &Arrangement{
+		Section:    SongSection{Part: 3, Cycles: 3, StartBeat: 2, StartCycles: 0},
+		Iterations: 1,
+	}
+
+	group1.Nodes = append(group1.Nodes, nodeC, nodeD)
+
+	root.Nodes = append(root.Nodes, nodeA, group1, nodeB)
+
+	cursor := ArrCursor{root, nodeA}
+	assert.True(t, cursor.IsFirstChild())
+
+	cursor = ArrCursor{root, nodeB}
+	assert.False(t, cursor.IsFirstChild())
+
+	cursor = ArrCursor{root, group1, nodeC}
+	assert.True(t, cursor.IsFirstChild())
+
+	cursor = ArrCursor{root, group1, nodeD}
+	assert.False(t, cursor.IsFirstChild())
+}
+

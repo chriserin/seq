@@ -1044,24 +1044,12 @@ func (m *model) DecreaseStartCycles() {
 
 func (m *model) IncreaseCycles() {
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	if currentNode != nil {
-		if currentNode.IsEndNode() {
-			currentNode.Section.IncreaseCycles()
-		} else {
-			m.arrangement.Cursor.IncreaseIterations()
-		}
-	}
+	currentNode.Section.IncreaseCycles()
 }
 
 func (m *model) DecreaseCycles() {
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	if currentNode != nil {
-		if currentNode.IsEndNode() {
-			currentNode.Section.DecreaseCycles()
-		} else {
-			m.arrangement.Cursor.DecreaseIterations()
-		}
-	}
+	currentNode.Section.DecreaseCycles()
 }
 
 func (m *model) IncreasePartSelector() {
