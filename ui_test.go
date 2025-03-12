@@ -81,12 +81,13 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			<-m.programChannel
 		}()
 		m.playing = PLAY_STANDARD
+		m.arrangement.Cursor.ResetIterations()
 		for m.playing != PLAY_STOPPED {
 			m.advanceKeyCycle()
 			counter++
 		}
 		fmt.Println(counter)
-		assert.Equal(t, 1, counter)
+		assert.Equal(t, 2, counter)
 	})
 
 	t.Run("2 iteration song", func(t *testing.T) {
@@ -104,11 +105,12 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			programChannel: make(chan midiEventLoopMsg),
 			playState:      InitLineStates(1, []linestate{}, 0),
 		}
-		m.arrangement.Cursor.IncreaseIterations()
+		m.arrangement.Cursor[0].IncreaseIterations()
 		go func() {
 			<-m.programChannel
 		}()
 		m.playing = PLAY_STANDARD
+		m.arrangement.Cursor.ResetIterations()
 		for m.playing != PLAY_STOPPED {
 			m.advanceKeyCycle()
 			counter++
@@ -138,10 +140,12 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			<-m.programChannel
 		}()
 		m.playing = PLAY_STANDARD
+		fmt.Println()
+		m.arrangement.Cursor.ResetIterations()
 		for m.playing != PLAY_STOPPED {
 			m.advanceKeyCycle()
 			counter++
 		}
-		assert.Equal(t, 2, counter)
+		assert.Equal(t, 3, counter)
 	})
 }

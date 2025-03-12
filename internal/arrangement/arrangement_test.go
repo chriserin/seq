@@ -92,14 +92,13 @@ func TestArrCursor(t *testing.T) {
 		Nodes:      []*Arrangement{node2, node3},
 	}
 
-	groupCursor := ArrCursor{root, groupNode}
-	groupCursor.IncreaseIterations()
+	groupNode.IncreaseIterations()
 	assert.Equal(t, 2, groupNode.Iterations, "Group node should have 2 iterations")
 
-	groupCursor.DecreaseIterations()
+	groupNode.DecreaseIterations()
 	assert.Equal(t, 1, groupNode.Iterations, "Group node should have 1 iteration")
 
-	groupCursor.DecreaseIterations()
+	groupNode.DecreaseIterations()
 	assert.Equal(t, 1, groupNode.Iterations, "Group node iterations should not go below 1")
 
 	// Test DeleteNode
@@ -524,15 +523,355 @@ func TestIsFirstChild(t *testing.T) {
 	root.Nodes = append(root.Nodes, nodeA, group1, nodeB)
 
 	cursor := ArrCursor{root, nodeA}
-	assert.True(t, cursor.IsFirstChild())
+	assert.True(t, cursor.IsFirstSibling())
 
 	cursor = ArrCursor{root, nodeB}
-	assert.False(t, cursor.IsFirstChild())
+	assert.False(t, cursor.IsFirstSibling())
 
 	cursor = ArrCursor{root, group1, nodeC}
-	assert.True(t, cursor.IsFirstChild())
+	assert.True(t, cursor.IsFirstSibling())
 
 	cursor = ArrCursor{root, group1, nodeD}
-	assert.False(t, cursor.IsFirstChild())
+	assert.False(t, cursor.IsFirstSibling())
 }
 
+func TestIsLastSibling(t *testing.T) {
+	// Setup test arrangement tree
+	root := &Arrangement{
+		Iterations: 1,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	nodeA := &Arrangement{
+		Section:    SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations: 1,
+	}
+
+	nodeB := &Arrangement{
+		Section:    SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2},
+		Iterations: 1,
+	}
+
+	group1 := &Arrangement{
+		Iterations: 2,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	nodeC := &Arrangement{
+		Section:    SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations: 1,
+	}
+
+	nodeD := &Arrangement{
+		Section:    SongSection{Part: 3, Cycles: 3, StartBeat: 2, StartCycles: 0},
+		Iterations: 1,
+	}
+
+	group1.Nodes = append(group1.Nodes, nodeC, nodeD)
+	root.Nodes = append(root.Nodes, nodeA, group1, nodeB)
+
+	// Define test cases
+	tests := []struct {
+		name     string
+		cursor   ArrCursor
+		expected bool
+	}{
+		{
+			name:     "nodeA is not the last sibling of root",
+			cursor:   ArrCursor{root, nodeA},
+			expected: false,
+		},
+		{
+			name:     "nodeB is the last sibling of root",
+			cursor:   ArrCursor{root, nodeB},
+			expected: true,
+		},
+		{
+			name:     "nodeC is not the last sibling of group1",
+			cursor:   ArrCursor{root, group1, nodeC},
+			expected: false,
+		},
+		{
+			name:     "nodeD is the last sibling of group1",
+			cursor:   ArrCursor{root, group1, nodeD},
+			expected: true,
+		},
+		{
+			name:     "Single item cursor (root only) should return false",
+			cursor:   ArrCursor{root},
+			expected: false,
+		},
+		{
+			name:     "Empty cursor should return false",
+			cursor:   ArrCursor{},
+			expected: false,
+		},
+	}
+
+	// Run test cases
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.cursor.IsLastSibling()
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestIsRoot(t *testing.T) {
+	root := &Arrangement{
+		Iterations: 1,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	nodeA := &Arrangement{
+		Section:    SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations: 1,
+	}
+
+	// Test cases
+	tests := []struct {
+		name     string
+		cursor   ArrCursor
+		expected bool
+	}{
+		{
+			name:     "Root only cursor should return true",
+			cursor:   ArrCursor{root},
+			expected: true,
+		},
+		{
+			name:     "Multi-node cursor should return false",
+			cursor:   ArrCursor{root, nodeA},
+			expected: false,
+		},
+		{
+			name:     "Empty cursor should return false",
+			cursor:   ArrCursor{},
+			expected: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.cursor.IsRoot()
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestHasParentIterations(t *testing.T) {
+	// Setup arrangement with playingIterations
+	// Remember: only group nodes have iterations, end nodes (with Sections) don't
+
+	// Root node (group)
+	root := &Arrangement{
+		Iterations:        2,
+		playingIterations: 1, // Has iterations left
+		Nodes:             make([]*Arrangement, 0),
+	}
+
+	// End node with section
+	nodeA := &Arrangement{
+		Section: SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Nodes:   nil, // End node
+	}
+
+	// Group node with iterations
+	groupWithIter := &Arrangement{
+		Iterations:        2,
+		playingIterations: 2, // Has iterations left
+		Nodes:             make([]*Arrangement, 0),
+	}
+
+	// Group node without iterations left
+	groupNoIter := &Arrangement{
+		Iterations:        2,
+		playingIterations: 0, // No iterations left
+		Nodes:             make([]*Arrangement, 0),
+	}
+
+	// End node in groups
+	nodeB := &Arrangement{
+		Section: SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2},
+		Nodes:   nil, // End node
+	}
+
+	nodeC := &Arrangement{
+		Section: SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Nodes:   nil, // End node
+	}
+
+	// Set up the tree
+	groupWithIter.Nodes = append(groupWithIter.Nodes, nodeB)
+	groupNoIter.Nodes = append(groupNoIter.Nodes, nodeC)
+	root.Nodes = append(root.Nodes, nodeA, groupWithIter, groupNoIter)
+
+	// Test cases
+	tests := []struct {
+		name     string
+		cursor   ArrCursor
+		expected bool
+	}{
+		{
+			name:     "Root only cursor has no parent",
+			cursor:   ArrCursor{root},
+			expected: false,
+		},
+		{
+			name:     "Parent with playingIterations > 0",
+			cursor:   ArrCursor{root, groupWithIter, nodeB},
+			expected: true,
+		},
+		{
+			name:     "Parent with playingIterations = 0",
+			cursor:   ArrCursor{root, groupNoIter, nodeC},
+			expected: false,
+		},
+		{
+			name:     "End node directly under root",
+			cursor:   ArrCursor{root, nodeA},
+			expected: true, // root has playingIterations > 0
+		},
+		{
+			name:     "Empty cursor has no parent",
+			cursor:   ArrCursor{},
+			expected: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.cursor.HasParentIterations()
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestMoveToFirstSibling(t *testing.T) {
+	root := &Arrangement{
+		Iterations: 1,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	nodeA := &Arrangement{
+		Section:    SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations: 1,
+	}
+
+	nodeB := &Arrangement{
+		Section:    SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2},
+		Iterations: 1,
+	}
+
+	nodeC := &Arrangement{
+		Section:    SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations: 1,
+	}
+
+	group1 := &Arrangement{
+		Iterations: 1,
+		Nodes:      []*Arrangement{nodeB, nodeC},
+	}
+
+	root.Nodes = append(root.Nodes, nodeA, group1)
+
+	cursor := ArrCursor{root, group1, nodeC}
+
+	cursorCopy := make(ArrCursor, len(cursor))
+	copy(cursorCopy, cursor)
+
+	cursorCopy.MoveToFirstSibling()
+
+	assert.Equal(t, root, cursorCopy[0], "Root should remain the same")
+	assert.Equal(t, group1, cursorCopy[1], "Group should remain the same")
+	assert.Equal(t, nodeB, cursorCopy[2], "Should now point to the first sibling")
+}
+
+func TestUp(t *testing.T) {
+	root := &Arrangement{
+		Iterations: 1,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	nodeA := &Arrangement{
+		Section:    SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations: 1,
+	}
+
+	group1 := &Arrangement{
+		Iterations: 2,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	nodeB := &Arrangement{
+		Section:    SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2},
+		Iterations: 1,
+	}
+
+	// Set up the tree
+	group1.Nodes = append(group1.Nodes, nodeB)
+	root.Nodes = append(root.Nodes, nodeA, group1)
+
+	// Test cases
+	tests := []struct {
+		name     string
+		cursor   ArrCursor
+		expected ArrCursor
+	}{
+		{
+			name:     "Move up from nodeB to group1",
+			cursor:   ArrCursor{root, group1, nodeB},
+			expected: ArrCursor{root, group1},
+		},
+		{
+			name:     "Move up from group1 to root",
+			cursor:   ArrCursor{root, group1},
+			expected: ArrCursor{root},
+		},
+		{
+			name:     "Move up from root (should remain root)",
+			cursor:   ArrCursor{root},
+			expected: ArrCursor{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a copy for testing
+			cursorCopy := make(ArrCursor, len(tc.cursor))
+			copy(cursorCopy, tc.cursor)
+
+			cursorCopy.Up()
+			assert.Equal(t, tc.expected, cursorCopy)
+		})
+	}
+}
+
+func TestResetIterations(t *testing.T) {
+	root := &Arrangement{
+		Iterations:        2,
+		playingIterations: 0, // Needs reset
+		Nodes:             make([]*Arrangement, 0),
+	}
+
+	nodeA := &Arrangement{
+		Section:           SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations:        3,
+		playingIterations: 0, // Needs reset
+	}
+
+	group1 := &Arrangement{
+		Iterations:        1,
+		playingIterations: 1, // Already set, should not change
+	}
+
+	root.Nodes = append(root.Nodes, nodeA, group1)
+
+	cursor := ArrCursor{root, nodeA}
+
+	cursor.ResetIterations()
+
+	assert.Equal(t, 2, root.playingIterations, "Root playingIterations should be reset to Iterations value")
+	assert.Equal(t, 3, nodeA.playingIterations, "NodeA playingIterations should be reset to Iterations value")
+	assert.Equal(t, 1, group1.playingIterations, "Group1 playingIterations should remain unchanged")
+}

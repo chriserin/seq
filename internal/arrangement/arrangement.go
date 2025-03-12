@@ -14,9 +14,20 @@ import (
 
 // New tree-based arrangement structure
 type Arrangement struct {
-	Section    SongSection
-	Nodes      []*Arrangement
-	Iterations int
+	Section           SongSection
+	Nodes             []*Arrangement
+	Iterations        int
+	playingIterations int
+}
+
+func (a *Arrangement) Reset() {
+	a.playingIterations = a.Iterations
+}
+
+func (a *Arrangement) DrawDown() {
+	if a.playingIterations > 0 {
+		a.playingIterations--
+	}
 }
 
 // ArrCursor represents the path through the tree to the current node
@@ -25,6 +36,53 @@ type ArrCursor []*Arrangement
 // IsEndNode checks if an arrangement is an end node (no children)
 func (a *Arrangement) IsEndNode() bool {
 	return len(a.Nodes) == 0
+}
+
+func (a *Arrangement) IsGroup() bool {
+	return len(a.Nodes) != 0
+}
+
+func (a *ArrCursor) IsRoot() bool {
+	return len(*a) == 1
+}
+
+func (a *ArrCursor) HasParentIterations() bool {
+	cursorLength := len(*a)
+	if cursorLength < 2 {
+		return false // Root node or empty cursor
+	}
+
+	parent := (*a)[cursorLength-2]
+	return parent.playingIterations > 0
+}
+
+func (a *ArrCursor) GetParentNode() *Arrangement {
+	cursorLength := len(*a)
+	if cursorLength < 2 {
+		return (*a)[0] // Root node or empty cursor
+	}
+
+	parent := (*a)[cursorLength-2]
+	return parent
+}
+
+func (ac *ArrCursor) MoveToFirstSibling() {
+	var workingCursor ArrCursor = make([]*Arrangement, len(*ac))
+	copy(workingCursor, *ac)
+	workingCursor = workingCursor[:len(workingCursor)-1]
+	MoveToFirstChild(ac, &workingCursor)
+}
+
+func (ac *ArrCursor) Up() {
+	*ac = (*ac)[:len(*ac)-1]
+}
+
+func (ac *ArrCursor) ResetIterations() {
+	for i := range *ac {
+		if (*ac)[i].playingIterations == 0 {
+			(*ac)[i].playingIterations = (*ac)[i].Iterations
+		}
+	}
 }
 
 // GetCurrentNode returns the current node based on the cursor path
@@ -257,13 +315,26 @@ type Model struct {
 	depthCursor int
 }
 
-func (cursor ArrCursor) IsFirstChild() bool {
+func (cursor ArrCursor) IsFirstSibling() bool {
 	if len(cursor) < 2 {
 		return false
 	}
 	leaf := cursor[len(cursor)-1]
 	parent := cursor[len(cursor)-2]
 	return slices.Index(parent.Nodes, leaf) == 0
+}
+
+func (a *ArrCursor) IsLastSibling() bool {
+	cursorLength := len(*a)
+	if cursorLength < 2 {
+		return false // Root node or empty cursor
+	}
+
+	leaf := (*a)[cursorLength-1]
+	parent := (*a)[cursorLength-2]
+
+	index := slices.Index(parent.Nodes, leaf)
+	return index == len(parent.Nodes)-1
 }
 
 func InitModel(arrangement *Arrangement, parts *[]Part) Model {
@@ -331,7 +402,7 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 			m.depthCursor = len(m.Cursor) - 1
 		}
 	case Is(msg, keys.CursorUp):
-		if m.Cursor.IsFirstChild() {
+		if m.Cursor.IsFirstSibling() {
 			if m.depthCursor > 0 {
 				m.depthCursor--
 			}

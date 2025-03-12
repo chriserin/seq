@@ -1680,6 +1680,7 @@ func (m *model) Start() {
 	// Reset to first node for playback
 	if len(m.definition.arrangement.Nodes) > 0 {
 		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement, m.definition.arrangement.Nodes[0]}
+		m.arrangement.Cursor.ResetIterations()
 	}
 
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
@@ -2267,14 +2268,40 @@ func (m *model) advanceKeyCycle() {
 		songSection := currentNode.Section
 
 		if songSection.Cycles+songSection.StartCycles <= m.keyCycles {
-			if m.arrangement.Cursor.MoveNext() {
-				m.keyCycles = currentNode.Section.StartCycles
-				m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(currentNode.Section.StartBeat))
-			} else {
-				m.StartStop()
+			if m.PlayMove() {
+				m.StartPart()
 			}
 		}
 	}
+}
+
+func (m *model) StartPart() {
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	m.keyCycles = currentNode.Section.StartCycles
+	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(currentNode.Section.StartBeat))
+}
+
+func (m *model) PlayMove() bool {
+
+	if m.arrangement.Cursor.IsRoot() {
+		m.StartStop()
+		return false
+	} else if m.arrangement.Cursor.IsLastSibling() {
+		m.arrangement.Cursor.GetParentNode().DrawDown()
+		if m.arrangement.Cursor.HasParentIterations() {
+			m.arrangement.Cursor.MoveToFirstSibling()
+			if m.arrangement.Cursor.GetCurrentNode().IsGroup() {
+				m.arrangement.Cursor.MoveNext()
+			}
+		} else {
+			m.arrangement.Cursor.Up()
+			return m.PlayMove()
+		}
+	} else {
+		m.arrangement.Cursor.MoveNext()
+		m.arrangement.Cursor.ResetIterations()
+	}
+	return true
 }
 
 func (m model) PlayingOverlayKeys() []overlayKey {
