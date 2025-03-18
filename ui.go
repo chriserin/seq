@@ -1617,25 +1617,14 @@ func (m *model) NewPart(index int) {
 		*m.definition.parts = append(*m.definition.parts, InitPart(fmt.Sprintf("Part %d", partId+1)))
 	}
 
-	// Create new section node
 	section := InitSongSection(partId)
 	newNode := &arrangement.Arrangement{
 		Section:    section,
 		Iterations: 1,
 	}
 
-	// Add to the tree
-	if len(m.arrangement.Cursor) >= 2 {
-		m.arrangement.AddPart(m.sectionSideIndicator, newNode)
-	} else if len(m.arrangement.Cursor) == 1 {
-		// Add to root node
-		m.definition.arrangement.Nodes = append(m.definition.arrangement.Nodes, newNode)
+	m.arrangement.AddPart(m.sectionSideIndicator, newNode)
 
-		// Update cursor to point to new node
-		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement, newNode}
-	}
-
-	// Update overlay
 	m.currentOverlay = m.CurrentPart().Overlays
 }
 

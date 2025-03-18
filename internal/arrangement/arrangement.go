@@ -427,8 +427,8 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch {
 	case Is(msg, keys.CursorDown):
 		if !m.Cursor.IsLastSibling() && m.Cursor.GetNextSiblingNode().IsGroup() {
+			m.depthCursor = len(m.Cursor) - 1
 			m.Cursor.MoveNext()
-			m.depthCursor = len(m.Cursor) - 2
 		} else if m.depthCursor < len(m.Cursor)-1 {
 			m.depthCursor++
 		} else {
@@ -488,10 +488,13 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 			currentNode := m.Cursor[len(m.Cursor)-1]
 			parentNode := m.Cursor[len(m.Cursor)-2]
 
-			currentIndex := slices.Index(m.Cursor, currentNode)
+			currentIndex := slices.Index(m.Cursor.GetParentNode().Nodes, currentNode)
 
 			if currentIndex+1 < len(parentNode.Nodes) {
+				m.Cursor.MovePrev()
 				GroupNodes(parentNode, currentIndex, currentIndex+1)
+				m.Cursor.MoveNext()
+				m.depthCursor = len(m.Cursor) - 1
 			}
 		}
 	case Is(msg, keys.DeleteNode):
