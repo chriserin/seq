@@ -93,6 +93,15 @@ func (ac ArrCursor) GetCurrentNode() *Arrangement {
 	return ac[len(ac)-1]
 }
 
+func (ac ArrCursor) GetNextSiblingNode() *Arrangement {
+	node := ac[len(ac)-1]
+	parentNode := ac[len(ac)-2]
+
+	currentIndex := slices.Index(parentNode.Nodes, node)
+
+	return parentNode.Nodes[currentIndex+1]
+}
+
 // MoveNext moves to the next node in the arrangement
 func (ac *ArrCursor) MoveNext() bool {
 	var workingCursor ArrCursor = make([]*Arrangement, len(*ac))
@@ -315,6 +324,28 @@ type Model struct {
 	depthCursor int
 }
 
+func (m *Model) AddPart(after bool, newNode *Arrangement) {
+	currentNode := m.Cursor[len(m.Cursor)-1]
+	parentNode := m.Cursor[len(m.Cursor)-2]
+
+	currentIndex := slices.Index(parentNode.Nodes, currentNode)
+	if after {
+		currentIndex++
+	}
+
+	if currentIndex > len(parentNode.Nodes) {
+		parentNode.Nodes = append(parentNode.Nodes, newNode)
+	} else {
+		parentNode.Nodes = slices.Insert(parentNode.Nodes, currentIndex, newNode)
+	}
+
+	// Update cursor to point to new node
+	newCursor := make(ArrCursor, len(m.Cursor)-1)
+	copy(newCursor, m.Cursor[:len(m.Cursor)-1])
+	newCursor = append(newCursor, newNode)
+	m.Cursor = newCursor
+}
+
 func (cursor ArrCursor) IsFirstSibling() bool {
 	if len(cursor) < 2 {
 		return false
@@ -395,14 +426,17 @@ func Key(help string, keyboardKey ...string) key.Binding {
 func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch {
 	case Is(msg, keys.CursorDown):
-		if m.depthCursor+1 < len(m.Cursor) {
+		if !m.Cursor.IsLastSibling() && m.Cursor.GetNextSiblingNode().IsGroup() {
+			m.Cursor.MoveNext()
+			m.depthCursor = len(m.Cursor) - 2
+		} else if m.depthCursor < len(m.Cursor)-1 {
 			m.depthCursor++
 		} else {
 			m.Cursor.MoveNext()
 			m.depthCursor = len(m.Cursor) - 1
 		}
 	case Is(msg, keys.CursorUp):
-		if m.Cursor.IsFirstSibling() {
+		if m.Cursor[:m.depthCursor+1].IsFirstSibling() {
 			if m.depthCursor > 0 {
 				m.depthCursor--
 			}
@@ -454,16 +488,8 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 			currentNode := m.Cursor[len(m.Cursor)-1]
 			parentNode := m.Cursor[len(m.Cursor)-2]
 
-			// Find current node's index in parent
-			var currentIndex int
-			for i, node := range parentNode.Nodes {
-				if node == currentNode {
-					currentIndex = i
-					break
-				}
-			}
+			currentIndex := slices.Index(m.Cursor, currentNode)
 
-			// Group with next node if possible
 			if currentIndex+1 < len(parentNode.Nodes) {
 				GroupNodes(parentNode, currentIndex, currentIndex+1)
 			}
@@ -547,7 +573,7 @@ func (m Model) View(currentSongSection int) string {
 	buf.WriteString("\n")
 
 	// Recursively render the arrangement tree
-	m.renderNode(&buf, m.root, 0, currentSongSection, "")
+	m.renderNode(&buf, m.root, 0, currentSongSection)
 
 	return buf.String()
 }
@@ -558,20 +584,20 @@ func (m Model) GetCursorPath() ArrCursor {
 }
 
 // Recursively render a node and its children
-func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, currentSongSection int, prefix string) {
+func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, currentSongSection int) {
 	if node == nil {
 		return
 	}
 
 	// For non-end nodes (groups), show iterations
 	if !node.IsEndNode() {
-		indentation := strings.Repeat("--", depth)
-		nodeName := fmt.Sprintf("%s%s[Group]", indentation, prefix)
-		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, nodeName))
+		indentation := strings.Repeat("  ", depth)
+		nodeName := fmt.Sprintf("%s[Group]", indentation)
+		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Left, nodeName))
 		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, ""))
 		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, ""))
 
-		isSelected := depth == m.depthCursor
+		isSelected := depth == m.depthCursor && slices.Contains(m.Cursor, node)
 
 		// Display iterations
 		iterations := fmt.Sprintf("%d", node.Iterations)
@@ -583,15 +609,14 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 		buf.WriteString("\n")
 
 		// Render child nodes
-		for i, childNode := range node.Nodes {
-			childPrefix := fmt.Sprintf("%d) ", i+1)
-			m.renderNode(buf, childNode, depth+1, currentSongSection, childPrefix)
+		for _, childNode := range node.Nodes {
+			m.renderNode(buf, childNode, depth+1, currentSongSection)
 		}
 	} else {
 		// For end nodes (song sections), show detailed information
 		songSection := node.Section
 		indentation := strings.Repeat("  ", depth)
-		section := fmt.Sprintf("%s%s%s", indentation, prefix, (*m.parts)[songSection.Part].GetName())
+		section := fmt.Sprintf("%s%s", indentation, (*m.parts)[songSection.Part].GetName())
 
 		isSelected := len(m.Cursor)-1 == m.depthCursor &&
 			m.Cursor[len(m.Cursor)-1] == node
@@ -599,12 +624,12 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 		// Check if this is the currently playing section
 		var sectionOutput string
 		if m.Cursor.Matches(node) {
-			sectionOutput = fmt.Sprintf("%s%s", colors.CurrentlyPlayingDot, section)
+			sectionOutput = fmt.Sprintf("%s%s", section, colors.CurrentlyPlayingDot)
 		} else {
 			sectionOutput = section
 		}
 
-		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, sectionOutput))
+		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Left, sectionOutput))
 
 		startBeat := songSection.StartBeat
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_START_BEAT {

@@ -1626,37 +1626,7 @@ func (m *model) NewPart(index int) {
 
 	// Add to the tree
 	if len(m.arrangement.Cursor) >= 2 {
-		currentNode := m.arrangement.Cursor[len(m.arrangement.Cursor)-1]
-		parentNode := m.arrangement.Cursor[len(m.arrangement.Cursor)-2]
-
-		// Find current node's index in parent
-		var currentIndex int
-		for i, node := range parentNode.Nodes {
-			if node == currentNode {
-				currentIndex = i
-				break
-			}
-		}
-
-		// Insert new node after current node if sectionSideIndicator is true,
-		// or before current node if false
-		insertAt := currentIndex
-		if m.sectionSideIndicator {
-			insertAt++
-		}
-
-		// Insert the new node
-		if insertAt > len(parentNode.Nodes) {
-			parentNode.Nodes = append(parentNode.Nodes, newNode)
-		} else {
-			parentNode.Nodes = slices.Insert(parentNode.Nodes, insertAt, newNode)
-		}
-
-		// Update cursor to point to new node
-		newCursor := make(arrangement.ArrCursor, len(m.arrangement.Cursor)-1)
-		copy(newCursor, m.arrangement.Cursor[:len(m.arrangement.Cursor)-1])
-		newCursor = append(newCursor, newNode)
-		m.arrangement.Cursor = newCursor
+		m.arrangement.AddPart(m.sectionSideIndicator, newNode)
 	} else if len(m.arrangement.Cursor) == 1 {
 		// Add to root node
 		m.definition.arrangement.Nodes = append(m.definition.arrangement.Nodes, newNode)
