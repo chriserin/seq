@@ -258,7 +258,7 @@ func GroupNodes(parent *Arrangement, index1, index2 int) {
 }
 
 func (ac *ArrCursor) DeleteNode() {
-	if len(*ac) < 3 {
+	if len(*ac) < 2 && len(((*ac)[0]).Nodes) > 1 {
 		return // Can't delete root
 	}
 

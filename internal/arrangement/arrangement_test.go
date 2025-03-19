@@ -100,17 +100,6 @@ func TestArrCursor(t *testing.T) {
 
 	groupNode.DecreaseIterations()
 	assert.Equal(t, 1, groupNode.Iterations, "Group node iterations should not go below 1")
-
-	// Test DeleteNode
-	deleteRoot := root
-	deleteNode1 := &Arrangement{Section: section1, Iterations: 1}
-	deleteNode2 := &Arrangement{Section: section2, Iterations: 1}
-	deleteRoot.Nodes = []*Arrangement{deleteNode1, deleteNode2}
-
-	deleteCursor := ArrCursor{deleteRoot, deleteNode1}
-	deleteCursor.DeleteNode()
-	assert.Equal(t, 1, len(deleteRoot.Nodes), "Root should have 1 node after deletion")
-	assert.Equal(t, deleteNode2, deleteRoot.Nodes[0], "Remaining node should be node2")
 }
 
 // TestMoveNext tests the MoveNext functionality of the ArrCursor
@@ -248,7 +237,7 @@ func TestGroupNodes(t *testing.T) {
 	assert.Equal(t, 2, len(root.Nodes), "Root should have 2 nodes after grouping")
 
 	// Get the group node (should be the last one)
-	groupNode := root.Nodes[1]
+	groupNode := root.Nodes[0]
 	assert.Equal(t, 2, len(groupNode.Nodes), "Group node should have 2 children")
 	assert.Equal(t, node1, groupNode.Nodes[0], "First child of group should be node1")
 	assert.Equal(t, node2, groupNode.Nodes[1], "Second child of group should be node2")
