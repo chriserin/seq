@@ -260,39 +260,36 @@ func GroupNodes(parent *Arrangement, index1, index2 int) {
 	parent.Nodes = append(parent.Nodes, newParent)
 }
 
-// DeleteNode removes the current node and restructures the tree
 func (ac *ArrCursor) DeleteNode() {
-	if len(*ac) < 2 {
+	if len(*ac) < 3 {
 		return // Can't delete root
 	}
 
 	currentNode := (*ac)[len(*ac)-1]
 	parentNode := (*ac)[len(*ac)-2]
 
-	// Find current node's index in parent's Nodes
-	var currentIndex int
-	for i, node := range parentNode.Nodes {
-		if node == currentNode {
-			currentIndex = i
-			break
-		}
+	currentIndex := slices.Index(ac.GetParentNode().Nodes, currentNode)
+
+	if len(parentNode.Nodes) == 1 {
+		parentNode.Nodes = []*Arrangement{}
+		newCursor := make(ArrCursor, len(*ac))
+		copy(newCursor, (*ac))
+		newCursor.MovePrev()
+		ac.Up()
+		ac.DeleteNode()
+		*ac = newCursor
+	} else {
+		ac.MovePrev()
+		parentNode.Nodes = append(parentNode.Nodes[:currentIndex], parentNode.Nodes[currentIndex+1:]...)
 	}
-
-	// Remove current node from parent
-	parentNode.Nodes = append(parentNode.Nodes[:currentIndex], parentNode.Nodes[currentIndex+1:]...)
-
-	// Move cursor up one level
-	*ac = (*ac)[:len(*ac)-1]
 }
 
-// IncreaseIterations increases the iterations count of current node
 func (arr *Arrangement) IncreaseIterations() {
 	if arr.Iterations < 128 {
 		arr.Iterations++
 	}
 }
 
-// DecreaseIterations decreases the iterations count of current node
 func (arr *Arrangement) DecreaseIterations() {
 	if arr.Iterations > 1 {
 		arr.Iterations--

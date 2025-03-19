@@ -262,44 +262,6 @@ func TestGroupNodes(t *testing.T) {
 	assert.Equal(t, originalNodes, len(root.Nodes), "Invalid grouping should not change structure")
 }
 
-// TestDeleteNode tests the node deletion functionality
-func TestDeleteNode(t *testing.T) {
-	// Create a basic arrangement tree
-	root := &Arrangement{
-		Iterations: 1,
-		Nodes:      make([]*Arrangement, 0),
-	}
-
-	// Create some sections and nodes
-	section1 := SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1}
-	section2 := SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2}
-	section3 := SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1}
-
-	node1 := &Arrangement{Section: section1, Iterations: 1}
-	node2 := &Arrangement{Section: section2, Iterations: 1}
-	node3 := &Arrangement{Section: section3, Iterations: 1}
-
-	// Add nodes to root in a specific order
-	root.Nodes = append(root.Nodes, node1, node2, node3)
-
-	// Create cursor pointing to node2
-	cursor := ArrCursor{root, node2}
-
-	// Delete the current node
-	cursor.DeleteNode()
-
-	// Check results
-	assert.Equal(t, 2, len(root.Nodes), "Root should have 2 nodes after deletion")
-	assert.Equal(t, node1, root.Nodes[0], "First node should be node1")
-	assert.Equal(t, node3, root.Nodes[1], "Second node should be node3")
-	assert.Equal(t, 1, len(cursor), "Cursor should move up one level")
-
-	// Try to delete the root (should fail)
-	rootCursor := ArrCursor{root}
-	rootCursor.DeleteNode()
-	assert.Equal(t, 1, len(rootCursor), "Root cursor should remain unchanged")
-}
-
 // TestSongSectionMethods tests the SongSection helper methods
 func TestSongSectionMethods(t *testing.T) {
 	section := SongSection{
@@ -874,4 +836,114 @@ func TestResetIterations(t *testing.T) {
 	assert.Equal(t, 2, root.playingIterations, "Root playingIterations should be reset to Iterations value")
 	assert.Equal(t, 3, nodeA.playingIterations, "NodeA playingIterations should be reset to Iterations value")
 	assert.Equal(t, 1, group1.playingIterations, "Group1 playingIterations should remain unchanged")
+}
+
+// TestDeleteNodeComplex tests the DeleteNode function in more complex scenarios
+func TestDeleteNodeComplex(t *testing.T) {
+	// Test case 1: Delete a node from a nested structure
+	t.Run("delete node from nested structure", func(t *testing.T) {
+		// Create a more complex arrangement tree
+		root := &Arrangement{
+			Iterations: 1,
+			Nodes:      make([]*Arrangement, 0),
+		}
+
+		outerGroup := &Arrangement{
+			Iterations: 2,
+			Nodes:      make([]*Arrangement, 0),
+		}
+
+		innerGroup := &Arrangement{
+			Iterations: 3,
+			Nodes:      make([]*Arrangement, 0),
+		}
+
+		nodeA := &Arrangement{
+			Section: SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		}
+
+		nodeB := &Arrangement{
+			Section: SongSection{Part: 1, Cycles: 2, StartBeat: 1, StartCycles: 0},
+		}
+
+		nodeC := &Arrangement{
+			Section: SongSection{Part: 2, Cycles: 3, StartBeat: 2, StartCycles: 1},
+		}
+
+		innerGroup.Nodes = append(innerGroup.Nodes, nodeA, nodeB)
+		outerGroup.Nodes = append(outerGroup.Nodes, innerGroup, nodeC)
+		root.Nodes = append(root.Nodes, outerGroup)
+
+		cursor := ArrCursor{root, outerGroup, innerGroup, nodeB}
+
+		cursor.DeleteNode()
+
+		assert.Equal(t, 4, len(cursor), "Cursor should point to previous node")
+		assert.Equal(t, nodeA, cursor[3], "Cursor should point to previous node")
+
+		assert.Equal(t, 1, len(innerGroup.Nodes), "InnerGroup should have 1 node left")
+		assert.Equal(t, nodeA, innerGroup.Nodes[0], "NodeA should be the only node left in innerGroup")
+	})
+
+	t.Run("delete last node in a group", func(t *testing.T) {
+		root := &Arrangement{
+			Iterations: 1,
+			Nodes:      make([]*Arrangement, 0),
+		}
+
+		firstNode := &Arrangement{
+			Section: SongSection{Part: 1, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		}
+
+		group := &Arrangement{
+			Iterations: 2,
+			Nodes:      make([]*Arrangement, 0),
+		}
+
+		lastNode := &Arrangement{
+			Section: SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		}
+
+		group.Nodes = append(group.Nodes, lastNode)
+		root.Nodes = append(root.Nodes, firstNode, group)
+
+		cursor := ArrCursor{root, group, lastNode}
+
+		cursor.DeleteNode()
+
+		assert.Equal(t, 2, len(cursor), "Cursor should move to previous node")
+		assert.Equal(t, firstNode, cursor[1], "Cursor should now point to previous node")
+
+		assert.Equal(t, 1, len(root.Nodes), "root should only have the node")
+	})
+
+	// Test case 3: Delete middle node in a flat structure
+	t.Run("delete middle node in flat structure", func(t *testing.T) {
+		root := &Arrangement{
+			Iterations: 1,
+			Nodes:      make([]*Arrangement, 0),
+		}
+
+		node1 := &Arrangement{
+			Section: SongSection{Part: 0, Cycles: 1},
+		}
+		node2 := &Arrangement{
+			Section: SongSection{Part: 1, Cycles: 2},
+		}
+		node3 := &Arrangement{
+			Section: SongSection{Part: 2, Cycles: 3},
+		}
+
+		root.Nodes = append(root.Nodes, node1, node2, node3)
+
+		cursor := ArrCursor{root, node2}
+		cursor.DeleteNode()
+
+		assert.Equal(t, 2, len(root.Nodes), "Root should have 2 nodes after deletion")
+		assert.Equal(t, node1, root.Nodes[0], "First node should remain")
+		assert.Equal(t, node3, root.Nodes[1], "Third node should now be second")
+
+		assert.Equal(t, 2, len(cursor), "Cursor should move to first node")
+		assert.Equal(t, root, cursor[0], "Cursor should move to first node")
+	})
 }
