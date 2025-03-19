@@ -241,13 +241,11 @@ func GroupNodes(parent *Arrangement, index1, index2 int) {
 	node1 := parent.Nodes[index1]
 	node2 := parent.Nodes[index2]
 
-	// Create a new parent node
 	newParent := &Arrangement{
 		Nodes:      []*Arrangement{node1, node2},
 		Iterations: 1,
 	}
 
-	// Remove original nodes
 	if index1 < index2 {
 		parent.Nodes = append(parent.Nodes[:index1], parent.Nodes[index1+1:]...)
 		parent.Nodes = append(parent.Nodes[:index2-1], parent.Nodes[index2:]...)
@@ -256,8 +254,7 @@ func GroupNodes(parent *Arrangement, index1, index2 int) {
 		parent.Nodes = append(parent.Nodes[:index1-1], parent.Nodes[index1:]...)
 	}
 
-	// Add new parent
-	parent.Nodes = append(parent.Nodes, newParent)
+	parent.Nodes = slices.Insert(parent.Nodes, index1, newParent)
 }
 
 func (ac *ArrCursor) DeleteNode() {
