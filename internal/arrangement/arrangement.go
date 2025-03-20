@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/chriserin/seq/internal/colors"
+	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/overlays"
 )
 
@@ -343,6 +344,23 @@ func (m *Model) GroupNodes() {
 	}
 }
 
+func (m *Model) NewPart(index int, after bool) {
+	partId := index
+	if index < 0 {
+		partId = len(*m.parts)
+		*m.parts = append(*m.parts, InitPart(fmt.Sprintf("Part %d", partId+1)))
+	}
+
+	section := InitSongSection(partId)
+	newNode := &Arrangement{
+		Section:    section,
+		Iterations: 1,
+	}
+
+	m.AddPart(after, newNode)
+
+}
+
 func (m *Model) AddPart(after bool, newNode *Arrangement) {
 	currentNode := m.Cursor[len(m.Cursor)-1]
 	parentNode := m.Cursor[len(m.Cursor)-2]
@@ -525,6 +543,15 @@ type SongSection struct {
 	StartCycles int
 }
 
+func InitSongSection(part int) SongSection {
+	return SongSection{
+		Part:        part,
+		Cycles:      1,
+		StartBeat:   0,
+		StartCycles: 1,
+	}
+}
+
 func (ss *SongSection) IncreaseStartBeats() {
 	newStartBeats := ss.StartBeat + 1
 	if newStartBeats < 128 {
@@ -571,6 +598,10 @@ type Part struct {
 	Overlays *overlays.Overlay
 	Beats    uint8
 	Name     string
+}
+
+func InitPart(name string) Part {
+	return Part{Overlays: overlays.InitOverlay(overlaykey.ROOT, nil), Beats: 32, Name: name}
 }
 
 func (m Model) View(currentSongSection int) string {

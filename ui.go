@@ -1145,21 +1145,8 @@ func InitArrangement(parts []arrangement.Part) *arrangement.Arrangement {
 	return root
 }
 
-func InitSongSection(part int) arrangement.SongSection {
-	return arrangement.SongSection{
-		Part:        part,
-		Cycles:      1,
-		StartBeat:   0,
-		StartCycles: 1,
-	}
-}
-
-func InitPart(name string) arrangement.Part {
-	return arrangement.Part{Overlays: overlays.InitOverlay(overlaykey.ROOT, nil), Beats: 32, Name: name}
-}
-
 func InitParts() []arrangement.Part {
-	firstPart := InitPart("Part 1")
+	firstPart := arrangement.InitPart("Part 1")
 	return []arrangement.Part{firstPart}
 }
 
@@ -1256,7 +1243,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if Is(msg, keys.Enter) {
 			switch m.selectionIndicator {
 			case SELECT_PART:
-				m.NewPart(m.partSelectorIndex)
+				m.arrangement.NewPart(m.partSelectorIndex, m.sectionSideIndicator)
+				m.currentOverlay = m.CurrentPart().Overlays
 				m.selectionIndicator = SELECT_NOTHING
 			case SELECT_CONFIRM_NEW:
 				m.NewSequence()
@@ -1608,24 +1596,6 @@ func (m *model) PrevSection() {
 			m.currentOverlay = (*m.definition.parts)[partId].Overlays
 		}
 	}
-}
-
-func (m *model) NewPart(index int) {
-	partId := index
-	if index < 0 {
-		partId = len(*m.definition.parts)
-		*m.definition.parts = append(*m.definition.parts, InitPart(fmt.Sprintf("Part %d", partId+1)))
-	}
-
-	section := InitSongSection(partId)
-	newNode := &arrangement.Arrangement{
-		Section:    section,
-		Iterations: 1,
-	}
-
-	m.arrangement.AddPart(m.sectionSideIndicator, newNode)
-
-	m.currentOverlay = m.CurrentPart().Overlays
 }
 
 func (m *model) Start() {
