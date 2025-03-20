@@ -563,7 +563,7 @@ type Part struct {
 
 func (m Model) View(currentSongSection int) string {
 	var buf strings.Builder
-	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Section"))
+	buf.WriteString(lipgloss.PlaceHorizontal(20, lipgloss.Left, "Section"))
 	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Start Beat"))
 	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Start Cycle"))
 	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Cycles"))
@@ -590,7 +590,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 	if !node.IsEndNode() {
 		indentation := strings.Repeat("  ", depth)
 		nodeName := fmt.Sprintf("%s[Group]", indentation)
-		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Left, nodeName))
+		buf.WriteString(lipgloss.PlaceHorizontal(20, lipgloss.Left, nodeName))
 		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, ""))
 		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, ""))
 
@@ -626,7 +626,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 			sectionOutput = section
 		}
 
-		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Left, sectionOutput))
+		buf.WriteString(lipgloss.PlaceHorizontal(20, lipgloss.Left, sectionOutput))
 
 		startBeat := songSection.StartBeat
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_START_BEAT {
