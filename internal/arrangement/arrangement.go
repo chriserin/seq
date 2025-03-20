@@ -563,7 +563,7 @@ type Part struct {
 
 func (m Model) View(currentSongSection int) string {
 	var buf strings.Builder
-	buf.WriteString(lipgloss.PlaceHorizontal(20, lipgloss.Left, "Section"))
+	buf.WriteString(lipgloss.PlaceHorizontal(20, lipgloss.Left, "  Section"))
 	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Start Beat"))
 	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Start Cycle"))
 	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Cycles"))
@@ -587,7 +587,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 	}
 
 	// For non-end nodes (groups), show iterations
-	if !node.IsEndNode() {
+	if node.IsGroup() && depth > 0 {
 		indentation := strings.Repeat("  ", depth)
 		nodeName := fmt.Sprintf("%s[Group]", indentation)
 		buf.WriteString(lipgloss.PlaceHorizontal(20, lipgloss.Left, nodeName))
@@ -609,8 +609,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 		for _, childNode := range node.Nodes {
 			m.renderNode(buf, childNode, depth+1, currentSongSection)
 		}
-	} else {
-		// For end nodes (song sections), show detailed information
+	} else if node.IsEndNode() {
 		songSection := node.Section
 		indentation := strings.Repeat("  ", depth)
 		section := fmt.Sprintf("%s%s", indentation, (*m.parts)[songSection.Part].GetName())
@@ -650,6 +649,10 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 		}
 
 		buf.WriteString("\n")
+	} else {
+		for _, childNode := range node.Nodes {
+			m.renderNode(buf, childNode, depth+1, currentSongSection)
+		}
 	}
 }
 
