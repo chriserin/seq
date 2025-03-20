@@ -238,20 +238,27 @@ func GroupNodes(parent *Arrangement, index1, index2 int) {
 		return
 	}
 
-	node1 := parent.Nodes[index1]
-	node2 := parent.Nodes[index2]
-
-	newParent := &Arrangement{
-		Nodes:      []*Arrangement{node1, node2},
-		Iterations: 1,
-	}
+	var newParent *Arrangement
 
 	if index1 < index2 {
+		node1 := parent.Nodes[index1]
+		node2 := parent.Nodes[index2]
+
+		newParent = &Arrangement{
+			Nodes:      []*Arrangement{node1, node2},
+			Iterations: 1,
+		}
+
 		parent.Nodes = append(parent.Nodes[:index1], parent.Nodes[index1+1:]...)
 		parent.Nodes = append(parent.Nodes[:index2-1], parent.Nodes[index2:]...)
-	} else {
-		parent.Nodes = append(parent.Nodes[:index2], parent.Nodes[index2+1:]...)
-		parent.Nodes = append(parent.Nodes[:index1-1], parent.Nodes[index1:]...)
+	} else if index1 == index2 {
+		node1 := parent.Nodes[index1]
+
+		newParent = &Arrangement{
+			Nodes:      []*Arrangement{node1},
+			Iterations: 1,
+		}
+		parent.Nodes = append(parent.Nodes[:index1], parent.Nodes[index1+1:]...)
 	}
 
 	parent.Nodes = slices.Insert(parent.Nodes, index1, newParent)
@@ -316,6 +323,24 @@ type Model struct {
 	root        *Arrangement
 	parts       *[]Part
 	depthCursor int
+}
+
+func (m *Model) GroupNodes() {
+	if len(m.Cursor) >= 2 {
+		currentNode := m.Cursor[len(m.Cursor)-1]
+		parentNode := m.Cursor[len(m.Cursor)-2]
+
+		currentIndex := slices.Index(m.Cursor.GetParentNode().Nodes, currentNode)
+
+		m.Cursor.MovePrev()
+		if currentIndex+1 < len(parentNode.Nodes) {
+			GroupNodes(parentNode, currentIndex, currentIndex+1)
+		} else {
+			GroupNodes(parentNode, currentIndex, currentIndex)
+		}
+		m.Cursor.MoveNext()
+		m.depthCursor = len(m.Cursor) - 1
+	}
 }
 
 func (m *Model) AddPart(after bool, newNode *Arrangement) {
@@ -477,20 +502,7 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 			m.Cursor[m.depthCursor].DecreaseIterations()
 		}
 	case Is(msg, keys.GroupNodes):
-		// Group current node with next sibling if possible
-		if len(m.Cursor) >= 2 {
-			currentNode := m.Cursor[len(m.Cursor)-1]
-			parentNode := m.Cursor[len(m.Cursor)-2]
-
-			currentIndex := slices.Index(m.Cursor.GetParentNode().Nodes, currentNode)
-
-			if currentIndex+1 < len(parentNode.Nodes) {
-				m.Cursor.MovePrev()
-				GroupNodes(parentNode, currentIndex, currentIndex+1)
-				m.Cursor.MoveNext()
-				m.depthCursor = len(m.Cursor) - 1
-			}
-		}
+		m.GroupNodes()
 	case Is(msg, keys.DeleteNode):
 		m.Cursor.DeleteNode()
 	case Is(msg, keys.Escape):

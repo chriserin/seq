@@ -228,27 +228,41 @@ func TestGroupNodes(t *testing.T) {
 	node3 := &Arrangement{Section: section3, Iterations: 1}
 
 	// Add nodes to root in a specific order
-	root.Nodes = append(root.Nodes, node1, node2, node3)
+	t.Run("Group nodes at 1st level", func(t *testing.T) {
+		root.Nodes = append(root.Nodes, node1, node2, node3)
 
-	// Group nodes 1 and 2
-	GroupNodes(root, 0, 1)
+		// Group nodes 1 and 2
+		GroupNodes(root, 0, 1)
 
-	// Check the structure
-	assert.Equal(t, 2, len(root.Nodes), "Root should have 2 nodes after grouping")
+		// Check the structure
+		assert.Equal(t, 2, len(root.Nodes), "Root should have 2 nodes after grouping")
 
-	// Get the group node (should be the last one)
-	groupNode := root.Nodes[0]
-	assert.Equal(t, 2, len(groupNode.Nodes), "Group node should have 2 children")
-	assert.Equal(t, node1, groupNode.Nodes[0], "First child of group should be node1")
-	assert.Equal(t, node2, groupNode.Nodes[1], "Second child of group should be node2")
+		// Get the group node (should be the last one)
+		groupNode := root.Nodes[0]
+		assert.Equal(t, 2, len(groupNode.Nodes), "Group node should have 2 children")
+		assert.Equal(t, node1, groupNode.Nodes[0], "First child of group should be node1")
+		assert.Equal(t, node2, groupNode.Nodes[1], "Second child of group should be node2")
+	})
 
 	// Group with invalid indices
-	originalNodes := len(root.Nodes)
-	GroupNodes(root, -1, 1)
-	assert.Equal(t, originalNodes, len(root.Nodes), "Invalid grouping should not change structure")
+	t.Run("Group with invalid negative indices", func(t *testing.T) {
+		originalNodes := len(root.Nodes)
+		GroupNodes(root, -1, 1)
+		assert.Equal(t, originalNodes, len(root.Nodes), "Invalid grouping should not change structure")
+	})
 
-	GroupNodes(root, 0, 10)
-	assert.Equal(t, originalNodes, len(root.Nodes), "Invalid grouping should not change structure")
+	t.Run("Group with invalid high indices", func(t *testing.T) {
+		originalNodes := len(root.Nodes)
+		GroupNodes(root, 0, 10)
+		assert.Equal(t, originalNodes, len(root.Nodes), "Invalid grouping should not change structure")
+	})
+
+	t.Run("Place only the one node in a group", func(t *testing.T) {
+		root.Nodes = []*Arrangement{node1}
+		GroupNodes(root, 0, 0)
+		assert.Equal(t, 1, len(root.Nodes), "Group only one Node")
+		assert.Equal(t, node1, root.Nodes[0].Nodes[0])
+	})
 }
 
 // TestSongSectionMethods tests the SongSection helper methods
