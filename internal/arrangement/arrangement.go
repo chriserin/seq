@@ -258,8 +258,8 @@ func GroupNodes(parent *Arrangement, index1, index2 int) {
 }
 
 func (ac *ArrCursor) DeleteNode() {
-	if len(*ac) < 2 && len(((*ac)[0]).Nodes) > 1 {
-		return // Can't delete root
+	if (*ac)[0].CountEndNodes() <= 1 {
+		return
 	}
 
 	currentNode := (*ac)[len(*ac)-1]
@@ -655,4 +655,17 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 
 func (p Part) GetName() string {
 	return p.Name
+}
+
+// CountEndNodes recursively counts the total number of end nodes in an arrangement
+func (a *Arrangement) CountEndNodes() int {
+	if a.IsEndNode() {
+		return 1
+	}
+
+	count := 0
+	for _, node := range a.Nodes {
+		count += node.CountEndNodes()
+	}
+	return count
 }

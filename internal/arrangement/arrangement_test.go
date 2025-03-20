@@ -936,3 +936,113 @@ func TestDeleteNodeComplex(t *testing.T) {
 		assert.Equal(t, root, cursor[0], "Cursor should move to first node")
 	})
 }
+
+// TestCountEndNodes tests the CountEndNodes function
+func TestCountEndNodes(t *testing.T) {
+	// Define test cases with different arrangement structures
+	tests := []struct {
+		name     string
+		arrange  func() *Arrangement
+		expected int
+	}{
+		{
+			name: "flat arrangement with three end nodes",
+			arrange: func() *Arrangement {
+				root := &Arrangement{
+					Iterations: 1,
+					Nodes:      make([]*Arrangement, 0),
+				}
+
+				node1 := &Arrangement{Section: SongSection{Part: 0, Cycles: 1}}
+				node2 := &Arrangement{Section: SongSection{Part: 1, Cycles: 2}}
+				node3 := &Arrangement{Section: SongSection{Part: 2, Cycles: 1}}
+
+				root.Nodes = append(root.Nodes, node1, node2, node3)
+				return root
+			},
+			expected: 3,
+		},
+		{
+			name: "nested arrangement with one group",
+			arrange: func() *Arrangement {
+				root := &Arrangement{
+					Iterations: 1,
+					Nodes:      make([]*Arrangement, 0),
+				}
+
+				node1 := &Arrangement{Section: SongSection{Part: 0, Cycles: 1}}
+
+				group := &Arrangement{
+					Iterations: 2,
+					Nodes:      make([]*Arrangement, 0),
+				}
+
+				node2 := &Arrangement{Section: SongSection{Part: 1, Cycles: 2}}
+				node3 := &Arrangement{Section: SongSection{Part: 2, Cycles: 1}}
+
+				group.Nodes = append(group.Nodes, node2, node3)
+				root.Nodes = append(root.Nodes, node1, group)
+				return root
+			},
+			expected: 3,
+		},
+		{
+			name: "deeply nested arrangement",
+			arrange: func() *Arrangement {
+				root := &Arrangement{
+					Iterations: 1,
+					Nodes:      make([]*Arrangement, 0),
+				}
+
+				outerGroup := &Arrangement{
+					Iterations: 2,
+					Nodes:      make([]*Arrangement, 0),
+				}
+
+				innerGroup1 := &Arrangement{
+					Iterations: 1,
+					Nodes:      make([]*Arrangement, 0),
+				}
+
+				innerGroup2 := &Arrangement{
+					Iterations: 3,
+					Nodes:      make([]*Arrangement, 0),
+				}
+
+				nodeA := &Arrangement{Section: SongSection{Part: 0, Cycles: 1}}
+				nodeB := &Arrangement{Section: SongSection{Part: 1, Cycles: 2}}
+				nodeC := &Arrangement{Section: SongSection{Part: 2, Cycles: 3}}
+				nodeD := &Arrangement{Section: SongSection{Part: 3, Cycles: 1}}
+				nodeE := &Arrangement{Section: SongSection{Part: 4, Cycles: 2}}
+
+				innerGroup1.Nodes = append(innerGroup1.Nodes, nodeA, nodeB)
+				innerGroup2.Nodes = append(innerGroup2.Nodes, nodeC, nodeD)
+				outerGroup.Nodes = append(outerGroup.Nodes, innerGroup1, innerGroup2)
+				root.Nodes = append(root.Nodes, outerGroup, nodeE)
+
+				return root
+			},
+			expected: 5,
+		},
+		{
+			name: "single end node",
+			arrange: func() *Arrangement {
+				return &Arrangement{
+					Section:    SongSection{Part: 0, Cycles: 1},
+					Iterations: 1,
+					Nodes:      []*Arrangement{},
+				}
+			},
+			expected: 1,
+		},
+	}
+
+	// Run the test cases
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			arrangement := tc.arrange()
+			count := arrangement.CountEndNodes()
+			assert.Equal(t, tc.expected, count, "CountEndNodes should return the correct number of end nodes")
+		})
+	}
+}
