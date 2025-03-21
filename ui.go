@@ -1621,7 +1621,8 @@ func (m *model) Start() {
 
 	// Reset to first node for playback
 	if len(m.definition.arrangement.Nodes) > 0 {
-		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement, m.definition.arrangement.Nodes[0]}
+		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement}
+		m.arrangement.Cursor.MoveNext()
 		m.arrangement.Cursor.ResetIterations()
 	}
 

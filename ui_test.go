@@ -115,7 +115,6 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			m.advanceKeyCycle()
 			counter++
 		}
-		fmt.Println(counter)
 		assert.Equal(t, 2, counter)
 	})
 
@@ -140,7 +139,6 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			<-m.programChannel
 		}()
 		m.playing = PLAY_STANDARD
-		fmt.Println()
 		m.arrangement.Cursor.ResetIterations()
 		for m.playing != PLAY_STOPPED {
 			m.advanceKeyCycle()
