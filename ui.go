@@ -1231,8 +1231,21 @@ func (m model) Init() tea.Cmd {
 	return func() tea.Msg { return tea.FocusMsg{} }
 }
 
-func Is(msg tea.KeyMsg, k key.Binding) bool {
-	return key.Matches(msg, k)
+func Is(msg tea.KeyMsg, k ...key.Binding) bool {
+	return key.Matches(msg, k...)
+}
+
+func IsNot(msg tea.KeyMsg, k ...key.Binding) bool {
+	return !key.Matches(msg, k...)
+}
+
+func (m model) IsPartOperation(msg tea.Msg) bool {
+	keys := transitiveKeys
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		return IsNot(msg, keys.NewSectionAfter, keys.NewSectionBefore) && !(Is(msg, keys.Increase, keys.Decrease) && m.selectionIndicator == SELECT_PART)
+	}
+	return false
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -1265,7 +1278,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.overlayKeyEdit = okModel
 			return m, cmd
 		}
-		if m.focus == FOCUS_ARRANGEMENT_EDITOR {
+		if m.focus == FOCUS_ARRANGEMENT_EDITOR && !m.IsPartOperation(msg) {
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
 			return m, cmd
