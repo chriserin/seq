@@ -31,6 +31,19 @@ func (a *Arrangement) DrawDown() {
 	}
 }
 
+// CountEndNodes recursively counts the total number of end nodes in an arrangement
+func (a *Arrangement) CountEndNodes() int {
+	if a.IsEndNode() {
+		return 1
+	}
+
+	count := 0
+	for _, node := range a.Nodes {
+		count += node.CountEndNodes()
+	}
+	return count
+}
+
 // ArrCursor represents the path through the tree to the current node
 type ArrCursor []*Arrangement
 
@@ -703,15 +716,26 @@ func (p Part) GetName() string {
 	return p.Name
 }
 
-// CountEndNodes recursively counts the total number of end nodes in an arrangement
-func (a *Arrangement) CountEndNodes() int {
-	if a.IsEndNode() {
-		return 1
+func (ac ArrCursor) PlayStateView() string {
+	var buf strings.Builder
+	buf.WriteString("    ▶ ")
+	buf.WriteString("")
+	for i, arr := range ac {
+		if i == 0 {
+			continue
+		} else if i != 1 {
+			buf.WriteString(" ⬩ ")
+		}
+		arr.PlayStateView(&buf)
 	}
+	buf.WriteString("\n")
+	return buf.String()
+}
 
-	count := 0
-	for _, node := range a.Nodes {
-		count += node.CountEndNodes()
+func (arr Arrangement) PlayStateView(buf *strings.Builder) {
+	if arr.IsGroup() {
+		buf.WriteString(fmt.Sprintf("%d/%d", arr.playingIterations, arr.Iterations))
+	} else {
+		buf.WriteString(fmt.Sprintf("%d/%d", 0, arr.Section.Cycles))
 	}
-	return count
 }

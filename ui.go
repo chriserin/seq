@@ -1243,7 +1243,7 @@ func (m model) IsPartOperation(msg tea.Msg) bool {
 	keys := transitiveKeys
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		return IsNot(msg, keys.NewSectionAfter, keys.NewSectionBefore) && !(Is(msg, keys.Increase, keys.Decrease) && m.selectionIndicator == SELECT_PART)
+		return Is(msg, keys.NewSectionAfter, keys.NewSectionBefore) || (Is(msg, keys.Increase, keys.Decrease) && m.selectionIndicator == SELECT_PART)
 	}
 	return false
 }
@@ -2224,7 +2224,6 @@ func (m *model) StartPart() {
 }
 
 func (m *model) PlayMove() bool {
-
 	if m.arrangement.Cursor.IsRoot() {
 		m.StartStop()
 		return false
@@ -2724,7 +2723,8 @@ func (m model) ViewTriggerSeq() string {
 	} else if m.selectionIndicator == SELECT_CONFIRM_QUIT {
 		buf.WriteString(m.ConfirmQuitView())
 	} else if m.playing != PLAY_STOPPED {
-		buf.WriteString(fmt.Sprintf("    Seq - Playing - %d\n", m.keyCycles))
+		buf.WriteString(m.arrangement.Cursor.PlayStateView())
+		// buf.WriteString(fmt.Sprintf("    Seq - Playing - %d\n", m.keyCycles))
 	} else {
 		buf.WriteString(m.WriteView())
 		buf.WriteString("Seq - A sequencer for your cli\n")
