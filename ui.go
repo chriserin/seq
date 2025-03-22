@@ -1072,13 +1072,6 @@ func (m *model) ToggleRatchetMute() {
 	m.currentOverlay.SetNote(m.cursorPos, currentNote)
 }
 
-func InitLines(template string) []grid.LineDefinition {
-	gridTemplate := config.GetTemplate(template)
-	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
-	copy(newLines, gridTemplate.Lines)
-	return newLines
-}
-
 func InitLineStates(lines int, previousPlayState []linestate, startBeat uint8) []linestate {
 	linestates := make([]linestate, 0, lines)
 
@@ -1701,7 +1694,6 @@ func (m model) ProcessNoteMsg(msg Delayable) {
 			if err := notereg.Add(msg); err != nil {
 				panic("Added a note that was already there")
 			}
-			m.LogFromBeatTime()
 			PlayMessage(msg.delay, msg.GetMidi(), sendFn)
 		case midi.NoteOffMsg:
 			PlayOffMessage(msg, sendFn)
@@ -2227,6 +2219,7 @@ func (m *model) StartPart() {
 func (m *model) PlayMove() bool {
 	if m.arrangement.Cursor.IsRoot() {
 		m.StartStop()
+		m.arrangement.Cursor.MoveNext()
 		return false
 	} else if m.arrangement.Cursor.IsLastSibling() {
 		m.arrangement.Cursor.GetParentNode().DrawDown()
@@ -2236,12 +2229,12 @@ func (m *model) PlayMove() bool {
 				m.arrangement.Cursor.MoveNext()
 			}
 		} else {
+			m.arrangement.Cursor.ResetIterations()
 			m.arrangement.Cursor.Up()
 			return m.PlayMove()
 		}
 	} else {
 		m.arrangement.Cursor.MoveNext()
-		m.arrangement.Cursor.ResetIterations()
 	}
 	return true
 }

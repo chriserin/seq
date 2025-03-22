@@ -137,24 +137,32 @@ func TestMoveNext(t *testing.T) {
 		Iterations: 1,
 	}
 
-	// Add children to group1
-	group1.Nodes = append(group1.Nodes, nodeC, nodeD)
+	t.Run("Test Nested Arrangement", func(t *testing.T) {
+		group1.Nodes = append(group1.Nodes, nodeC, nodeD)
+		root.Nodes = append(root.Nodes, nodeA, group1, nodeB)
 
-	// Add nodes to root: nodeA, group1, nodeB
-	root.Nodes = append(root.Nodes, nodeA, group1, nodeB)
+		cursor := ArrCursor{root}
 
-	// Test 1: Starting at root, navigate through the arrangement
-	cursor := ArrCursor{root}
+		assert.True(t, cursor.MoveNext())
+		assert.Equal(t, nodeA, cursor.GetCurrentNode())
+		assert.True(t, cursor.MoveNext())
+		assert.Equal(t, nodeC, cursor.GetCurrentNode())
+		assert.True(t, cursor.MoveNext())
+		assert.Equal(t, nodeD, cursor.GetCurrentNode())
+		assert.True(t, cursor.MoveNext())
+		assert.Equal(t, nodeB, cursor.GetCurrentNode())
+		assert.False(t, cursor.MoveNext())
+	})
 
-	assert.True(t, cursor.MoveNext())
-	assert.Equal(t, nodeA, cursor.GetCurrentNode())
-	assert.True(t, cursor.MoveNext())
-	assert.Equal(t, nodeC, cursor.GetCurrentNode())
-	assert.True(t, cursor.MoveNext())
-	assert.Equal(t, nodeD, cursor.GetCurrentNode())
-	assert.True(t, cursor.MoveNext())
-	assert.Equal(t, nodeB, cursor.GetCurrentNode())
-	assert.False(t, cursor.MoveNext())
+	t.Run("Test Single part single group", func(t *testing.T) {
+		group1.Nodes = []*Arrangement{nodeA}
+		root.Nodes = []*Arrangement{nodeA, group1}
+
+		cursor := ArrCursor{root, group1}
+
+		assert.True(t, cursor.MoveNext())
+		assert.Equal(t, nodeA, cursor.GetCurrentNode())
+	})
 }
 
 // TestMovePrev tests the MovePrev functionality of the ArrCursor

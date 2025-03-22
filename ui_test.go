@@ -5,7 +5,9 @@ import (
 	"slices"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/chriserin/seq/internal/arrangement"
+	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
@@ -98,12 +100,14 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			arrangement: arr,
 			parts:       &parts,
 			keyline:     0,
+			lines:       make([]grid.LineDefinition, 1),
 		}
 		m := model{
 			arrangement:    arrangement.InitModel(def.arrangement, def.parts),
 			definition:     def,
 			programChannel: make(chan midiEventLoopMsg),
 			playState:      InitLineStates(1, []linestate{}, 0),
+			keyCycles:      1,
 		}
 		m.arrangement.Cursor[0].IncreaseIterations()
 		go func() {
@@ -126,6 +130,7 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			arrangement: arr,
 			parts:       &parts,
 			keyline:     0,
+			lines:       make([]grid.LineDefinition, 1),
 		}
 		m := model{
 			arrangement:    arrangement.InitModel(def.arrangement, def.parts),
@@ -145,5 +150,62 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			counter++
 		}
 		assert.Equal(t, 3, counter)
+	})
+
+	t.Run("nested cycle song 1 part", func(t *testing.T) {
+		var counter int
+		var parts = InitParts()
+
+		group1 := &arrangement.Arrangement{
+			Iterations: 2,
+			Nodes:      make([]*arrangement.Arrangement, 0),
+		}
+
+		group2 := &arrangement.Arrangement{
+			Iterations: 2,
+			Nodes:      make([]*arrangement.Arrangement, 0),
+		}
+
+		nodeA := &arrangement.Arrangement{
+			Section:    arrangement.SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1},
+			Iterations: 1,
+		}
+
+		root := &arrangement.Arrangement{
+			Iterations: 1,
+			Nodes:      make([]*arrangement.Arrangement, 0),
+		}
+
+		root.Nodes = append(root.Nodes, group1)
+		group1.Nodes = append(group1.Nodes, group2)
+		group2.Nodes = append(group2.Nodes, nodeA)
+
+		def := Definition{
+			arrangement: root,
+			parts:       &parts,
+			keyline:     0,
+			lines:       make([]grid.LineDefinition, 1),
+		}
+		logFile, _ := tea.LogToFile("debug.log", "debug")
+		m := model{
+			logFile:        logFile,
+			arrangement:    arrangement.InitModel(def.arrangement, def.parts),
+			definition:     def,
+			programChannel: make(chan midiEventLoopMsg),
+			playState:      InitLineStates(1, []linestate{}, 0),
+			keyCycles:      1,
+		}
+		arr := m.arrangement.Cursor.GetCurrentNode()
+		(*arr).Section.Cycles = 1
+		go func() {
+			<-m.programChannel
+		}()
+		m.playing = PLAY_STANDARD
+		m.arrangement.Cursor.ResetIterations()
+		for m.playing != PLAY_STOPPED {
+			m.advanceKeyCycle()
+			counter++
+		}
+		assert.Equal(t, 4, counter)
 	})
 }

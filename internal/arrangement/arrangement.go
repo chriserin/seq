@@ -120,7 +120,7 @@ func (ac ArrCursor) GetNextSiblingNode() *Arrangement {
 func (ac *ArrCursor) MoveNext() bool {
 	var workingCursor ArrCursor = make([]*Arrangement, len(*ac))
 	copy(workingCursor, *ac)
-	if len(*ac) <= 1 {
+	if (*ac).GetCurrentNode().IsGroup() {
 		return MoveToFirstChild(ac, &workingCursor)
 	}
 	return MoveToNextEndNode(ac, &workingCursor)
@@ -425,7 +425,8 @@ func InitModel(arrangement *Arrangement, parts *[]Part) Model {
 	if arrangement != nil {
 		// Use the provided arrangement tree
 		root = arrangement
-		cursor = ArrCursor{root, root.Nodes[0]}
+		cursor = ArrCursor{root}
+		cursor.MoveNext()
 	} else {
 		root = &Arrangement{
 			Iterations: 1,
