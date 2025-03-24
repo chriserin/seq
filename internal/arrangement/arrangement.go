@@ -31,6 +31,10 @@ func (a *Arrangement) DrawDown() {
 	}
 }
 
+func (a *Arrangement) PlayingIterations() int {
+	return a.playingIterations
+}
+
 // CountEndNodes recursively counts the total number of end nodes in an arrangement
 func (a *Arrangement) CountEndNodes() int {
 	if a.IsEndNode() {
@@ -63,7 +67,7 @@ func (a *ArrCursor) IsRoot() bool {
 func (a *ArrCursor) HasParentIterations() bool {
 	cursorLength := len(*a)
 	if cursorLength < 2 {
-		return false // Root node or empty cursor
+		return false
 	}
 
 	parent := (*a)[cursorLength-2]

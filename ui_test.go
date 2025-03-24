@@ -208,4 +208,62 @@ func TestAdvanceKeyCycles(t *testing.T) {
 		}
 		assert.Equal(t, 4, counter)
 	})
+
+	t.Run("grouped part with following part", func(t *testing.T) {
+		var counter int
+		var parts = InitParts()
+
+		group1 := &arrangement.Arrangement{
+			Iterations: 1,
+			Nodes:      make([]*arrangement.Arrangement, 0),
+		}
+
+		nodeA := &arrangement.Arrangement{
+			Section:    arrangement.SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1},
+			Iterations: 1,
+		}
+
+		nodeB := &arrangement.Arrangement{
+			Section:    arrangement.SongSection{Part: 3, Cycles: 1, StartBeat: 0, StartCycles: 1},
+			Iterations: 1,
+		}
+
+		root := &arrangement.Arrangement{
+			Iterations: 1,
+			Nodes:      make([]*arrangement.Arrangement, 0),
+		}
+
+		root.Nodes = append(root.Nodes, group1, nodeB)
+		group1.Nodes = append(group1.Nodes, nodeA)
+
+		def := Definition{
+			arrangement: root,
+			parts:       &parts,
+			keyline:     0,
+			lines:       make([]grid.LineDefinition, 1),
+		}
+		logFile, _ := tea.LogToFile("debug.log", "debug")
+		m := model{
+			logFile:        logFile,
+			arrangement:    arrangement.InitModel(def.arrangement, def.parts),
+			definition:     def,
+			programChannel: make(chan midiEventLoopMsg),
+			playState:      InitLineStates(1, []linestate{}, 0),
+			keyCycles:      1,
+		}
+		go func() {
+			<-m.programChannel
+		}()
+		m.playing = PLAY_STANDARD
+		m.arrangement.Cursor.ResetIterations()
+		for m.playing != PLAY_STOPPED {
+			m.advanceKeyCycle()
+			counter++
+			if counter > 3 {
+				assert.Fail(t, "Should not go past 3 iterations")
+				break
+			}
+		}
+		assert.Equal(t, 1, counter)
+	})
 }
