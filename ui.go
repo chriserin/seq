@@ -1596,6 +1596,7 @@ func (m *model) NextSection() {
 			partId := currentNode.Section.Part
 			m.currentOverlay = (*m.definition.parts)[partId].Overlays
 		}
+		m.arrangement.ResetDepth()
 	}
 }
 
@@ -1606,6 +1607,7 @@ func (m *model) PrevSection() {
 			partId := currentNode.Section.Part
 			m.currentOverlay = (*m.definition.parts)[partId].Overlays
 		}
+		m.arrangement.ResetDepth()
 	}
 }
 

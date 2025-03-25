@@ -343,6 +343,10 @@ type Model struct {
 	depthCursor int
 }
 
+func (m *Model) ResetDepth() {
+	m.depthCursor = len(m.Cursor) - 1
+}
+
 func (m *Model) GroupNodes() {
 	if len(m.Cursor) >= 2 {
 		currentNode := m.Cursor[len(m.Cursor)-1]
@@ -357,7 +361,7 @@ func (m *Model) GroupNodes() {
 			GroupNodes(parentNode, currentIndex, currentIndex)
 		}
 		m.Cursor.MoveNext()
-		m.depthCursor = len(m.Cursor) - 1
+		m.ResetDepth()
 	}
 }
 
@@ -482,13 +486,13 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch {
 	case Is(msg, keys.CursorDown):
 		if !m.Cursor.IsLastSibling() && m.Cursor.GetNextSiblingNode().IsGroup() {
-			m.depthCursor = len(m.Cursor) - 1
+			m.ResetDepth()
 			m.Cursor.MoveNext()
 		} else if m.depthCursor < len(m.Cursor)-1 {
 			m.depthCursor++
 		} else {
 			m.Cursor.MoveNext()
-			m.depthCursor = len(m.Cursor) - 1
+			m.ResetDepth()
 		}
 	case Is(msg, keys.CursorUp):
 		if m.Cursor[:m.depthCursor+1].IsFirstSibling() {
@@ -497,7 +501,7 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 			}
 		} else {
 			m.Cursor.MovePrev()
-			m.depthCursor = len(m.Cursor) - 1
+			m.ResetDepth()
 		}
 	case Is(msg, keys.CursorLeft):
 		if m.oldCursor.attribute > 0 {
@@ -543,6 +547,7 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.Cursor.DeleteNode()
 	case Is(msg, keys.Escape):
 		m.Focus = false
+		m.ResetDepth()
 		return m, func() tea.Msg { return GiveBackFocus{} }
 	}
 	return m, nil
