@@ -383,8 +383,8 @@ func (m *Model) NewPart(index int, after bool) {
 }
 
 func (m *Model) AddPart(after bool, newNode *Arrangement) {
-	currentNode := m.Cursor[len(m.Cursor)-1]
-	parentNode := m.Cursor[len(m.Cursor)-2]
+	currentNode := m.Cursor[m.depthCursor]
+	parentNode := m.Cursor[m.depthCursor-1]
 
 	currentIndex := slices.Index(parentNode.Nodes, currentNode)
 	if after {
@@ -513,7 +513,7 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case Is(msg, keys.Increase):
 		currentNode := m.Cursor.GetCurrentNode()
-		if m.depthCursor+1 == len(m.Cursor) {
+		if m.depthCursor == len(m.Cursor)-1 {
 			// For end nodes, modify section properties
 			switch m.oldCursor.attribute {
 			case SECTION_START_BEAT:
