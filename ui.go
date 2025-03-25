@@ -1251,7 +1251,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case SELECT_PART:
 				m.arrangement.NewPart(m.partSelectorIndex, m.sectionSideIndicator)
 				m.currentOverlay = m.CurrentPart().Overlays
-				m.selectionIndicator = SELECT_NOTHING
+				if m.focus == FOCUS_ARRANGEMENT_EDITOR {
+					m.selectionIndicator = SELECT_ARRANGEMENT_EDITOR
+				} else {
+					m.selectionIndicator = SELECT_NOTHING
+				}
+				return m, nil
 			case SELECT_CONFIRM_NEW:
 				m.NewSequence()
 				m.selectionIndicator = SELECT_NOTHING

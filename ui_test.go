@@ -41,6 +41,57 @@ func TestOverlayKeySort(t *testing.T) {
 	}
 }
 
+func TestUpdateArrangementFocus(t *testing.T) {
+	t.Run("switch to arrangement view and create part", func(t *testing.T) {
+		// Setup a model with a basic arrangement
+		var parts = InitParts()
+		var arr = InitArrangement(parts)
+		def := Definition{
+			arrangement: arr,
+			parts:       &parts,
+			keyline:     0,
+		}
+
+		m := model{
+			arrangement:    arrangement.InitModel(def.arrangement, def.parts),
+			definition:     def,
+			programChannel: make(chan midiEventLoopMsg),
+			playState:      InitLineStates(1, []linestate{}, 0),
+			focus:          FOCUS_GRID, // Start with grid focus
+		}
+
+		// // Create a goroutine to consume from the channel so it doesn't block
+		// go func() {
+		// 	<-m.programChannel
+		// }()
+
+		initialNodeCount := m.arrangement.Root.CountEndNodes()
+		updatedModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+		modelPtr := updatedModel.(model)
+
+		assert.Equal(t, FOCUS_ARRANGEMENT_EDITOR, modelPtr.focus, "Model should have arrangement editor focus")
+		assert.True(t, modelPtr.arrangement.Focus, "Arrangement model should have focus flag set to true")
+
+		updatedModel, _ = updatedModel.Update(tea.KeyMsg{Type: tea.KeyCtrlCloseBracket})
+		modelPtr = updatedModel.(model)
+		modelPtr.selectionIndicator = SELECT_PART
+		modelPtr.sectionSideIndicator = true
+
+		assert.Equal(t, FOCUS_ARRANGEMENT_EDITOR, modelPtr.focus, "Model should have arrangement editor focus")
+		assert.True(t, modelPtr.arrangement.Focus, "Arrangement model should have focus flag set to true")
+
+		updatedModelAfterPart, _ := updatedModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		finalModel := updatedModelAfterPart.(model)
+
+		finalNodeCount := finalModel.arrangement.Root.CountEndNodes()
+		assert.Greater(t, finalNodeCount, initialNodeCount, "Arrangement should have more end nodes after part creation")
+
+		assert.Equal(t, FOCUS_ARRANGEMENT_EDITOR, finalModel.focus, "Model should still have arrangement editor focus")
+		assert.True(t, finalModel.arrangement.Focus, "Arrangement model should still have focus flag set to true")
+		assert.Equal(t, SELECT_ARRANGEMENT_EDITOR, finalModel.selectionIndicator, "Selection indicator should be reset to nothing")
+	})
+}
+
 func TestSolo(t *testing.T) {
 	t.Run("First Solo", func(t *testing.T) {
 		playStates := []linestate{

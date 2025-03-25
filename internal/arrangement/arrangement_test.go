@@ -360,7 +360,7 @@ func TestModelSetup(t *testing.T) {
 	model := InitModel(arr, partPtr)
 
 	// Test the initialization
-	assert.Equal(t, arr, model.root, "Model root should be the arrangement")
+	assert.Equal(t, arr, model.Root, "Model root should be the arrangement")
 	// Check that the cursor has length at least 1
 	assert.True(t, len(model.Cursor) >= 1, "Cursor should have at least one element")
 	assert.Equal(t, arr, model.Cursor[0], "First cursor element should be root")

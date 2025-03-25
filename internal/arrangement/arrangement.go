@@ -338,7 +338,7 @@ type Model struct {
 	Focus       bool
 	Cursor      ArrCursor
 	oldCursor   cursor
-	root        *Arrangement
+	Root        *Arrangement
 	parts       *[]Part
 	depthCursor int
 }
@@ -443,7 +443,7 @@ func InitModel(arrangement *Arrangement, parts *[]Part) Model {
 	// Initialize cursor to point to the root and first node if available
 
 	return Model{
-		root:        root,
+		Root:        root,
 		Cursor:      cursor,
 		parts:       parts,
 		depthCursor: len(cursor) - 1,
@@ -631,7 +631,7 @@ func (m Model) View(currentSongSection int) string {
 	buf.WriteString("\n")
 
 	// Recursively render the arrangement tree
-	m.renderNode(&buf, m.root, 0, currentSongSection)
+	m.renderNode(&buf, m.Root, 0, currentSongSection)
 
 	return buf.String()
 }
