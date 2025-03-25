@@ -1644,11 +1644,6 @@ func (m *model) Start() {
 func (m *model) Stop() {
 	m.keyCycles = 0
 
-	// Reset cursor to the first node
-	if m.definition.arrangement != nil && len(m.definition.arrangement.Nodes) > 0 {
-		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement, m.definition.arrangement.Nodes[0]}
-	}
-
 	notes := notereg.Clear()
 	sendFn := m.midiConnection.AcquireSendFunc()
 	for _, n := range notes {
