@@ -2227,6 +2227,8 @@ func (m *model) StartPart() {
 func (m *model) PlayMove() bool {
 	if m.arrangement.Cursor.IsRoot() {
 		m.StartStop()
+		m.arrangement.Cursor.MoveNext()
+		m.ResetCurrentOverlay()
 		return false
 	} else if m.arrangement.Cursor.IsLastSibling() {
 		m.arrangement.Cursor.GetParentNode().DrawDown()
