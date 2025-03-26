@@ -411,6 +411,19 @@ type model struct {
 	definition Definition
 }
 
+func (m *model) ResetCurrentOverlay() {
+	if m.playing != PLAY_STOPPED && m.playEditing {
+		return
+	}
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	if currentNode != nil && currentNode.IsEndNode() {
+		partId := currentNode.Section.Part
+		if len(*m.definition.parts) > partId {
+			m.currentOverlay = (*m.definition.parts)[partId].Overlays
+		}
+	}
+}
+
 type PlayMode int
 
 const (
@@ -1591,22 +1604,14 @@ func (m *model) Escape() {
 
 func (m *model) NextSection() {
 	if m.arrangement.Cursor.MoveNext() {
-		currentNode := m.arrangement.Cursor.GetCurrentNode()
-		if currentNode != nil && currentNode.IsEndNode() {
-			partId := currentNode.Section.Part
-			m.currentOverlay = (*m.definition.parts)[partId].Overlays
-		}
+		m.ResetCurrentOverlay()
 		m.arrangement.ResetDepth()
 	}
 }
 
 func (m *model) PrevSection() {
 	if m.arrangement.Cursor.MovePrev() {
-		currentNode := m.arrangement.Cursor.GetCurrentNode()
-		if currentNode != nil && currentNode.IsEndNode() {
-			partId := currentNode.Section.Part
-			m.currentOverlay = (*m.definition.parts)[partId].Overlays
-		}
+		m.ResetCurrentOverlay()
 		m.arrangement.ResetDepth()
 	}
 }
@@ -2216,6 +2221,7 @@ func (m *model) StartPart() {
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
 	m.keyCycles = currentNode.Section.StartCycles
 	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(currentNode.Section.StartBeat))
+	m.ResetCurrentOverlay()
 }
 
 func (m *model) PlayMove() bool {
