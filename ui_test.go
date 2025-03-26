@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"slices"
 	"testing"
 
@@ -139,7 +138,6 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			m.advanceKeyCycle()
 			counter++
 		}
-		fmt.Println(counter)
 		assert.Equal(t, 2, counter)
 	})
 
@@ -315,6 +313,6 @@ func TestAdvanceKeyCycles(t *testing.T) {
 				break
 			}
 		}
-		assert.Equal(t, 1, counter)
+		assert.Equal(t, 2, counter)
 	})
 }

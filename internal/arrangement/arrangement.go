@@ -147,6 +147,12 @@ func MoveToNextEndNode(currentCursor *ArrCursor, workingCursor *ArrCursor) bool 
 	}
 }
 
+func (ac *ArrCursor) MoveToSibling() bool {
+	var workingCursor ArrCursor = make([]*Arrangement, len(*ac))
+	copy(workingCursor, *ac)
+	return MoveToSibling(ac, &workingCursor)
+}
+
 func MoveToSibling(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
 	cursorLength := len(*workingCursor)
 	if cursorLength == 0 {

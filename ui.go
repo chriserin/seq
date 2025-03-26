@@ -2227,9 +2227,8 @@ func (m *model) StartPart() {
 func (m *model) PlayMove() bool {
 	if m.arrangement.Cursor.IsRoot() {
 		m.StartStop()
-		m.arrangement.Cursor.MoveNext()
 		return false
-	} else if m.arrangement.Cursor.IsLastSibling() || m.arrangement.Cursor.GetCurrentNode().IsGroup() {
+	} else if m.arrangement.Cursor.IsLastSibling() {
 		m.arrangement.Cursor.GetParentNode().DrawDown()
 		if m.arrangement.Cursor.HasParentIterations() {
 			m.arrangement.Cursor.MoveToFirstSibling()
@@ -2242,7 +2241,7 @@ func (m *model) PlayMove() bool {
 			return m.PlayMove()
 		}
 	} else {
-		m.arrangement.Cursor.MoveNext()
+		m.arrangement.Cursor.MoveToSibling()
 	}
 	return true
 }
