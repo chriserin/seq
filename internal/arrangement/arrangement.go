@@ -43,7 +43,12 @@ func (a *Arrangement) SetInfinite() {
 }
 
 func (a *Arrangement) ResetIterations() {
-	a.playingIterations = 0
+	if len(a.Nodes) > 0 {
+		a.playingIterations = 0
+		for _, n := range a.Nodes {
+			n.ResetIterations()
+		}
+	}
 }
 
 func (a *Arrangement) ResetCycles() {
@@ -300,16 +305,24 @@ func MoveToLastChild(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
 	}
 }
 
-func CurrentPartCursor(currentCursor ArrCursor) ArrCursor {
-	currentPart := currentCursor[len(currentCursor)-1]
-	currentPart.Section.resetCycles = currentPart.Section.Cycles
-	currentPart.Section.Cycles = math.MaxInt64
-	partGroup := &Arrangement{
-		Nodes:      []*Arrangement{currentPart},
-		Iterations: 1,
+func (m Model) CurrentNodeCursor(currentCursor ArrCursor) ArrCursor {
+	if m.depthCursor == len(currentCursor)-1 {
+		currentPart := currentCursor[len(currentCursor)-1]
+		currentPart.Section.resetCycles = currentPart.Section.Cycles
+		currentPart.Section.Cycles = math.MaxInt64
+		partGroup := &Arrangement{
+			Nodes:      []*Arrangement{currentPart},
+			Iterations: 1,
+		}
+		cursor := ArrCursor{partGroup, currentPart}
+		return cursor
+	} else {
+		group := currentCursor[m.depthCursor]
+		group.SetInfinite()
+		cursor := ArrCursor{group}
+		cursor.MoveNext()
+		return cursor
 	}
-	cursor := ArrCursor{partGroup, currentPart}
-	return cursor
 }
 
 // GroupNodes groups two end nodes together
@@ -535,7 +548,7 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case Is(msg, keys.CursorUp):
 		if m.Cursor[:m.depthCursor+1].IsFirstSibling() {
-			if m.depthCursor > 0 {
+			if m.depthCursor > 1 {
 				m.depthCursor--
 			}
 		} else {

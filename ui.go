@@ -1258,6 +1258,15 @@ func (m model) IsPartOperation(msg tea.Msg) bool {
 	return false
 }
 
+func (m model) IsPlayOperation(msg tea.Msg) bool {
+	keys := transitiveKeys
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		return Is(msg, keys.PlayLoop, keys.PlayStop, keys.PlayPart)
+	}
+	return false
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	keys := transitiveKeys
 
@@ -1293,7 +1302,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.overlayKeyEdit = okModel
 			return m, cmd
 		}
-		if m.focus == FOCUS_ARRANGEMENT_EDITOR && !m.IsPartOperation(msg) {
+		if m.focus == FOCUS_ARRANGEMENT_EDITOR && !m.IsPartOperation(msg) && !m.IsPlayOperation(msg) {
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
 			return m, cmd
@@ -1343,14 +1352,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.Escape):
 			m.Escape()
 		case Is(msg, keys.PlayStop):
-			m.loopMode = LOOP_SONG
-			m.arrangement.Root.ResetIterations()
+			if m.playing == PLAY_STOPPED {
+				m.loopMode = LOOP_SONG
+			}
 			m.StartStop()
 		case Is(msg, keys.PlayPart):
-			m.loopMode = LOOP_PART
+			if m.playing == PLAY_STOPPED {
+				m.loopMode = LOOP_PART
+			}
 			m.StartStop()
 		case Is(msg, keys.PlayLoop):
-			m.loopMode = LOOP_SONG
+			if m.playing == PLAY_STOPPED {
+				m.loopMode = LOOP_SONG
+			}
 			m.arrangement.Root.SetInfinite()
 			m.StartStop()
 		case Is(msg, keys.OverlayInputSwitch):
@@ -1640,7 +1654,7 @@ func (m *model) Start() {
 		m.arrangement.Cursor.ResetIterations()
 	case LOOP_PART:
 		m.arrangement.SavedCursor = m.arrangement.Cursor
-		m.arrangement.Cursor = arrangement.CurrentPartCursor(m.arrangement.Cursor)
+		m.arrangement.Cursor = m.arrangement.CurrentNodeCursor(m.arrangement.Cursor)
 	}
 
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
@@ -1665,6 +1679,7 @@ func (m *model) Stop() {
 
 	if m.loopMode == LOOP_PART {
 		m.arrangement.Cursor = m.arrangement.SavedCursor
+		m.arrangement.ResetDepth()
 	}
 	m.arrangement.Root.ResetCycles()
 	m.arrangement.Root.ResetIterations()
