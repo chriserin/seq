@@ -62,6 +62,7 @@ type transitiveKeyMap struct {
 	NewLine                key.Binding
 	NewSectionAfter        key.Binding
 	NewSectionBefore       key.Binding
+	ChangePart             key.Binding
 	NextSection            key.Binding
 	PrevSection            key.Binding
 	Yank                   key.Binding
@@ -196,6 +197,7 @@ var transitiveKeys = transitiveKeyMap{
 	NewLine:                Key("New Line", "ctrl+l"),
 	NewSectionAfter:        Key("New Part After", "ctrl+]"),
 	NewSectionBefore:       Key("New Part Before", "ctrl+p"),
+	ChangePart:             Key("Change Part", "ctrl+c"),
 	NextSection:            Key("Next Section", "]"),
 	PrevSection:            Key("Prev Section", "["),
 	Yank:                   Key("Yank", "y"),
@@ -476,6 +478,7 @@ const (
 	SELECT_START_BEATS
 	SELECT_START_CYCLES
 	SELECT_PART
+	SELECT_CHANGE_PART
 	SELECT_CONFIRM_NEW
 	SELECT_CONFIRM_QUIT
 	SELECT_ARRANGEMENT_EDITOR
@@ -1253,7 +1256,7 @@ func (m model) IsPartOperation(msg tea.Msg) bool {
 	keys := transitiveKeys
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		return Is(msg, keys.NewSectionAfter, keys.NewSectionBefore) || (Is(msg, keys.Increase, keys.Decrease) && m.selectionIndicator == SELECT_PART)
+		return Is(msg, keys.ChangePart, keys.NewSectionAfter, keys.NewSectionBefore) || (Is(msg, keys.Increase, keys.Decrease) && (m.selectionIndicator == SELECT_PART || m.selectionIndicator == SELECT_CHANGE_PART))
 	}
 	return false
 }
@@ -1276,6 +1279,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch m.selectionIndicator {
 			case SELECT_PART:
 				m.arrangement.NewPart(m.partSelectorIndex, m.sectionSideIndicator)
+				m.currentOverlay = m.CurrentPart().Overlays
+				if m.focus == FOCUS_ARRANGEMENT_EDITOR {
+					m.selectionIndicator = SELECT_ARRANGEMENT_EDITOR
+				} else {
+					m.selectionIndicator = SELECT_NOTHING
+				}
+				return m, nil
+			case SELECT_CHANGE_PART:
+				m.arrangement.ChangePart(m.partSelectorIndex)
 				m.currentOverlay = m.CurrentPart().Overlays
 				if m.focus == FOCUS_ARRANGEMENT_EDITOR {
 					m.selectionIndicator = SELECT_ARRANGEMENT_EDITOR
@@ -1434,6 +1446,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.IncreaseStartCycles()
 			case SELECT_PART:
 				m.IncreasePartSelector()
+			case SELECT_CHANGE_PART:
+				m.IncreasePartSelector()
 			}
 		case Is(msg, keys.Decrease):
 			switch m.selectionIndicator {
@@ -1470,6 +1484,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case SELECT_START_CYCLES:
 				m.DecreaseStartCycles()
 			case SELECT_PART:
+				m.DecreasePartSelector()
+			case SELECT_CHANGE_PART:
 				m.DecreasePartSelector()
 			}
 		case Is(msg, keys.ToggleGateMode):
@@ -1521,6 +1537,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.NewSectionBefore):
 			m.selectionIndicator = SELECT_PART
 			m.sectionSideIndicator = false
+		case Is(msg, keys.ChangePart):
+			m.selectionIndicator = SELECT_CHANGE_PART
 		case Is(msg, keys.NextSection):
 			m.NextSection()
 		case Is(msg, keys.PrevSection):
@@ -2748,6 +2766,8 @@ func (m model) ViewTriggerSeq() string {
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetEditView())
 	} else if m.selectionIndicator == SELECT_PART {
+		buf.WriteString(m.ChoosePartView())
+	} else if m.selectionIndicator == SELECT_CHANGE_PART {
 		buf.WriteString(m.ChoosePartView())
 	} else if m.selectionIndicator == SELECT_CONFIRM_NEW {
 		buf.WriteString(m.ConfirmNewSequenceView())

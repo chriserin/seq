@@ -431,7 +431,16 @@ func (m *Model) NewPart(index int, after bool) {
 	}
 
 	m.AddPart(after, newNode)
+}
 
+func (m *Model) ChangePart(index int) {
+	partId := index
+	if index < 0 {
+		partId = len(*m.parts)
+		*m.parts = append(*m.parts, InitPart(fmt.Sprintf("Part %d", partId+1)))
+	}
+	currentNode := m.Cursor[m.depthCursor]
+	currentNode.Section.Part = partId
 }
 
 func (m *Model) AddPart(after bool, newNode *Arrangement) {
