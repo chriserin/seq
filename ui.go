@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"slices"
@@ -374,7 +375,8 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 type model struct {
 	partSelectorIndex     int
 	sectionSideIndicator  bool
-	loopMode              MidiLoopMode
+	midiLoopMode          MidiLoopMode
+	loopMode              LoopMode
 	hasUIFocus            bool
 	connected             bool
 	transitiveStatekeys   transitiveKeyMap
@@ -430,6 +432,13 @@ const (
 	PLAY_STOPPED PlayMode = iota
 	PLAY_STANDARD
 	PLAY_RECEIVER
+)
+
+type LoopMode uint
+
+const (
+	LOOP_SONG LoopMode = iota
+	LOOP_PART
 )
 
 func (m model) SyncTempo() {
@@ -1133,12 +1142,7 @@ func InitArrangement(parts []arrangement.Part) *arrangement.Arrangement {
 
 	// Create end nodes for each part
 	for i := range parts {
-		section := arrangement.SongSection{
-			Part:        i,
-			Cycles:      1,
-			StartBeat:   0,
-			StartCycles: 1,
-		}
+		section := arrangement.InitSongSection(i)
 
 		node := &arrangement.Arrangement{
 			Section:    section,
@@ -1156,7 +1160,7 @@ func InitParts() []arrangement.Part {
 	return []arrangement.Part{firstPart}
 }
 
-func InitModel(midiConnection MidiConnection, template string, instrument string, loopMode MidiLoopMode) model {
+func InitModel(midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) model {
 	logFile, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
 		panic("could not open log file")
@@ -1178,7 +1182,7 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 
 	return model{
 		partSelectorIndex:     -1,
-		loopMode:              loopMode,
+		midiLoopMode:          midiLoopMode,
 		programChannel:        programChannel,
 		lockReceiverChannel:   lockReceiverChannel,
 		unlockReceiverChannel: unlockReceiverChannel,
@@ -1224,11 +1228,11 @@ func (m model) LogFromBeatTime() {
 	}
 }
 
-func RunProgram(midiConnection MidiConnection, template string, instrument string, loopMode MidiLoopMode) *tea.Program {
+func RunProgram(midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	model := InitModel(midiConnection, template, instrument, loopMode)
+	model := InitModel(midiConnection, template, instrument, midiLoopMode)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
-	MidiEventLoop(loopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
+	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
 	model.SyncTempo()
 	return program
 }
@@ -1339,11 +1343,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.Escape):
 			m.Escape()
 		case Is(msg, keys.PlayStop):
+			m.loopMode = LOOP_SONG
+			m.arrangement.Root.ResetIterations()
 			m.StartStop()
 		case Is(msg, keys.PlayPart):
-			println("PlayPart")
+			m.loopMode = LOOP_PART
+			m.StartStop()
 		case Is(msg, keys.PlayLoop):
-			println("PlayLoop")
+			m.loopMode = LOOP_SONG
+			m.arrangement.Root.SetInfinite()
+			m.StartStop()
 		case Is(msg, keys.OverlayInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
 			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
@@ -1624,11 +1633,14 @@ func (m *model) Start() {
 		}
 	}
 
-	// Reset to first node for playback
-	if len(m.definition.arrangement.Nodes) > 0 {
+	switch m.loopMode {
+	case LOOP_SONG:
 		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement}
 		m.arrangement.Cursor.MoveNext()
 		m.arrangement.Cursor.ResetIterations()
+	case LOOP_PART:
+		m.arrangement.SavedCursor = m.arrangement.Cursor
+		m.arrangement.Cursor = arrangement.CurrentPartCursor(m.arrangement.Cursor)
 	}
 
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
@@ -1651,6 +1663,12 @@ func (m *model) Start() {
 func (m *model) Stop() {
 	m.keyCycles = 0
 
+	if m.loopMode == LOOP_PART {
+		m.arrangement.Cursor = m.arrangement.SavedCursor
+	}
+	m.arrangement.Root.ResetCycles()
+	m.arrangement.Root.ResetIterations()
+
 	notes := notereg.Clear()
 	sendFn := m.midiConnection.AcquireSendFunc()
 	for _, n := range notes {
@@ -1672,14 +1690,14 @@ func (m *model) StartStop() {
 	m.playEditing = false
 	if m.playing == PLAY_STOPPED {
 		m.playing = PLAY_STANDARD
-		if m.loopMode == MLM_RECEIVER {
+		if m.midiLoopMode == MLM_RECEIVER {
 			m.lockReceiverChannel <- true
 		}
 		m.Start()
 	} else {
 		if m.playing == PLAY_STANDARD {
 			m.programChannel <- stopMsg{}
-			if m.loopMode == MLM_RECEIVER {
+			if m.midiLoopMode == MLM_RECEIVER {
 				m.unlockReceiverChannel <- true
 			}
 		}
@@ -1972,13 +1990,7 @@ func (m model) CurrentSongSection() arrangement.SongSection {
 		return currentNode.Section
 	}
 
-	// Return a default section if no valid node is selected
-	return arrangement.SongSection{
-		Part:        0,
-		Cycles:      1,
-		StartBeat:   0,
-		StartCycles: 1,
-	}
+	panic("Cursor should always be at end node")
 }
 
 func (m model) CurrentNote() note {
@@ -2209,7 +2221,8 @@ func (m *model) advanceKeyCycle() {
 		currentNode := m.arrangement.Cursor.GetCurrentNode()
 		songSection := currentNode.Section
 
-		if songSection.Cycles+songSection.StartCycles <= m.keyCycles {
+		if songSection.Cycles != math.MaxInt64 &&
+			songSection.Cycles+songSection.StartCycles <= m.keyCycles {
 			if m.PlayMove() {
 				m.StartPart()
 			}
@@ -2501,7 +2514,7 @@ func (m model) TempoView() string {
 	buf.WriteString(fmt.Sprintf("    %s  %s  %s  \n", heart, division, heart))
 	buf.WriteString(colors.HeartColor.Render("     ♡   ♡   ") + "\n")
 	buf.WriteString(colors.HeartColor.Render("      ♡ ♡    ") + "\n")
-	if m.loopMode == MLM_RECEIVER && !m.connected {
+	if m.midiLoopMode == MLM_RECEIVER && !m.connected {
 		buf.WriteString(colors.HeartColor.Render("       ╳     ") + "\n")
 	} else {
 		buf.WriteString(colors.HeartColor.Render("       †     ") + "\n")
@@ -2726,8 +2739,7 @@ func (m model) ViewTriggerSeq() string {
 	} else if m.selectionIndicator == SELECT_CONFIRM_QUIT {
 		buf.WriteString(m.ConfirmQuitView())
 	} else if m.playing != PLAY_STOPPED {
-		buf.WriteString(m.arrangement.Cursor.PlayStateView())
-		// buf.WriteString(fmt.Sprintf("    Seq - Playing - %d\n", m.keyCycles))
+		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.keyCycles))
 	} else {
 		buf.WriteString(m.WriteView())
 		buf.WriteString("Seq - A sequencer for your cli\n")

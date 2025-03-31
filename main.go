@@ -24,13 +24,13 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			midiConnection := InitMidiConnection()
 			defer midiConnection.Close()
-			loopMode := MLM_STAND_ALONE
+			midiLoopMode := MLM_STAND_ALONE
 			if transmitter {
-				loopMode = MLM_TRANSMITTER
+				midiLoopMode = MLM_TRANSMITTER
 			} else if receiver {
-				loopMode = MLM_RECEIVER
+				midiLoopMode = MLM_RECEIVER
 			}
-			p := RunProgram(midiConnection, template, instrument, loopMode)
+			p := RunProgram(midiConnection, template, instrument, midiLoopMode)
 			var err error
 			_, err = p.Run()
 			if err != nil {

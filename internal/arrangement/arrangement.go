@@ -2,6 +2,7 @@ package arrangement
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 
@@ -26,13 +27,33 @@ func (a *Arrangement) Reset() {
 }
 
 func (a *Arrangement) DrawDown() {
-	if a.playingIterations > 0 {
+	if a.playingIterations == math.MaxInt64 {
+		return
+	} else if a.playingIterations > 0 {
 		a.playingIterations--
 	}
 }
 
 func (a *Arrangement) PlayingIterations() int {
 	return a.playingIterations
+}
+
+func (a *Arrangement) SetInfinite() {
+	a.playingIterations = math.MaxInt64
+}
+
+func (a *Arrangement) ResetIterations() {
+	a.playingIterations = 0
+}
+
+func (a *Arrangement) ResetCycles() {
+	if len(a.Nodes) == 0 {
+		a.Section.ResetCycles()
+	} else {
+		for _, n := range a.Nodes {
+			n.ResetCycles()
+		}
+	}
 }
 
 // CountEndNodes recursively counts the total number of end nodes in an arrangement
@@ -48,7 +69,6 @@ func (a *Arrangement) CountEndNodes() int {
 	return count
 }
 
-// ArrCursor represents the path through the tree to the current node
 type ArrCursor []*Arrangement
 
 // IsEndNode checks if an arrangement is an end node (no children)
@@ -130,6 +150,52 @@ func (ac *ArrCursor) MoveNext() bool {
 	return MoveToNextEndNode(ac, &workingCursor)
 }
 
+func (ac *ArrCursor) MoveToSibling() bool {
+	var workingCursor ArrCursor = make([]*Arrangement, len(*ac))
+	copy(workingCursor, *ac)
+	return MoveToSibling(ac, &workingCursor)
+}
+
+func (ac *ArrCursor) MovePrev() bool {
+	var workingCursor ArrCursor = make([]*Arrangement, len(*ac))
+	copy(workingCursor, *ac)
+	if len(*ac) <= 1 {
+		return MoveToLastChild(ac, &workingCursor)
+	}
+	return MoveToPrevEndNode(ac, &workingCursor)
+}
+
+func (ac *ArrCursor) Matches(node *Arrangement) bool {
+	if len(*ac) == 0 || node == nil {
+		return false
+	}
+	return (*ac)[len(*ac)-1] == node
+}
+
+func (ac *ArrCursor) DeleteNode() {
+	if (*ac)[0].CountEndNodes() <= 1 {
+		return
+	}
+
+	currentNode := (*ac)[len(*ac)-1]
+	parentNode := (*ac)[len(*ac)-2]
+
+	currentIndex := slices.Index(ac.GetParentNode().Nodes, currentNode)
+
+	if len(parentNode.Nodes) == 1 {
+		parentNode.Nodes = []*Arrangement{}
+		newCursor := make(ArrCursor, len(*ac))
+		copy(newCursor, (*ac))
+		newCursor.MovePrev()
+		ac.Up()
+		ac.DeleteNode()
+		*ac = newCursor
+	} else {
+		ac.MovePrev()
+		parentNode.Nodes = append(parentNode.Nodes[:currentIndex], parentNode.Nodes[currentIndex+1:]...)
+	}
+}
+
 func MoveToNextEndNode(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
 	cursorLength := len(*workingCursor)
 	if cursorLength == 0 {
@@ -145,12 +211,6 @@ func MoveToNextEndNode(currentCursor *ArrCursor, workingCursor *ArrCursor) bool 
 		scopeCursor = scopeCursor[:len(scopeCursor)-1]
 		return MoveToNextEndNode(currentCursor, &scopeCursor)
 	}
-}
-
-func (ac *ArrCursor) MoveToSibling() bool {
-	var workingCursor ArrCursor = make([]*Arrangement, len(*ac))
-	copy(workingCursor, *ac)
-	return MoveToSibling(ac, &workingCursor)
 }
 
 func MoveToSibling(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
@@ -186,15 +246,6 @@ func MoveToFirstChild(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
 	} else {
 		panic("Malformed arrangement tree")
 	}
-}
-
-func (ac *ArrCursor) MovePrev() bool {
-	var workingCursor ArrCursor = make([]*Arrangement, len(*ac))
-	copy(workingCursor, *ac)
-	if len(*ac) <= 1 {
-		return MoveToLastChild(ac, &workingCursor)
-	}
-	return MoveToPrevEndNode(ac, &workingCursor)
 }
 
 func MoveToPrevEndNode(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
@@ -249,11 +300,16 @@ func MoveToLastChild(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
 	}
 }
 
-func (ac *ArrCursor) Matches(node *Arrangement) bool {
-	if len(*ac) == 0 || node == nil {
-		return false
+func CurrentPartCursor(currentCursor ArrCursor) ArrCursor {
+	currentPart := currentCursor[len(currentCursor)-1]
+	currentPart.Section.resetCycles = currentPart.Section.Cycles
+	currentPart.Section.Cycles = math.MaxInt64
+	partGroup := &Arrangement{
+		Nodes:      []*Arrangement{currentPart},
+		Iterations: 1,
 	}
-	return (*ac)[len(*ac)-1] == node
+	cursor := ArrCursor{partGroup, currentPart}
+	return cursor
 }
 
 // GroupNodes groups two end nodes together
@@ -288,30 +344,6 @@ func GroupNodes(parent *Arrangement, index1, index2 int) {
 	parent.Nodes = slices.Insert(parent.Nodes, index1, newParent)
 }
 
-func (ac *ArrCursor) DeleteNode() {
-	if (*ac)[0].CountEndNodes() <= 1 {
-		return
-	}
-
-	currentNode := (*ac)[len(*ac)-1]
-	parentNode := (*ac)[len(*ac)-2]
-
-	currentIndex := slices.Index(ac.GetParentNode().Nodes, currentNode)
-
-	if len(parentNode.Nodes) == 1 {
-		parentNode.Nodes = []*Arrangement{}
-		newCursor := make(ArrCursor, len(*ac))
-		copy(newCursor, (*ac))
-		newCursor.MovePrev()
-		ac.Up()
-		ac.DeleteNode()
-		*ac = newCursor
-	} else {
-		ac.MovePrev()
-		parentNode.Nodes = append(parentNode.Nodes[:currentIndex], parentNode.Nodes[currentIndex+1:]...)
-	}
-}
-
 func (arr *Arrangement) IncreaseIterations() {
 	if arr.Iterations < 128 {
 		arr.Iterations++
@@ -342,6 +374,7 @@ const (
 
 type Model struct {
 	Focus       bool
+	SavedCursor ArrCursor
 	Cursor      ArrCursor
 	oldCursor   cursor
 	Root        *Arrangement
@@ -445,7 +478,7 @@ func InitModel(arrangement *Arrangement, parts *[]Part) Model {
 		root = &Arrangement{
 			Iterations: 1,
 			Nodes:      make([]*Arrangement, 0),
-			Section:    SongSection{0, 1, 0, 1},
+			Section:    InitSongSection(0),
 		}
 		cursor = ArrCursor{root}
 	}
@@ -570,6 +603,13 @@ type SongSection struct {
 	Cycles      int
 	StartBeat   int
 	StartCycles int
+	resetCycles int
+}
+
+func (ss *SongSection) ResetCycles() {
+	if ss.Cycles == math.MaxInt64 {
+		ss.Cycles = ss.resetCycles
+	}
 }
 
 func InitSongSection(part int) SongSection {
@@ -578,6 +618,7 @@ func InitSongSection(part int) SongSection {
 		Cycles:      1,
 		StartBeat:   0,
 		StartCycles: 1,
+		resetCycles: 1,
 	}
 }
 
@@ -714,10 +755,16 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 		}
 
 		cycles := songSection.Cycles
-		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_CYCLES {
-			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.SelectedColor.Render(fmt.Sprintf("%d", cycles))))
+		var cyclesString string
+		if cycles == math.MaxInt64 {
+			cyclesString = "∞"
 		} else {
-			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.NumberColor.Render(fmt.Sprintf("%d", cycles))))
+			cyclesString = fmt.Sprintf("%d", cycles)
+		}
+		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_CYCLES {
+			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.SelectedColor.Render(cyclesString)))
+		} else {
+			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.NumberColor.Render(cyclesString)))
 		}
 
 		buf.WriteString("\n")
@@ -732,26 +779,33 @@ func (p Part) GetName() string {
 	return p.Name
 }
 
-func (ac ArrCursor) PlayStateView() string {
+func (ac ArrCursor) PlayStateView(cycles int) string {
 	var buf strings.Builder
 	buf.WriteString("    ▶ ")
 	buf.WriteString("")
 	for i, arr := range ac {
 		if i == 0 {
+			if arr.playingIterations == math.MaxInt64 {
+				buf.WriteString("∞ ⬩ ")
+			}
 			continue
 		} else if i != 1 {
 			buf.WriteString(" ⬩ ")
 		}
-		arr.PlayStateView(&buf)
+		arr.PlayStateView(&buf, cycles)
 	}
 	buf.WriteString("\n")
 	return buf.String()
 }
 
-func (arr Arrangement) PlayStateView(buf *strings.Builder) {
+func (arr Arrangement) PlayStateView(buf *strings.Builder, cycles int) {
 	if arr.IsGroup() {
-		buf.WriteString(fmt.Sprintf("%d/%d", arr.playingIterations, arr.Iterations))
+		fmt.Fprintf(buf, "%d/%d", arr.playingIterations, arr.Iterations)
 	} else {
-		buf.WriteString(fmt.Sprintf("%d/%d", 0, arr.Section.Cycles))
+		if arr.Section.Cycles == math.MaxInt64 {
+			fmt.Fprintf(buf, "%d/∞", cycles)
+		} else {
+			fmt.Fprintf(buf, "%d/%d", cycles, arr.Section.Cycles)
+		}
 	}
 }
