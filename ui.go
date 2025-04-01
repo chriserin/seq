@@ -402,7 +402,6 @@ type model struct {
 	patternMode           PatternMode
 	ratchetCursor         uint8
 	currentOverlay        *overlays.Overlay
-	currentSongSection    int
 	keyCycles             int
 	undoStack             UndoStack
 	redoStack             UndoStack
@@ -1196,7 +1195,6 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 		midiConnection:        midiConnection,
 		logFile:               logFile,
 		cursorPos:             GK(0, 0),
-		currentSongSection:    0,
 		currentOverlay:        (*definition.parts)[0].Overlays,
 		overlayKeyEdit:        overlaykey.InitModel(),
 		arrangement:           arrangement.InitModel(definition.arrangement, definition.parts),
@@ -2608,7 +2606,7 @@ func (m model) View() string {
 	seqView := m.ViewTriggerSeq()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "  ", seqView, "  ", sideView))
 	buf.WriteString("\n")
-	buf.WriteString(m.arrangement.View(m.currentSongSection))
+	buf.WriteString(m.arrangement.View())
 	return buf.String()
 }
 

@@ -446,7 +446,7 @@ func TestModelView(t *testing.T) {
 	model.Focus = true
 
 	// Test view rendering
-	output := model.View(0)
+	output := model.View()
 
 	// Basic validation of output
 	assert.Contains(t, output, "Part 1", "Output should contain Part 1")
@@ -455,7 +455,7 @@ func TestModelView(t *testing.T) {
 
 	// Test that indentation is working
 	var buf strings.Builder
-	model.renderNode(&buf, group, 1, 0)
+	model.renderNode(&buf, group, 1)
 	groupOutput := buf.String()
 	assert.Contains(t, groupOutput, "  ", "Group rendering should include indentation")
 }

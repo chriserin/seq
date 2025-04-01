@@ -697,7 +697,7 @@ func InitPart(name string) Part {
 	return Part{Overlays: overlays.InitOverlay(overlaykey.ROOT, nil), Beats: 32, Name: name}
 }
 
-func (m Model) View(currentSongSection int) string {
+func (m Model) View() string {
 	var buf strings.Builder
 	buf.WriteString(lipgloss.PlaceHorizontal(20, lipgloss.Left, "  Section"))
 	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Start Beat"))
@@ -705,19 +705,13 @@ func (m Model) View(currentSongSection int) string {
 	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Cycles"))
 	buf.WriteString("\n")
 
-	// Recursively render the arrangement tree
-	m.renderNode(&buf, m.Root, 0, currentSongSection)
+	m.renderNode(&buf, m.Root, 0)
 
 	return buf.String()
 }
 
-// GetCursorPath returns the current cursor path
-func (m Model) GetCursorPath() ArrCursor {
-	return m.Cursor
-}
-
 // Recursively render a node and its children
-func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, currentSongSection int) {
+func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int) {
 	if node == nil {
 		return
 	}
@@ -743,7 +737,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 
 		// Render child nodes
 		for _, childNode := range node.Nodes {
-			m.renderNode(buf, childNode, depth+1, currentSongSection)
+			m.renderNode(buf, childNode, depth+1)
 		}
 	} else if node.IsEndNode() {
 		songSection := node.Section
@@ -793,7 +787,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, cu
 		buf.WriteString("\n")
 	} else {
 		for _, childNode := range node.Nodes {
-			m.renderNode(buf, childNode, depth+1, currentSongSection)
+			m.renderNode(buf, childNode, depth+1)
 		}
 	}
 }
