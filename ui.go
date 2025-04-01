@@ -1307,7 +1307,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if Is(msg, keys.Quit) {
-			m.selectionIndicator = SELECT_CONFIRM_QUIT
+			m.SetSelectionIndicator(SELECT_CONFIRM_QUIT)
 		}
 		if m.focus == FOCUS_OVERLAY_KEY {
 			okModel, cmd := m.overlayKeyEdit.Update(msg)
@@ -1381,31 +1381,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.StartStop()
 		case Is(msg, keys.OverlayInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
-			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 			m.focus = FOCUS_OVERLAY_KEY
 			m.overlayKeyEdit.Focus(m.selectionIndicator == SELECT_OVERLAY)
 		case Is(msg, keys.TempoInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_TEMPO, SELECT_TEMPO_SUBDIVISION}
-			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case Is(msg, keys.SetupInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}
-			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case Is(msg, keys.AccentInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
-			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case Is(msg, keys.RatchetInputSwitch):
 			currentNote := m.CurrentNote()
 			if currentNote.AccentIndex > 0 {
 				states := []Selection{SELECT_NOTHING, SELECT_RATCHETS, SELECT_RATCHET_SPAN}
-				m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+				m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 				m.ratchetCursor = 0
 			}
 		case Is(msg, keys.BeatsInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_BEATS, SELECT_CYCLES, SELECT_START_BEATS, SELECT_START_CYCLES}
-			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case Is(msg, keys.ArrangementInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_ARRANGEMENT_EDITOR}
-			m.selectionIndicator = AdvanceSelectionState(states, m.selectionIndicator)
+			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 			m.focus = FOCUS_ARRANGEMENT_EDITOR
 			m.arrangement.Focus = true
 		case Is(msg, keys.Increase):
@@ -1489,13 +1489,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.DecreasePartSelector()
 			}
 		case Is(msg, keys.ToggleGateMode):
-			m.patternMode = PATTERN_GATE
+			m.SetPatternMode(PATTERN_GATE)
 		case Is(msg, keys.ToggleWaitMode):
-			m.patternMode = PATTERN_WAIT
+			m.SetPatternMode(PATTERN_WAIT)
 		case Is(msg, keys.ToggleAccentMode):
-			m.patternMode = PATTERN_ACCENT
+			m.SetPatternMode(PATTERN_ACCENT)
 		case Is(msg, keys.ToggleRatchetMode):
-			m.patternMode = PATTERN_RATCHET
+			m.SetPatternMode(PATTERN_RATCHET)
 		case Is(msg, keys.PrevOverlay):
 			m.NextOverlay(-1)
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
@@ -1532,13 +1532,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case Is(msg, keys.NewSectionAfter):
-			m.selectionIndicator = SELECT_PART
+			m.SetSelectionIndicator(SELECT_PART)
 			m.sectionSideIndicator = true
 		case Is(msg, keys.NewSectionBefore):
-			m.selectionIndicator = SELECT_PART
+			m.SetSelectionIndicator(SELECT_PART)
 			m.sectionSideIndicator = false
 		case Is(msg, keys.ChangePart):
-			m.selectionIndicator = SELECT_CHANGE_PART
+			m.SetSelectionIndicator(SELECT_CHANGE_PART)
 		case Is(msg, keys.NextSection):
 			m.NextSection()
 		case Is(msg, keys.PrevSection):
@@ -1626,6 +1626,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.cursor = cursor
 
 	return m, cmd
+}
+
+func (m *model) SetSelectionIndicator(indicator Selection) {
+	m.selectionIndicator = indicator
+	m.patternMode = PATTERN_FILL
+}
+
+func (m *model) SetPatternMode(mode PatternMode) {
+	m.patternMode = mode
+	m.selectionIndicator = SELECT_NOTHING
 }
 
 func (m *model) NewSequence() {
