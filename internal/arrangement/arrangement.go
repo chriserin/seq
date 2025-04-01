@@ -317,14 +317,13 @@ func MoveToLastChild(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
 
 func (m Model) CurrentNodeCursor(currentCursor ArrCursor) ArrCursor {
 	if m.depthCursor == len(currentCursor)-1 {
-		currentPart := currentCursor[len(currentCursor)-1]
-		currentPart.Section.resetCycles = currentPart.Section.Cycles
-		currentPart.Section.Cycles = math.MaxInt64
+		currentNode := currentCursor[len(currentCursor)-1]
+		currentNode.Section.infinite = true
 		partGroup := &Arrangement{
-			Nodes:      []*Arrangement{currentPart},
+			Nodes:      []*Arrangement{currentNode},
 			Iterations: 1,
 		}
-		cursor := ArrCursor{partGroup, currentPart}
+		cursor := ArrCursor{partGroup, currentNode}
 		return cursor
 	} else {
 		group := currentCursor[m.depthCursor]
@@ -636,8 +635,8 @@ type SongSection struct {
 	Cycles      int
 	StartBeat   int
 	StartCycles int
-	resetCycles int
 	playCycles  int
+	infinite    bool
 }
 
 func (ss *SongSection) ResetPlayCycles() {
@@ -653,9 +652,7 @@ func (ss SongSection) PlayCycles() int {
 }
 
 func (ss *SongSection) ResetCycles() {
-	if ss.Cycles == math.MaxInt64 {
-		ss.Cycles = ss.resetCycles
-	}
+	ss.infinite = false
 }
 
 func (ss *SongSection) IncrementPlayCycles() {
@@ -663,8 +660,8 @@ func (ss *SongSection) IncrementPlayCycles() {
 }
 
 func (ss *SongSection) IsDone() bool {
-	//return ss.Cycles != math.MaxInt64 &&
-	return ss.Cycles+ss.StartCycles <= ss.playCycles
+	return !ss.infinite &&
+		ss.Cycles+ss.StartCycles <= ss.playCycles
 }
 
 func InitSongSection(part int) SongSection {
@@ -673,7 +670,7 @@ func InitSongSection(part int) SongSection {
 		Cycles:      1,
 		StartBeat:   0,
 		StartCycles: 1,
-		resetCycles: 1,
+		infinite:    false,
 	}
 }
 
@@ -803,12 +800,11 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int) {
 			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.NumberColor.Render(fmt.Sprintf("%d", startCycle))))
 		}
 
-		cycles := songSection.Cycles
 		var cyclesString string
-		if cycles == math.MaxInt64 {
+		if songSection.infinite {
 			cyclesString = "∞"
 		} else {
-			cyclesString = fmt.Sprintf("%d", cycles)
+			cyclesString = fmt.Sprintf("%d", songSection.Cycles)
 		}
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_CYCLES {
 			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.SelectedColor.Render(cyclesString)))
@@ -851,7 +847,7 @@ func (arr Arrangement) PlayStateView(buf *strings.Builder, cycles int) {
 	if arr.IsGroup() {
 		fmt.Fprintf(buf, "%d/%d", arr.playingIterations, arr.Iterations)
 	} else {
-		if arr.Section.Cycles == math.MaxInt64 {
+		if arr.Section.infinite {
 			fmt.Fprintf(buf, "%d/∞", cycles)
 		} else {
 			fmt.Fprintf(buf, "%d/%d", cycles, arr.Section.Cycles)
