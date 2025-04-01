@@ -206,7 +206,9 @@ func (ac *ArrCursor) DeleteNode() {
 		ac.DeleteNode()
 		*ac = newCursor
 	} else {
-		ac.MovePrev()
+		if !ac.MoveNext() {
+			ac.MovePrev()
+		}
 		parentNode.Nodes = append(parentNode.Nodes[:currentIndex], parentNode.Nodes[currentIndex+1:]...)
 	}
 }
