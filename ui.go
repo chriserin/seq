@@ -1071,6 +1071,11 @@ func (m *model) IncrementPlayCycles() {
 	currentNode.Section.IncrementPlayCycles()
 }
 
+func (m *model) DuringPlayResetPlayCycles() {
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	currentNode.Section.DuringPlayReset()
+}
+
 func (m *model) IncreasePartSelector() {
 	newIndex := m.partSelectorIndex + 1
 	if newIndex < len(*m.definition.parts) {
@@ -2254,9 +2259,9 @@ func (m *model) advanceKeyCycle() {
 }
 
 func (m *model) StartPart() {
-	section := m.CurrentSongSection()
-	section.DuringPlayReset()
-	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(section.StartBeat))
+	m.LogString("Start Part")
+	m.DuringPlayResetPlayCycles()
+	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().StartBeat))
 	m.ResetCurrentOverlay()
 }
 

@@ -392,6 +392,7 @@ const (
 	SECTION_START_BEAT SectionAttribute = iota
 	SECTION_START_CYCLE
 	SECTION_CYCLES
+	SECTION_KEEP_CYCLES
 )
 
 type Model struct {
@@ -578,7 +579,7 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 			m.oldCursor.attribute--
 		}
 	case Is(msg, keys.CursorRight):
-		if m.oldCursor.attribute < 2 {
+		if m.oldCursor.attribute < 3 {
 			m.oldCursor.attribute++
 		}
 	case Is(msg, keys.Increase):
@@ -592,6 +593,8 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 				currentNode.Section.IncreaseStartCycles()
 			case SECTION_CYCLES:
 				currentNode.Section.IncreaseCycles()
+			case SECTION_KEEP_CYCLES:
+				currentNode.Section.ToggleKeepCycles()
 			}
 		} else {
 			// For parent nodes, increase iterations
@@ -607,6 +610,8 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 				currentNode.Section.DecreaseStartCycles()
 			case SECTION_CYCLES:
 				currentNode.Section.DecreaseCycles()
+			case SECTION_KEEP_CYCLES:
+				currentNode.Section.ToggleKeepCycles()
 			}
 		} else {
 			m.Cursor[m.depthCursor].DecreaseIterations()
@@ -636,6 +641,7 @@ type SongSection struct {
 	StartBeat   int
 	StartCycles int
 	playCycles  int
+	KeepCycles  bool
 	infinite    bool
 }
 
@@ -644,7 +650,9 @@ func (ss *SongSection) ResetPlayCycles() {
 }
 
 func (ss *SongSection) DuringPlayReset() {
-	ss.playCycles = ss.StartCycles
+	if !ss.KeepCycles {
+		ss.playCycles = ss.StartCycles
+	}
 }
 
 func (ss SongSection) PlayCycles() int {
@@ -695,6 +703,10 @@ func (ss *SongSection) IncreaseCycles() {
 	}
 }
 
+func (ss *SongSection) ToggleKeepCycles() {
+	ss.KeepCycles = !ss.KeepCycles
+}
+
 func (ss *SongSection) DecreaseStartBeats() {
 	newStartBeats := ss.StartBeat - 1
 	if newStartBeats >= 0 {
@@ -728,10 +740,11 @@ func InitPart(name string) Part {
 
 func (m Model) View() string {
 	var buf strings.Builder
-	buf.WriteString(lipgloss.PlaceHorizontal(20, lipgloss.Left, "  Section"))
-	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Start Beat"))
-	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Start Cycle"))
-	buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, "Cycles"))
+	buf.WriteString(lipgloss.PlaceHorizontal(18, lipgloss.Left, "  Section"))
+	buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, "Start Beat"))
+	buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, "Start Cycle"))
+	buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, "Cycles"))
+	buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, "Keep"))
 	buf.WriteString("\n")
 
 	m.renderNode(&buf, m.Root, 0)
@@ -749,18 +762,18 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int) {
 	if node.IsGroup() && depth > 0 {
 		indentation := strings.Repeat("  ", depth)
 		nodeName := fmt.Sprintf("%s[Group]", indentation)
-		buf.WriteString(lipgloss.PlaceHorizontal(20, lipgloss.Left, nodeName))
-		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, ""))
-		buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, ""))
+		buf.WriteString(lipgloss.PlaceHorizontal(18, lipgloss.Left, nodeName))
+		buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, ""))
+		buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, ""))
 
 		isSelected := depth == m.depthCursor && slices.Contains(m.Cursor, node)
 
 		// Display iterations
 		iterations := fmt.Sprintf("%d", node.Iterations)
 		if isSelected && m.Focus {
-			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.SelectedColor.Render(iterations)))
+			buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, colors.SelectedColor.Render(iterations)))
 		} else {
-			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.NumberColor.Render(iterations)))
+			buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, colors.NumberColor.Render(iterations)))
 		}
 		buf.WriteString("\n")
 
@@ -784,20 +797,20 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int) {
 			sectionOutput = section
 		}
 
-		buf.WriteString(lipgloss.PlaceHorizontal(20, lipgloss.Left, sectionOutput))
+		buf.WriteString(lipgloss.PlaceHorizontal(18, lipgloss.Left, sectionOutput))
 
 		startBeat := songSection.StartBeat
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_START_BEAT {
-			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.SelectedColor.Render(fmt.Sprintf("%d", startBeat))))
+			buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, colors.SelectedColor.Render(fmt.Sprintf("%d", startBeat))))
 		} else {
-			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.NumberColor.Render(fmt.Sprintf("%d", startBeat))))
+			buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, colors.NumberColor.Render(fmt.Sprintf("%d", startBeat))))
 		}
 
 		startCycle := songSection.StartCycles
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_START_CYCLE {
-			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.SelectedColor.Render(fmt.Sprintf("%d", startCycle))))
+			buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, colors.SelectedColor.Render(fmt.Sprintf("%d", startCycle))))
 		} else {
-			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.NumberColor.Render(fmt.Sprintf("%d", startCycle))))
+			buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, colors.NumberColor.Render(fmt.Sprintf("%d", startCycle))))
 		}
 
 		var cyclesString string
@@ -807,9 +820,16 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int) {
 			cyclesString = fmt.Sprintf("%d", songSection.Cycles)
 		}
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_CYCLES {
-			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.SelectedColor.Render(cyclesString)))
+			buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, colors.SelectedColor.Render(cyclesString)))
 		} else {
-			buf.WriteString(lipgloss.PlaceHorizontal(15, lipgloss.Right, colors.NumberColor.Render(cyclesString)))
+			buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, colors.NumberColor.Render(cyclesString)))
+		}
+
+		keepCycles := songSection.KeepCycles
+		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_KEEP_CYCLES {
+			buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, colors.SelectedColor.Render(fmt.Sprintf("%v", keepCycles))))
+		} else {
+			buf.WriteString(lipgloss.PlaceHorizontal(11, lipgloss.Right, colors.NumberColor.Render(fmt.Sprintf("%v", keepCycles))))
 		}
 
 		buf.WriteString("\n")
