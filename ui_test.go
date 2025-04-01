@@ -73,8 +73,6 @@ func TestUpdateArrangementFocus(t *testing.T) {
 
 		updatedModel, _ = updatedModel.Update(tea.KeyMsg{Type: tea.KeyCtrlCloseBracket})
 		modelPtr = updatedModel.(model)
-		modelPtr.selectionIndicator = SELECT_PART
-		modelPtr.sectionSideIndicator = true
 
 		assert.Equal(t, FOCUS_ARRANGEMENT_EDITOR, modelPtr.focus, "Model should have arrangement editor focus")
 		assert.True(t, modelPtr.arrangement.Focus, "Arrangement model should have focus flag set to true")
@@ -117,7 +115,7 @@ func TestAdvanceKeyCycles(t *testing.T) {
 	t.Run("1 cycle song", func(t *testing.T) {
 		var counter int
 		var parts = InitParts()
-		var arr *arrangement.Arrangement = InitArrangement(parts)
+		var arr = InitArrangement(parts)
 		def := Definition{
 			arrangement: arr,
 			parts:       &parts,
@@ -144,7 +142,7 @@ func TestAdvanceKeyCycles(t *testing.T) {
 	t.Run("2 iteration song", func(t *testing.T) {
 		var counter int
 		var parts = InitParts()
-		var arr *arrangement.Arrangement = InitArrangement(parts)
+		var arr = InitArrangement(parts)
 		def := Definition{
 			arrangement: arr,
 			parts:       &parts,
@@ -174,7 +172,7 @@ func TestAdvanceKeyCycles(t *testing.T) {
 	t.Run("2 cycle song", func(t *testing.T) {
 		var counter int
 		var parts = InitParts()
-		var arr *arrangement.Arrangement = InitArrangement(parts)
+		var arr = InitArrangement(parts)
 		def := Definition{
 			arrangement: arr,
 			parts:       &parts,

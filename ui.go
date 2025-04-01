@@ -1039,41 +1039,33 @@ func (m *model) DecreaseBeats() {
 }
 
 func (m *model) IncreaseStartBeats() {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	if currentNode != nil && currentNode.IsEndNode() {
-		currentNode.Section.IncreaseStartBeats()
-	}
+	section := m.CurrentSongSection()
+	section.IncreaseStartBeats()
 }
 
 func (m *model) DecreaseStartBeats() {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	if currentNode != nil && currentNode.IsEndNode() {
-		currentNode.Section.DecreaseStartBeats()
-	}
+	section := m.CurrentSongSection()
+	section.DecreaseStartBeats()
 }
 
 func (m *model) IncreaseStartCycles() {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	if currentNode != nil && currentNode.IsEndNode() {
-		currentNode.Section.IncreaseStartCycles()
-	}
+	section := m.CurrentSongSection()
+	section.IncreaseStartCycles()
 }
 
 func (m *model) DecreaseStartCycles() {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	if currentNode != nil && currentNode.IsEndNode() {
-		currentNode.Section.DecreaseStartCycles()
-	}
+	section := m.CurrentSongSection()
+	section.DecreaseStartCycles()
 }
 
 func (m *model) IncreaseCycles() {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	currentNode.Section.IncreaseCycles()
+	section := m.CurrentSongSection()
+	section.IncreaseCycles()
 }
 
 func (m *model) DecreaseCycles() {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	currentNode.Section.DecreaseCycles()
+	section := m.CurrentSongSection()
+	section.DecreaseCycles()
 }
 
 func (m *model) IncreasePartSelector() {
@@ -2007,22 +1999,14 @@ func (m model) Save() {
 }
 
 func (m model) CurrentPart() arrangement.Part {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	if currentNode != nil && currentNode.IsEndNode() {
-		partId := currentNode.Section.Part
-		return (*m.definition.parts)[partId]
-	}
-	// Default to first part if no valid node is selected
-	return (*m.definition.parts)[0]
+	section := m.CurrentSongSection()
+	partId := section.Part
+	return (*m.definition.parts)[partId]
 }
 
 func (m model) CurrentPartId() int {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	if currentNode != nil && currentNode.IsEndNode() {
-		return currentNode.Section.Part
-	}
-	// Default to 0 if no valid node is selected
-	return 0
+	section := m.CurrentSongSection()
+	return section.Part
 }
 
 func (m model) CurrentSongSection() arrangement.SongSection {
@@ -2259,8 +2243,7 @@ func (m *model) advanceKeyCycle() {
 	if m.playState[m.definition.keyline].currentBeat == 0 {
 		m.keyCycles++
 
-		currentNode := m.arrangement.Cursor.GetCurrentNode()
-		songSection := currentNode.Section
+		songSection := m.CurrentSongSection()
 
 		if songSection.Cycles != math.MaxInt64 &&
 			songSection.Cycles+songSection.StartCycles <= m.keyCycles {
@@ -2272,9 +2255,9 @@ func (m *model) advanceKeyCycle() {
 }
 
 func (m *model) StartPart() {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	m.keyCycles = currentNode.Section.StartCycles
-	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(currentNode.Section.StartBeat))
+	section := m.CurrentSongSection()
+	m.keyCycles = section.StartCycles
+	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(section.StartBeat))
 	m.ResetCurrentOverlay()
 }
 
