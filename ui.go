@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"math/rand"
 	"os"
 	"slices"
@@ -402,7 +401,6 @@ type model struct {
 	patternMode           PatternMode
 	ratchetCursor         uint8
 	currentOverlay        *overlays.Overlay
-	keyCycles             int
 	undoStack             UndoStack
 	redoStack             UndoStack
 	yankBuffer            Buffer
@@ -1039,33 +1037,38 @@ func (m *model) DecreaseBeats() {
 }
 
 func (m *model) IncreaseStartBeats() {
-	section := m.CurrentSongSection()
-	section.IncreaseStartBeats()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	currentNode.Section.IncreaseStartBeats()
 }
 
 func (m *model) DecreaseStartBeats() {
-	section := m.CurrentSongSection()
-	section.DecreaseStartBeats()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	currentNode.Section.DecreaseStartBeats()
 }
 
 func (m *model) IncreaseStartCycles() {
-	section := m.CurrentSongSection()
-	section.IncreaseStartCycles()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	currentNode.Section.IncreaseStartCycles()
 }
 
 func (m *model) DecreaseStartCycles() {
-	section := m.CurrentSongSection()
-	section.DecreaseStartCycles()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	currentNode.Section.DecreaseStartCycles()
 }
 
 func (m *model) IncreaseCycles() {
-	section := m.CurrentSongSection()
-	section.IncreaseCycles()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	currentNode.Section.IncreaseCycles()
 }
 
 func (m *model) DecreaseCycles() {
-	section := m.CurrentSongSection()
-	section.DecreaseCycles()
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	currentNode.Section.DecreaseCycles()
+}
+
+func (m *model) IncrementPlayCycles() {
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	currentNode.Section.IncrementPlayCycles()
 }
 
 func (m *model) IncreasePartSelector() {
@@ -1575,17 +1578,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.connected = false
 	case beatMsg:
 		m.beatTime = time.Now()
-		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.keyCycles)
+		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
 		if m.playing != PLAY_STOPPED {
 			m.advanceCurrentBeat(playingOverlay)
 			m.advanceKeyCycle()
 		}
 		if m.playing != PLAY_STOPPED {
-			playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.keyCycles)
+			playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
 			gridKeys := make([]grid.GridKey, 0, len(m.playState))
 			m.CurrentBeatGridKeys(&gridKeys)
 			pattern := make(grid.Pattern)
-			playingOverlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, gridKeys)
+			playingOverlay.CurrentBeatOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles(), gridKeys)
 			cmds := make([]tea.Cmd, 0, len(pattern)+1)
 			m.PlayBeat(msg.interval, pattern, &cmds)
 			if len(cmds) > 0 {
@@ -1675,31 +1678,29 @@ func (m *model) Start() {
 		m.arrangement.Cursor = m.arrangement.CurrentNodeCursor(m.arrangement.Cursor)
 	}
 
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	if currentNode != nil && currentNode.IsEndNode() {
-		m.keyCycles = currentNode.Section.StartCycles
-		m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(currentNode.Section.StartBeat))
+	m.arrangement.Root.ResetAllPlayCycles()
+	section := m.CurrentSongSection()
+	section.ResetPlayCycles()
+	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(section.StartBeat))
 
-		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.keyCycles)
-		tickInterval := m.TickInterval()
+	playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(section.PlayCycles())
+	tickInterval := m.TickInterval()
 
-		pattern := m.CombinedBeatPattern(playingOverlay)
-		cmds := make([]tea.Cmd, 0, len(pattern))
-		m.PlayBeat(tickInterval, pattern, &cmds)
-		if m.playing == PLAY_STANDARD {
-			m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
-		}
+	pattern := m.CombinedBeatPattern(playingOverlay)
+	cmds := make([]tea.Cmd, 0, len(pattern))
+	m.PlayBeat(tickInterval, pattern, &cmds)
+	if m.playing == PLAY_STANDARD {
+		m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 	}
 }
 
 func (m *model) Stop() {
-	m.keyCycles = 0
-
 	if m.loopMode == LOOP_PART {
 		m.arrangement.Cursor = m.arrangement.SavedCursor
 		m.arrangement.ResetDepth()
 	}
 	m.arrangement.Root.ResetCycles()
+	m.arrangement.Root.ResetAllPlayCycles()
 	m.arrangement.Root.ResetIterations()
 
 	notes := notereg.Clear()
@@ -2172,7 +2173,7 @@ func (m *model) Paste() {
 
 func (m *model) advanceCurrentBeat(playingOverlay *overlays.Overlay) {
 	pattern := make(grid.Pattern)
-	playingOverlay.CombineActionPattern(&pattern, m.keyCycles)
+	playingOverlay.CombineActionPattern(&pattern, m.CurrentSongSection().PlayCycles())
 	for i := range m.playState {
 		doContinue := m.advancePlayState(pattern, i)
 		if !doContinue {
@@ -2241,12 +2242,10 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 
 func (m *model) advanceKeyCycle() {
 	if m.playState[m.definition.keyline].currentBeat == 0 {
-		m.keyCycles++
-
+		m.IncrementPlayCycles()
 		songSection := m.CurrentSongSection()
 
-		if songSection.Cycles != math.MaxInt64 &&
-			songSection.Cycles+songSection.StartCycles <= m.keyCycles {
+		if songSection.IsDone() {
 			if m.PlayMove() {
 				m.StartPart()
 			}
@@ -2256,7 +2255,7 @@ func (m *model) advanceKeyCycle() {
 
 func (m *model) StartPart() {
 	section := m.CurrentSongSection()
-	m.keyCycles = section.StartCycles
+	section.DuringPlayReset()
 	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(section.StartBeat))
 	m.ResetCurrentOverlay()
 }
@@ -2287,7 +2286,7 @@ func (m *model) PlayMove() bool {
 
 func (m model) PlayingOverlayKeys() []overlayKey {
 	keys := make([]overlayKey, 0, 10)
-	m.CurrentPart().Overlays.GetMatchingOverlayKeys(&keys, m.keyCycles)
+	m.CurrentPart().Overlays.GetMatchingOverlayKeys(&keys, m.CurrentSongSection().PlayCycles())
 	return keys
 }
 
@@ -2301,14 +2300,14 @@ func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 	pattern := make(grid.Pattern)
 	gridKeys := make([]grid.GridKey, 0, len(m.playState))
 	m.CurrentBeatGridKeys(&gridKeys)
-	overlay.CurrentBeatOverlayPattern(&pattern, m.keyCycles, gridKeys)
+	overlay.CurrentBeatOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles(), gridKeys)
 	return pattern
 }
 
 func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.OverlayPattern {
 	pattern := make(overlays.OverlayPattern)
 	if m.playing != PLAY_STOPPED && !m.playEditing {
-		m.CurrentPart().Overlays.CombineOverlayPattern(&pattern, m.keyCycles)
+		m.CurrentPart().Overlays.CombineOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles())
 	} else {
 		overlay.CombineOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle())
 	}
@@ -2765,7 +2764,7 @@ func (m model) ViewTriggerSeq() string {
 	} else if m.selectionIndicator == SELECT_CONFIRM_QUIT {
 		buf.WriteString(m.ConfirmQuitView())
 	} else if m.playing != PLAY_STOPPED {
-		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.keyCycles))
+		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
 	} else {
 		buf.WriteString(m.WriteView())
 		buf.WriteString("Seq - A sequencer for your cli\n")
@@ -2854,7 +2853,7 @@ func (m model) ViewOverlay() string {
 func (m model) CurrentOverlayView() string {
 	var matchedKey overlayKey
 	if m.playing != PLAY_STOPPED {
-		matchedKey = m.CurrentPart().Overlays.HighestMatchingOverlay(m.keyCycles).Key
+		matchedKey = m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles()).Key
 	} else {
 		matchedKey = overlaykey.ROOT
 	}

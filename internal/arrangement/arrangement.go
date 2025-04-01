@@ -61,6 +61,16 @@ func (a *Arrangement) ResetCycles() {
 	}
 }
 
+func (a *Arrangement) ResetAllPlayCycles() {
+	if len(a.Nodes) == 0 {
+		a.Section.ResetPlayCycles()
+	} else {
+		for _, n := range a.Nodes {
+			n.ResetAllPlayCycles()
+		}
+	}
+}
+
 // CountEndNodes recursively counts the total number of end nodes in an arrangement
 func (a *Arrangement) CountEndNodes() int {
 	if a.IsEndNode() {
@@ -627,12 +637,34 @@ type SongSection struct {
 	StartBeat   int
 	StartCycles int
 	resetCycles int
+	playCycles  int
+}
+
+func (ss *SongSection) ResetPlayCycles() {
+	ss.playCycles = ss.StartCycles
+}
+
+func (ss *SongSection) DuringPlayReset() {
+	ss.playCycles = ss.StartCycles
+}
+
+func (ss SongSection) PlayCycles() int {
+	return ss.playCycles
 }
 
 func (ss *SongSection) ResetCycles() {
 	if ss.Cycles == math.MaxInt64 {
 		ss.Cycles = ss.resetCycles
 	}
+}
+
+func (ss *SongSection) IncrementPlayCycles() {
+	ss.playCycles++
+}
+
+func (ss *SongSection) IsDone() bool {
+	//return ss.Cycles != math.MaxInt64 &&
+	return ss.Cycles+ss.StartCycles <= ss.playCycles
 }
 
 func InitSongSection(part int) SongSection {
