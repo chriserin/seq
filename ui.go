@@ -1315,6 +1315,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.focus == FOCUS_ARRANGEMENT_EDITOR && !m.IsPartOperation(msg) && !m.IsPlayOperation(msg) {
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
+			m.ResetCurrentOverlay()
 			return m, cmd
 		}
 		switch {
