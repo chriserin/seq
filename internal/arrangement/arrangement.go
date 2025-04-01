@@ -606,6 +606,7 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.GroupNodes()
 	case Is(msg, keys.DeleteNode):
 		m.Cursor.DeleteNode()
+		m.ResetDepth()
 	case Is(msg, keys.Escape):
 		m.Focus = false
 		m.ResetDepth()
