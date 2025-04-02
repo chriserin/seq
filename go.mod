@@ -3,7 +3,6 @@ module github.com/chriserin/seq
 go 1.23.3
 
 require (
-	github.com/BurntSushi/toml v1.4.0
 	github.com/aarzilli/golua v0.0.0-20250217091409-248753f411c4
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.2.4
