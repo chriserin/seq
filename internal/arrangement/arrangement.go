@@ -499,6 +499,46 @@ func (a *ArrCursor) IsLastSibling() bool {
 	return index == len(parent.Nodes)-1
 }
 
+func MoveNodeDown(cursor *ArrCursor) {
+	if len(*cursor) < 2 {
+		return
+	}
+
+	currentNode := (*cursor)[len(*cursor)-1]
+	parentNode := (*cursor)[len(*cursor)-2]
+
+	currentIndex := slices.Index(parentNode.Nodes, currentNode)
+
+	if currentIndex < len(parentNode.Nodes)-1 && parentNode.Nodes[currentIndex+1].IsEndNode() {
+		parentNode.Nodes[currentIndex], parentNode.Nodes[currentIndex+1] = parentNode.Nodes[currentIndex+1], parentNode.Nodes[currentIndex]
+		return
+	}
+
+	if currentIndex < len(parentNode.Nodes)-1 && parentNode.Nodes[currentIndex+1].IsGroup() {
+		newParent := parentNode.Nodes[currentIndex+1]
+		newParent.Nodes = slices.Insert(newParent.Nodes, 0, currentNode)
+		parentNode.Nodes = slices.Delete(parentNode.Nodes, currentIndex, currentIndex+1)
+		*cursor = (*cursor)[:len(*cursor)-1]
+		*cursor = append(*cursor, newParent, currentNode)
+		return
+	}
+
+	if len(*cursor) == 2 && (*cursor)[0] == parentNode {
+		// PARENT IS ROOT, CAN'T MOVE DOWN FURTHER
+		return
+	}
+
+	parentNode.Nodes = parentNode.Nodes[:len(parentNode.Nodes)-1]
+
+	grandparentNode := (*cursor)[len(*cursor)-3]
+	parentIndex := slices.Index(grandparentNode.Nodes, parentNode)
+
+	grandparentNode.Nodes = slices.Insert(grandparentNode.Nodes, parentIndex+1, currentNode)
+
+	*cursor = (*cursor)[:len(*cursor)-2]   // Remove current node and parent
+	*cursor = append(*cursor, currentNode) // Add new path
+}
+
 func InitModel(arrangement *Arrangement, parts *[]Part) Model {
 	var root *Arrangement
 	var cursor ArrCursor
@@ -528,27 +568,29 @@ func InitModel(arrangement *Arrangement, parts *[]Part) Model {
 }
 
 type keymap struct {
-	CursorUp    key.Binding
-	CursorDown  key.Binding
-	CursorLeft  key.Binding
-	CursorRight key.Binding
-	Increase    key.Binding
-	Decrease    key.Binding
-	GroupNodes  key.Binding
-	DeleteNode  key.Binding
-	Escape      key.Binding
+	CursorUp     key.Binding
+	CursorDown   key.Binding
+	CursorLeft   key.Binding
+	CursorRight  key.Binding
+	Increase     key.Binding
+	Decrease     key.Binding
+	GroupNodes   key.Binding
+	DeleteNode   key.Binding
+	MovePartDown key.Binding
+	Escape       key.Binding
 }
 
 var keys = keymap{
-	CursorUp:    Key("Up", "k"),
-	CursorDown:  Key("Down", "j"),
-	CursorLeft:  Key("Left", "h"),
-	CursorRight: Key("Right", "l"),
-	Increase:    Key("Increase", "+", "="),
-	Decrease:    Key("Decrease", "-", "_"),
-	GroupNodes:  Key("Group", "g"),
-	DeleteNode:  Key("Delete", "d"),
-	Escape:      Key("Escape", "esc", "enter"),
+	CursorUp:     Key("Up", "k"),
+	CursorDown:   Key("Down", "j"),
+	CursorLeft:   Key("Left", "h"),
+	CursorRight:  Key("Right", "l"),
+	Increase:     Key("Increase", "+", "="),
+	Decrease:     Key("Decrease", "-", "_"),
+	GroupNodes:   Key("Group", "g"),
+	DeleteNode:   Key("Delete", "d"),
+	MovePartDown: Key("Move Part Down", "J"),
+	Escape:       Key("Escape", "esc", "enter"),
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -623,6 +665,8 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 	case Is(msg, keys.DeleteNode):
 		m.Cursor.DeleteNode()
 		m.ResetDepth()
+	case Is(msg, keys.MovePartDown):
+		MoveNodeDown(&m.Cursor)
 	case Is(msg, keys.Escape):
 		m.Focus = false
 		m.ResetDepth()
