@@ -539,6 +539,59 @@ func MoveNodeDown(cursor *ArrCursor) {
 	*cursor = append(*cursor, currentNode) // Add new path
 }
 
+func MoveNodeUp(cursor *ArrCursor) {
+	if len(*cursor) < 2 {
+		return
+	}
+
+	currentNode := (*cursor)[len(*cursor)-1]
+	parentNode := (*cursor)[len(*cursor)-2]
+
+	currentIndex := slices.Index(parentNode.Nodes, currentNode)
+
+	// Can't move up if already at the top
+	if currentIndex == 0 {
+		// If it's the first node in a group and there's a parent, move it up to the parent level
+		if len(*cursor) > 2 {
+			grandparentNode := (*cursor)[len(*cursor)-3]
+			parentIndex := slices.Index(grandparentNode.Nodes, parentNode)
+			
+			// Remove node from current parent
+			parentNode.Nodes = slices.Delete(parentNode.Nodes, currentIndex, currentIndex+1)
+			
+			// Insert node as sibling before the parent
+			grandparentNode.Nodes = slices.Insert(grandparentNode.Nodes, parentIndex, currentNode)
+			
+			// Update cursor
+			*cursor = (*cursor)[:len(*cursor)-2]   // Remove current node and parent
+			*cursor = append(*cursor, currentNode) // Add new path
+		}
+		return
+	}
+
+	// Swap with previous sibling if both are end nodes
+	if parentNode.Nodes[currentIndex-1].IsEndNode() {
+		parentNode.Nodes[currentIndex], parentNode.Nodes[currentIndex-1] = parentNode.Nodes[currentIndex-1], parentNode.Nodes[currentIndex]
+		return
+	}
+
+	// Handle the case where the previous sibling is a group
+	if parentNode.Nodes[currentIndex-1].IsGroup() {
+		prevGroup := parentNode.Nodes[currentIndex-1]
+		
+		// Remove node from current position
+		parentNode.Nodes = slices.Delete(parentNode.Nodes, currentIndex, currentIndex+1)
+		
+		// Add the node to the end of the previous group
+		prevGroup.Nodes = append(prevGroup.Nodes, currentNode)
+		
+		// Update cursor to point to the node in its new position
+		*cursor = (*cursor)[:len(*cursor)-1]                    // Remove current node
+		*cursor = append(*cursor, prevGroup, currentNode)       // Add path through group
+		return
+	}
+}
+
 func InitModel(arrangement *Arrangement, parts *[]Part) Model {
 	var root *Arrangement
 	var cursor ArrCursor
@@ -577,6 +630,7 @@ type keymap struct {
 	GroupNodes   key.Binding
 	DeleteNode   key.Binding
 	MovePartDown key.Binding
+	MovePartUp   key.Binding
 	Escape       key.Binding
 }
 
@@ -590,6 +644,7 @@ var keys = keymap{
 	GroupNodes:   Key("Group", "g"),
 	DeleteNode:   Key("Delete", "d"),
 	MovePartDown: Key("Move Part Down", "J"),
+	MovePartUp:   Key("Move Part Up", "K"),
 	Escape:       Key("Escape", "esc", "enter"),
 }
 
@@ -667,6 +722,8 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.ResetDepth()
 	case Is(msg, keys.MovePartDown):
 		MoveNodeDown(&m.Cursor)
+	case Is(msg, keys.MovePartUp):
+		MoveNodeUp(&m.Cursor)
 	case Is(msg, keys.Escape):
 		m.Focus = false
 		m.ResetDepth()
