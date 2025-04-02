@@ -154,7 +154,6 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			definition:     def,
 			programChannel: make(chan midiEventLoopMsg),
 			playState:      InitLineStates(1, []linestate{}, 0),
-			keyCycles:      1,
 		}
 		m.arrangement.Cursor[0].IncreaseIterations()
 		go func() {
@@ -240,7 +239,6 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			definition:     def,
 			programChannel: make(chan midiEventLoopMsg),
 			playState:      InitLineStates(1, []linestate{}, 0),
-			keyCycles:      1,
 		}
 		arr := m.arrangement.Cursor.GetCurrentNode()
 		(*arr).Section.Cycles = 1
@@ -282,6 +280,7 @@ func TestAdvanceKeyCycles(t *testing.T) {
 
 		root.Nodes = append(root.Nodes, group1, nodeB)
 		group1.Nodes = append(group1.Nodes, nodeA)
+		root.ResetAllPlayCycles()
 
 		def := Definition{
 			arrangement: root,
@@ -296,7 +295,6 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			definition:     def,
 			programChannel: make(chan midiEventLoopMsg),
 			playState:      InitLineStates(1, []linestate{}, 0),
-			keyCycles:      1,
 		}
 		go func() {
 			<-m.programChannel
