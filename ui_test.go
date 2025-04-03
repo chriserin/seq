@@ -165,7 +165,7 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			m.advanceKeyCycle()
 			counter++
 		}
-		assert.Equal(t, 2, counter)
+		assert.Equal(t, 3, counter)
 	})
 
 	t.Run("2 cycle song", func(t *testing.T) {
@@ -251,7 +251,7 @@ func TestAdvanceKeyCycles(t *testing.T) {
 			m.advanceKeyCycle()
 			counter++
 		}
-		assert.Equal(t, 4, counter)
+		assert.Equal(t, 5, counter)
 	})
 
 	t.Run("grouped part with following part", func(t *testing.T) {

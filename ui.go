@@ -2260,7 +2260,6 @@ func (m *model) advanceKeyCycle() {
 }
 
 func (m *model) StartPart() {
-	m.LogString("Start Part")
 	m.DuringPlayResetPlayCycles()
 	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().StartBeat))
 	m.ResetCurrentOverlay()
