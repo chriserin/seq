@@ -928,6 +928,38 @@ func TestDeleteNodeComplex(t *testing.T) {
 		assert.Equal(t, 1, len(root.Nodes), "root should only have the node")
 	})
 
+	t.Run("delete group", func(t *testing.T) {
+		root := &Arrangement{
+			Iterations: 1,
+			Nodes:      make([]*Arrangement, 0),
+		}
+
+		firstNode := &Arrangement{
+			Section: SongSection{Part: 1, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		}
+
+		group := &Arrangement{
+			Iterations: 2,
+			Nodes:      make([]*Arrangement, 0),
+		}
+
+		lastNode := &Arrangement{
+			Section: SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		}
+
+		group.Nodes = append(group.Nodes, lastNode)
+		root.Nodes = append(root.Nodes, firstNode, group)
+
+		cursor := ArrCursor{root, group, lastNode}
+
+		cursor.DeleteGroup(1)
+
+		assert.Equal(t, 2, len(cursor), "Cursor should move to previous node")
+		assert.Equal(t, lastNode, cursor[1], "Cursor should now point to previous node")
+
+		assert.Equal(t, 2, len(root.Nodes), "root should have children of deleted group")
+	})
+
 	// Test case 3: Delete middle node in a flat structure
 	t.Run("delete middle node in flat structure", func(t *testing.T) {
 		root := &Arrangement{

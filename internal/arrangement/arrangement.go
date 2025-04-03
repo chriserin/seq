@@ -187,8 +187,19 @@ func (ac *ArrCursor) Matches(node *Arrangement) bool {
 	return (*ac)[len(*ac)-1] == node
 }
 
+func (ac *ArrCursor) DeleteGroup(depthCursor int) {
+	currentNode := (*ac)[depthCursor]
+	parentNode := (*ac)[depthCursor-1]
+
+	currentIndex := slices.Index(parentNode.Nodes, currentNode)
+
+	parentNode.Nodes = slices.Replace(parentNode.Nodes, currentIndex, currentIndex+1, currentNode.Nodes...)
+	*ac = slices.Delete(*ac, depthCursor, depthCursor+1)
+}
+
 func (ac *ArrCursor) DeleteNode() {
 	if (*ac)[0].CountEndNodes() <= 1 {
+		(*ac).MoveNext()
 		return
 	}
 
@@ -206,8 +217,8 @@ func (ac *ArrCursor) DeleteNode() {
 		ac.DeleteNode()
 		*ac = newCursor
 	} else {
-		if !ac.MoveNext() {
-			ac.MovePrev()
+		if !ac.MovePrev() {
+			ac.MoveNext()
 		}
 		parentNode.Nodes = append(parentNode.Nodes[:currentIndex], parentNode.Nodes[currentIndex+1:]...)
 	}
@@ -721,7 +732,11 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 	case Is(msg, keys.GroupNodes):
 		m.GroupNodes()
 	case Is(msg, keys.DeleteNode):
-		m.Cursor.DeleteNode()
+		if m.depthCursor == len(m.Cursor)-1 {
+			m.Cursor.DeleteNode()
+		} else {
+			m.Cursor.DeleteGroup(m.depthCursor)
+		}
 		m.ResetDepth()
 	case Is(msg, keys.MovePartDown):
 		MoveNodeDown(&m.Cursor)
