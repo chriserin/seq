@@ -2598,7 +2598,9 @@ func (m model) View() string {
 	seqView := m.ViewTriggerSeq()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "  ", seqView, "  ", sideView))
 	buf.WriteString("\n")
-	buf.WriteString(m.arrangement.View())
+	if m.focus == FOCUS_ARRANGEMENT_EDITOR {
+		buf.WriteString(m.arrangement.View())
+	}
 	return buf.String()
 }
 

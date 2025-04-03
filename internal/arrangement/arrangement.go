@@ -800,6 +800,7 @@ func InitSongSection(part int) SongSection {
 		StartBeat:   0,
 		StartCycles: 1,
 		infinite:    false,
+		KeepCycles:  false,
 	}
 }
 

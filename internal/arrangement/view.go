@@ -189,15 +189,15 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		// Handle keep cycles
 		var keepCycles string
 		if songSection.KeepCycles {
-			keepCycles = "-"
-		} else {
 			keepCycles = "✔"
+		} else {
+			keepCycles = "-"
 		}
 		keepText := ""
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_KEEP_CYCLES {
-			keepText = colors.SelectedColor.Render(fmt.Sprintf("%s", keepCycles))
+			keepText = colors.SelectedColor.Render(keepCycles)
 		} else {
-			keepText = colors.NumberColor.Render(fmt.Sprintf("%s", keepCycles))
+			keepText = colors.NumberColor.Render(keepCycles)
 		}
 		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
 			lipgloss.PlaceHorizontal(12, lipgloss.Right, keepText))

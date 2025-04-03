@@ -455,7 +455,7 @@ func TestModelView(t *testing.T) {
 
 	// Test that indentation is working
 	var buf strings.Builder
-	model.renderNode(&buf, group, 1)
+	model.renderNode(&buf, group, 1, false)
 	groupOutput := buf.String()
 	assert.Contains(t, groupOutput, "  ", "Group rendering should include indentation")
 }
