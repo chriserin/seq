@@ -58,6 +58,7 @@ type transitiveKeyMap struct {
 	Redo                   key.Binding
 	New                    key.Binding
 	ToggleVisualMode       key.Binding
+	TogglePlayEdit         key.Binding
 	NewLine                key.Binding
 	NewSectionAfter        key.Binding
 	NewSectionBefore       key.Binding
@@ -192,6 +193,7 @@ var transitiveKeys = transitiveKeyMap{
 	Undo:                   Key("Undo", "u"),
 	Redo:                   Key("Redo", "U"),
 	ToggleVisualMode:       Key("Toggle Visual Mode", "v"),
+	TogglePlayEdit:         Key("Toggle Play Edit", "e"),
 	New:                    Key("New", "ctrl+n"),
 	NewLine:                Key("New Line", "ctrl+l"),
 	NewSectionAfter:        Key("New Part After", "ctrl+]"),
@@ -1519,6 +1521,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.ToggleVisualMode):
 			m.visualAnchorCursor = m.cursorPos
 			m.visualMode = !m.visualMode
+		case Is(msg, keys.TogglePlayEdit):
+			m.playEditing = !m.playEditing
 		case Is(msg, keys.NewLine):
 			if len(m.definition.lines) < 16 {
 				lastline := m.definition.lines[len(m.definition.lines)-1]
