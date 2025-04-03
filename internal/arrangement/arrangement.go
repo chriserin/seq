@@ -440,7 +440,7 @@ func (m *Model) GroupNodes() {
 	}
 }
 
-func (m *Model) NewPart(index int, after bool) {
+func (m *Model) NewPart(index int, after bool, isPlaying bool) {
 	partId := index
 	if index < 0 {
 		partId = len(*m.parts)
@@ -453,7 +453,7 @@ func (m *Model) NewPart(index int, after bool) {
 		Iterations: 1,
 	}
 
-	m.AddPart(after, newNode)
+	m.AddPart(after, newNode, isPlaying)
 }
 
 func (m *Model) ChangePart(index int) {
@@ -466,7 +466,7 @@ func (m *Model) ChangePart(index int) {
 	currentNode.Section.Part = partId
 }
 
-func (m *Model) AddPart(after bool, newNode *Arrangement) {
+func (m *Model) AddPart(after bool, newNode *Arrangement, isPlaying bool) {
 	currentNode := m.Cursor[m.depthCursor]
 	parentNode := m.Cursor[m.depthCursor-1]
 
@@ -481,11 +481,12 @@ func (m *Model) AddPart(after bool, newNode *Arrangement) {
 		parentNode.Nodes = slices.Insert(parentNode.Nodes, currentIndex, newNode)
 	}
 
-	// Update cursor to point to new node
-	newCursor := make(ArrCursor, len(m.Cursor)-1)
-	copy(newCursor, m.Cursor[:len(m.Cursor)-1])
-	newCursor = append(newCursor, newNode)
-	m.Cursor = newCursor
+	if !isPlaying {
+		newCursor := make(ArrCursor, len(m.Cursor)-1)
+		copy(newCursor, m.Cursor[:len(m.Cursor)-1])
+		newCursor = append(newCursor, newNode)
+		m.Cursor = newCursor
+	}
 }
 
 func (cursor ArrCursor) IsFirstSibling() bool {

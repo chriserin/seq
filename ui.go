@@ -1276,7 +1276,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if Is(msg, keys.Enter) {
 			switch m.selectionIndicator {
 			case SELECT_PART:
-				m.arrangement.NewPart(m.partSelectorIndex, m.sectionSideIndicator)
+				m.arrangement.NewPart(m.partSelectorIndex, m.sectionSideIndicator, m.playing != PLAY_STOPPED)
 				m.currentOverlay = m.CurrentPart().Overlays
 				if m.focus == FOCUS_ARRANGEMENT_EDITOR {
 					m.selectionIndicator = SELECT_ARRANGEMENT_EDITOR
