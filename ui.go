@@ -1708,6 +1708,7 @@ func (m *model) Stop() {
 	m.arrangement.Root.ResetCycles()
 	m.arrangement.Root.ResetAllPlayCycles()
 	m.arrangement.Root.ResetIterations()
+	m.ResetCurrentOverlay()
 
 	notes := notereg.Clear()
 	sendFn := m.midiConnection.AcquireSendFunc()
