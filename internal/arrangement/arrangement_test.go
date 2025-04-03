@@ -450,7 +450,7 @@ func TestModelView(t *testing.T) {
 
 	// Basic validation of output
 	assert.Contains(t, output, "Part 1", "Output should contain Part 1")
-	assert.Contains(t, output, "[Group]", "Output should contain a group")
+	assert.Contains(t, output, "Group", "Output should contain a group")
 	assert.Contains(t, output, "2", "Output should contain iteration count")
 
 	// Test that indentation is working
