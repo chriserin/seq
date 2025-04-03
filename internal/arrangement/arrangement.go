@@ -533,7 +533,12 @@ func MoveNodeDown(cursor *ArrCursor) {
 	grandparentNode := (*cursor)[len(*cursor)-3]
 	parentIndex := slices.Index(grandparentNode.Nodes, parentNode)
 
-	grandparentNode.Nodes = slices.Insert(grandparentNode.Nodes, parentIndex+1, currentNode)
+	if len(parentNode.Nodes) == 0 {
+		grandparentNode.Nodes = slices.Delete(grandparentNode.Nodes, parentIndex, parentIndex+1)
+		grandparentNode.Nodes = slices.Insert(grandparentNode.Nodes, parentIndex, currentNode)
+	} else {
+		grandparentNode.Nodes = slices.Insert(grandparentNode.Nodes, parentIndex+1, currentNode)
+	}
 
 	*cursor = (*cursor)[:len(*cursor)-2]   // Remove current node and parent
 	*cursor = append(*cursor, currentNode) // Add new path
@@ -549,22 +554,20 @@ func MoveNodeUp(cursor *ArrCursor) {
 
 	currentIndex := slices.Index(parentNode.Nodes, currentNode)
 
-	// Can't move up if already at the top
 	if currentIndex == 0 {
-		// If it's the first node in a group and there's a parent, move it up to the parent level
 		if len(*cursor) > 2 {
 			grandparentNode := (*cursor)[len(*cursor)-3]
 			parentIndex := slices.Index(grandparentNode.Nodes, parentNode)
-			
-			// Remove node from current parent
+
 			parentNode.Nodes = slices.Delete(parentNode.Nodes, currentIndex, currentIndex+1)
-			
-			// Insert node as sibling before the parent
+			if len(parentNode.Nodes) == 0 {
+				grandparentNode.Nodes = slices.Delete(grandparentNode.Nodes, parentIndex, parentIndex+1)
+			}
+
 			grandparentNode.Nodes = slices.Insert(grandparentNode.Nodes, parentIndex, currentNode)
-			
-			// Update cursor
-			*cursor = (*cursor)[:len(*cursor)-2]   // Remove current node and parent
-			*cursor = append(*cursor, currentNode) // Add new path
+
+			*cursor = (*cursor)[:len(*cursor)-2]
+			*cursor = append(*cursor, currentNode)
 		}
 		return
 	}
@@ -578,16 +581,16 @@ func MoveNodeUp(cursor *ArrCursor) {
 	// Handle the case where the previous sibling is a group
 	if parentNode.Nodes[currentIndex-1].IsGroup() {
 		prevGroup := parentNode.Nodes[currentIndex-1]
-		
+
 		// Remove node from current position
 		parentNode.Nodes = slices.Delete(parentNode.Nodes, currentIndex, currentIndex+1)
-		
+
 		// Add the node to the end of the previous group
 		prevGroup.Nodes = append(prevGroup.Nodes, currentNode)
-		
+
 		// Update cursor to point to the node in its new position
-		*cursor = (*cursor)[:len(*cursor)-1]                    // Remove current node
-		*cursor = append(*cursor, prevGroup, currentNode)       // Add path through group
+		*cursor = (*cursor)[:len(*cursor)-1]              // Remove current node
+		*cursor = append(*cursor, prevGroup, currentNode) // Add path through group
 		return
 	}
 }
@@ -722,8 +725,10 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.ResetDepth()
 	case Is(msg, keys.MovePartDown):
 		MoveNodeDown(&m.Cursor)
+		m.ResetDepth()
 	case Is(msg, keys.MovePartUp):
 		MoveNodeUp(&m.Cursor)
+		m.ResetDepth()
 	case Is(msg, keys.Escape):
 		m.Focus = false
 		m.ResetDepth()

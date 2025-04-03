@@ -1139,6 +1139,26 @@ func TestMoveNodeDown(t *testing.T) {
 		assert.Equal(t, node1, cursor[2], "Cursor should still point to the moved node")
 	})
 
+	t.Run("Move last node of group down out of group", func(t *testing.T) {
+		group := &Arrangement{
+			Iterations: 2,
+			Nodes:      []*Arrangement{node1},
+		}
+
+		root.Nodes = []*Arrangement{group}
+
+		cursor := ArrCursor{root, group, node1}
+
+		MoveNodeDown(&cursor)
+
+		assert.Equal(t, 0, len(group.Nodes), "Group should have 0 nodes")
+		assert.Equal(t, 1, len(root.Nodes), "Root should have 1 nodes")
+		assert.Equal(t, node1, root.Nodes[0], "Root child should be node1")
+
+		assert.Equal(t, root, cursor[0], "Cursor root should be the same")
+		assert.Equal(t, node1, cursor[1], "Cursor should still point to the moved node")
+	})
+
 	t.Run("Move last node of a group to be a sibling of that group", func(t *testing.T) {
 		group := &Arrangement{
 			Iterations: 2,
@@ -1204,13 +1224,11 @@ func TestMoveNodeDown(t *testing.T) {
 
 // TestMoveNodeUp tests the MoveNodeUp function that reorders nodes within the tree
 func TestMoveNodeUp(t *testing.T) {
-	// Create a basic arrangement tree
 	root := &Arrangement{
 		Iterations: 1,
 		Nodes:      make([]*Arrangement, 0),
 	}
 
-	// Create some sections and nodes
 	section1 := SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1}
 	section2 := SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2}
 	section3 := SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1}
@@ -1270,6 +1288,26 @@ func TestMoveNodeUp(t *testing.T) {
 		assert.Equal(t, root, cursor[0], "Cursor root should be the same")
 		assert.Equal(t, group, cursor[1], "Cursor should still point to the group")
 		assert.Equal(t, node2, cursor[2], "Cursor should still point to the moved node")
+	})
+
+	t.Run("Move last node of group up out of group", func(t *testing.T) {
+		group := &Arrangement{
+			Iterations: 2,
+			Nodes:      []*Arrangement{node1},
+		}
+
+		root.Nodes = []*Arrangement{group}
+
+		cursor := ArrCursor{root, group, node1}
+
+		MoveNodeUp(&cursor)
+
+		assert.Equal(t, 0, len(group.Nodes), "Group should have 0 nodes")
+		assert.Equal(t, 1, len(root.Nodes), "Root should have 1 nodes")
+		assert.Equal(t, node1, root.Nodes[0], "Root child should be node1")
+
+		assert.Equal(t, root, cursor[0], "Cursor root should be the same")
+		assert.Equal(t, node1, cursor[1], "Cursor should still point to the moved node")
 	})
 
 	t.Run("Move first node of a group to be a sibling of that group", func(t *testing.T) {
