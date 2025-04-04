@@ -33,5 +33,4 @@ var WhiteKeyStyle = lipgloss.NewStyle().Background(White).Foreground(Black)
 
 var Black = lipgloss.Color("#000000")
 var White = lipgloss.Color("#ffffff")
-var Grey = lipgloss.Color("#ccc")
 var Heart = lipgloss.Color("#ed3902")
