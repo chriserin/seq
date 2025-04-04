@@ -74,7 +74,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 	if node.IsGroup() && depth > 0 {
 		var indent, nodeName string
 		if depth > 1 {
-			indent = strings.Repeat("┃ ", max(0, depth-2)) + "┣━"
+			indent = strings.Repeat("│ ", max(0, depth-2)) + "├─"
 			indentation := indentStyle.Render(indent)
 			nodeName = fmt.Sprintf("%s %s", indentation, groupStyle.Render("Group"))
 		} else {
@@ -122,11 +122,11 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		sectionName := (*m.parts)[songSection.Part].GetName()
 		if depth > 1 {
 			if isLast {
-				indentChar = "┗━"
+				indentChar = "└─"
 			} else {
-				indentChar = "┣━"
+				indentChar = "├─"
 			}
-			indentChars := strings.Repeat("┃ ", depth-2) + indentChar
+			indentChars := strings.Repeat("│ ", depth-2) + indentChar
 			indentation = indentStyle.Render(indentChars)
 			section = fmt.Sprintf("%s %s", indentation, sectionNameStyle.Render(sectionName))
 		} else {
