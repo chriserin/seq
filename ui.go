@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/chriserin/seq/internal/arrangement"
@@ -378,6 +379,7 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 type model struct {
+	textInput             textinput.Model
 	partSelectorIndex     int
 	sectionSideIndicator  bool
 	midiLoopMode          MidiLoopMode
@@ -484,6 +486,7 @@ const (
 	SELECT_CONFIRM_NEW
 	SELECT_CONFIRM_QUIT
 	SELECT_ARRANGEMENT_EDITOR
+	SELECT_RENAME_PART
 )
 
 type PatternMode uint8
@@ -1188,6 +1191,7 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 	unlockReceiverChannel := make(chan bool)
 
 	return model{
+		textInput:             InitTextInput(),
 		partSelectorIndex:     -1,
 		midiLoopMode:          midiLoopMode,
 		programChannel:        programChannel,
@@ -1206,6 +1210,16 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 		definition:            definition,
 		playState:             InitLineStates(len(definition.lines), []linestate{}, 0),
 	}
+}
+
+func InitTextInput() textinput.Model {
+	ti := textinput.New()
+	ti.Placeholder = "------"
+	ti.Focus()
+	ti.Prompt = ""
+	ti.CharLimit = 20
+	ti.Width = 20
+	return ti
 }
 
 func (m model) LogTeaMsg(msg tea.Msg) {
@@ -1289,6 +1303,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if Is(msg, keys.Enter) {
 			switch m.selectionIndicator {
+			case SELECT_RENAME_PART:
+				m.RenamePart(m.textInput.Value())
+				m.textInput.Reset()
+				m.selectionIndicator = SELECT_NOTHING
+				return m, nil
 			case SELECT_PART:
 				m.arrangement.NewPart(m.partSelectorIndex, m.sectionSideIndicator, m.playing != PLAY_STOPPED)
 				m.currentOverlay = m.CurrentPart().Overlays
@@ -1323,6 +1342,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if Is(msg, keys.Quit) {
 			m.SetSelectionIndicator(SELECT_CONFIRM_QUIT)
+		}
+		if m.selectionIndicator == SELECT_RENAME_PART {
+			tiModel, cmd := m.textInput.Update(msg)
+			m.textInput = tiModel
+			return m, cmd
 		}
 		if m.focus == FOCUS_OVERLAY_KEY {
 			okModel, cmd := m.overlayKeyEdit.Update(msg)
@@ -1656,6 +1680,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case arrangement.GiveBackFocus:
 		m.selectionIndicator = SELECT_NOTHING
 		m.focus = FOCUS_GRID
+	case arrangement.RenamePart:
+		m.selectionIndicator = SELECT_RENAME_PART
 	}
 	var cmd tea.Cmd
 	cursor, cmd := m.cursor.Update(msg)
@@ -2047,6 +2073,12 @@ func (m model) CurrentPart() arrangement.Part {
 	section := m.CurrentSongSection()
 	partId := section.Part
 	return (*m.definition.parts)[partId]
+}
+
+func (m model) RenamePart(value string) {
+	section := m.CurrentSongSection()
+	partId := section.Part
+	(*m.definition.parts)[partId].Name = value
 }
 
 func (m model) CurrentPartId() int {
@@ -2804,6 +2836,8 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(m.ChoosePartView())
 	} else if m.selectionIndicator == SELECT_CHANGE_PART {
 		buf.WriteString(m.ChoosePartView())
+	} else if m.selectionIndicator == SELECT_RENAME_PART {
+		buf.WriteString(m.RenamePartView())
 	} else if m.selectionIndicator == SELECT_CONFIRM_NEW {
 		buf.WriteString(m.ConfirmNewSequenceView())
 	} else if m.selectionIndicator == SELECT_CONFIRM_QUIT {
@@ -2824,6 +2858,14 @@ func (m model) ViewTriggerSeq() string {
 	buf.WriteString("\n")
 	// buf.WriteString(m.help.View(m.keys))
 	// buf.WriteString("\n")
+	return buf.String()
+}
+
+func (m model) RenamePartView() string {
+	var buf strings.Builder
+	buf.WriteString("   Rename Part: ")
+	buf.WriteString(m.textInput.View())
+	buf.WriteString("\n")
 	return buf.String()
 }
 

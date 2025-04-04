@@ -644,6 +644,7 @@ type keymap struct {
 	MovePartDown key.Binding
 	MovePartUp   key.Binding
 	Escape       key.Binding
+	RenamePart   key.Binding
 }
 
 var keys = keymap{
@@ -657,6 +658,7 @@ var keys = keymap{
 	DeleteNode:   Key("Delete", "d"),
 	MovePartDown: Key("Move Part Down", "J"),
 	MovePartUp:   Key("Move Part Up", "K"),
+	RenamePart:   Key("Rename Part", "R"),
 	Escape:       Key("Escape", "esc", "enter"),
 }
 
@@ -746,11 +748,14 @@ func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.Focus = false
 		m.ResetDepth()
 		return m, func() tea.Msg { return GiveBackFocus{} }
+	case Is(msg, keys.RenamePart):
+		return m, func() tea.Msg { return RenamePart{} }
 	}
 	return m, nil
 }
 
 type GiveBackFocus struct{}
+type RenamePart struct{}
 
 func Is(msg tea.KeyMsg, k key.Binding) bool {
 	return key.Matches(msg, k)
