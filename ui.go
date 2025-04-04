@@ -379,6 +379,7 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 type model struct {
+	filename              string
 	textInput             textinput.Model
 	partSelectorIndex     int
 	sectionSideIndicator  bool
@@ -487,6 +488,7 @@ const (
 	SELECT_CONFIRM_QUIT
 	SELECT_ARRANGEMENT_EDITOR
 	SELECT_RENAME_PART
+	SELECT_FILE_NAME
 )
 
 type PatternMode uint8
@@ -1308,6 +1310,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textInput.Reset()
 				m.selectionIndicator = SELECT_NOTHING
 				return m, nil
+			case SELECT_FILE_NAME:
+				m.filename = m.textInput.Value()
+				m.textInput.Reset()
+				m.selectionIndicator = SELECT_NOTHING
+				m.Save()
+				return m, nil
 			case SELECT_PART:
 				m.arrangement.NewPart(m.partSelectorIndex, m.sectionSideIndicator, m.playing != PLAY_STOPPED)
 				m.currentOverlay = m.CurrentPart().Overlays
@@ -1343,7 +1351,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if Is(msg, keys.Quit) {
 			m.SetSelectionIndicator(SELECT_CONFIRM_QUIT)
 		}
-		if m.selectionIndicator == SELECT_RENAME_PART {
+		if m.selectionIndicator == SELECT_RENAME_PART || m.selectionIndicator == SELECT_FILE_NAME {
 			tiModel, cmd := m.textInput.Update(msg)
 			m.textInput = tiModel
 			return m, cmd
@@ -1561,8 +1569,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.NextOverlay(+1)
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 		case Is(msg, keys.Save):
-			m.Save()
-			m.needsWrite = m.undoStack.id
+			if m.filename == "" {
+				m.selectionIndicator = SELECT_FILE_NAME
+			} else {
+				m.Save()
+			}
 		case Is(msg, keys.Undo):
 			undoStack := m.Undo()
 			if undoStack != NIL_STACK {
@@ -2065,8 +2076,9 @@ func (m model) UndoableOverlay() Undoable {
 	return UndoGridNotes{m.currentOverlay.Key, notesToUndo}
 }
 
-func (m model) Save() {
-	//Write(m.definition)
+func (m *model) Save() {
+	Write(m)
+	m.needsWrite = m.undoStack.id
 }
 
 func (m model) CurrentPart() arrangement.Part {
@@ -2838,6 +2850,8 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(m.ChoosePartView())
 	} else if m.selectionIndicator == SELECT_RENAME_PART {
 		buf.WriteString(m.RenamePartView())
+	} else if m.selectionIndicator == SELECT_FILE_NAME {
+		buf.WriteString(m.FileNameView())
 	} else if m.selectionIndicator == SELECT_CONFIRM_NEW {
 		buf.WriteString(m.ConfirmNewSequenceView())
 	} else if m.selectionIndicator == SELECT_CONFIRM_QUIT {
@@ -2864,6 +2878,14 @@ func (m model) ViewTriggerSeq() string {
 func (m model) RenamePartView() string {
 	var buf strings.Builder
 	buf.WriteString("   Rename Part: ")
+	buf.WriteString(m.textInput.View())
+	buf.WriteString("\n")
+	return buf.String()
+}
+
+func (m model) FileNameView() string {
+	var buf strings.Builder
+	buf.WriteString("   File Name: ")
 	buf.WriteString(m.textInput.View())
 	buf.WriteString("\n")
 	return buf.String()
