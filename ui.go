@@ -44,6 +44,7 @@ type transitiveKeyMap struct {
 	RatchetInputSwitch     key.Binding
 	BeatsInputSwitch       key.Binding
 	ArrangementInputSwitch key.Binding
+	ToggleArrangementView  key.Binding
 	Increase               key.Binding
 	Decrease               key.Binding
 	Enter                  key.Binding
@@ -182,7 +183,8 @@ var transitiveKeys = transitiveKeyMap{
 	AccentInputSwitch:      Key("Accent Input Indicator", "ctrl+e"),
 	RatchetInputSwitch:     Key("Ratchet Input Indicator", "ctrl+h"),
 	BeatsInputSwitch:       Key("Beats Input Indicator", "ctrl+b"),
-	ArrangementInputSwitch: Key("Arrangement Input Indicator", "ctrl+d"),
+	ArrangementInputSwitch: Key("Arrangement Input Indicator", "ctrl+x"),
+	ToggleArrangementView:  Key("Arrangement Input Indicator", "ctrl+f"),
 	ToggleRatchetMode:      Key("Toggle Ratchet Mode", "ctrl+r"),
 	ToggleGateMode:         Key("Toggle Gate Mode", "ctrl+g"),
 	ToggleWaitMode:         Key("Toggle Wait Mode", "ctrl+w"),
@@ -400,6 +402,7 @@ type model struct {
 	hasSolo               bool
 	selectionIndicator    Selection
 	focus                 focus
+	showArrangementView   bool
 	patternMode           PatternMode
 	ratchetCursor         uint8
 	currentOverlay        *overlays.Overlay
@@ -1270,6 +1273,15 @@ func (m model) IsPlayOperation(msg tea.Msg) bool {
 	return false
 }
 
+func (m model) IsArrangementViewOperation(msg tea.Msg) bool {
+	keys := transitiveKeys
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		return Is(msg, keys.ToggleArrangementView, keys.ArrangementInputSwitch)
+	}
+	return false
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	keys := transitiveKeys
 
@@ -1300,7 +1312,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectionIndicator = SELECT_NOTHING
 			case SELECT_CONFIRM_QUIT:
 				m.programChannel <- quitMsg{}
-				m.logFile.Close()
+				err := m.logFile.Close()
+				if err != nil {
+					panic("Unable to close logfile")
+				}
 				return m, tea.Quit
 			default:
 				m.Escape()
@@ -1314,7 +1329,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.overlayKeyEdit = okModel
 			return m, cmd
 		}
-		if m.focus == FOCUS_ARRANGEMENT_EDITOR && !m.IsPartOperation(msg) && !m.IsPlayOperation(msg) {
+		if m.focus == FOCUS_ARRANGEMENT_EDITOR && !m.IsPartOperation(msg) && !m.IsPlayOperation(msg) && !m.IsArrangementViewOperation(msg) {
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
 			m.ResetCurrentOverlay()
@@ -1407,8 +1422,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case Is(msg, keys.ArrangementInputSwitch):
 			states := []Selection{SELECT_NOTHING, SELECT_ARRANGEMENT_EDITOR}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
-			m.focus = FOCUS_ARRANGEMENT_EDITOR
-			m.arrangement.Focus = true
+			if m.selectionIndicator == SELECT_ARRANGEMENT_EDITOR {
+				m.focus = FOCUS_ARRANGEMENT_EDITOR
+				m.arrangement.Focus = true
+			} else {
+				model, cmd := m.arrangement.Update(tea.KeyMsg{Type: tea.KeyEsc})
+				m.arrangement = model
+				return m, cmd
+			}
+		case Is(msg, keys.ToggleArrangementView):
+			m.showArrangementView = !m.showArrangementView
+			if m.showArrangementView {
+				m.SetSelectionIndicator(SELECT_ARRANGEMENT_EDITOR)
+				m.focus = FOCUS_ARRANGEMENT_EDITOR
+				m.arrangement.Focus = true
+			} else {
+				m.Escape()
+				model, cmd := m.arrangement.Update(tea.KeyMsg{Type: tea.KeyEsc})
+				m.arrangement = model
+				return m, cmd
+			}
 		case Is(msg, keys.Increase):
 			switch m.selectionIndicator {
 			case SELECT_TEMPO:
@@ -2598,7 +2631,7 @@ func (m model) View() string {
 	seqView := m.ViewTriggerSeq()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "  ", seqView, "  ", sideView))
 	buf.WriteString("\n")
-	if m.focus == FOCUS_ARRANGEMENT_EDITOR {
+	if m.showArrangementView {
 		buf.WriteString(m.arrangement.View())
 	}
 	return buf.String()
