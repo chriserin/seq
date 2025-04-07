@@ -13,7 +13,7 @@ import (
 	"github.com/chriserin/seq/internal/overlays"
 )
 
-// Write saves the parts attribute of the model's definition struct to a file
+// Write saves the parts and arrangement attributes of the model's definition struct to a file
 // using a custom format that is easy to diff with tools like git diff
 func Write(m *model, filename string) error {
 	f, err := os.Create(filename)
@@ -28,7 +28,19 @@ func Write(m *model, filename string) error {
 		return nil
 	}
 
-	return writeParts(f, *m.definition.parts)
+	// Write parts first
+	if err := writeParts(f, *m.definition.parts); err != nil {
+		return err
+	}
+
+	// Write arrangement next
+	if m.definition.arrangement != nil {
+		if err := writeArrangement(f, m.definition.arrangement); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // writeParts writes all parts to the provided writer
@@ -51,6 +63,79 @@ func writeParts(w io.Writer, parts []arrangement.Part) error {
 		}
 
 		fmt.Fprintln(w, "") // Extra newline for better readability between parts
+	}
+
+	return nil
+}
+
+// writeArrangement writes the arrangement tree structure recursively
+func writeArrangement(w io.Writer, arr *arrangement.Arrangement) error {
+	if arr == nil {
+		return nil
+	}
+
+	fmt.Fprintln(w, "------------------------ ARRANGEMENT ------------------------")
+	
+	// Write arrangement tree recursively using depth-first traversal
+	return writeArrangementNode(w, arr, 0, -1) // Pass -1 as childIndex to indicate root node
+}
+
+// writeArrangementNode writes a single arrangement node and its children
+func writeArrangementNode(w io.Writer, node *arrangement.Arrangement, depth int, childIndex ...int) error {
+	// Create indentation based on depth
+	indent := ""
+	for i := 0; i < depth; i++ {
+		indent += "  "
+	}
+
+	// Write node identifier
+	if depth == 0 {
+		fmt.Fprintln(w, "------------------------ ROOT NODE ------------------------")
+	} else {
+		isGroup := len(node.Nodes) > 0
+		nodeType := "PART"
+		if isGroup {
+			nodeType = "GROUP"
+		}
+		
+		// Include child index in the separator if provided
+		indexStr := ""
+		if len(childIndex) > 0 && childIndex[0] >= 0 {
+			indexStr = fmt.Sprintf(" #%d", childIndex[0]+1)
+		}
+		
+		fmt.Fprintf(w, "%s------------------------ %s%s NODE ------------------------\n", 
+			indent, nodeType, indexStr)
+	}
+
+	// Write node properties
+	fmt.Fprintf(w, "%sIterations: %d\n", indent, node.Iterations)
+	
+	// If it's an end node (contains a section), write section data
+	if len(node.Nodes) == 0 {
+		fmt.Fprintf(w, "%sPart: %d\n", indent, node.Section.Part)
+		fmt.Fprintf(w, "%sCycles: %d\n", indent, node.Section.Cycles)
+		fmt.Fprintf(w, "%sStartBeat: %d\n", indent, node.Section.StartBeat)
+		fmt.Fprintf(w, "%sStartCycles: %d\n", indent, node.Section.StartCycles)
+		fmt.Fprintf(w, "%sKeepCycles: %t\n", indent, node.Section.KeepCycles)
+	}
+
+	// Write child nodes recursively
+	if len(node.Nodes) > 0 {
+		fmt.Fprintf(w, "%sChildren: %d\n", indent, len(node.Nodes))
+		fmt.Fprintf(w, "%s------------------------ CHILDREN ------------------------\n", indent)
+		
+		for i, child := range node.Nodes {
+			// Add empty line between children for readability
+			if i > 0 {
+				fmt.Fprintf(w, "%s\n", indent)
+			}
+			
+			// Pass the child index to the recursive call
+			if err := writeArrangementNode(w, child, depth+1, i); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
