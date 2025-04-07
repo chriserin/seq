@@ -28,17 +28,17 @@ func Write(m *model, filename string) error {
 		log.Warn("No parts to write", "filename", filename)
 		return nil
 	}
-	
+
 	// Write global sequencer settings
 	if err := writeSettings(f, &m.definition); err != nil {
 		return err
 	}
-	
+
 	// Write line definitions
 	if err := writeLineDefinitions(f, m.definition.lines); err != nil {
 		return err
 	}
-	
+
 	// Write accents
 	if err := writeAccents(f, m.definition.accents); err != nil {
 		return err
@@ -69,7 +69,7 @@ func writeSettings(w io.Writer, def *Definition) error {
 	fmt.Fprintf(w, "Template: %s\n", def.template)
 	fmt.Fprintf(w, "TemplateUIStyle: %s\n", def.templateUIStyle)
 	fmt.Fprintln(w, "")
-	
+
 	return nil
 }
 
@@ -78,14 +78,14 @@ func writeLineDefinitions(w io.Writer, lines []grid.LineDefinition) error {
 	if len(lines) == 0 {
 		return nil
 	}
-	
+
 	fmt.Fprintln(w, "------------------------- LINES -------------------------")
 	for i, line := range lines {
-		fmt.Fprintf(w, "Line %d: Channel=%d, Note=%d, MessageType=%d\n", 
+		fmt.Fprintf(w, "Line %d: Channel=%d, Note=%d, MessageType=%d\n",
 			i, line.Channel, line.Note, line.MsgType)
 	}
 	fmt.Fprintln(w, "")
-	
+
 	return nil
 }
 
@@ -94,7 +94,7 @@ func writeAccents(w io.Writer, accents patternAccents) error {
 	fmt.Fprintln(w, "------------------------- ACCENTS -------------------------")
 	fmt.Fprintf(w, "Diff: %d\n", accents.Diff)
 	fmt.Fprintf(w, "Start: %d\n", accents.Start)
-	
+
 	// Convert accentTarget to string for better readability
 	targetStr := "UNKNOWN"
 	switch accents.Target {
@@ -104,7 +104,7 @@ func writeAccents(w io.Writer, accents patternAccents) error {
 		targetStr = "VELOCITY"
 	}
 	fmt.Fprintf(w, "Target: %s\n", targetStr)
-	
+
 	// Write accent data
 	if len(accents.Data) > 0 {
 		fmt.Fprintln(w, "----------------------- ACCENT DATA -----------------------")
@@ -115,13 +115,13 @@ func writeAccents(w io.Writer, accents patternAccents) error {
 				// Only take the color code if it's a hex color
 				colorStr = strings.Split(colorStr, " ")[0]
 			}
-			
-			fmt.Fprintf(w, "Accent %d: Shape='%c', Color=%s, Value=%d\n", 
+
+			fmt.Fprintf(w, "Accent %d: Shape='%c', Color=%s, Value=%d\n",
 				i, accent.Shape, colorStr, accent.Value)
 		}
 	}
 	fmt.Fprintln(w, "")
-	
+
 	return nil
 }
 
@@ -157,7 +157,7 @@ func writeArrangement(w io.Writer, arr *arrangement.Arrangement) error {
 	}
 
 	fmt.Fprintln(w, "------------------------ ARRANGEMENT ------------------------")
-	
+
 	// Write arrangement tree recursively using depth-first traversal
 	return writeArrangementNode(w, arr, 0, -1) // Pass -1 as childIndex to indicate root node
 }
@@ -175,24 +175,24 @@ func writeArrangementNode(w io.Writer, node *arrangement.Arrangement, depth int,
 		fmt.Fprintln(w, "------------------------ ROOT NODE ------------------------")
 	} else {
 		isGroup := len(node.Nodes) > 0
-		nodeType := "PART"
+		nodeType := "SECTION"
 		if isGroup {
 			nodeType = "GROUP"
 		}
-		
+
 		// Include child index in the separator if provided
 		indexStr := ""
 		if len(childIndex) > 0 && childIndex[0] >= 0 {
 			indexStr = fmt.Sprintf(" #%d", childIndex[0]+1)
 		}
-		
-		fmt.Fprintf(w, "%s------------------------ %s%s NODE ------------------------\n", 
+
+		fmt.Fprintf(w, "%s------------------------ %s%s NODE ------------------------\n",
 			indent, nodeType, indexStr)
 	}
 
 	// Write node properties
 	fmt.Fprintf(w, "%sIterations: %d\n", indent, node.Iterations)
-	
+
 	// If it's an end node (contains a section), write section data
 	if len(node.Nodes) == 0 {
 		fmt.Fprintf(w, "%sPart: %d\n", indent, node.Section.Part)
@@ -206,13 +206,13 @@ func writeArrangementNode(w io.Writer, node *arrangement.Arrangement, depth int,
 	if len(node.Nodes) > 0 {
 		fmt.Fprintf(w, "%sChildren: %d\n", indent, len(node.Nodes))
 		fmt.Fprintf(w, "%s------------------------ CHILDREN ------------------------\n", indent)
-		
+
 		for i, child := range node.Nodes {
 			// Add empty line between children for readability
 			if i > 0 {
 				fmt.Fprintf(w, "%s\n", indent)
 			}
-			
+
 			// Pass the child index to the recursive call
 			if err := writeArrangementNode(w, child, depth+1, i); err != nil {
 				return err
