@@ -1311,7 +1311,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectionIndicator = SELECT_NOTHING
 				return m, nil
 			case SELECT_FILE_NAME:
-				m.filename = m.textInput.Value()
+				m.filename = fmt.Sprintf("%s.seq", m.textInput.Value())
 				m.textInput.Reset()
 				m.selectionIndicator = SELECT_NOTHING
 				m.Save()
@@ -2077,7 +2077,11 @@ func (m model) UndoableOverlay() Undoable {
 }
 
 func (m *model) Save() {
-	Write(m)
+	err := Write(m, m.filename)
+	if err != nil {
+		fmt.Println(err)
+		panic("Could not write file")
+	}
 	m.needsWrite = m.undoStack.id
 }
 
