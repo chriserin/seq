@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/charmbracelet/log"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/chriserin/seq/internal/overlays"
 )
 
-// Write saves the parts and arrangement attributes of the model's definition struct to a file
+// Write saves all attributes of the model's definition struct to a file
 // using a custom format that is easy to diff with tools like git diff
 func Write(m *model, filename string) error {
 	f, err := os.Create(filename)
@@ -27,19 +28,100 @@ func Write(m *model, filename string) error {
 		log.Warn("No parts to write", "filename", filename)
 		return nil
 	}
+	
+	// Write global sequencer settings
+	if err := writeSettings(f, &m.definition); err != nil {
+		return err
+	}
+	
+	// Write line definitions
+	if err := writeLineDefinitions(f, m.definition.lines); err != nil {
+		return err
+	}
+	
+	// Write accents
+	if err := writeAccents(f, m.definition.accents); err != nil {
+		return err
+	}
 
-	// Write parts first
+	// Write parts
 	if err := writeParts(f, *m.definition.parts); err != nil {
 		return err
 	}
 
-	// Write arrangement next
+	// Write arrangement
 	if m.definition.arrangement != nil {
 		if err := writeArrangement(f, m.definition.arrangement); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+// writeSettings writes global sequencer settings
+func writeSettings(w io.Writer, def *Definition) error {
+	fmt.Fprintln(w, "------------------------ GLOBAL SETTINGS ------------------------")
+	fmt.Fprintf(w, "Tempo: %d\n", def.tempo)
+	fmt.Fprintf(w, "Subdivisions: %d\n", def.subdivisions)
+	fmt.Fprintf(w, "Keyline: %d\n", def.keyline)
+	fmt.Fprintf(w, "Instrument: %s\n", def.instrument)
+	fmt.Fprintf(w, "Template: %s\n", def.template)
+	fmt.Fprintf(w, "TemplateUIStyle: %s\n", def.templateUIStyle)
+	fmt.Fprintln(w, "")
+	
+	return nil
+}
+
+// writeLineDefinitions writes all line definitions
+func writeLineDefinitions(w io.Writer, lines []grid.LineDefinition) error {
+	if len(lines) == 0 {
+		return nil
+	}
+	
+	fmt.Fprintln(w, "------------------------- LINES -------------------------")
+	for i, line := range lines {
+		fmt.Fprintf(w, "Line %d: Channel=%d, Note=%d, MessageType=%d\n", 
+			i, line.Channel, line.Note, line.MsgType)
+	}
+	fmt.Fprintln(w, "")
+	
+	return nil
+}
+
+// writeAccents writes the accents configuration
+func writeAccents(w io.Writer, accents patternAccents) error {
+	fmt.Fprintln(w, "------------------------- ACCENTS -------------------------")
+	fmt.Fprintf(w, "Diff: %d\n", accents.Diff)
+	fmt.Fprintf(w, "Start: %d\n", accents.Start)
+	
+	// Convert accentTarget to string for better readability
+	targetStr := "UNKNOWN"
+	switch accents.Target {
+	case ACCENT_TARGET_NOTE:
+		targetStr = "NOTE"
+	case ACCENT_TARGET_VELOCITY:
+		targetStr = "VELOCITY"
+	}
+	fmt.Fprintf(w, "Target: %s\n", targetStr)
+	
+	// Write accent data
+	if len(accents.Data) > 0 {
+		fmt.Fprintln(w, "----------------------- ACCENT DATA -----------------------")
+		for i, accent := range accents.Data {
+			// Extract color string from lipgloss.Color
+			colorStr := string(accent.Color)
+			if strings.HasPrefix(colorStr, "#") {
+				// Only take the color code if it's a hex color
+				colorStr = strings.Split(colorStr, " ")[0]
+			}
+			
+			fmt.Fprintf(w, "Accent %d: Shape='%c', Color=%s, Value=%d\n", 
+				i, accent.Shape, colorStr, accent.Value)
+		}
+	}
+	fmt.Fprintln(w, "")
+	
 	return nil
 }
 

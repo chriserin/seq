@@ -94,8 +94,10 @@ func TestWrite(t *testing.T) {
 		content, err := os.ReadFile(filename)
 		assert.NoError(t, err)
 
-		// Check if content contains part name and beats
+		// Check if content contains all required sections
 		contentStr := string(content)
+		assert.Contains(t, contentStr, "GLOBAL SETTINGS")
+		assert.Contains(t, contentStr, "ACCENTS")
 		assert.Contains(t, contentStr, "PARTS")
 		assert.Contains(t, contentStr, "PART TestPart")
 		assert.Contains(t, contentStr, "Name: TestPart")
@@ -144,7 +146,7 @@ func TestWrite(t *testing.T) {
 		content, err := os.ReadFile(filename)
 		assert.NoError(t, err)
 
-		// Check content
+		// Check content for all sections
 		contentStr := string(content)
 		assert.Contains(t, contentStr, "PARTS")
 		assert.Contains(t, contentStr, "PART PartWithOverlay")
