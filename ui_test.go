@@ -59,13 +59,8 @@ func TestUpdateArrangementFocus(t *testing.T) {
 			focus:          FOCUS_GRID, // Start with grid focus
 		}
 
-		// // Create a goroutine to consume from the channel so it doesn't block
-		// go func() {
-		// 	<-m.programChannel
-		// }()
-
 		initialNodeCount := m.arrangement.Root.CountEndNodes()
-		updatedModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+		updatedModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlF})
 		modelPtr := updatedModel.(model)
 
 		assert.Equal(t, FOCUS_ARRANGEMENT_EDITOR, modelPtr.focus, "Model should have arrangement editor focus")
