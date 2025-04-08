@@ -422,13 +422,16 @@ func TestWrite(t *testing.T) {
 		assert.Contains(t, contentStr, "KeepCycles: true")
 		assert.Contains(t, contentStr, "KeepCycles: false")
 
-		// definition, err := Read(filename)
-		// if err == nil {
-		// 	fmt.Println(definition.arrangement)
-		// 	assert.Equal(t, 2, len(definition.arrangement.Nodes))
-		// } else {
-		// 	t.Fail()
-		// }
+		definition, err := Read(filename)
+		if err == nil {
+			assert.Equal(t, 1, len(definition.arrangement.Nodes))
+			currentNode := definition.arrangement.Nodes[0]
+			assert.Equal(t, 2, len(currentNode.Nodes))
+			currentNode = currentNode.Nodes[0]
+			assert.Equal(t, 2, len(currentNode.Nodes))
+		} else {
+			t.Fail()
+		}
 	})
 }
 

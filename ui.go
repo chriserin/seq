@@ -1172,7 +1172,7 @@ func InitParts() []arrangement.Part {
 	return []arrangement.Part{firstPart}
 }
 
-func InitModel(midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) model {
+func InitModel(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) model {
 	logFile, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
 		panic("could not open log file")
@@ -1182,10 +1182,15 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 	newCursor.BlinkSpeed = 600 * time.Millisecond
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
-	definition, hasDefinition := Definition{}, false // Read()
+	var definition *Definition
+	var fileErr error
+	if filename != "" {
+		definition, fileErr = Read(filename)
+	}
 
-	if !hasDefinition {
-		definition = InitDefinition(template, instrument)
+	if filename == "" || fileErr != nil {
+		newDefinition := InitDefinition(template, instrument)
+		definition = &newDefinition
 	}
 
 	programChannel := make(chan midiEventLoopMsg)
@@ -1209,7 +1214,7 @@ func InitModel(midiConnection MidiConnection, template string, instrument string
 		currentOverlay:        (*definition.parts)[0].Overlays,
 		overlayKeyEdit:        overlaykey.InitModel(),
 		arrangement:           arrangement.InitModel(definition.arrangement, definition.parts),
-		definition:            definition,
+		definition:            *definition,
 		playState:             InitLineStates(len(definition.lines), []linestate{}, 0),
 	}
 }
@@ -1250,9 +1255,9 @@ func (m model) LogFromBeatTime() {
 	}
 }
 
-func RunProgram(midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) *tea.Program {
+func RunProgram(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	model := InitModel(midiConnection, template, instrument, midiLoopMode)
+	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
 	model.SyncTempo()

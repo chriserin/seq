@@ -17,6 +17,9 @@ import (
 // Write saves all attributes of the model's definition struct to a file
 // using a custom format that is easy to diff with tools like git diff
 func Write(m *model, filename string) error {
+
+	log.SetLevel(log.FatalLevel)
+
 	f, err := os.Create(filename)
 	if err != nil {
 		log.Error("Failed to create file", "filename", filename, "error", err)

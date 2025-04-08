@@ -30,7 +30,11 @@ func main() {
 			} else if receiver {
 				midiLoopMode = MLM_RECEIVER
 			}
-			p := RunProgram(midiConnection, template, instrument, midiLoopMode)
+			var filename string
+			if len(args) > 0 {
+				filename = args[0]
+			}
+			p := RunProgram(filename, midiConnection, template, instrument, midiLoopMode)
 			var err error
 			_, err = p.Run()
 			if err != nil {
