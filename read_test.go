@@ -123,6 +123,7 @@ func TestReadWrite(t *testing.T) {
 		assert.Equal(t, uint8(5), readDef.accents.Diff)
 		assert.Equal(t, uint8(50), readDef.accents.Start)
 		assert.Equal(t, ACCENT_TARGET_VELOCITY, readDef.accents.Target)
+		assert.Len(t, readDef.accents.Data, 2)
 	})
 
 	t.Run("Model with multiple parts", func(t *testing.T) {

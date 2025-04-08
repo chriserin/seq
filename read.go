@@ -68,7 +68,7 @@ func Scan(scanner *bufio.Scanner, definition *Definition) {
 		}
 
 		// Check for section headers
-		if strings.Contains(line, "------------------------") {
+		if strings.Contains(line, "----------------------") {
 			sectionLine := strings.TrimSpace(line)
 			sectionLine = strings.Trim(sectionLine, "- ")
 
@@ -561,4 +561,3 @@ func ScanArrangement(scanner *bufio.Scanner, currentArrangement *arrangement.Arr
 	}
 	return false
 }
-
