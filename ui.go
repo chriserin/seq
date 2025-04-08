@@ -1198,6 +1198,7 @@ func InitModel(filename string, midiConnection MidiConnection, template string, 
 	unlockReceiverChannel := make(chan bool)
 
 	return model{
+		filename:              filename,
 		textInput:             InitTextInput(),
 		partSelectorIndex:     -1,
 		midiLoopMode:          midiLoopMode,
