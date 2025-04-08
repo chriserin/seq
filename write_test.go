@@ -116,6 +116,8 @@ func TestWrite(t *testing.T) {
 
 		// Create overlay with notes
 		overlay := overlays.InitOverlay(key, nil)
+		overlay.PressDown = false
+		overlay.PressUp = true
 		note := grid.InitNote()
 		note.AccentIndex = 3
 		note.GateIndex = 2
@@ -156,6 +158,8 @@ func TestWrite(t *testing.T) {
 		assert.Contains(t, contentStr, "Shift: 2")
 		assert.Contains(t, contentStr, "Interval: 4")
 		assert.Contains(t, contentStr, "Width: 1")
+		assert.Contains(t, contentStr, "PressUp: true")
+		assert.Contains(t, contentStr, "PressDown: false")
 		assert.Contains(t, contentStr, "NOTES")
 		assert.Contains(t, contentStr, "GridKey(1,2)")
 		assert.Contains(t, contentStr, "AccentIndex=3")

@@ -346,6 +346,14 @@ func Scan(scanner *bufio.Scanner, definition *Definition) {
 				if startCycle, err := strconv.ParseUint(value, 10, 8); err == nil {
 					currentOverlay.Key.StartCycle = uint8(startCycle)
 				}
+			case "PressUp":
+				if pressUp, err := strconv.ParseBool(value); err == nil {
+					currentOverlay.PressUp = pressUp
+				}
+			case "PressDown":
+				if pressDown, err := strconv.ParseBool(value); err == nil {
+					currentOverlay.PressDown = pressDown
+				}
 			}
 
 		case "NOTES":

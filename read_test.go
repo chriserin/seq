@@ -165,6 +165,8 @@ func TestReadWrite(t *testing.T) {
 			StartCycle: 0,
 		}
 		overlay := overlays.InitOverlay(key, nil)
+		overlay.PressUp = true
+		overlay.PressDown = false
 
 		// Add some notes to the overlay
 		note1 := grid.InitNote()
@@ -214,6 +216,8 @@ func TestReadWrite(t *testing.T) {
 		assert.Equal(t, uint8(4), readOverlay.Key.Interval)
 		assert.Equal(t, uint8(1), readOverlay.Key.Width)
 		assert.Equal(t, uint8(0), readOverlay.Key.StartCycle)
+		assert.Equal(t, true, readOverlay.PressUp)
+		assert.Equal(t, false, readOverlay.PressDown)
 
 		// Verify notes
 		assert.NotEmpty(t, readOverlay.Notes)

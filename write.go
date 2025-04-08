@@ -240,6 +240,8 @@ func writeOverlays(w io.Writer, overlay *overlays.Overlay) error {
 	fmt.Fprintf(w, "Interval: %d\n", overlay.Key.Interval)
 	fmt.Fprintf(w, "Width: %d\n", overlay.Key.Width)
 	fmt.Fprintf(w, "StartCycle: %d\n", overlay.Key.StartCycle)
+	fmt.Fprintf(w, "PressUp: %t\n", overlay.PressUp)
+	fmt.Fprintf(w, "PressDown: %t\n", overlay.PressDown)
 
 	// Write notes in a formatted way
 	fmt.Fprintln(w, "------------------------ NOTES --------------------------")
