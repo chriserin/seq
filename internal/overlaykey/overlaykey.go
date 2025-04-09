@@ -14,20 +14,44 @@ func InitOverlayKey(shift, interval uint8) OverlayPeriodicity {
 }
 
 func (o *OverlayPeriodicity) IncrementShift() {
-	if o.Shift < 9 {
+	if o.Shift < 99 {
 		o.Shift++
 	}
 }
 
 func (o *OverlayPeriodicity) IncrementInterval() {
-	if o.Interval < 9 {
+	if o.Interval < 99 {
 		o.Interval++
+	}
+}
+
+func (o *OverlayPeriodicity) IncrementWidth() {
+	if o.Width < 99 {
+		o.Width++
+	}
+}
+
+func (o *OverlayPeriodicity) IncrementStartCycle() {
+	if o.StartCycle < 99 {
+		o.StartCycle++
 	}
 }
 
 func (o *OverlayPeriodicity) DecrementShift() {
 	if o.Shift > 1 {
 		o.Shift--
+	}
+}
+
+func (o *OverlayPeriodicity) DecrementWidth() {
+	if o.Width > 1 {
+		o.Width--
+	}
+}
+
+func (o *OverlayPeriodicity) DecrementStartCycle() {
+	if o.StartCycle > 1 {
+		o.StartCycle--
 	}
 }
 

@@ -93,7 +93,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, Updated(m.overlayKey, false)
 		case key.Matches(msg, keys.FocusWidth):
 			m.focus = FOCUS_WIDTH
-			m.overlayKey.Width = 1
+			if m.overlayKey.Width == 0 {
+				m.overlayKey.Width = 1
+			}
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.FocusInterval):
 			m.focus = FOCUS_INTERVAL
@@ -103,7 +105,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.FocusStart):
 			m.focus = FOCUS_START
-			m.overlayKey.StartCycle = 1
+			if m.overlayKey.StartCycle == 0 {
+				m.overlayKey.StartCycle = 1
+			}
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.RemoveStart):
 			m.focus = FOCUS_SHIFT
@@ -115,6 +119,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				m.overlayKey.IncrementShift()
 			case FOCUS_INTERVAL:
 				m.overlayKey.IncrementInterval()
+			case FOCUS_WIDTH:
+				m.overlayKey.IncrementWidth()
+			case FOCUS_START:
+				m.overlayKey.IncrementStartCycle()
 			}
 		case key.Matches(msg, keys.Decrease):
 			switch m.focus {
@@ -122,6 +130,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				m.overlayKey.DecrementShift()
 			case FOCUS_INTERVAL:
 				m.overlayKey.DecrementInterval()
+			case FOCUS_WIDTH:
+				m.overlayKey.DecrementWidth()
+			case FOCUS_START:
+				m.overlayKey.DecrementStartCycle()
 			}
 		}
 	}
@@ -132,8 +144,14 @@ func (m *Model) ApplyDigit(newDigit int) {
 	switch m.focus {
 	case FOCUS_SHIFT:
 		m.overlayKey.Shift = m.UnshiftDigit(m.overlayKey.Shift, newDigit)
+		if m.overlayKey.Shift == 0 {
+			m.overlayKey.Shift = 1
+		}
 	case FOCUS_INTERVAL:
 		m.overlayKey.Interval = m.UnshiftDigit(m.overlayKey.Interval, newDigit)
+		if m.overlayKey.Interval == 0 {
+			m.overlayKey.Interval = 1
+		}
 	case FOCUS_WIDTH:
 		m.overlayKey.Width = m.UnshiftDigit(m.overlayKey.Width, newDigit)
 	case FOCUS_START:
