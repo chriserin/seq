@@ -429,6 +429,7 @@ func (m *model) ResetCurrentOverlay() {
 		partId := currentNode.Section.Part
 		if len(*m.definition.parts) > partId {
 			m.currentOverlay = (*m.definition.parts)[partId].Overlays
+			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 		}
 	}
 }
