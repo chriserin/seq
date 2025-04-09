@@ -89,7 +89,7 @@ func TestUndoBeats(t *testing.T) {
 		(*m.definition.parts)[0].Beats = 8
 
 		// Create and apply undoable
-		undoable := UndoBeats{beats: 4, partId: 0}
+		undoable := UndoBeats{beats: 4, ArrCursor: m.arrangement.Cursor}
 		undoable.ApplyUndo(m)
 
 		// Verify beats were changed
@@ -140,14 +140,15 @@ func TestUndoGridNote(t *testing.T) {
 			overlayKey:     ok,
 			cursorPosition: gk,
 			gridNote:       GridNote{gridKey: gk, note: testNote},
+			ArrCursor:      m.arrangement.Cursor,
 		}
 
 		// Apply the undo
-		overlayKey, gridKey := undoable.ApplyUndo(m)
+		location := undoable.ApplyUndo(m)
 
 		// Verify return values
-		assert.Equal(t, ok, overlayKey)
-		assert.Equal(t, gk, gridKey)
+		assert.Equal(t, ok, location.OverlayKey)
+		assert.Equal(t, gk, location.GridKey)
 
 		// Verify the note was set in the overlay
 		assert.Equal(t, testNote, m.currentOverlay.Notes[gk])
@@ -182,17 +183,18 @@ func TestUndoLineGridNotes(t *testing.T) {
 			cursorPosition: gk1,
 			line:           line,
 			gridNotes:      gridNotes,
+			ArrCursor:      m.arrangement.Cursor,
 		}
 
 		// Set beats for the current part
 		(*m.definition.parts)[0].Beats = 3
 
 		// Apply the undo
-		overlayKey, gridKey := undoable.ApplyUndo(m)
+		location := undoable.ApplyUndo(m)
 
 		// Verify return values
-		assert.Equal(t, ok, overlayKey)
-		assert.Equal(t, gk1, gridKey)
+		assert.Equal(t, ok, location.OverlayKey)
+		assert.Equal(t, gk1, location.GridKey)
 
 		// Verify the notes were set correctly
 		assert.Equal(t, note1, m.currentOverlay.Notes[gk1])
@@ -230,14 +232,15 @@ func TestUndoBounds(t *testing.T) {
 			cursorPosition: gk1,
 			bounds:         bounds,
 			gridNotes:      gridNotes,
+			ArrCursor:      m.arrangement.Cursor,
 		}
 
 		// Apply the undo
-		overlayKey, gridKey := undoable.ApplyUndo(m)
+		location := undoable.ApplyUndo(m)
 
 		// Verify return values
-		assert.Equal(t, ok, overlayKey)
-		assert.Equal(t, gk1, gridKey)
+		assert.Equal(t, ok, location.OverlayKey)
+		assert.Equal(t, gk1, location.GridKey)
 
 		// Verify notes were set correctly
 		assert.Equal(t, note1, m.currentOverlay.Notes[gk1])
@@ -271,14 +274,15 @@ func TestUndoGridNotes(t *testing.T) {
 		undoable := UndoGridNotes{
 			overlayKey: ok,
 			gridNotes:  gridNotes,
+			ArrCursor:  m.arrangement.Cursor,
 		}
 
 		// Apply the undo
-		overlayKey, gridKey := undoable.ApplyUndo(m)
+		location := undoable.ApplyUndo(m)
 
 		// Verify return values
-		assert.Equal(t, ok, overlayKey)
-		assert.Equal(t, gk1, gridKey)
+		assert.Equal(t, ok, location.OverlayKey)
+		assert.Equal(t, gk1, location.GridKey)
 
 		// Verify the notes were set correctly
 		assert.Equal(t, note1, m.currentOverlay.Notes[gk1])
@@ -298,14 +302,15 @@ func TestUndoToNothing(t *testing.T) {
 		undoable := UndoToNothing{
 			overlayKey: ok,
 			location:   gk,
+			ArrCursor:  m.arrangement.Cursor,
 		}
 
 		// Apply the undo
-		overlayKey, gridKey := undoable.ApplyUndo(m)
+		location := undoable.ApplyUndo(m)
 
 		// Verify return values
-		assert.Equal(t, ok, overlayKey)
-		assert.Equal(t, gk, gridKey)
+		assert.Equal(t, ok, location.OverlayKey)
+		assert.Equal(t, gk, location.GridKey)
 
 		// Verify the note was removed
 		_, exists := m.currentOverlay.Notes[gk]
@@ -329,17 +334,18 @@ func TestUndoLineToNothing(t *testing.T) {
 			overlayKey:     ok,
 			cursorPosition: GK(line, 0),
 			line:           line,
+			ArrCursor:      m.arrangement.Cursor,
 		}
 
 		// Set beats for the current part
 		(*m.definition.parts)[0].Beats = 3
 
 		// Apply the undo
-		overlayKey, gridKey := undoable.ApplyUndo(m)
+		location := undoable.ApplyUndo(m)
 
 		// Verify return values
-		assert.Equal(t, ok, overlayKey)
-		assert.Equal(t, GK(line, 0), gridKey)
+		assert.Equal(t, ok, location.OverlayKey)
+		assert.Equal(t, GK(line, 0), location.GridKey)
 
 		// Verify all notes on the line were removed
 		_, exists := m.currentOverlay.Notes[GK(line, 0)]
@@ -370,22 +376,24 @@ func TestUndoNewOverlay(t *testing.T) {
 		undoable := UndoNewOverlay{
 			overlayKey:     ok,
 			cursorPosition: GK(0, 0),
-			partId:         0,
+			ArrCursor:      m.arrangement.Cursor,
 		}
 
+		m.arrangement.NewPart(-1, false, false)
+		m.currentOverlay = m.CurrentPart().Overlays
+
 		// Apply the undo
-		overlayKey, gridKey := undoable.ApplyUndo(m)
+		location := undoable.ApplyUndo(m)
 
 		// Verify return values
-		assert.Equal(t, ok, overlayKey)
-		assert.Equal(t, GK(0, 0), gridKey)
+		assert.Equal(t, ok, location.OverlayKey)
+		assert.Equal(t, GK(0, 0), location.GridKey)
 
 		// Verify the overlay was removed from current part
-		foundOverlay := m.CurrentPart().Overlays.FindOverlay(overlayKey)
+		foundOverlay := m.CurrentPart().Overlays.FindOverlay(location.OverlayKey)
 		assert.Nil(t, foundOverlay, "Overlay should be removed")
 
 		// Verify the overlay was stored in the part definition
 		assert.Equal(t, previousTopOverlay, (*m.definition.parts)[0].Overlays)
 	})
 }
-

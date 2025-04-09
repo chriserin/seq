@@ -576,15 +576,17 @@ func (m *model) PopRedo() UndoStack {
 func (m *model) Undo() UndoStack {
 	undoStack := m.PopUndo()
 	if undoStack != NIL_STACK {
-		ok, gk := undoStack.undo.ApplyUndo(m)
-		m.cursorPos = gk
-		overlay := m.CurrentPart().Overlays.FindOverlay(ok)
-		if overlay == nil {
-			m.currentOverlay = m.CurrentPart().Overlays
-		} else {
-			m.currentOverlay = overlay
+		location := undoStack.undo.ApplyUndo(m)
+		if location.ApplyLocation {
+			m.cursorPos = location.GridKey
+			overlay := m.CurrentPart().Overlays.FindOverlay(location.OverlayKey)
+			if overlay == nil {
+				m.currentOverlay = m.CurrentPart().Overlays
+			} else {
+				m.currentOverlay = overlay
+			}
+			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 		}
-		m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 	}
 	return undoStack
 }
@@ -592,10 +594,12 @@ func (m *model) Undo() UndoStack {
 func (m *model) Redo() UndoStack {
 	undoStack := m.PopRedo()
 	if undoStack != NIL_STACK {
-		ok, gk := undoStack.redo.ApplyUndo(m)
-		m.cursorPos = gk
-		m.currentOverlay = m.CurrentPart().Overlays.FindOverlay(ok)
-		m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
+		location := undoStack.redo.ApplyUndo(m)
+		if location.ApplyLocation {
+			m.cursorPos = location.GridKey
+			m.currentOverlay = m.CurrentPart().Overlays.FindOverlay(location.OverlayKey)
+			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
+		}
 	}
 	return undoStack
 }
@@ -1884,20 +1888,20 @@ func (m model) UpdateDefinition(msg tea.KeyMsg) model {
 func (m model) UndoableNote() Undoable {
 	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
 	if overlay == nil {
-		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.CurrentPartId()}
+		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.arrangement.Cursor}
 	}
 	currentNote, hasNote := overlay.Notes[m.cursorPos]
 	if hasNote {
-		return UndoGridNote{m.currentOverlay.Key, m.cursorPos, GridNote{m.cursorPos, currentNote}}
+		return UndoGridNote{m.currentOverlay.Key, m.cursorPos, GridNote{m.cursorPos, currentNote}, m.arrangement.Cursor}
 	} else {
-		return UndoToNothing{m.currentOverlay.Key, m.cursorPos}
+		return UndoToNothing{m.currentOverlay.Key, m.cursorPos, m.arrangement.Cursor}
 	}
 }
 
 func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
 	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
 	if overlay == nil {
-		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.CurrentPartId()}
+		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.arrangement.Cursor}
 	}
 	bounds := InitBounds(pointA, pointB)
 	gridKeys := bounds.GridKeys()
@@ -1908,13 +1912,14 @@ func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
 			gridNotes = append(gridNotes, GridNote{k, currentNote})
 		}
 	}
-	return UndoBounds{m.currentOverlay.Key, m.cursorPos, bounds, gridNotes}
+	return UndoBounds{m.currentOverlay.Key, m.cursorPos, bounds, gridNotes, m.arrangement.Cursor}
 }
 
 func (m model) UndoableLine() Undoable {
+
 	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
 	if overlay == nil {
-		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.CurrentPartId()}
+		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.arrangement.Cursor}
 	}
 	beats := m.CurrentPart().Beats
 	notesToUndo := make([]GridNote, 0, beats)
@@ -1926,21 +1931,21 @@ func (m model) UndoableLine() Undoable {
 		}
 	}
 	if len(notesToUndo) == 0 {
-		return UndoLineToNothing{m.currentOverlay.Key, m.cursorPos, m.cursorPos.Line}
+		return UndoLineToNothing{m.currentOverlay.Key, m.cursorPos, m.cursorPos.Line, m.arrangement.Cursor}
 	}
-	return UndoLineGridNotes{m.currentOverlay.Key, m.cursorPos, m.cursorPos.Line, notesToUndo}
+	return UndoLineGridNotes{m.currentOverlay.Key, m.cursorPos, m.cursorPos.Line, notesToUndo, m.arrangement.Cursor}
 }
 
 func (m model) UndoableOverlay() Undoable {
 	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
 	if overlay == nil {
-		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.CurrentPartId()}
+		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.arrangement.Cursor}
 	}
 	notesToUndo := make([]GridNote, 0, m.CurrentPart().Beats)
 	for key, note := range overlay.Notes {
 		notesToUndo = append(notesToUndo, GridNote{key, note})
 	}
-	return UndoGridNotes{m.currentOverlay.Key, notesToUndo}
+	return UndoGridNotes{m.currentOverlay.Key, notesToUndo, m.arrangement.Cursor}
 }
 
 func (m *model) Save() {

@@ -1,7 +1,15 @@
 package main
 
+import "github.com/chriserin/seq/internal/arrangement"
+
 type Undoable interface {
-	ApplyUndo(m *model) (overlayKey, gridKey)
+	ApplyUndo(m *model) Location
+}
+
+type Location struct {
+	OverlayKey    overlayKey
+	GridKey       gridKey
+	ApplyLocation bool
 }
 
 type UndoStack struct {
@@ -14,41 +22,48 @@ type UndoStack struct {
 var NIL_STACK = UndoStack{}
 
 type UndoBeats struct {
-	beats  uint8
-	partId int
+	beats     uint8
+	ArrCursor arrangement.ArrCursor
 }
 
-func (ub UndoBeats) ApplyUndo(m *model) {
-	(*m.definition.parts)[ub.partId].Beats = ub.beats
+func (ub UndoBeats) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = ub.ArrCursor
+	partId := m.CurrentPartId()
+	(*m.definition.parts)[partId].Beats = ub.beats
+	return Location{ApplyLocation: false}
 }
 
 type UndoTempo struct {
 	tempo int
 }
 
-func (ukl UndoTempo) ApplyUndo(m *model) {
+func (ukl UndoTempo) ApplyUndo(m *model) Location {
 	m.definition.tempo = ukl.tempo
+	return Location{ApplyLocation: false}
 }
 
 type UndoSubdivisions struct {
 	subdivisions int
 }
 
-func (ukl UndoSubdivisions) ApplyUndo(m *model) {
+func (ukl UndoSubdivisions) ApplyUndo(m *model) Location {
 	m.definition.subdivisions = ukl.subdivisions
+	return Location{ApplyLocation: false}
 }
 
 type UndoGridNote struct {
 	overlayKey
 	cursorPosition gridKey
 	gridNote       GridNote
+	ArrCursor      arrangement.ArrCursor
 }
 
-func (ugn UndoGridNote) ApplyUndo(m *model) (overlayKey, gridKey) {
+func (ugn UndoGridNote) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = ugn.ArrCursor
 	m.EnsureOverlayWithKey(ugn.overlayKey)
 	overlay := m.CurrentPart().Overlays.FindOverlay(ugn.overlayKey)
 	overlay.SetNote(ugn.gridNote.gridKey, ugn.gridNote.note)
-	return ugn.overlayKey, ugn.gridNote.gridKey
+	return Location{ugn.overlayKey, ugn.gridNote.gridKey, true}
 }
 
 type UndoLineGridNotes struct {
@@ -56,9 +71,11 @@ type UndoLineGridNotes struct {
 	cursorPosition gridKey
 	line           uint8
 	gridNotes      []GridNote
+	ArrCursor      arrangement.ArrCursor
 }
 
-func (ulgn UndoLineGridNotes) ApplyUndo(m *model) (overlayKey, gridKey) {
+func (ulgn UndoLineGridNotes) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = ulgn.ArrCursor
 	m.EnsureOverlayWithKey(ulgn.overlayKey)
 	overlay := m.CurrentPart().Overlays.FindOverlay(ulgn.overlayKey)
 	for i := range m.CurrentPart().Beats {
@@ -67,7 +84,7 @@ func (ulgn UndoLineGridNotes) ApplyUndo(m *model) (overlayKey, gridKey) {
 	for _, gridNote := range ulgn.gridNotes {
 		overlay.SetNote(gridNote.gridKey, gridNote.note)
 	}
-	return ulgn.overlayKey, ulgn.cursorPosition
+	return Location{ulgn.overlayKey, ulgn.cursorPosition, true}
 }
 
 type UndoBounds struct {
@@ -75,69 +92,79 @@ type UndoBounds struct {
 	cursorPosition gridKey
 	bounds         Bounds
 	gridNotes      []GridNote
+	ArrCursor      arrangement.ArrCursor
 }
 
-func (uvs UndoBounds) ApplyUndo(m *model) (overlayKey, gridKey) {
-	m.EnsureOverlayWithKey(uvs.overlayKey)
-	overlay := m.CurrentPart().Overlays.FindOverlay(uvs.overlayKey)
-	for _, k := range uvs.bounds.GridKeys() {
+func (ub UndoBounds) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = ub.ArrCursor
+	m.EnsureOverlayWithKey(ub.overlayKey)
+	overlay := m.CurrentPart().Overlays.FindOverlay(ub.overlayKey)
+	for _, k := range ub.bounds.GridKeys() {
 		overlay.RemoveNote(k)
 	}
-	for _, gridNote := range uvs.gridNotes {
+	for _, gridNote := range ub.gridNotes {
 		overlay.SetNote(gridNote.gridKey, gridNote.note)
 	}
-	return uvs.overlayKey, uvs.cursorPosition
+	return Location{ub.overlayKey, ub.cursorPosition, true}
 }
 
 type UndoGridNotes struct {
 	overlayKey
 	gridNotes []GridNote
+	ArrCursor arrangement.ArrCursor
 }
 
-func (ugn UndoGridNotes) ApplyUndo(m *model) (overlayKey, gridKey) {
+func (ugn UndoGridNotes) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = ugn.ArrCursor
 	m.EnsureOverlayWithKey(ugn.overlayKey)
 	overlay := m.CurrentPart().Overlays.FindOverlay(ugn.overlayKey)
 	for _, gridNote := range ugn.gridNotes {
 
 		overlay.SetNote(gridNote.gridKey, gridNote.note)
 	}
-	return ugn.overlayKey, ugn.gridNotes[0].gridKey
+	return Location{ugn.overlayKey, ugn.gridNotes[0].gridKey, true}
 }
 
 type UndoToNothing struct {
 	overlayKey overlayKey
 	location   gridKey
+	ArrCursor  arrangement.ArrCursor
 }
 
-func (utn UndoToNothing) ApplyUndo(m *model) (overlayKey, gridKey) {
+func (utn UndoToNothing) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = utn.ArrCursor
 	overlay := m.CurrentPart().Overlays.FindOverlay(utn.overlayKey)
 	overlay.RemoveNote(utn.location)
-	return utn.overlayKey, utn.location
+	return Location{utn.overlayKey, utn.location, true}
 }
 
 type UndoLineToNothing struct {
 	overlayKey     overlayKey
 	cursorPosition gridKey
 	line           uint8
+	ArrCursor      arrangement.ArrCursor
 }
 
-func (ultn UndoLineToNothing) ApplyUndo(m *model) (overlayKey, gridKey) {
+func (ultn UndoLineToNothing) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = ultn.ArrCursor
 	overlay := m.CurrentPart().Overlays.FindOverlay(ultn.overlayKey)
 	for i := range m.CurrentPart().Beats {
 		overlay.RemoveNote(GK(ultn.line, i))
 	}
 
-	return ultn.overlayKey, ultn.cursorPosition
+	return Location{ultn.overlayKey, ultn.cursorPosition, true}
 }
 
 type UndoNewOverlay struct {
 	overlayKey     overlayKey
 	cursorPosition gridKey
-	partId         int
+	ArrCursor      arrangement.ArrCursor
 }
 
-func (uno UndoNewOverlay) ApplyUndo(m *model) (overlayKey, gridKey) {
+func (uno UndoNewOverlay) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = uno.ArrCursor
+	currentPartId := m.CurrentPartId()
 	newOverlay := m.CurrentPart().Overlays.Remove(uno.overlayKey)
-	(*m.definition.parts)[uno.partId].Overlays = newOverlay
-	return uno.overlayKey, uno.cursorPosition
+	(*m.definition.parts)[currentPartId].Overlays = newOverlay
+	return Location{uno.overlayKey, uno.cursorPosition, true}
 }
