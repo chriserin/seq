@@ -182,7 +182,7 @@ var transitiveKeys = transitiveKeyMap{
 	OverlayInputSwitch:     Key("Select Overlay Indicator", "ctrl+o"),
 	SetupInputSwitch:       Key("Setup Input Indicator", "ctrl+s"),
 	AccentInputSwitch:      Key("Accent Input Indicator", "ctrl+e"),
-	RatchetInputSwitch:     Key("Ratchet Input Indicator", "ctrl+h"),
+	RatchetInputSwitch:     Key("Ratchet Input Indicator", "ctrl+y"),
 	BeatsInputSwitch:       Key("Beats Input Indicator", "ctrl+b"),
 	ArrangementInputSwitch: Key("Arrangement Input Indicator", "ctrl+x"),
 	ToggleArrangementView:  Key("Arrangement Input Indicator", "ctrl+f"),
