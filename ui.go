@@ -506,7 +506,6 @@ type GridNote struct {
 	note    note
 }
 
-
 func (m *model) PushUndoables(undo Undoable, redo Undoable) {
 	if m.undoStack == NIL_STACK {
 		m.undoStack = UndoStack{
@@ -1579,7 +1578,9 @@ func (m *model) SetPatternMode(mode PatternMode) {
 func (m *model) NewSequence() {
 	m.cursorPos = GK(0, 0)
 	m.definition = InitDefinition(m.definition.template, m.definition.instrument)
+	m.arrangement = arrangement.InitModel(m.definition.arrangement, m.definition.parts)
 	m.currentOverlay = m.CurrentPart().Overlays
+	m.filename = ""
 }
 
 func (m model) NeedsWrite() bool {
