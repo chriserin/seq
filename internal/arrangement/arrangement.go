@@ -437,6 +437,12 @@ func (m *Model) GroupNodes() {
 	}
 }
 
+type NewPart struct {
+	Index     int
+	After     bool
+	IsPlaying bool
+}
+
 func (m *Model) NewPart(index int, after bool, isPlaying bool) {
 	partId := index
 	if index < 0 {
@@ -451,6 +457,10 @@ func (m *Model) NewPart(index int, after bool, isPlaying bool) {
 	}
 
 	m.AddPart(after, newNode, isPlaying)
+}
+
+type ChangePart struct {
+	Index int
 }
 
 func (m *Model) ChangePart(index int) {
@@ -666,90 +676,97 @@ func Key(help string, keyboardKey ...string) key.Binding {
 	return key.NewBinding(key.WithKeys(keyboardKey...), key.WithHelp(keyboardKey[0], help))
 }
 
-func (m Model) Update(msg tea.KeyMsg) (Model, tea.Cmd) {
-	switch {
-	case Is(msg, keys.CursorDown):
-		if !m.Cursor.IsLastSibling() && m.Cursor.GetNextSiblingNode().IsGroup() {
-			m.ResetDepth()
-			m.Cursor.MoveNext()
-		} else if m.depthCursor < len(m.Cursor)-1 {
-			m.depthCursor++
-		} else {
-			m.Cursor.MoveNext()
-			m.ResetDepth()
-		}
-	case Is(msg, keys.CursorUp):
-		if m.Cursor[:m.depthCursor+1].IsFirstSibling() {
-			if m.depthCursor > 1 {
-				m.depthCursor--
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case ChangePart:
+		m.ChangePart(msg.Index)
+	case NewPart:
+		m.NewPart(msg.Index, msg.After, msg.IsPlaying)
+	case tea.KeyMsg:
+		switch {
+		case Is(msg, keys.CursorDown):
+			if !m.Cursor.IsLastSibling() && m.Cursor.GetNextSiblingNode().IsGroup() {
+				m.ResetDepth()
+				m.Cursor.MoveNext()
+			} else if m.depthCursor < len(m.Cursor)-1 {
+				m.depthCursor++
+			} else {
+				m.Cursor.MoveNext()
+				m.ResetDepth()
 			}
-		} else {
-			m.Cursor.MovePrev()
+		case Is(msg, keys.CursorUp):
+			if m.Cursor[:m.depthCursor+1].IsFirstSibling() {
+				if m.depthCursor > 1 {
+					m.depthCursor--
+				}
+			} else {
+				m.Cursor.MovePrev()
+				m.ResetDepth()
+			}
+		case Is(msg, keys.CursorLeft):
+			if m.oldCursor.attribute > 0 {
+				m.oldCursor.attribute--
+			}
+		case Is(msg, keys.CursorRight):
+			if m.oldCursor.attribute < 3 {
+				m.oldCursor.attribute++
+			}
+		case Is(msg, keys.Increase):
+			currentNode := m.Cursor.GetCurrentNode()
+			if m.depthCursor == len(m.Cursor)-1 {
+				// For end nodes, modify section properties
+				switch m.oldCursor.attribute {
+				case SECTION_START_BEAT:
+					currentNode.Section.IncreaseStartBeats()
+				case SECTION_START_CYCLE:
+					currentNode.Section.IncreaseStartCycles()
+				case SECTION_CYCLES:
+					currentNode.Section.IncreaseCycles()
+				case SECTION_KEEP_CYCLES:
+					currentNode.Section.ToggleKeepCycles()
+				}
+			} else {
+				// For parent nodes, increase iterations
+				m.Cursor[m.depthCursor].IncreaseIterations()
+			}
+		case Is(msg, keys.Decrease):
+			currentNode := m.Cursor.GetCurrentNode()
+			if m.depthCursor+1 == len(m.Cursor) {
+				switch m.oldCursor.attribute {
+				case SECTION_START_BEAT:
+					currentNode.Section.DecreaseStartBeats()
+				case SECTION_START_CYCLE:
+					currentNode.Section.DecreaseStartCycles()
+				case SECTION_CYCLES:
+					currentNode.Section.DecreaseCycles()
+				case SECTION_KEEP_CYCLES:
+					currentNode.Section.ToggleKeepCycles()
+				}
+			} else {
+				m.Cursor[m.depthCursor].DecreaseIterations()
+			}
+		case Is(msg, keys.GroupNodes):
+			m.GroupNodes()
+		case Is(msg, keys.DeleteNode):
+			if m.depthCursor == len(m.Cursor)-1 {
+				m.Cursor.DeleteNode()
+			} else {
+				m.Cursor.DeleteGroup(m.depthCursor)
+			}
 			m.ResetDepth()
+		case Is(msg, keys.MovePartDown):
+			MoveNodeDown(&m.Cursor)
+			m.ResetDepth()
+		case Is(msg, keys.MovePartUp):
+			MoveNodeUp(&m.Cursor)
+			m.ResetDepth()
+		case Is(msg, keys.Escape):
+			m.Focus = false
+			m.ResetDepth()
+			return m, func() tea.Msg { return GiveBackFocus{} }
+		case Is(msg, keys.RenamePart):
+			return m, func() tea.Msg { return RenamePart{} }
 		}
-	case Is(msg, keys.CursorLeft):
-		if m.oldCursor.attribute > 0 {
-			m.oldCursor.attribute--
-		}
-	case Is(msg, keys.CursorRight):
-		if m.oldCursor.attribute < 3 {
-			m.oldCursor.attribute++
-		}
-	case Is(msg, keys.Increase):
-		currentNode := m.Cursor.GetCurrentNode()
-		if m.depthCursor == len(m.Cursor)-1 {
-			// For end nodes, modify section properties
-			switch m.oldCursor.attribute {
-			case SECTION_START_BEAT:
-				currentNode.Section.IncreaseStartBeats()
-			case SECTION_START_CYCLE:
-				currentNode.Section.IncreaseStartCycles()
-			case SECTION_CYCLES:
-				currentNode.Section.IncreaseCycles()
-			case SECTION_KEEP_CYCLES:
-				currentNode.Section.ToggleKeepCycles()
-			}
-		} else {
-			// For parent nodes, increase iterations
-			m.Cursor[m.depthCursor].IncreaseIterations()
-		}
-	case Is(msg, keys.Decrease):
-		currentNode := m.Cursor.GetCurrentNode()
-		if m.depthCursor+1 == len(m.Cursor) {
-			switch m.oldCursor.attribute {
-			case SECTION_START_BEAT:
-				currentNode.Section.DecreaseStartBeats()
-			case SECTION_START_CYCLE:
-				currentNode.Section.DecreaseStartCycles()
-			case SECTION_CYCLES:
-				currentNode.Section.DecreaseCycles()
-			case SECTION_KEEP_CYCLES:
-				currentNode.Section.ToggleKeepCycles()
-			}
-		} else {
-			m.Cursor[m.depthCursor].DecreaseIterations()
-		}
-	case Is(msg, keys.GroupNodes):
-		m.GroupNodes()
-	case Is(msg, keys.DeleteNode):
-		if m.depthCursor == len(m.Cursor)-1 {
-			m.Cursor.DeleteNode()
-		} else {
-			m.Cursor.DeleteGroup(m.depthCursor)
-		}
-		m.ResetDepth()
-	case Is(msg, keys.MovePartDown):
-		MoveNodeDown(&m.Cursor)
-		m.ResetDepth()
-	case Is(msg, keys.MovePartUp):
-		MoveNodeUp(&m.Cursor)
-		m.ResetDepth()
-	case Is(msg, keys.Escape):
-		m.Focus = false
-		m.ResetDepth()
-		return m, func() tea.Msg { return GiveBackFocus{} }
-	case Is(msg, keys.RenamePart):
-		return m, func() tea.Msg { return RenamePart{} }
 	}
 	return m, nil
 }

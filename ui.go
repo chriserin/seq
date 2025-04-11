@@ -237,20 +237,6 @@ var definitionKeys = definitionKeyMap{
 	Paste:                Key("Paste", "p"),
 }
 
-// func (k keymap) ShortHelp() []key.Binding {
-// 	return []key.Binding{
-// 		k.Help, k.Quit,
-// 	}
-// }
-//
-// func (k keymap) FullHelp() [][]key.Binding {
-// 	return [][]key.Binding{
-// 		{k.Help, k.Quit},
-// 		{k.CursorUp, k.CursorDown, k.CursorLeft, k.CursorRight},
-// 		{k.TriggerAdd, k.TriggerRemove},
-// 	}
-// }
-
 type groupPlayState uint
 
 const (
@@ -1195,7 +1181,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			case SELECT_CHANGE_PART:
-				m.arrangement.ChangePart(m.partSelectorIndex)
+				m.arrangement.Update(arrangement.ChangePart{Index: m.partSelectorIndex})
 				m.currentOverlay = m.CurrentPart().Overlays
 				if m.focus == FOCUS_ARRANGEMENT_EDITOR {
 					m.selectionIndicator = SELECT_ARRANGEMENT_EDITOR
