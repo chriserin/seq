@@ -2524,7 +2524,7 @@ func (m model) View() string {
 
 	if m.patternMode == PATTERN_ACCENT || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
-	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && len(m.CurrentPart().Overlays.Notes) == 0) ||
+	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && len(m.CurrentPart().Overlays.Notes) == 0 && m.CurrentPartId() == 0) ||
 		m.selectionIndicator == SELECT_SETUP_VALUE ||
 		m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE ||
 		m.selectionIndicator == SELECT_SETUP_CHANNEL {
