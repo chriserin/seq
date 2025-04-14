@@ -676,7 +676,109 @@ func Key(help string, keyboardKey ...string) key.Binding {
 	return key.NewBinding(key.WithKeys(keyboardKey...), key.WithHelp(keyboardKey[0], help))
 }
 
+func IsSectionChangeMessage(msg tea.Msg, isEndNode bool) bool {
+	if !isEndNode {
+		return false
+	}
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		return key.Matches(msg, keys.Increase, keys.Decrease)
+	}
+	return false
+}
+
+func IsGroupChangeMessage(msg tea.Msg, isGroup bool) bool {
+	if !isGroup {
+		return false
+	}
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		return key.Matches(msg, keys.Increase, keys.Decrease)
+	}
+	return false
+}
+
+var changeKeys = []key.Binding{
+	keys.GroupNodes,
+	keys.DeleteNode,
+	keys.MovePartDown,
+	keys.MovePartUp,
+}
+
+func IsArrChangeMessage(msg tea.Msg) bool {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		return key.Matches(msg, changeKeys...)
+	case NewPart:
+		return true
+	case ChangePart:
+		return true
+	}
+	return false
+}
+
+type ArrUndo struct {
+	Undo Undoable
+	Redo Undoable
+}
+
+type Undoable interface {
+	ApplyUndo(m *Model)
+}
+
+type TreeUndo struct {
+	undoTree UndoTree
+}
+
+func (tu TreeUndo) ApplyUndo(m *Model) {
+	m.Root = Convert(tu.undoTree)
+}
+
+func Convert(ut UndoTree) *Arrangement {
+	if ut.arrRef == nil {
+		return nil
+	}
+	ut.arrRef.Nodes = []*Arrangement{}
+	for _, n := range ut.nodes {
+		ut.arrRef.Nodes = append(ut.arrRef.Nodes, Convert(n))
+	}
+
+	return ut.arrRef
+}
+
+type UndoTree struct {
+	arrRef *Arrangement
+	nodes  []UndoTree
+}
+
+type GroupUndo struct {
+	arr        *Arrangement
+	iterations int
+}
+
+func (gu GroupUndo) ApplyUndo(m *Model) {
+	(*gu.arr).Iterations = gu.iterations
+}
+
+type SectionUndo struct {
+	arr     *Arrangement
+	section SongSection
+}
+
+func (su SectionUndo) ApplyUndo(m *Model) {
+	(*su.arr).Section = su.section
+}
+
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	var undo, redo Undoable
+	if IsArrChangeMessage(msg) {
+		undo = TreeUndo{m.CreateUndoTree()}
+	} else if IsSectionChangeMessage(msg, m.Cursor[m.depthCursor].IsEndNode()) {
+		undo = SectionUndo{m.Cursor[len(m.Cursor)-1], m.Cursor[len(m.Cursor)-1].Section}
+	} else if IsGroupChangeMessage(msg, m.Cursor[m.depthCursor].IsGroup()) {
+		undo = GroupUndo{m.Cursor[m.depthCursor], m.Cursor[m.depthCursor].Iterations}
+	}
+
 	switch msg := msg.(type) {
 	case ChangePart:
 		m.ChangePart(msg.Index)
@@ -768,6 +870,18 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, func() tea.Msg { return RenamePart{} }
 		}
 	}
+
+	if IsArrChangeMessage(msg) {
+		redo = TreeUndo{m.CreateUndoTree()}
+		return m, m.CreateUndoCmd(undo, redo)
+	} else if IsSectionChangeMessage(msg, m.Cursor[m.depthCursor].IsEndNode()) {
+		redo = SectionUndo{m.Cursor[len(m.Cursor)-1], m.Cursor[len(m.Cursor)-1].Section}
+		return m, m.CreateUndoCmd(undo, redo)
+	} else if IsGroupChangeMessage(msg, m.Cursor[m.depthCursor].IsGroup()) {
+		redo = GroupUndo{m.Cursor[m.depthCursor], m.Cursor[m.depthCursor].Iterations}
+		return m, m.CreateUndoCmd(undo, redo)
+	}
+
 	return m, nil
 }
 
@@ -783,8 +897,8 @@ type SongSection struct {
 	Cycles      int
 	StartBeat   int
 	StartCycles int
-	playCycles  int
 	KeepCycles  bool
+	playCycles  int
 	infinite    bool
 }
 
@@ -880,4 +994,29 @@ type Part struct {
 
 func InitPart(name string) Part {
 	return Part{Overlays: overlays.InitOverlay(overlaykey.ROOT, nil), Beats: 32, Name: name}
+}
+
+func (m *Model) ApplyArrUndo(arrUndo Undoable) {
+	arrUndo.ApplyUndo(m)
+}
+
+func (m Model) CreateUndoTree() UndoTree {
+	return CreateUndoTree(m.Root)
+}
+
+func (m Model) CreateUndoCmd(undo Undoable, redo Undoable) tea.Cmd {
+	return func() tea.Msg {
+		return ArrUndo{
+			Undo: undo,
+			Redo: redo,
+		}
+	}
+}
+
+func CreateUndoTree(arr *Arrangement) UndoTree {
+	undoTree := UndoTree{arrRef: arr, nodes: make([]UndoTree, 0)}
+	for _, arrRef := range arr.Nodes {
+		undoTree.nodes = append(undoTree.nodes, CreateUndoTree(arrRef))
+	}
+	return undoTree
 }

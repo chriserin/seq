@@ -1,6 +1,8 @@
 package main
 
-import "github.com/chriserin/seq/internal/arrangement"
+import (
+	"github.com/chriserin/seq/internal/arrangement"
+)
 
 type Undoable interface {
 	ApplyUndo(m *model) Location
@@ -167,4 +169,13 @@ func (uno UndoNewOverlay) ApplyUndo(m *model) Location {
 	newOverlay := m.CurrentPart().Overlays.Remove(uno.overlayKey)
 	(*m.definition.parts)[currentPartId].Overlays = newOverlay
 	return Location{uno.overlayKey, uno.cursorPosition, true}
+}
+
+type UndoArrangement struct {
+	arrUndo arrangement.Undoable
+}
+
+func (ua UndoArrangement) ApplyUndo(m *model) Location {
+	m.arrangement.ApplyArrUndo(ua.arrUndo)
+	return Location{ApplyLocation: false}
 }

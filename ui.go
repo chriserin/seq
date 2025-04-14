@@ -493,6 +493,10 @@ type GridNote struct {
 	note    note
 }
 
+func (m *model) PushArrUndo(arrundo arrangement.ArrUndo) {
+	m.PushUndoables(UndoArrangement{arrUndo: arrundo.Undo}, UndoArrangement{arrUndo: arrundo.Redo})
+}
+
 func (m *model) PushUndoables(undo Undoable, redo Undoable) {
 	if m.undoStack == NIL_STACK {
 		m.undoStack = UndoStack{
@@ -1172,23 +1176,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Save()
 				return m, nil
 			case SELECT_PART:
-				m.arrangement.NewPart(m.partSelectorIndex, m.sectionSideIndicator, m.playing != PLAY_STOPPED)
+				_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator, IsPlaying: m.playing != PLAY_STOPPED})
 				m.currentOverlay = m.CurrentPart().Overlays
 				if m.focus == FOCUS_ARRANGEMENT_EDITOR {
 					m.selectionIndicator = SELECT_ARRANGEMENT_EDITOR
 				} else {
 					m.selectionIndicator = SELECT_NOTHING
 				}
-				return m, nil
+				return m, cmd
 			case SELECT_CHANGE_PART:
-				m.arrangement.Update(arrangement.ChangePart{Index: m.partSelectorIndex})
+				_, cmd := m.arrangement.Update(arrangement.ChangePart{Index: m.partSelectorIndex})
 				m.currentOverlay = m.CurrentPart().Overlays
 				if m.focus == FOCUS_ARRANGEMENT_EDITOR {
 					m.selectionIndicator = SELECT_ARRANGEMENT_EDITOR
 				} else {
 					m.selectionIndicator = SELECT_NOTHING
 				}
-				return m, nil
+				return m, cmd
 			case SELECT_CONFIRM_NEW:
 				m.NewSequence()
 				m.selectionIndicator = SELECT_NOTHING
@@ -1548,6 +1552,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.focus = FOCUS_GRID
 	case arrangement.RenamePart:
 		m.selectionIndicator = SELECT_RENAME_PART
+	case arrangement.ArrUndo:
+		m.PushArrUndo(msg)
 	}
 	var cmd tea.Cmd
 	cursor, cmd := m.cursor.Update(msg)
