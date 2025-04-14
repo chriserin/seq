@@ -2524,7 +2524,7 @@ func (m model) View() string {
 
 	if m.patternMode == PATTERN_ACCENT || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
-	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && len(m.CurrentPart().Overlays.Notes) == 0 && m.CurrentPartId() == 0) ||
+	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && len(m.CurrentPart().Overlays.Notes) == 0 && len(*m.definition.parts) == 1 && m.CurrentPartId() == 0) ||
 		m.selectionIndicator == SELECT_SETUP_VALUE ||
 		m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE ||
 		m.selectionIndicator == SELECT_SETUP_CHANNEL {
@@ -2726,6 +2726,9 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(m.ConfirmQuitView())
 	} else if m.playing != PLAY_STOPPED {
 		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
+	} else if len(*m.definition.parts) > 1 {
+		buf.WriteString(m.WriteView())
+		buf.WriteString(fmt.Sprintf("Seq - %s\n", m.CurrentPart().GetName()))
 	} else {
 		buf.WriteString(m.WriteView())
 		buf.WriteString("Seq - A sequencer for your cli\n")
