@@ -57,9 +57,10 @@ func (ol Overlay) Remove(key Key) *Overlay {
 
 func InitOverlay(key Key, below *Overlay) *Overlay {
 	return &Overlay{
-		Key:   key,
-		Below: below,
-		Notes: make(grid.Pattern),
+		Key:     key,
+		Below:   below,
+		Notes:   make(grid.Pattern),
+		PressUp: overlaykey.ROOT == key,
 	}
 }
 
