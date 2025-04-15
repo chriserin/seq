@@ -1,10 +1,14 @@
 package mappings
 
 import (
+	"slices"
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 var keycombo = make([]tea.KeyMsg, 0, 3)
+var timer *time.Timer
 
 type Command int
 type Mapping struct {
@@ -190,7 +194,19 @@ func k(x ...string) [3]string {
 }
 
 func ProcessKey(key tea.KeyMsg) Mapping {
-	keycombo = append(keycombo, key)
+	if len(keycombo) < 3 {
+		keycombo = append(keycombo, key)
+	} else {
+		keycombo = slices.Delete(keycombo, 0, 1)
+		keycombo = append(keycombo, key)
+	}
+
+	if timer != nil {
+		timer.Stop()
+	}
+	timer = time.AfterFunc(time.Millisecond*750, func() {
+		keycombo = make([]tea.KeyMsg, 0, 3)
+	})
 
 	command, exists := mappings[ToMappingKey(keycombo)]
 
