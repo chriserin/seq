@@ -16,9 +16,9 @@ var MutedRatchetColor lipgloss.Color = "#f34213"
 var ActiveStyle = lipgloss.NewStyle().Foreground(ActiveRatchetColor)
 var MutedStyle = lipgloss.NewStyle().Foreground(MutedRatchetColor)
 
-var HeartColor = lipgloss.NewStyle().Foreground(Heart)
-var SelectedColor = lipgloss.NewStyle().Background(lipgloss.Color("#5cdffb")).Foreground(lipgloss.Color("#000000"))
-var NumberColor = lipgloss.NewStyle().Foreground(lipgloss.Color("#fcbd15"))
+var HeartStyle = lipgloss.NewStyle().Foreground(Heart)
+var SelectedStyle = lipgloss.NewStyle().Background(lipgloss.Color("#5cdffb")).Foreground(lipgloss.Color("#000000"))
+var NumberStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#fcbd15"))
 
 var currentPlayingColor lipgloss.Color = "#abfaa9"
 var activePlayingColor lipgloss.Color = "#f34213"
@@ -34,3 +34,9 @@ var WhiteKeyStyle = lipgloss.NewStyle().Background(White).Foreground(Black)
 var Black = lipgloss.Color("#000000")
 var White = lipgloss.Color("#ffffff")
 var Heart = lipgloss.Color("#ed3902")
+
+var ArrangementHeaderColor = lipgloss.Color("FAFAFA")
+var ArrangementTitleColor = lipgloss.Color("FAFAFA")
+var ArrangementGroupColor = lipgloss.Color("#F25D94")
+var ArrangementIndentColor = lipgloss.Color("#4b4261")
+var ArrangementSelectedLineColor = lipgloss.Color("#3b4261")

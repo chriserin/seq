@@ -14,14 +14,14 @@ var (
 	// Styles for header
 	headerStyle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
+			Foreground(colors.ArrangementHeaderColor).
 			PaddingRight(1).
 			PaddingLeft(1)
 
 	// Title style
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
+			Foreground(colors.ArrangementTitleColor).
 			MarginLeft(1)
 )
 
@@ -30,11 +30,11 @@ func (m Model) View() string {
 
 	// Create stylish header
 	header := lipgloss.JoinHorizontal(lipgloss.Top,
-		lipgloss.PlaceHorizontal(24, lipgloss.Left, titleStyle.Render("Section "), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(lipgloss.Color("#3b4261"))),
-		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("Start Beat"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(lipgloss.Color("#3b4261"))),
-		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("⟳ Start"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(lipgloss.Color("#3b4261"))),
-		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("⟳ Amount"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(lipgloss.Color("#3b4261"))),
-		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("⟳ Keep"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(lipgloss.Color("#3b4261"))),
+		lipgloss.PlaceHorizontal(24, lipgloss.Left, titleStyle.Render("Section "), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(colors.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("Start Beat"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(colors.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("⟳ Start"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(colors.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("⟳ Amount"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(colors.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("⟳ Keep"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(colors.ArrangementSelectedLineColor)),
 	)
 
 	buf.WriteString(header)
@@ -48,19 +48,19 @@ func (m Model) View() string {
 // Style definitions for node rendering
 var (
 	groupStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#F25D94")).
+			Foreground(colors.ArrangementGroupColor).
 			MarginRight(1).
 			Bold(true)
 
 	indentStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#4b4261"))
+			Foreground(colors.ArrangementIndentColor)
 
 	nodeRowStyle = lipgloss.NewStyle().
 			PaddingLeft(1).
 			MarginBottom(0)
 
 	sectionNameStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#FFFFFF"))
+				Foreground(colors.ArrangementHeaderColor)
 )
 
 // Recursively render a node and its children
@@ -84,7 +84,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 
 		var options []lipgloss.WhitespaceOption
 		if isSelected {
-			options = []lipgloss.WhitespaceOption{lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(lipgloss.Color("#3b4261"))}
+			options = []lipgloss.WhitespaceOption{lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(colors.ArrangementSelectedLineColor)}
 		} else {
 			options = []lipgloss.WhitespaceOption{}
 		}
@@ -117,7 +117,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		for i, childNode := range node.Nodes {
 			if i == len(node.Nodes)-1 && depth > 0 {
 				// Draw a connection line for the last child
-				indentStyle = indentStyle.Foreground(lipgloss.Color("#3b4261"))
+				indentStyle = indentStyle.Foreground(colors.ArrangementSelectedLineColor)
 			}
 			m.renderNode(buf, childNode, depth+1, len(node.Nodes)-1 == i)
 		}
@@ -145,7 +145,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 
 		var options []lipgloss.WhitespaceOption
 		if isSelected {
-			options = []lipgloss.WhitespaceOption{lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(lipgloss.Color("#3b4261"))}
+			options = []lipgloss.WhitespaceOption{lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(colors.ArrangementSelectedLineColor)}
 		} else {
 			options = []lipgloss.WhitespaceOption{}
 		}
