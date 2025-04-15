@@ -99,9 +99,9 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		iterations := fmt.Sprintf("%d", node.Iterations)
 		iterationsText := ""
 		if isSelected && m.Focus {
-			iterationsText = colors.SelectedColor.MarginLeft(1).Render(iterations)
+			iterationsText = colors.SelectedStyle.MarginLeft(1).Render(iterations)
 		} else {
-			iterationsText = colors.NumberColor.Render(iterations)
+			iterationsText = colors.NumberStyle.Render(iterations)
 		}
 
 		row = lipgloss.JoinHorizontal(lipgloss.Top,
@@ -161,7 +161,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		// Start building the row
 		row := lipgloss.PlaceHorizontal(22, lipgloss.Left, sectionOutput, options...)
 
-		selectedStyle := colors.SelectedColor.MarginLeft(1)
+		selectedStyle := colors.SelectedStyle.MarginLeft(1)
 
 		// Handle start beat
 		startBeat := songSection.StartBeat
@@ -169,7 +169,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_START_BEAT {
 			startBeatText = selectedStyle.Render(fmt.Sprintf("%d", startBeat))
 		} else {
-			startBeatText = colors.NumberColor.Render(fmt.Sprintf("%d", startBeat))
+			startBeatText = colors.NumberStyle.Render(fmt.Sprintf("%d", startBeat))
 		}
 		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
 			lipgloss.PlaceHorizontal(12, lipgloss.Right, startBeatText, options...))
@@ -180,7 +180,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_START_CYCLE {
 			startCycleText = selectedStyle.Render(fmt.Sprintf("%d", startCycle))
 		} else {
-			startCycleText = colors.NumberColor.Render(fmt.Sprintf("%d", startCycle))
+			startCycleText = colors.NumberStyle.Render(fmt.Sprintf("%d", startCycle))
 		}
 		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
 			lipgloss.PlaceHorizontal(12, lipgloss.Right, startCycleText, options...))
@@ -197,7 +197,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_CYCLES {
 			cyclesText = selectedStyle.Render(cyclesString)
 		} else {
-			cyclesText = colors.NumberColor.Render(cyclesString)
+			cyclesText = colors.NumberStyle.Render(cyclesString)
 		}
 		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
 			lipgloss.PlaceHorizontal(12, lipgloss.Right, cyclesText, options...))
@@ -213,7 +213,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_KEEP_CYCLES {
 			keepText = selectedStyle.Render(keepCycles)
 		} else {
-			keepText = colors.NumberColor.Render(keepCycles)
+			keepText = colors.NumberStyle.Render(keepCycles)
 		}
 		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
 			lipgloss.PlaceHorizontal(12, lipgloss.Right, keepText, options...))

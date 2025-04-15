@@ -2422,19 +2422,19 @@ func (m model) PartView() string {
 	startBeats := m.CurrentSongSection().StartBeat
 	startCycles := m.CurrentSongSection().StartCycles
 
-	beatsInput := colors.NumberColor.Render(strconv.Itoa(int(beats)))
-	cyclesInput := colors.NumberColor.Render(strconv.Itoa(int(cycles)))
-	startBeatsInput := colors.NumberColor.Render(strconv.Itoa(int(startBeats)))
-	startCyclesInput := colors.NumberColor.Render(strconv.Itoa(int(startCycles)))
+	beatsInput := colors.NumberStyle.Render(strconv.Itoa(int(beats)))
+	cyclesInput := colors.NumberStyle.Render(strconv.Itoa(int(cycles)))
+	startBeatsInput := colors.NumberStyle.Render(strconv.Itoa(int(startBeats)))
+	startCyclesInput := colors.NumberStyle.Render(strconv.Itoa(int(startCycles)))
 	switch m.selectionIndicator {
 	case SELECT_BEATS:
-		beatsInput = colors.SelectedColor.Render(strconv.Itoa(int(beats)))
+		beatsInput = colors.SelectedStyle.Render(strconv.Itoa(int(beats)))
 	case SELECT_CYCLES:
-		cyclesInput = colors.SelectedColor.Render(strconv.Itoa(int(cycles)))
+		cyclesInput = colors.SelectedStyle.Render(strconv.Itoa(int(cycles)))
 	case SELECT_START_BEATS:
-		startBeatsInput = colors.SelectedColor.Render(strconv.Itoa(int(startBeats)))
+		startBeatsInput = colors.SelectedStyle.Render(strconv.Itoa(int(startBeats)))
 	case SELECT_START_CYCLES:
-		startCyclesInput = colors.SelectedColor.Render(strconv.Itoa(int(startCycles)))
+		startCyclesInput = colors.SelectedStyle.Render(strconv.Itoa(int(startCycles)))
 	}
 	buf.WriteString("             \n")
 	buf.WriteString("             \n")
@@ -2454,33 +2454,33 @@ func (m model) TempoView() string {
 	var tempo, division string
 	switch m.selectionIndicator {
 	case SELECT_TEMPO:
-		tempo = colors.SelectedColor.Render(strconv.Itoa(m.definition.tempo))
-		division = colors.NumberColor.Render(strconv.Itoa(m.definition.subdivisions))
+		tempo = colors.SelectedStyle.Render(strconv.Itoa(m.definition.tempo))
+		division = colors.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
 	case SELECT_TEMPO_SUBDIVISION:
-		tempo = colors.NumberColor.Render(strconv.Itoa(m.definition.tempo))
-		division = colors.SelectedColor.Render(strconv.Itoa(m.definition.subdivisions))
+		tempo = colors.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
+		division = colors.SelectedStyle.Render(strconv.Itoa(m.definition.subdivisions))
 	default:
-		tempo = colors.NumberColor.Render(strconv.Itoa(m.definition.tempo))
-		division = colors.NumberColor.Render(strconv.Itoa(m.definition.subdivisions))
+		tempo = colors.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
+		division = colors.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
 	}
-	heart := colors.HeartColor.Render("♡")
+	heart := colors.HeartStyle.Render("♡")
 	if m.hasUIFocus {
 		buf.WriteString(fmt.Sprintf("       %s     \n", heart))
 	} else {
 		buf.WriteString("             \n")
 	}
-	buf.WriteString(colors.HeartColor.Render("   ♡♡♡☆ ☆♡♡♡ ") + "\n")
-	buf.WriteString(colors.HeartColor.Render("  ♡    ◊    ♡") + "\n")
-	buf.WriteString(colors.HeartColor.Render("  ♡  TEMPO  ♡") + "\n")
+	buf.WriteString(colors.HeartStyle.Render("   ♡♡♡☆ ☆♡♡♡ ") + "\n")
+	buf.WriteString(colors.HeartStyle.Render("  ♡    ◊    ♡") + "\n")
+	buf.WriteString(colors.HeartStyle.Render("  ♡  TEMPO  ♡") + "\n")
 	buf.WriteString(fmt.Sprintf("  %s   %s   %s\n", heart, tempo, heart))
-	buf.WriteString(colors.HeartColor.Render("   ♡ BEATS ♡") + "\n")
+	buf.WriteString(colors.HeartStyle.Render("   ♡ BEATS ♡") + "\n")
 	buf.WriteString(fmt.Sprintf("    %s  %s  %s  \n", heart, division, heart))
-	buf.WriteString(colors.HeartColor.Render("     ♡   ♡   ") + "\n")
-	buf.WriteString(colors.HeartColor.Render("      ♡ ♡    ") + "\n")
+	buf.WriteString(colors.HeartStyle.Render("     ♡   ♡   ") + "\n")
+	buf.WriteString(colors.HeartStyle.Render("      ♡ ♡    ") + "\n")
 	if m.midiLoopMode == MLM_RECEIVER && !m.connected {
-		buf.WriteString(colors.HeartColor.Render("       ╳     ") + "\n")
+		buf.WriteString(colors.HeartStyle.Render("       ╳     ") + "\n")
 	} else {
-		buf.WriteString(colors.HeartColor.Render("       †     ") + "\n")
+		buf.WriteString(colors.HeartStyle.Render("       †     ") + "\n")
 	}
 	return buf.String()
 }
@@ -2549,16 +2549,16 @@ func (m model) AccentKeyView() string {
 	}
 
 	if m.selectionIndicator == SELECT_ACCENT_DIFF {
-		accentDiffString = colors.SelectedColor.Render(fmt.Sprintf("%2d", accentDiff))
+		accentDiffString = colors.SelectedStyle.Render(fmt.Sprintf("%2d", accentDiff))
 	} else {
-		accentDiffString = colors.NumberColor.Render(fmt.Sprintf("%2d", accentDiff))
+		accentDiffString = colors.NumberStyle.Render(fmt.Sprintf("%2d", accentDiff))
 	}
 
 	var accentTargetString string
 	if m.selectionIndicator == SELECT_ACCENT_TARGET {
-		accentTargetString = colors.SelectedColor.Render(fmt.Sprintf(" %s", accentTarget))
+		accentTargetString = colors.SelectedStyle.Render(fmt.Sprintf(" %s", accentTarget))
 	} else {
-		accentTargetString = colors.NumberColor.Render(fmt.Sprintf(" %s", accentTarget))
+		accentTargetString = colors.NumberStyle.Render(fmt.Sprintf(" %s", accentTarget))
 	}
 
 	buf.WriteString(fmt.Sprintf(" ACCENTS %s %s\n", accentDiffString, accentTargetString))
@@ -2567,9 +2567,9 @@ func (m model) AccentKeyView() string {
 
 	var accentStartString string
 	if m.selectionIndicator == SELECT_ACCENT_START {
-		accentStartString = colors.SelectedColor.Render(fmt.Sprintf("%2d", accentStart))
+		accentStartString = colors.SelectedStyle.Render(fmt.Sprintf("%2d", accentStart))
 	} else {
-		accentStartString = colors.NumberColor.Render(fmt.Sprintf("%2d", accentStart))
+		accentStartString = colors.NumberStyle.Render(fmt.Sprintf("%2d", accentStart))
 	}
 
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color(startAccent.Color))
@@ -2589,9 +2589,9 @@ func (m model) SetupView() string {
 
 		buf.WriteString("CH ")
 		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_CHANNEL {
-			buf.WriteString(colors.SelectedColor.Render(fmt.Sprintf("%2d", line.Channel)))
+			buf.WriteString(colors.SelectedStyle.Render(fmt.Sprintf("%2d", line.Channel)))
 		} else {
-			buf.WriteString(colors.NumberColor.Render(fmt.Sprintf("%2d", line.Channel)))
+			buf.WriteString(colors.NumberStyle.Render(fmt.Sprintf("%2d", line.Channel)))
 		}
 
 		var messageType string
@@ -2603,7 +2603,7 @@ func (m model) SetupView() string {
 		}
 
 		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE {
-			messageType = fmt.Sprintf(" %s ", colors.SelectedColor.Render(messageType))
+			messageType = fmt.Sprintf(" %s ", colors.SelectedStyle.Render(messageType))
 		} else {
 			messageType = fmt.Sprintf(" %s ", messageType)
 		}
@@ -2611,9 +2611,9 @@ func (m model) SetupView() string {
 		buf.WriteString(messageType)
 
 		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_VALUE {
-			buf.WriteString(colors.SelectedColor.Render(strconv.Itoa(int(line.Note))))
+			buf.WriteString(colors.SelectedStyle.Render(strconv.Itoa(int(line.Note))))
 		} else {
-			buf.WriteString(colors.NumberColor.Render(strconv.Itoa(int(line.Note))))
+			buf.WriteString(colors.NumberStyle.Render(strconv.Itoa(int(line.Note))))
 		}
 		buf.WriteString(fmt.Sprintf(" %s\n", LineValueName(line, m.definition.instrument)))
 	}
@@ -2756,7 +2756,7 @@ func (m model) ChoosePartView() string {
 	} else {
 		name = (*m.definition.parts)[m.partSelectorIndex].GetName()
 	}
-	buf.WriteString(colors.SelectedColor.Render(name))
+	buf.WriteString(colors.SelectedStyle.Render(name))
 	buf.WriteString("\n")
 	return buf.String()
 }
@@ -2764,7 +2764,7 @@ func (m model) ChoosePartView() string {
 func (m model) ConfirmNewSequenceView() string {
 	var buf strings.Builder
 	buf.WriteString("   New Sequence: ")
-	buf.WriteString(colors.SelectedColor.Render("Confirm"))
+	buf.WriteString(colors.SelectedStyle.Render("Confirm"))
 	buf.WriteString("\n")
 	return buf.String()
 }
@@ -2772,7 +2772,7 @@ func (m model) ConfirmNewSequenceView() string {
 func (m model) ConfirmQuitView() string {
 	var buf strings.Builder
 	buf.WriteString("   Quit: ")
-	buf.WriteString(colors.SelectedColor.Render("Confirm"))
+	buf.WriteString(colors.SelectedStyle.Render("Confirm"))
 	buf.WriteString("\n")
 	return buf.String()
 }
@@ -2802,9 +2802,9 @@ func (m model) RatchetEditView() string {
 	}
 	buf.WriteString(fmt.Sprintf("%*s", 32, ratchetsBuf.String()))
 	if m.selectionIndicator == SELECT_RATCHET_SPAN {
-		buf.WriteString(fmt.Sprintf(" Span %s ", colors.SelectedColor.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
+		buf.WriteString(fmt.Sprintf(" Span %s ", colors.SelectedStyle.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
 	} else {
-		buf.WriteString(fmt.Sprintf(" Span %s ", colors.NumberColor.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
+		buf.WriteString(fmt.Sprintf(" Span %s ", colors.NumberStyle.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
 	}
 	buf.WriteString("\n")
 
@@ -2848,7 +2848,7 @@ var blackNotes = []uint8{1, 3, 6, 8, 10}
 func (m model) LineIndicator(lineNumber uint8) string {
 	indicator := "│"
 	if lineNumber == m.cursorPos.Line {
-		indicator = colors.SelectedColor.Render("┤")
+		indicator = colors.SelectedStyle.Render("┤")
 	}
 	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PLAY_STATE_MUTE {
 		indicator = "M"
