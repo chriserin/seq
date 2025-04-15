@@ -19,6 +19,7 @@ import (
 	colors "github.com/chriserin/seq/internal/colors"
 	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
+	"github.com/chriserin/seq/internal/mappings"
 	"github.com/chriserin/seq/internal/notereg"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/overlays"
@@ -100,62 +101,47 @@ type definitionKeyMap struct {
 	Paste                key.Binding
 }
 
-var noteWiseKeys = []key.Binding{
-	definitionKeys.TriggerAdd,
-	definitionKeys.TriggerRemove,
-	definitionKeys.AccentIncrease,
-	definitionKeys.AccentDecrease,
-	definitionKeys.GateIncrease,
-	definitionKeys.GateDecrease,
-	definitionKeys.WaitIncrease,
-	definitionKeys.WaitDecrease,
-	definitionKeys.OverlayTriggerRemove,
-	definitionKeys.RatchetIncrease,
-	definitionKeys.RatchetDecrease,
-	definitionKeys.ActionAddLineReset,
-	definitionKeys.ActionAddLineReverse,
-	definitionKeys.ActionAddSkipBeat,
-	definitionKeys.ActionAddReset,
-	definitionKeys.ActionAddLineBounce,
-	definitionKeys.ActionAddLineDelay,
+var noteWiseKeys = []mappings.Command{
+	mappings.TriggerAdd,
+	mappings.TriggerRemove,
+	mappings.AccentIncrease,
+	mappings.AccentDecrease,
+	mappings.GateIncrease,
+	mappings.GateDecrease,
+	mappings.WaitIncrease,
+	mappings.WaitDecrease,
+	mappings.OverlayTriggerRemove,
+	mappings.RatchetIncrease,
+	mappings.RatchetDecrease,
+	mappings.ActionAddLineReset,
+	mappings.ActionAddLineReverse,
+	mappings.ActionAddSkipBeat,
+	mappings.ActionAddReset,
+	mappings.ActionAddLineBounce,
+	mappings.ActionAddLineDelay,
 }
 
-var lineWiseKeys = []key.Binding{
-	definitionKeys.ClearLine,
-	definitionKeys.NumberPattern,
-	definitionKeys.RotateRight,
-	definitionKeys.RotateLeft,
+var lineWiseKeys = []mappings.Command{
+	mappings.ClearLine,
+	mappings.NumberPattern,
+	mappings.RotateRight,
+	mappings.RotateLeft,
 }
 
-var overlayWiseKeys = []key.Binding{
-	definitionKeys.ClearSeq,
+var overlayWiseKeys = []mappings.Command{
+	mappings.ClearSeq,
 }
 
-func (dkm definitionKeyMap) IsNoteWiseKey(keyMsg tea.KeyMsg) bool {
-	for _, kb := range noteWiseKeys {
-		if key.Matches(keyMsg, kb) {
-			return true
-		}
-	}
-	return false
+func IsNoteWiseKey(mapCmd mappings.Command) bool {
+	return slices.Contains(noteWiseKeys, mapCmd)
 }
 
-func (dkm definitionKeyMap) IsLineWiseKey(keyMsg tea.KeyMsg) bool {
-	for _, kb := range lineWiseKeys {
-		if key.Matches(keyMsg, kb) {
-			return true
-		}
-	}
-	return false
+func IsLineWiseKey(mapCmd mappings.Command) bool {
+	return slices.Contains(lineWiseKeys, mapCmd)
 }
 
-func (dkm definitionKeyMap) IsOverlayWiseKey(keyMsg tea.KeyMsg) bool {
-	for _, kb := range overlayWiseKeys {
-		if key.Matches(keyMsg, kb) {
-			return true
-		}
-	}
-	return false
+func IsOverlayWiseKey(mapCmd mappings.Command) bool {
+	return slices.Contains(overlayWiseKeys, mapCmd)
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -1226,20 +1212,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ResetCurrentOverlay()
 			return m, cmd
 		}
-		switch {
-		case Is(msg, keys.CursorDown):
+		mappingsCommand := mappings.ProcessKey(msg)
+		switch mappingsCommand.Command {
+		case mappings.CursorDown:
 			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
 				if m.cursorPos.Line < uint8(len(m.definition.lines)-1) {
 					m.cursorPos.Line++
 				}
 			}
-		case Is(msg, keys.CursorUp):
+		case mappings.CursorUp:
 			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
 				if m.cursorPos.Line > 0 {
 					m.cursorPos.Line--
 				}
 			}
-		case Is(msg, keys.CursorLeft):
+		case mappings.CursorLeft:
 			if m.selectionIndicator == SELECT_RATCHETS {
 				if m.ratchetCursor > 0 {
 					m.ratchetCursor--
@@ -1251,7 +1238,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursorPos.Beat--
 				}
 			}
-		case Is(msg, keys.CursorRight):
+		case mappings.CursorRight:
 			if m.selectionIndicator == SELECT_RATCHETS {
 				currentNote := m.CurrentNote()
 				if m.ratchetCursor < currentNote.Ratchets.Length {
@@ -1264,53 +1251,53 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursorPos.Beat++
 				}
 			}
-		case Is(msg, keys.CursorLineStart):
+		case mappings.CursorLineStart:
 			m.cursorPos.Beat = 0
-		case Is(msg, keys.CursorLineEnd):
+		case mappings.CursorLineEnd:
 			m.cursorPos.Beat = m.CurrentPart().Beats - 1
-		case Is(msg, keys.Escape):
+		case mappings.Escape:
 			m.Escape()
-		case Is(msg, keys.PlayStop):
+		case mappings.PlayStop:
 			if m.playing == PLAY_STOPPED {
 				m.loopMode = LOOP_SONG
 			}
 			m.StartStop()
-		case Is(msg, keys.PlayPart):
+		case mappings.PlayPart:
 			if m.playing == PLAY_STOPPED {
 				m.loopMode = LOOP_PART
 			}
 			m.StartStop()
-		case Is(msg, keys.PlayLoop):
+		case mappings.PlayLoop:
 			if m.playing == PLAY_STOPPED {
 				m.loopMode = LOOP_SONG
 			}
 			m.arrangement.Root.SetInfinite()
 			m.StartStop()
-		case Is(msg, keys.OverlayInputSwitch):
+		case mappings.OverlayInputSwitch:
 			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 			m.focus = FOCUS_OVERLAY_KEY
 			m.overlayKeyEdit.Focus(m.selectionIndicator == SELECT_OVERLAY)
-		case Is(msg, keys.TempoInputSwitch):
+		case mappings.TempoInputSwitch:
 			states := []Selection{SELECT_NOTHING, SELECT_TEMPO, SELECT_TEMPO_SUBDIVISION}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
-		case Is(msg, keys.SetupInputSwitch):
+		case mappings.SetupInputSwitch:
 			states := []Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
-		case Is(msg, keys.AccentInputSwitch):
+		case mappings.AccentInputSwitch:
 			states := []Selection{SELECT_NOTHING, SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
-		case Is(msg, keys.RatchetInputSwitch):
+		case mappings.RatchetInputSwitch:
 			currentNote := m.CurrentNote()
 			if currentNote.AccentIndex > 0 {
 				states := []Selection{SELECT_NOTHING, SELECT_RATCHETS, SELECT_RATCHET_SPAN}
 				m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 				m.ratchetCursor = 0
 			}
-		case Is(msg, keys.BeatsInputSwitch):
+		case mappings.BeatsInputSwitch:
 			states := []Selection{SELECT_NOTHING, SELECT_BEATS, SELECT_CYCLES, SELECT_START_BEATS, SELECT_START_CYCLES}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
-		case Is(msg, keys.ArrangementInputSwitch):
+		case mappings.ArrangementInputSwitch:
 			states := []Selection{SELECT_NOTHING, SELECT_ARRANGEMENT_EDITOR}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 			if m.selectionIndicator == SELECT_ARRANGEMENT_EDITOR {
@@ -1321,7 +1308,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.arrangement = model
 				return m, cmd
 			}
-		case Is(msg, keys.ToggleArrangementView):
+		case mappings.ToggleArrangementView:
 			m.showArrangementView = !m.showArrangementView
 			if m.showArrangementView {
 				m.SetSelectionIndicator(SELECT_ARRANGEMENT_EDITOR)
@@ -1333,7 +1320,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.arrangement = model
 				return m, cmd
 			}
-		case Is(msg, keys.Increase):
+		case mappings.Increase:
 			switch m.selectionIndicator {
 			case SELECT_TEMPO:
 				if m.definition.tempo < 300 {
@@ -1374,7 +1361,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case SELECT_CHANGE_PART:
 				m.IncreasePartSelector()
 			}
-		case Is(msg, keys.Decrease):
+		case mappings.Decrease:
 			switch m.selectionIndicator {
 			case SELECT_TEMPO:
 				if m.definition.tempo > 30 {
@@ -1413,44 +1400,44 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case SELECT_CHANGE_PART:
 				m.DecreasePartSelector()
 			}
-		case Is(msg, keys.ToggleGateMode):
+		case mappings.ToggleGateMode:
 			m.SetPatternMode(PATTERN_GATE)
-		case Is(msg, keys.ToggleWaitMode):
+		case mappings.ToggleWaitMode:
 			m.SetPatternMode(PATTERN_WAIT)
-		case Is(msg, keys.ToggleAccentMode):
+		case mappings.ToggleAccentMode:
 			m.SetPatternMode(PATTERN_ACCENT)
-		case Is(msg, keys.ToggleRatchetMode):
+		case mappings.ToggleRatchetMode:
 			m.SetPatternMode(PATTERN_RATCHET)
-		case Is(msg, keys.PrevOverlay):
+		case mappings.PrevOverlay:
 			m.NextOverlay(-1)
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
-		case Is(msg, keys.NextOverlay):
+		case mappings.NextOverlay:
 			m.NextOverlay(+1)
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
-		case Is(msg, keys.Save):
+		case mappings.Save:
 			if m.filename == "" {
 				m.selectionIndicator = SELECT_FILE_NAME
 			} else {
 				m.Save()
 			}
-		case Is(msg, keys.Undo):
+		case mappings.Undo:
 			undoStack := m.Undo()
 			if undoStack != NIL_STACK {
 				m.PushRedo(undoStack)
 			}
-		case Is(msg, keys.Redo):
+		case mappings.Redo:
 			undoStack := m.Redo()
 			if undoStack != NIL_STACK {
 				m.PushUndo(undoStack)
 			}
-		case Is(msg, keys.New):
+		case mappings.New:
 			m.selectionIndicator = SELECT_CONFIRM_NEW
-		case Is(msg, keys.ToggleVisualMode):
+		case mappings.ToggleVisualMode:
 			m.visualAnchorCursor = m.cursorPos
 			m.visualMode = !m.visualMode
-		case Is(msg, keys.TogglePlayEdit):
+		case mappings.TogglePlayEdit:
 			m.playEditing = !m.playEditing
-		case Is(msg, keys.NewLine):
+		case mappings.NewLine:
 			if len(m.definition.lines) < 16 {
 				lastline := m.definition.lines[len(m.definition.lines)-1]
 				m.definition.lines = append(m.definition.lines, grid.LineDefinition{
@@ -1461,34 +1448,34 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.playState = append(m.playState, InitLineState(PLAY_STATE_PLAY, uint8(len(m.definition.lines)-1), 0))
 				}
 			}
-		case Is(msg, keys.NewSectionAfter):
+		case mappings.NewSectionAfter:
 			m.SetSelectionIndicator(SELECT_PART)
 			m.sectionSideIndicator = true
-		case Is(msg, keys.NewSectionBefore):
+		case mappings.NewSectionBefore:
 			m.SetSelectionIndicator(SELECT_PART)
 			m.sectionSideIndicator = false
-		case Is(msg, keys.ChangePart):
+		case mappings.ChangePart:
 			m.SetSelectionIndicator(SELECT_CHANGE_PART)
-		case Is(msg, keys.NextSection):
+		case mappings.NextSection:
 			m.NextSection()
-		case Is(msg, keys.PrevSection):
+		case mappings.PrevSection:
 			m.PrevSection()
-		case Is(msg, keys.Yank):
+		case mappings.Yank:
 			m.yankBuffer = m.Yank()
 			m.cursorPos = m.YankBounds().TopLeft()
 			m.visualMode = false
-		case Is(msg, keys.Mute):
+		case mappings.Mute:
 			if m.IsRatchetSelector() {
 				m.ToggleRatchetMute()
 			} else {
 				m.playState = Mute(m.playState, m.cursorPos.Line)
 				m.hasSolo = m.HasSolo()
 			}
-		case Is(msg, keys.Solo):
+		case mappings.Solo:
 			m.playState = Solo(m.playState, m.cursorPos.Line)
 			m.hasSolo = m.HasSolo()
 		default:
-			m = m.UpdateDefinition(msg)
+			m = m.UpdateDefinition(mappingsCommand)
 		}
 	case tea.FocusMsg:
 		m.hasUIFocus = true
@@ -1718,63 +1705,62 @@ func AdvanceSelectionState(states []Selection, currentSelection Selection) Selec
 	return resultSelection
 }
 
-func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
-	keys := definitionKeys
-	switch {
-	case Is(msg, keys.TriggerAdd):
+func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
+	switch mapping.Command {
+	case mappings.TriggerAdd:
 		m.AddTrigger()
-	case Is(msg, keys.TriggerRemove):
+	case mappings.TriggerRemove:
 		m.yankBuffer = m.Yank()
 		m.RemoveTrigger()
 		m.visualMode = false
-	case Is(msg, keys.AccentIncrease):
+	case mappings.AccentIncrease:
 		m.AccentModify(1)
-	case Is(msg, keys.AccentDecrease):
+	case mappings.AccentDecrease:
 		m.AccentModify(-1)
-	case Is(msg, keys.GateIncrease):
+	case mappings.GateIncrease:
 		m.GateModify(1)
-	case Is(msg, keys.GateDecrease):
+	case mappings.GateDecrease:
 		m.GateModify(-1)
-	case Is(msg, keys.WaitIncrease):
+	case mappings.WaitIncrease:
 		m.WaitModify(1)
-	case Is(msg, keys.WaitDecrease):
+	case mappings.WaitDecrease:
 		m.WaitModify(-1)
-	case Is(msg, keys.OverlayTriggerRemove):
+	case mappings.OverlayTriggerRemove:
 		m.OverlayRemoveTrigger()
-	case Is(msg, keys.ClearLine):
+	case mappings.ClearLine:
 		m.ClearOverlayLine()
-	case Is(msg, keys.RatchetIncrease):
+	case mappings.RatchetIncrease:
 		m.IncreaseRatchet()
-	case Is(msg, keys.RatchetDecrease):
+	case mappings.RatchetDecrease:
 		m.DecreaseRatchet()
 		m.EnsureRatchetCursorVisisble()
-	case Is(msg, keys.ActionAddLineReset):
+	case mappings.ActionAddLineReset:
 		m.AddAction(grid.ACTION_LINE_RESET)
-	case Is(msg, keys.ActionAddLineReverse):
+	case mappings.ActionAddLineReverse:
 		m.AddAction(grid.ACTION_LINE_REVERSE)
-	case Is(msg, keys.ActionAddSkipBeat):
+	case mappings.ActionAddSkipBeat:
 		m.AddAction(grid.ACTION_LINE_SKIP_BEAT)
-	case Is(msg, keys.ActionAddReset):
+	case mappings.ActionAddReset:
 		m.AddAction(grid.ACTION_RESET)
-	case Is(msg, keys.ActionAddLineBounce):
+	case mappings.ActionAddLineBounce:
 		m.AddAction(grid.ACTION_LINE_BOUNCE)
-	case Is(msg, keys.ActionAddLineDelay):
+	case mappings.ActionAddLineDelay:
 		m.AddAction(grid.ACTION_LINE_DELAY)
-	case Is(msg, keys.SelectKeyLine):
+	case mappings.SelectKeyLine:
 		m.definition.keyline = m.cursorPos.Line
-	case Is(msg, keys.PressDownOverlay):
+	case mappings.PressDownOverlay:
 		m.currentOverlay.ToggleOverlayStackOptions()
-	case Is(msg, keys.ClearSeq):
+	case mappings.ClearSeq:
 		m.ClearOverlay()
-	case Is(msg, keys.RotateRight):
+	case mappings.RotateRight:
 		m.RotateRight()
-	case Is(msg, keys.RotateLeft):
+	case mappings.RotateLeft:
 		m.RotateLeft()
-	case Is(msg, keys.Paste):
+	case mappings.Paste:
 		m.Paste()
 	}
-	if msg.String() >= "1" && msg.String() <= "9" {
-		beatInterval, _ := strconv.ParseInt(msg.String(), 0, 8)
+	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
+		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
 		switch m.patternMode {
 		case PATTERN_FILL:
 			m.fill(uint8(beatInterval))
@@ -1788,8 +1774,8 @@ func (m model) UpdateDefinitionKeys(msg tea.KeyMsg) model {
 			m.incrementWait(uint8(beatInterval), -1)
 		}
 	}
-	if IsShiftSymbol(msg.String()) {
-		beatInterval := convertSymbolToInt(msg.String())
+	if IsShiftSymbol(mapping.LastValue) {
+		beatInterval := convertSymbolToInt(mapping.LastValue)
 		switch m.patternMode {
 		case PATTERN_FILL:
 			m.fill(uint8(beatInterval))
@@ -1834,41 +1820,40 @@ func convertSymbolToInt(symbol string) int64 {
 	return 0
 }
 
-func (m model) UpdateDefinition(msg tea.KeyMsg) model {
-	keys := definitionKeys
-	if m.visualMode && (keys.IsLineWiseKey(msg) || keys.IsNoteWiseKey(msg) || Is(msg, keys.Paste)) {
+func (m model) UpdateDefinition(mapping mappings.Mapping) model {
+	if m.visualMode && (IsLineWiseKey(mapping.Command) || IsNoteWiseKey(mapping.Command) || mappings.Paste == mapping.Command) {
 		undoable := m.UndoableBounds(m.visualAnchorCursor, m.cursorPos)
 		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(msg)
+		m = m.UpdateDefinitionKeys(mapping)
 		redoable := m.UndoableBounds(m.visualAnchorCursor, m.cursorPos)
 		m.PushUndoables(undoable, redoable)
-	} else if keys.IsNoteWiseKey(msg) {
+	} else if IsNoteWiseKey(mapping.Command) {
 		undoable := m.UndoableNote()
 		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(msg)
+		m = m.UpdateDefinitionKeys(mapping)
 		redoable := m.UndoableNote()
 		m.PushUndoables(undoable, redoable)
-	} else if keys.IsLineWiseKey(msg) {
+	} else if IsLineWiseKey(mapping.Command) {
 		undoable := m.UndoableLine()
 		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(msg)
+		m = m.UpdateDefinitionKeys(mapping)
 		redoable := m.UndoableLine()
 		m.PushUndoables(undoable, redoable)
-	} else if keys.IsOverlayWiseKey(msg) {
+	} else if IsOverlayWiseKey(mapping.Command) {
 		undoable := m.UndoableOverlay()
 		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(msg)
+		m = m.UpdateDefinitionKeys(mapping)
 		redoable := m.UndoableOverlay()
 		m.PushUndoables(undoable, redoable)
-	} else if Is(msg, keys.Paste) {
+	} else if mappings.Paste == mapping.Command {
 		undoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRightFrom(m.cursorPos))
 		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(msg)
+		m = m.UpdateDefinitionKeys(mapping)
 		redoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRightFrom(m.cursorPos))
 		m.PushUndoables(undoable, redoable)
 	} else {
 		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(msg)
+		m = m.UpdateDefinitionKeys(mapping)
 	}
 	if m.playing != PLAY_STOPPED {
 		m.playEditing = true
