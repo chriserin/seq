@@ -217,7 +217,7 @@ func (ac *ArrCursor) DeleteNode() {
 		if !ac.MovePrev() {
 			ac.MoveNext()
 		}
-		parentNode.Nodes = append(parentNode.Nodes[:currentIndex], parentNode.Nodes[currentIndex+1:]...)
+		parentNode.Nodes = slices.Delete(parentNode.Nodes, currentIndex, currentIndex+1)
 	}
 }
 
