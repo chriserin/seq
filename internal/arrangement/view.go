@@ -153,7 +153,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		// Check if this is the currently playing section
 		var sectionOutput string
 		if m.Cursor.Matches(node) {
-			sectionOutput = fmt.Sprintf("%s %s", section, colors.CurrentlyPlayingDot)
+			sectionOutput = fmt.Sprintf("%s %s", section, colors.CurrentlyPlayingSymbol)
 		} else {
 			sectionOutput = section
 		}

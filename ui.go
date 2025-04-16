@@ -1097,6 +1097,7 @@ func (m model) LogFromBeatTime() {
 
 func RunProgram(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
+	colors.ChooseColorScheme("default")
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
@@ -2644,11 +2645,11 @@ func (m model) OverlaysView() string {
 		var playingSpacer = "   "
 		var playing = ""
 		if m.playing != PLAY_STOPPED && playingOverlayKeys[0] == currentOverlay.Key {
-			playing = colors.OverlayCurrentlyPlayingDot
+			playing = colors.OverlayCurrentlyPlayingSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""
 		} else if m.playing != PLAY_STOPPED && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
-			playing = colors.ActiveDot
+			playing = colors.ActiveSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""
 		}
@@ -3031,7 +3032,6 @@ func (m model) InVisualSelection(key gridKey) bool {
 
 func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 
-	currentAccent := config.Accents[currentNote.AccentIndex]
 	currentAction := currentNote.Action
 	var char string
 	var foregroundColor lipgloss.Color
@@ -3040,15 +3040,18 @@ func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 		waitShape = "\u0320"
 	}
 	if currentAction == grid.ACTION_NOTHING && currentNote != zeronote {
-		char = string(currentAccent.Shape) +
+		currentAccentShape := colors.AccentIcons[currentNote.AccentIndex]
+		currentAccentColor := colors.AccentColors[currentNote.AccentIndex]
+		char = string(currentAccentShape) +
 			string(config.Ratchets[currentNote.Ratchets.Length]) +
 			ShortGate(currentNote) +
 			waitShape
-		foregroundColor = currentAccent.Color
+		foregroundColor = lipgloss.Color(currentAccentColor)
 	} else {
 		lineaction := config.Lineactions[currentAction]
+		lineActionColor := colors.ActionColors[currentAction]
 		char = string(lineaction.Shape)
-		foregroundColor = lineaction.Color
+		foregroundColor = lipgloss.Color(lineActionColor)
 	}
 
 	return char, foregroundColor
