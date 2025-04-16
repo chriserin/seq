@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strings"
 
 	"github.com/charmbracelet/log"
 
@@ -112,15 +111,8 @@ func writeAccents(w io.Writer, accents patternAccents) error {
 	if len(accents.Data) > 0 {
 		fmt.Fprintln(w, "----------------------- ACCENT DATA -----------------------")
 		for i, accent := range accents.Data {
-			// Extract color string from lipgloss.Color
-			colorStr := string(accent.Color)
-			if strings.HasPrefix(colorStr, "#") {
-				// Only take the color code if it's a hex color
-				colorStr = strings.Split(colorStr, " ")[0]
-			}
-
-			fmt.Fprintf(w, "Accent %d: Shape='%c', Color=%s, Value=%d\n",
-				i, accent.Shape, colorStr, accent.Value)
+			fmt.Fprintf(w, "Accent %d: Value=%d\n",
+				i, accent.Value)
 		}
 	}
 	fmt.Fprintln(w, "")

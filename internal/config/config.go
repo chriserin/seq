@@ -16,21 +16,19 @@ type Config struct {
 }
 
 type Accent struct {
-	Shape rune
-	Color lipgloss.Color
 	Value uint8
 }
 
 var Accents = []Accent{
-	{' ', "#000000", 0},
-	{'✤', "#ed3902", 120},
-	{'⎈', "#f564a9", 105},
-	{'⚙', "#f8730e", 90},
-	{'⊚', "#fcc05c", 75},
-	{'✦', "#5cdffb", 60},
-	{'❖', "#1e89ef", 45},
-	{'✥', "#164de5", 30},
-	{'❄', "#0246a7", 15},
+	{0},
+	{120},
+	{105},
+	{90},
+	{75},
+	{60},
+	{45},
+	{30},
+	{15},
 }
 
 const C1 = 36

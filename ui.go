@@ -2564,7 +2564,6 @@ func (m model) AccentKeyView() string {
 
 	buf.WriteString(fmt.Sprintf(" ACCENTS %s %s\n", accentDiffString, accentTargetString))
 	buf.WriteString("———————————————\n")
-	startAccent := m.definition.accents.Data[1]
 
 	var accentStartString string
 	if m.selectionIndicator == SELECT_ACCENT_START {
@@ -2573,11 +2572,11 @@ func (m model) AccentKeyView() string {
 		accentStartString = colors.NumberStyle.Render(fmt.Sprintf("%2d", accentStart))
 	}
 
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color(startAccent.Color))
-	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(startAccent.Shape)), accentStartString))
-	for _, accent := range m.definition.accents.Data[2:] {
-		style := lipgloss.NewStyle().Foreground(lipgloss.Color(accent.Color))
-		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(accent.Shape)), accent.Value))
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color(colors.AccentColors[1]))
+	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(colors.AccentIcons[1])), accentStartString))
+	for i, accent := range m.definition.accents.Data[2:] {
+		style := lipgloss.NewStyle().Foreground(lipgloss.Color(colors.AccentColors[i+2]))
+		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(colors.AccentIcons[i+2])), accent.Value))
 	}
 	return buf.String()
 }

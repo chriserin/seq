@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/chriserin/seq/internal/arrangement"
 	"github.com/chriserin/seq/internal/config"
@@ -278,13 +277,6 @@ func Scan(scanner *bufio.Scanner, definition *Definition) {
 				value := strings.TrimSpace(keyVal[1])
 
 				switch key {
-				case "Shape":
-					if len(value) >= 3 && value[0] == '\'' && value[2] == '\'' {
-						accent.Shape = rune(value[1])
-					}
-				case "Color":
-					// Convert string to lipgloss.Color
-					accent.Color = lipgloss.Color(value)
 				case "Value":
 					if val, err := strconv.Atoi(value); err == nil {
 						accent.Value = uint8(val)

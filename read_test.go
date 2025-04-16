@@ -84,8 +84,8 @@ func TestReadWrite(t *testing.T) {
 					Start:  50,
 					Target: ACCENT_TARGET_VELOCITY,
 					Data: []config.Accent{
-						{Shape: '*', Color: "#ff0000", Value: 100},
-						{Shape: '.', Color: "#00ff00", Value: 80},
+						{Value: 100},
+						{Value: 80},
 					},
 				},
 			},
@@ -102,8 +102,8 @@ func TestReadWrite(t *testing.T) {
 		contentStr := string(content)
 
 		// Verify accent data is written properly
-		assert.Contains(t, contentStr, "Accent 0: Shape='*'")
-		assert.Contains(t, contentStr, "Accent 1: Shape='.'")
+		assert.Contains(t, contentStr, "Accent 0:")
+		assert.Contains(t, contentStr, "Accent 1:")
 
 		// Read it back
 		readDef, err := Read(filename)
