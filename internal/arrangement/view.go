@@ -46,22 +46,6 @@ func (m Model) View() string {
 }
 
 // Style definitions for node rendering
-var (
-	groupStyle = lipgloss.NewStyle().
-			Foreground(colors.ArrangementGroupColor).
-			MarginRight(1).
-			Bold(true)
-
-	indentStyle = lipgloss.NewStyle().
-			Foreground(colors.ArrangementIndentColor)
-
-	nodeRowStyle = lipgloss.NewStyle().
-			PaddingLeft(1).
-			MarginBottom(0)
-
-	sectionNameStyle = lipgloss.NewStyle().
-				Foreground(colors.ArrangementHeaderColor)
-)
 
 // Recursively render a node and its children
 func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, isLast bool) {
@@ -74,10 +58,10 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		var indent, nodeName string
 		if depth > 1 {
 			indent = strings.Repeat("│ ", max(0, depth-2)) + "├─"
-			indentation := indentStyle.Render(indent)
-			nodeName = fmt.Sprintf("%s %s", indentation, groupStyle.Render("Group "))
+			indentation := colors.IndentStyle.Render(indent)
+			nodeName = fmt.Sprintf("%s %s", indentation, colors.GroupStyle.Render("Group "))
 		} else {
-			nodeName = groupStyle.Render("Group")
+			nodeName = colors.GroupStyle.Render("Group")
 		}
 
 		isSelected := depth == m.depthCursor && slices.Contains(m.Cursor, node)
@@ -110,15 +94,11 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 			lipgloss.PlaceHorizontal(12, lipgloss.Right, "", options...),
 		)
 
-		buf.WriteString(nodeRowStyle.Render(row))
+		buf.WriteString(colors.NodeRowStyle.Render(row))
 		buf.WriteString("\n")
 
 		// Render child nodes
 		for i, childNode := range node.Nodes {
-			if i == len(node.Nodes)-1 && depth > 0 {
-				// Draw a connection line for the last child
-				indentStyle = indentStyle.Foreground(colors.ArrangementSelectedLineColor)
-			}
 			m.renderNode(buf, childNode, depth+1, len(node.Nodes)-1 == i)
 		}
 	} else if node.IsEndNode() {
@@ -134,10 +114,10 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 				indentChar = "├─"
 			}
 			indentChars := strings.Repeat("│ ", depth-2) + indentChar
-			indentation = indentStyle.Render(indentChars)
-			section = fmt.Sprintf("%s %s", indentation, sectionNameStyle.Render(sectionName))
+			indentation = colors.IndentStyle.Render(indentChars)
+			section = fmt.Sprintf("%s %s", indentation, colors.SectionNameStyle.Render(sectionName))
 		} else {
-			section = sectionNameStyle.Render(sectionName)
+			section = colors.SectionNameStyle.Render(sectionName)
 		}
 
 		isSelected := len(m.Cursor)-1 == m.depthCursor &&
@@ -218,7 +198,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
 			lipgloss.PlaceHorizontal(12, lipgloss.Right, keepText, options...))
 
-		buf.WriteString(nodeRowStyle.Render(row))
+		buf.WriteString(colors.NodeRowStyle.Render(row))
 		buf.WriteString("\n")
 	} else {
 		for i, childNode := range node.Nodes {

@@ -1097,7 +1097,7 @@ func (m model) LogFromBeatTime() {
 
 func RunProgram(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	colors.ChooseColorScheme("default")
+	colors.ChooseColorScheme("spaceodyssey")
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
