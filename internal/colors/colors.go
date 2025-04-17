@@ -33,6 +33,8 @@ var defaultColors = map[string]string{
 	"ArrangementGroupColor":        "#F25D94",
 	"ArrangementIndentColor":       "#4b4261",
 	"ArrangementSelectedLineColor": "#3b4261",
+	"SeqBorderLineColor":           "fafafa",
+	"PatternModeColor":             "#ed3902",
 }
 
 var defaultTheme = Theme{
@@ -512,58 +514,52 @@ var ActionColors = map[grid.Action]string{
 
 // Colors
 
-var AltSeqColor = lipgloss.Color("#222222")
-var SeqColor = lipgloss.Color("#000000")
-var SeqCursorColor = lipgloss.Color("#444444")
-var SeqVisualColor = lipgloss.Color("#aaaaaa")
-var SeqOverlayColor = lipgloss.Color("#333388")
-var SeqMiddleOverlayColor = lipgloss.Color("#405810")
-var SelectedAttributeColor = lipgloss.Color("#5cdffb")
-var NumberColor = lipgloss.Color("#fcbd15")
-var Black = lipgloss.Color("#000000")
-var White = lipgloss.Color("#ffffff")
-var Heart = lipgloss.Color("#ed3902")
-var ActiveRatchetColor = lipgloss.Color("#abfaa9")
-var MutedRatchetColor = lipgloss.Color("#f34213")
-var CurrentPlayingColor = lipgloss.Color("#abfaa9")
-var ActivePlayingColor = lipgloss.Color("#f34213")
-var ArrangementHeaderColor = lipgloss.Color("FAFAFA")
-var ArrangementTitleColor = lipgloss.Color("FAFAFA")
-var ArrangementGroupColor = lipgloss.Color("#F25D94")
-var ArrangementIndentColor = lipgloss.Color("#4b4261")
-var ArrangementSelectedLineColor = lipgloss.Color("#3b4261")
+var AppTitleColor,
+	AppDescriptorColor,
+	AltSeqColor,
+	SeqColor,
+	SeqCursorColor,
+	SeqVisualColor,
+	SeqOverlayColor,
+	SeqMiddleOverlayColor,
+	SeqBorderLineColor,
+	PatternModeColor,
+	SelectedAttributeColor,
+	NumberColor,
+	Black,
+	White,
+	Heart,
+	ActiveRatchetColor,
+	MutedRatchetColor,
+	CurrentPlayingColor,
+	ActivePlayingColor,
+	ArrangementHeaderColor,
+	ArrangementTitleColor,
+	ArrangementGroupColor,
+	ArrangementIndentColor,
+	ArrangementSelectedLineColor lipgloss.Color
 
 // Styles
-var ActiveStyle = lipgloss.NewStyle().Foreground(ActiveRatchetColor)
-var MutedStyle = lipgloss.NewStyle().Foreground(MutedRatchetColor)
-var HeartStyle = lipgloss.NewStyle().Foreground(Heart)
-var SelectedStyle = lipgloss.NewStyle().Background(SelectedAttributeColor).Foreground(Black)
-var NumberStyle = lipgloss.NewStyle().Foreground(NumberColor)
-var AccentModeStyle = lipgloss.NewStyle().Background(Heart).Foreground(Black)
-var BlackKeyStyle = lipgloss.NewStyle().Background(Black).Foreground(White)
-var WhiteKeyStyle = lipgloss.NewStyle().Background(White).Foreground(Black)
-
-var (
-	GroupStyle = lipgloss.NewStyle().
-			Foreground(ArrangementGroupColor).
-			MarginRight(1).
-			Bold(true)
-
-	IndentStyle = lipgloss.NewStyle().
-			Foreground(ArrangementIndentColor)
-
-	NodeRowStyle = lipgloss.NewStyle().
-			PaddingLeft(1).
-			MarginBottom(0)
-
-	SectionNameStyle = lipgloss.NewStyle().
-				Foreground(ArrangementHeaderColor)
-)
+var AppTitleStyle,
+	AppDescriptorStyle,
+	ActiveStyle,
+	MutedStyle,
+	HeartStyle,
+	SelectedStyle,
+	NumberStyle,
+	AccentModeStyle,
+	BlackKeyStyle,
+	WhiteKeyStyle,
+	GroupStyle,
+	IndentStyle,
+	NodeRowStyle,
+	SectionNameStyle,
+	SeqBorderStyle lipgloss.Style
 
 // Symbols
-var CurrentlyPlayingSymbol = lipgloss.NewStyle().Foreground(CurrentPlayingColor).Render(" \u25CF ")
-var OverlayCurrentlyPlayingSymbol = lipgloss.NewStyle().Background(SeqOverlayColor).Foreground(CurrentPlayingColor).Render(" \u25CF ")
-var ActiveSymbol = lipgloss.NewStyle().Background(SeqOverlayColor).Foreground(ActivePlayingColor).Render(" \u25C9 ")
+var CurrentlyPlayingSymbol,
+	OverlayCurrentlyPlayingSymbol,
+	ActiveSymbol string
 
 func ChooseColorScheme(colorscheme string) {
 	switch colorscheme {
@@ -600,6 +596,10 @@ func SetColors(newColors map[string]string) {
 	for key, value := range newColors {
 		newColor := lipgloss.Color(value)
 		switch key {
+		case "AppTitleColor":
+			AppTitleColor = newColor
+		case "AppDescriptorColor":
+			AppDescriptorColor = newColor
 		case "AltSeqColor":
 			AltSeqColor = newColor
 		case "SeqColor":
@@ -640,6 +640,10 @@ func SetColors(newColors map[string]string) {
 			ArrangementIndentColor = newColor
 		case "ArrangementSelectedLineColor":
 			ArrangementSelectedLineColor = newColor
+		case "SeqBorderLineColor":
+			SeqBorderLineColor = newColor
+		case "PatternModeColor":
+			PatternModeColor = newColor
 		}
 	}
 }
@@ -657,7 +661,7 @@ func EvaluateStyles() {
 	HeartStyle = lipgloss.NewStyle().Foreground(Heart)
 	SelectedStyle = lipgloss.NewStyle().Background(SelectedAttributeColor).Foreground(Black)
 	NumberStyle = lipgloss.NewStyle().Foreground(NumberColor)
-	AccentModeStyle = lipgloss.NewStyle().Background(Heart).Foreground(Black)
+	AccentModeStyle = lipgloss.NewStyle().Background(PatternModeColor).Foreground(Black)
 	BlackKeyStyle = lipgloss.NewStyle().Background(Black).Foreground(White)
 	WhiteKeyStyle = lipgloss.NewStyle().Background(White).Foreground(Black)
 
@@ -675,6 +679,10 @@ func EvaluateStyles() {
 
 	SectionNameStyle = lipgloss.NewStyle().
 		Foreground(ArrangementHeaderColor)
+
+	SeqBorderStyle = lipgloss.NewStyle().Background(Black).Foreground(SeqBorderLineColor)
+	AppTitleStyle = lipgloss.NewStyle().Background(Black).Foreground(AppTitleColor)
+	AppDescriptorStyle = lipgloss.NewStyle().Background(Black).Foreground(AppDescriptorColor)
 }
 
 func SetAccentColors(accentColors []string) {

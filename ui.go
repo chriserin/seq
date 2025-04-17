@@ -28,7 +28,6 @@ import (
 
 type transitiveKeyMap struct {
 	Quit                   key.Binding
-	Help                   key.Binding
 	PlayStop               key.Binding
 	PlayPart               key.Binding
 	PlayLoop               key.Binding
@@ -91,7 +90,6 @@ func Key(help string, keyboardKey ...string) key.Binding {
 
 var transitiveKeys = transitiveKeyMap{
 	Quit:                   Key("Quit", "q"),
-	Help:                   Key("Expand Help", "?"),
 	PlayStop:               Key("Play/Stop", " "),
 	PlayPart:               Key("PlayPart", "ctrl+@"),
 	PlayLoop:               Key("PlayLoop", "alt+ "),
@@ -975,7 +973,7 @@ func (m model) LogFromBeatTime() {
 
 func RunProgram(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	colors.ChooseColorScheme("spaceodyssey")
+	colors.ChooseColorScheme("orangegrove")
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
@@ -2433,7 +2431,8 @@ func (m model) AccentKeyView() string {
 	}
 
 	buf.WriteString(fmt.Sprintf(" ACCENTS %s %s\n", accentDiffString, accentTargetString))
-	buf.WriteString("———————————————\n")
+	buf.WriteString(colors.SeqBorderStyle.Render("———————————————"))
+	buf.WriteString("\n")
 
 	var accentStartString string
 	if m.selectionIndicator == SELECT_ACCENT_START {
@@ -2454,7 +2453,8 @@ func (m model) AccentKeyView() string {
 func (m model) SetupView() string {
 	var buf strings.Builder
 	buf.WriteString("    Setup\n")
-	buf.WriteString("———————————————\n")
+	buf.WriteString(colors.SeqBorderStyle.Render("———————————————"))
+	buf.WriteString("\n")
 	for i, line := range m.definition.lines {
 
 		buf.WriteString("CH ")
@@ -2506,8 +2506,10 @@ func LineValueName(ld grid.LineDefinition, instrument string) string {
 
 func (m model) OverlaysView() string {
 	var buf strings.Builder
-	buf.WriteString("Overlays\n")
-	buf.WriteString("——————————————\n")
+	buf.WriteString("Overlays")
+	buf.WriteString("\n")
+	buf.WriteString(colors.SeqBorderStyle.Render("——————————————"))
+	buf.WriteString("\n")
 	style := lipgloss.NewStyle().Background(colors.SeqOverlayColor)
 	var playingOverlayKeys = m.PlayingOverlayKeys()
 	for currentOverlay := m.CurrentPart().Overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
@@ -2586,18 +2588,20 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(fmt.Sprintf("Seq - %s\n", m.CurrentPart().GetName()))
 	} else {
 		buf.WriteString(m.WriteView())
-		buf.WriteString("Seq - A sequencer for your cli\n")
+		buf.WriteString(colors.AppTitleStyle.Render("Seq"))
+		buf.WriteString(colors.AppDescriptorStyle.Render("- A sequencer for your cli"))
+		buf.WriteString("\n")
 	}
 	beats := m.CurrentPart().Beats
 	topLine := strings.Repeat("─", max(32, int(beats)))
-	buf.WriteString(fmt.Sprintf("   ┌%s\n", topLine))
+	buf.WriteString("   ")
+	buf.WriteString(colors.SeqBorderStyle.Render(fmt.Sprintf("┌%s", topLine)))
+	buf.WriteString("\n")
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
 		buf.WriteString(lineView(i, m, visualCombinedPattern))
 	}
 	buf.WriteString(m.CurrentOverlayView())
 	buf.WriteString("\n")
-	// buf.WriteString(m.help.View(m.keys))
-	// buf.WriteString("\n")
 	return buf.String()
 }
 
@@ -2716,7 +2720,7 @@ func KeyLineIndicator(k uint8, l uint8) string {
 var blackNotes = []uint8{1, 3, 6, 8, 10}
 
 func (m model) LineIndicator(lineNumber uint8) string {
-	indicator := "│"
+	indicator := colors.SeqBorderStyle.Render("│")
 	if lineNumber == m.cursorPos.Line {
 		indicator = colors.SelectedStyle.Render("┤")
 	}
