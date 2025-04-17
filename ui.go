@@ -29,76 +29,17 @@ import (
 type transitiveKeyMap struct {
 	Quit                   key.Binding
 	Help                   key.Binding
-	CursorUp               key.Binding
-	CursorDown             key.Binding
-	CursorLeft             key.Binding
-	CursorRight            key.Binding
-	CursorLineStart        key.Binding
-	CursorLineEnd          key.Binding
-	Escape                 key.Binding
 	PlayStop               key.Binding
 	PlayPart               key.Binding
 	PlayLoop               key.Binding
-	TempoInputSwitch       key.Binding
-	OverlayInputSwitch     key.Binding
-	SetupInputSwitch       key.Binding
-	AccentInputSwitch      key.Binding
-	RatchetInputSwitch     key.Binding
-	BeatsInputSwitch       key.Binding
 	ArrangementInputSwitch key.Binding
 	ToggleArrangementView  key.Binding
 	Increase               key.Binding
 	Decrease               key.Binding
 	Enter                  key.Binding
-	ToggleGateMode         key.Binding
-	ToggleWaitMode         key.Binding
-	ToggleAccentMode       key.Binding
-	ToggleRatchetMode      key.Binding
-	NextOverlay            key.Binding
-	PrevOverlay            key.Binding
-	Save                   key.Binding
-	Undo                   key.Binding
-	Redo                   key.Binding
-	New                    key.Binding
-	ToggleVisualMode       key.Binding
-	TogglePlayEdit         key.Binding
-	NewLine                key.Binding
 	NewSectionAfter        key.Binding
 	NewSectionBefore       key.Binding
 	ChangePart             key.Binding
-	NextSection            key.Binding
-	PrevSection            key.Binding
-	Yank                   key.Binding
-	Mute                   key.Binding
-	Solo                   key.Binding
-}
-
-type definitionKeyMap struct {
-	TriggerAdd           key.Binding
-	TriggerRemove        key.Binding
-	AccentIncrease       key.Binding
-	AccentDecrease       key.Binding
-	GateIncrease         key.Binding
-	GateDecrease         key.Binding
-	WaitIncrease         key.Binding
-	WaitDecrease         key.Binding
-	OverlayTriggerRemove key.Binding
-	ClearLine            key.Binding
-	ClearSeq             key.Binding
-	RatchetIncrease      key.Binding
-	RatchetDecrease      key.Binding
-	ActionAddLineReset   key.Binding
-	ActionAddLineReverse key.Binding
-	ActionAddSkipBeat    key.Binding
-	ActionAddReset       key.Binding
-	ActionAddLineBounce  key.Binding
-	ActionAddLineDelay   key.Binding
-	SelectKeyLine        key.Binding
-	PressDownOverlay     key.Binding
-	NumberPattern        key.Binding
-	RotateRight          key.Binding
-	RotateLeft           key.Binding
-	Paste                key.Binding
 }
 
 var noteWiseKeys = []mappings.Command{
@@ -151,76 +92,17 @@ func Key(help string, keyboardKey ...string) key.Binding {
 var transitiveKeys = transitiveKeyMap{
 	Quit:                   Key("Quit", "q"),
 	Help:                   Key("Expand Help", "?"),
-	CursorUp:               Key("Up", "k"),
-	CursorDown:             Key("Down", "j"),
-	CursorLeft:             Key("Left", "h"),
-	CursorRight:            Key("Right", "l"),
-	CursorLineStart:        Key("Line Start", "<"),
-	CursorLineEnd:          Key("Line End", ">"),
-	Escape:                 Key("Escape", "esc"),
 	PlayStop:               Key("Play/Stop", " "),
 	PlayPart:               Key("PlayPart", "ctrl+@"),
 	PlayLoop:               Key("PlayLoop", "alt+ "),
 	Increase:               Key("Tempo Increase", "+", "="),
 	Decrease:               Key("Tempo Decrease", "-"),
 	Enter:                  Key("Enter", "enter"),
-	TempoInputSwitch:       Key("Select Tempo Indicator", "ctrl+t"),
-	OverlayInputSwitch:     Key("Select Overlay Indicator", "ctrl+o"),
-	SetupInputSwitch:       Key("Setup Input Indicator", "ctrl+s"),
-	AccentInputSwitch:      Key("Accent Input Indicator", "ctrl+e"),
-	RatchetInputSwitch:     Key("Ratchet Input Indicator", "ctrl+y"),
-	BeatsInputSwitch:       Key("Beats Input Indicator", "ctrl+b"),
 	ArrangementInputSwitch: Key("Arrangement Input Indicator", "ctrl+x"),
 	ToggleArrangementView:  Key("Arrangement Input Indicator", "ctrl+f"),
-	ToggleRatchetMode:      Key("Toggle Ratchet Mode", "ctrl+r"),
-	ToggleGateMode:         Key("Toggle Gate Mode", "ctrl+g"),
-	ToggleWaitMode:         Key("Toggle Wait Mode", "ctrl+w"),
-	ToggleAccentMode:       Key("Toggle Wait Mode", "ctrl+a"),
-	NextOverlay:            Key("Next Overlay", "{"),
-	PrevOverlay:            Key("Prev Overlay", "}"),
-	Save:                   Key("Save", "ctrl+v"),
-	Undo:                   Key("Undo", "u"),
-	Redo:                   Key("Redo", "U"),
-	ToggleVisualMode:       Key("Toggle Visual Mode", "v"),
-	TogglePlayEdit:         Key("Toggle Play Edit", "e"),
-	New:                    Key("New", "ctrl+n"),
-	NewLine:                Key("New Line", "ctrl+l"),
 	NewSectionAfter:        Key("New Part After", "ctrl+]"),
 	NewSectionBefore:       Key("New Part Before", "ctrl+p"),
 	ChangePart:             Key("Change Part", "ctrl+c"),
-	NextSection:            Key("Next Section", "]"),
-	PrevSection:            Key("Prev Section", "["),
-	Yank:                   Key("Yank", "y"),
-	Mute:                   Key("Mute", "m"),
-	Solo:                   Key("Solo", "M"),
-}
-
-var definitionKeys = definitionKeyMap{
-	TriggerAdd:           Key("Add Trigger", "f"),
-	TriggerRemove:        Key("Remove Trigger", "d"),
-	AccentIncrease:       Key("Accent Increase", "A"),
-	AccentDecrease:       Key("Accent Increase", "a"),
-	GateIncrease:         Key("Gate Increase", "G"),
-	GateDecrease:         Key("Gate Increase", "g"),
-	WaitIncrease:         Key("Wait Increase", "W"),
-	WaitDecrease:         Key("Wait Increase", "w"),
-	OverlayTriggerRemove: Key("Remove Overlay Note", "x"),
-	ClearLine:            Key("Clear Line", "c"),
-	ClearSeq:             Key("Clear Overlay", "C"),
-	RatchetIncrease:      Key("Increase Ratchet", "R"),
-	RatchetDecrease:      Key("Decrease Ratchet", "r"),
-	ActionAddLineReset:   Key("Add Line Reset Action", "s"),
-	ActionAddLineReverse: Key("Add Line Reverse Action", "S"),
-	ActionAddLineBounce:  Key("Add Line Bounce", "B"),
-	ActionAddLineDelay:   Key("Add Line Delay", "z"),
-	ActionAddSkipBeat:    Key("Add Skip Beat", "b"),
-	ActionAddReset:       Key("Add Pattern Reset", "T"),
-	SelectKeyLine:        Key("Select Key Line", "K"),
-	PressDownOverlay:     Key("Press Down Overlay", "ctrl+u"),
-	NumberPattern:        Key("Number Pattern", "1", "2", "3", "4", "5", "6", "7", "8", "9", "!", "@", "#", "$", "%", "^", "&", "*", "("),
-	RotateRight:          Key("Right Right", "L"),
-	RotateLeft:           Key("Right Left", "H"),
-	Paste:                Key("Paste", "p"),
 }
 
 type groupPlayState uint
@@ -359,8 +241,6 @@ type model struct {
 	loopMode              LoopMode
 	hasUIFocus            bool
 	connected             bool
-	transitiveStatekeys   transitiveKeyMap
-	definitionKeys        definitionKeyMap
 	help                  help.Model
 	cursor                cursor.Model
 	overlayKeyEdit        overlaykey.Model
@@ -1044,8 +924,6 @@ func InitModel(filename string, midiConnection MidiConnection, template string, 
 		programChannel:        programChannel,
 		lockReceiverChannel:   lockReceiverChannel,
 		unlockReceiverChannel: unlockReceiverChannel,
-		transitiveStatekeys:   transitiveKeys,
-		definitionKeys:        definitionKeys,
 		help:                  help.New(),
 		cursor:                newCursor,
 		midiConnection:        midiConnection,
@@ -1964,14 +1842,6 @@ func (m model) CurrentSongSection() arrangement.SongSection {
 func (m model) CurrentNote() note {
 	note, _ := m.currentOverlay.GetNote(m.cursorPos)
 	return note
-}
-
-func RemoveRootKey(keys []overlayKey) []overlayKey {
-	index := slices.Index(keys, overlaykey.ROOT)
-	if index >= 0 {
-		return append(keys[:index], keys[index+1:]...)
-	}
-	return keys
 }
 
 func (m *model) NextOverlay(direction int) {
