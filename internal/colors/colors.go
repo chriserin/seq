@@ -13,8 +13,12 @@ type Theme struct {
 }
 
 var defaultColors = map[string]string{
-	"AltSeqColor":                  "#222222",
-	"SeqColor":                     "#000000",
+	"AppTitleColor":                "#fafafa",
+	"AppDescriptorColor":           "#fafafa",
+	"LineNumberColor":              "#fafafa",
+	"RightSideTitleColor":          "#fafafa",
+	"AltSeqBackgroundColor":        "#2a2a2a",
+	"SeqBackgroundColor":           "#000000",
 	"SeqCursorColor":               "#444444",
 	"SeqVisualColor":               "#aaaaaa",
 	"SeqOverlayColor":              "#333388",
@@ -33,7 +37,7 @@ var defaultColors = map[string]string{
 	"ArrangementGroupColor":        "#F25D94",
 	"ArrangementIndentColor":       "#4b4261",
 	"ArrangementSelectedLineColor": "#3b4261",
-	"SeqBorderLineColor":           "fafafa",
+	"SeqBorderLineColor":           "#fafafa",
 	"PatternModeColor":             "#ed3902",
 }
 
@@ -73,13 +77,17 @@ var defaultTheme = Theme{
 }
 
 var seafoamColors = map[string]string{
-	"AltSeqColor":                  "#1a3632",
-	"SeqColor":                     "#0a2622",
-	"SeqCursorColor":               "#2c5d54",
+	"AppTitleColor":                "#e6f2ef",
+	"AppDescriptorColor":           "#cce7e0",
+	"LineNumberColor":              "#a6d0c7",
+	"RightSideTitleColor":          "#8abdb2",
+	"AltSeqBackgroundColor":        "#214a44",
+	"SeqBackgroundColor":           "#0a2622",
+	"SeqCursorColor":               "#3d8a7d",
 	"SeqVisualColor":               "#88c3b8",
 	"SeqOverlayColor":              "#336699",
 	"SeqMiddleOverlayColor":        "#4d7a68",
-	"SelectedAttributeColor":       "#4fd1bf",
+	"SelectedAttributeColor":       "#ff9f45",
 	"NumberColor":                  "#c5d86d",
 	"Black":                        "#0a2622",
 	"White":                        "#e6f2ef",
@@ -93,6 +101,8 @@ var seafoamColors = map[string]string{
 	"ArrangementGroupColor":        "#f76c5e",
 	"ArrangementIndentColor":       "#4d7a68",
 	"ArrangementSelectedLineColor": "#2c5d54",
+	"SeqBorderLineColor":           "#e6f2ef",
+	"PatternModeColor":             "#f39c6b",
 }
 
 var seafoamTheme = Theme{
@@ -131,13 +141,17 @@ var seafoamTheme = Theme{
 }
 
 var dynamiteColors = map[string]string{
-	"AltSeqColor":                  "#300808",
-	"SeqColor":                     "#1c0404",
-	"SeqCursorColor":               "#580f0f",
+	"AppTitleColor":                "#fff8f0",
+	"AppDescriptorColor":           "#ffe6d1",
+	"LineNumberColor":              "#ffcbad",
+	"RightSideTitleColor":          "#ffb38f",
+	"AltSeqBackgroundColor":        "#3d0d0d",
+	"SeqBackgroundColor":           "#1c0404",
+	"SeqCursorColor":               "#7a1414",
 	"SeqVisualColor":               "#ff5252",
 	"SeqOverlayColor":              "#9e2424",
 	"SeqMiddleOverlayColor":        "#c91a1a",
-	"SelectedAttributeColor":       "#ffd700",
+	"SelectedAttributeColor":       "#00e5ff",
 	"NumberColor":                  "#ff914d",
 	"Black":                        "#1c0404",
 	"White":                        "#fff8f0",
@@ -151,6 +165,8 @@ var dynamiteColors = map[string]string{
 	"ArrangementGroupColor":        "#e91e63",
 	"ArrangementIndentColor":       "#740505",
 	"ArrangementSelectedLineColor": "#580f0f",
+	"SeqBorderLineColor":           "#fff8f0",
+	"PatternModeColor":             "#ff914d",
 }
 
 var dynamiteTheme = Theme{
@@ -189,15 +205,19 @@ var dynamiteTheme = Theme{
 }
 
 var springtimeColors = map[string]string{
-	"AltSeqColor":                  "#eef7e4",
-	"SeqColor":                     "#f9fdf5",
-	"SeqCursorColor":               "#d6e9c6",
+	"AppTitleColor":                "#ffdb58",
+	"AppDescriptorColor":           "#ff9eb3",
+	"LineNumberColor":              "#617852",
+	"RightSideTitleColor":          "#769164",
+	"AltSeqBackgroundColor":        "#e5f0d8",
+	"SeqBackgroundColor":           "#f9fdf5",
+	"SeqCursorColor":               "#b7d49e",
 	"SeqVisualColor":               "#8eb656",
 	"SeqOverlayColor":              "#b3daff",
 	"SeqMiddleOverlayColor":        "#a6d173",
-	"SelectedAttributeColor":       "#9ed36a",
+	"SelectedAttributeColor":       "#ff5e8a",
 	"NumberColor":                  "#ff9eb3",
-	"Black":                        "#3c4f2f",
+	"Black":                        "#070215",
 	"White":                        "#f9fdf5",
 	"Heart":                        "#fc6c85",
 	"ActiveRatchetColor":           "#c3f584",
@@ -209,6 +229,8 @@ var springtimeColors = map[string]string{
 	"ArrangementGroupColor":        "#ff9eb3",
 	"ArrangementIndentColor":       "#a6d173",
 	"ArrangementSelectedLineColor": "#d6e9c6",
+	"SeqBorderLineColor":           "#3c4f2f",
+	"PatternModeColor":             "#ffdb58",
 }
 
 var springtimeTheme = Theme{
@@ -247,13 +269,17 @@ var springtimeTheme = Theme{
 }
 
 var orangegroveColors = map[string]string{
-	"AltSeqColor":                  "#2d2418",
-	"SeqColor":                     "#1a1410",
-	"SeqCursorColor":               "#4f3f29",
+	"AppTitleColor":                "#fff4e6",
+	"AppDescriptorColor":           "#ffe8cc",
+	"LineNumberColor":              "#ffdbb3",
+	"RightSideTitleColor":          "#ffc999",
+	"AltSeqBackgroundColor":        "#3a2e1e",
+	"SeqBackgroundColor":           "#1a1410",
+	"SeqCursorColor":               "#6a5433",
 	"SeqVisualColor":               "#cc9966",
 	"SeqOverlayColor":              "#ff8c42",
 	"SeqMiddleOverlayColor":        "#dd7733",
-	"SelectedAttributeColor":       "#ffb347",
+	"SelectedAttributeColor":       "#00c8ff",
 	"NumberColor":                  "#ffcb69",
 	"Black":                        "#1a1410",
 	"White":                        "#fff4e6",
@@ -267,6 +293,8 @@ var orangegroveColors = map[string]string{
 	"ArrangementGroupColor":        "#f45d48",
 	"ArrangementIndentColor":       "#8c6d46",
 	"ArrangementSelectedLineColor": "#4f3f29",
+	"SeqBorderLineColor":           "#fff4e6",
+	"PatternModeColor":             "#ff8c42",
 }
 
 var orangegroveTheme = Theme{
@@ -305,13 +333,17 @@ var orangegroveTheme = Theme{
 }
 
 var cyberpunkColors = map[string]string{
-	"AltSeqColor":                  "#0d0221",
-	"SeqColor":                     "#070215",
-	"SeqCursorColor":               "#1a0933",
+	"AppTitleColor":                "#edfdfd",
+	"AppDescriptorColor":           "#c0f0f0",
+	"LineNumberColor":              "#a0e0e0",
+	"RightSideTitleColor":          "#80c0c0",
+	"AltSeqBackgroundColor":        "#13032e",
+	"SeqBackgroundColor":           "#070215",
+	"SeqCursorColor":               "#2d105a",
 	"SeqVisualColor":               "#8e44ad",
 	"SeqOverlayColor":              "#3e1f6d",
 	"SeqMiddleOverlayColor":        "#2e0f50",
-	"SelectedAttributeColor":       "#00ff9f",
+	"SelectedAttributeColor":       "#fcee21",
 	"NumberColor":                  "#ff00ff",
 	"Black":                        "#070215",
 	"White":                        "#edfdfd",
@@ -325,6 +357,8 @@ var cyberpunkColors = map[string]string{
 	"ArrangementGroupColor":        "#ff00ff",
 	"ArrangementIndentColor":       "#3e1f6d",
 	"ArrangementSelectedLineColor": "#1a0933",
+	"SeqBorderLineColor":           "#edfdfd",
+	"PatternModeColor":             "#ff00ff",
 }
 
 var cyberpunkTheme = Theme{
@@ -363,15 +397,19 @@ var cyberpunkTheme = Theme{
 }
 
 var brainiacColors = map[string]string{
-	"AltSeqColor":                  "#003b46",
-	"SeqColor":                     "#002b33",
-	"SeqCursorColor":               "#004d5d",
+	"AppTitleColor":                "#e8f1f2",
+	"AppDescriptorColor":           "#c4dfe6",
+	"LineNumberColor":              "#a0c7d3",
+	"RightSideTitleColor":          "#7cafbf",
+	"AltSeqBackgroundColor":        "#142233",
+	"SeqBackgroundColor":           "#002b00",
+	"SeqCursorColor":               "#006b82",
 	"SeqVisualColor":               "#07889b",
 	"SeqOverlayColor":              "#007888",
 	"SeqMiddleOverlayColor":        "#006677",
-	"SelectedAttributeColor":       "#66b3ba",
+	"SelectedAttributeColor":       "#f8b24b",
 	"NumberColor":                  "#c4dfe6",
-	"Black":                        "#002b33",
+	"Black":                        "#002b00",
 	"White":                        "#e8f1f2",
 	"Heart":                        "#4fb99f",
 	"ActiveRatchetColor":           "#66b3ba",
@@ -383,6 +421,8 @@ var brainiacColors = map[string]string{
 	"ArrangementGroupColor":        "#66b3ba",
 	"ArrangementIndentColor":       "#007888",
 	"ArrangementSelectedLineColor": "#004d5d",
+	"SeqBorderLineColor":           "#e8f1f2",
+	"PatternModeColor":             "#4fb99f",
 }
 
 var brainiacTheme = Theme{
@@ -421,13 +461,17 @@ var brainiacTheme = Theme{
 }
 
 var spaceodysseyColors = map[string]string{
-	"AltSeqColor":                  "#0c0c1d",
-	"SeqColor":                     "#020210",
-	"SeqCursorColor":               "#191936",
+	"AppTitleColor":                "#e6e6ff",
+	"AppDescriptorColor":           "#c0c0f0",
+	"LineNumberColor":              "#a0a0d6",
+	"RightSideTitleColor":          "#8080c0",
+	"AltSeqBackgroundColor":        "#14142a",
+	"SeqBackgroundColor":           "#020210",
+	"SeqCursorColor":               "#2a2a55",
 	"SeqVisualColor":               "#3a3a75",
 	"SeqOverlayColor":              "#2d2d50",
 	"SeqMiddleOverlayColor":        "#40406f",
-	"SelectedAttributeColor":       "#c0c0f0",
+	"SelectedAttributeColor":       "#ffcf00",
 	"NumberColor":                  "#f0c0c0",
 	"Black":                        "#020210",
 	"White":                        "#e6e6ff",
@@ -441,6 +485,8 @@ var spaceodysseyColors = map[string]string{
 	"ArrangementGroupColor":        "#c050c0",
 	"ArrangementIndentColor":       "#40406f",
 	"ArrangementSelectedLineColor": "#191936",
+	"SeqBorderLineColor":           "#e6e6ff",
+	"PatternModeColor":             "#9090e0",
 }
 
 var spaceodysseyTheme = Theme{
@@ -516,8 +562,10 @@ var ActionColors = map[grid.Action]string{
 
 var AppTitleColor,
 	AppDescriptorColor,
-	AltSeqColor,
-	SeqColor,
+	LineNumberColor,
+	RightSideTitleColor,
+	AltSeqBackgroundColor,
+	SeqBackgroundColor,
 	SeqCursorColor,
 	SeqVisualColor,
 	SeqOverlayColor,
@@ -550,6 +598,7 @@ var AppTitleStyle,
 	AccentModeStyle,
 	BlackKeyStyle,
 	WhiteKeyStyle,
+	LineNumberStyle,
 	GroupStyle,
 	IndentStyle,
 	NodeRowStyle,
@@ -611,10 +660,14 @@ func SetColors(newColors map[string]string) {
 			AppTitleColor = newColor
 		case "AppDescriptorColor":
 			AppDescriptorColor = newColor
-		case "AltSeqColor":
-			AltSeqColor = newColor
-		case "SeqColor":
-			SeqColor = newColor
+		case "LineNumberColor":
+			LineNumberColor = newColor
+		case "RightSideTitleColor":
+			RightSideTitleColor = newColor
+		case "AltSeqBackgroundColor":
+			AltSeqBackgroundColor = newColor
+		case "SeqBackgroundColor":
+			SeqBackgroundColor = newColor
 		case "SeqCursorColor":
 			SeqCursorColor = newColor
 		case "SeqVisualColor":
@@ -675,6 +728,7 @@ func EvaluateStyles() {
 	AccentModeStyle = lipgloss.NewStyle().Background(PatternModeColor).Foreground(Black)
 	BlackKeyStyle = lipgloss.NewStyle().Background(Black).Foreground(White)
 	WhiteKeyStyle = lipgloss.NewStyle().Background(White).Foreground(Black)
+	LineNumberStyle = lipgloss.NewStyle().Foreground(LineNumberColor)
 
 	GroupStyle = lipgloss.NewStyle().
 		Foreground(ArrangementGroupColor).
@@ -692,7 +746,7 @@ func EvaluateStyles() {
 		Foreground(ArrangementHeaderColor)
 
 	SeqBorderStyle = lipgloss.NewStyle().Background(Black).Foreground(SeqBorderLineColor)
-	AppTitleStyle = lipgloss.NewStyle().Background(Black).Foreground(AppTitleColor)
+	AppTitleStyle = lipgloss.NewStyle().Bold(true).Background(Black).Foreground(AppTitleColor)
 	AppDescriptorStyle = lipgloss.NewStyle().Background(Black).Foreground(AppDescriptorColor)
 }
 

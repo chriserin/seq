@@ -2363,7 +2363,7 @@ func (m model) TempoView() string {
 	}
 	heart := colors.HeartStyle.Render("♡")
 	if m.hasUIFocus {
-		buf.WriteString(fmt.Sprintf("       %s     \n", heart))
+		buf.WriteString(fmt.Sprintf("       %s %5s\n", heart, mappings.KeycomboView()))
 	} else {
 		buf.WriteString("             \n")
 	}
@@ -2459,8 +2459,9 @@ func (m model) AccentKeyView() string {
 		accentTargetString = colors.NumberStyle.Render(fmt.Sprintf(" %s", accentTarget))
 	}
 
-	buf.WriteString(fmt.Sprintf(" ACCENTS %s %s\n", accentDiffString, accentTargetString))
-	buf.WriteString(colors.SeqBorderStyle.Render("———————————————"))
+	title := lipgloss.NewStyle().Foreground(colors.RightSideTitleColor).Render("Setup")
+	buf.WriteString(fmt.Sprintf(" %s %s %s\n", title, accentDiffString, accentTargetString))
+	buf.WriteString(colors.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
 
 	var accentStartString string
@@ -2481,8 +2482,9 @@ func (m model) AccentKeyView() string {
 
 func (m model) SetupView() string {
 	var buf strings.Builder
-	buf.WriteString("    Setup\n")
-	buf.WriteString(colors.SeqBorderStyle.Render("———————————————"))
+	buf.WriteString(lipgloss.NewStyle().Foreground(colors.RightSideTitleColor).Render("Setup"))
+	buf.WriteString("\n")
+	buf.WriteString(colors.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
 	for i, line := range m.definition.lines {
 
@@ -2535,9 +2537,9 @@ func LineValueName(ld grid.LineDefinition, instrument string) string {
 
 func (m model) OverlaysView() string {
 	var buf strings.Builder
-	buf.WriteString("Overlays")
+	buf.WriteString(lipgloss.NewStyle().Foreground(colors.RightSideTitleColor).Render("Overlays"))
 	buf.WriteString("\n")
-	buf.WriteString(colors.SeqBorderStyle.Render("——————————————"))
+	buf.WriteString(colors.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
 	style := lipgloss.NewStyle().Background(colors.SeqOverlayColor)
 	var playingOverlayKeys = m.PlayingOverlayKeys()
@@ -2617,7 +2619,7 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(fmt.Sprintf("Seq - %s\n", m.CurrentPart().GetName()))
 	} else {
 		buf.WriteString(m.WriteView())
-		buf.WriteString(colors.AppTitleStyle.Render("Seq"))
+		buf.WriteString(colors.AppTitleStyle.Render(" Seq "))
 		buf.WriteString(colors.AppDescriptorStyle.Render("- A sequencer for your cli"))
 		buf.WriteString("\n")
 	}
@@ -2728,13 +2730,15 @@ func (m model) CurrentOverlayView() string {
 
 	var editOverlayTitle string
 	if m.playEditing {
-		editOverlayTitle = lipgloss.NewStyle().Background(colors.SeqOverlayColor).Render("Edit")
+		editOverlayTitle = lipgloss.NewStyle().Background(colors.SeqOverlayColor).Foreground(colors.AppTitleColor).Render("Edit")
 	} else {
-		editOverlayTitle = "Edit"
+		editOverlayTitle = lipgloss.NewStyle().Foreground(colors.AppTitleColor).Render("Edit")
 	}
 
+	playOverlayTitle := lipgloss.NewStyle().Foreground(colors.AppTitleColor).Render("Play")
+
 	editOverlay := fmt.Sprintf("%s %s", editOverlayTitle, lipgloss.PlaceHorizontal(11, 0, m.ViewOverlay()))
-	playOverlay := fmt.Sprintf("Play %s", lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
+	playOverlay := fmt.Sprintf("%s %s", playOverlayTitle, lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
 	return fmt.Sprintf("   %s  %s", editOverlay, playOverlay)
 }
 
@@ -2769,7 +2773,7 @@ func (m model) LineIndicator(lineNumber uint8) string {
 			lineName = colors.WhiteKeyStyle.Render(notename)
 		}
 	} else {
-		lineName = fmt.Sprintf("%d", lineNumber)
+		lineName = colors.LineNumberStyle.Render(fmt.Sprintf(" %d", lineNumber))
 	}
 
 	return fmt.Sprintf("%2s%s%s", lineName, KeyLineIndicator(m.definition.keyline, lineNumber), indicator)
@@ -2816,9 +2820,9 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		} else if hasNote && !overlayNote.HighestOverlay && overlayNote.OverlayKey != overlaykey.ROOT {
 			backgroundSeqColor = colors.SeqMiddleOverlayColor
 		} else if i%8 > 3 {
-			backgroundSeqColor = colors.AltSeqColor
+			backgroundSeqColor = colors.AltSeqBackgroundColor
 		} else {
-			backgroundSeqColor = colors.SeqColor
+			backgroundSeqColor = colors.SeqBackgroundColor
 		}
 
 		char, foregroundColor := ViewNoteComponents(overlayNote.Note)
