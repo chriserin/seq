@@ -231,6 +231,7 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 type model struct {
+	theme                 string
 	filename              string
 	textInput             textinput.Model
 	partSelectorIndex     int
@@ -889,7 +890,7 @@ func InitParts() []arrangement.Part {
 	return []arrangement.Part{firstPart}
 }
 
-func InitModel(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) model {
+func InitModel(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) model {
 	logFile, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
 		panic("could not open log file")
@@ -914,7 +915,10 @@ func InitModel(filename string, midiConnection MidiConnection, template string, 
 	lockReceiverChannel := make(chan bool)
 	unlockReceiverChannel := make(chan bool)
 
+	colors.ChooseTheme(theme)
+
 	return model{
+		theme:                 theme,
 		filename:              filename,
 		textInput:             InitTextInput(),
 		partSelectorIndex:     -1,
@@ -973,8 +977,7 @@ func (m model) LogFromBeatTime() {
 
 func RunProgram(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	colors.ChooseColorScheme("orangegrove")
-	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode)
+	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, "orangegrove")
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
 	model.SyncTempo()
@@ -1091,6 +1094,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		mappingsCommand := mappings.ProcessKey(msg)
 		switch mappingsCommand.Command {
+		case mappings.HoldingKeys:
+			return m, nil
 		case mappings.CursorDown:
 			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
 				if m.cursorPos.Line < uint8(len(m.definition.lines)-1) {
@@ -1333,6 +1338,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.sectionSideIndicator = false
 		case mappings.ChangePart:
 			m.SetSelectionIndicator(SELECT_CHANGE_PART)
+		case mappings.NextTheme:
+			m.NextTheme()
+		case mappings.PrevTheme:
+			m.PrevTheme()
 		case mappings.NextSection:
 			m.NextSection()
 		case mappings.PrevSection:
@@ -1451,6 +1460,26 @@ func (m model) NeedsWrite() bool {
 func (m *model) Escape() {
 	m.selectionIndicator = SELECT_NOTHING
 	m.patternMode = PATTERN_FILL
+}
+
+func (m *model) NextTheme() {
+	index := slices.Index(colors.Themes, m.theme)
+	if index+1 < len(colors.Themes) {
+		m.theme = colors.Themes[index+1]
+	} else {
+		m.theme = colors.Themes[0]
+	}
+	colors.ChooseTheme(m.theme)
+}
+
+func (m *model) PrevTheme() {
+	index := slices.Index(colors.Themes, m.theme)
+	if index-1 >= 0 {
+		m.theme = colors.Themes[index-1]
+	} else {
+		m.theme = colors.Themes[len(colors.Themes)-1]
+	}
+	colors.ChooseTheme(m.theme)
 }
 
 func (m *model) NextSection() {

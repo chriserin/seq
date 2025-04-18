@@ -561,7 +561,18 @@ var CurrentlyPlayingSymbol,
 	OverlayCurrentlyPlayingSymbol,
 	ActiveSymbol string
 
-func ChooseColorScheme(colorscheme string) {
+var Themes = []string{
+	"default",
+	"seafoam",
+	"dynamite",
+	"springtime",
+	"orangegrove",
+	"cyberpunk",
+	"brainiac",
+	"spaceodyssey",
+}
+
+func ChooseTheme(colorscheme string) {
 	switch colorscheme {
 	case "default":
 		ApplyTheme(defaultTheme)

@@ -2,13 +2,22 @@ package mappings
 
 import (
 	"slices"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var keycombo = make([]tea.KeyMsg, 0, 3)
+var Keycombo = make([]tea.KeyMsg, 0, 3)
 var timer *time.Timer
+
+func KeycomboView() string {
+	var buf strings.Builder
+	for _, msg := range Keycombo {
+		buf.WriteString(msg.String())
+	}
+	return buf.String()
+}
 
 type Command int
 type Mapping struct {
@@ -17,7 +26,7 @@ type Mapping struct {
 }
 
 const (
-	Hold Command = iota
+	HoldingKeys Command = iota
 	Quit
 	Help
 	CursorUp
@@ -59,6 +68,8 @@ const (
 	ChangePart
 	NextSection
 	PrevSection
+	NextTheme
+	PrevTheme
 	Yank
 	Mute
 	Solo
@@ -134,8 +145,10 @@ var mappings = registry{
 	k("ctrl+]"): NewSectionAfter,
 	k("ctrl+p"): NewSectionBefore,
 	k("ctrl+c"): ChangePart,
-	k("]"):      NextSection,
-	k("["):      PrevSection,
+	k("]", "s"): NextSection,
+	k("[", "s"): PrevSection,
+	k("]", "c"): NextTheme,
+	k("[", "c"): PrevTheme,
 	k("y"):      Yank,
 	k("m"):      Mute,
 	k("M"):      Solo,
@@ -194,27 +207,30 @@ func k(x ...string) [3]string {
 }
 
 func ProcessKey(key tea.KeyMsg) Mapping {
-	if len(keycombo) < 3 {
-		keycombo = append(keycombo, key)
+	if len(Keycombo) < 3 {
+		Keycombo = append(Keycombo, key)
 	} else {
-		keycombo = slices.Delete(keycombo, 0, 1)
-		keycombo = append(keycombo, key)
+		Keycombo = slices.Delete(Keycombo, 0, 1)
+		Keycombo = append(Keycombo, key)
 	}
 
 	if timer != nil {
 		timer.Stop()
 	}
-	timer = time.AfterFunc(time.Millisecond*750, func() {
-		keycombo = make([]tea.KeyMsg, 0, 3)
-	})
 
-	command, exists := mappings[ToMappingKey(keycombo)]
+	command, exists := mappings[ToMappingKey(Keycombo)]
+
+	if !exists {
+		timer = time.AfterFunc(time.Millisecond*750, func() {
+			Keycombo = make([]tea.KeyMsg, 0, 3)
+		})
+	}
 
 	if exists {
-		keycombo = make([]tea.KeyMsg, 0, 3)
+		Keycombo = make([]tea.KeyMsg, 0, 3)
 		return Mapping{command, key.String()}
 	} else {
-		return Mapping{command, key.String()}
+		return Mapping{HoldingKeys, key.String()}
 	}
 }
 
