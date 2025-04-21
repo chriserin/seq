@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chriserin/seq/internal/colors"
+	"github.com/chriserin/seq/internal/themes"
 
 	"github.com/charmbracelet/bubbles/key"
 )
@@ -239,11 +239,11 @@ func (m Model) ViewOverlay() string {
 }
 
 func NumberColor(number uint8) string {
-	return colors.NumberStyle.Render(strconv.Itoa(int(number)))
+	return themes.NumberStyle.Render(strconv.Itoa(int(number)))
 }
 
 func SelectedColor(number uint8) string {
-	return colors.SelectedStyle.Render(strconv.Itoa(int(number)))
+	return themes.SelectedStyle.Render(strconv.Itoa(int(number)))
 }
 
 func NormalColor(number uint8) string {

@@ -16,13 +16,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/chriserin/seq/internal/arrangement"
-	colors "github.com/chriserin/seq/internal/colors"
 	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/mappings"
 	"github.com/chriserin/seq/internal/notereg"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/overlays"
+	themes "github.com/chriserin/seq/internal/themes"
 	midi "gitlab.com/gomidi/midi/v2"
 )
 
@@ -915,7 +915,7 @@ func InitModel(filename string, midiConnection MidiConnection, template string, 
 	lockReceiverChannel := make(chan bool)
 	unlockReceiverChannel := make(chan bool)
 
-	colors.ChooseTheme(theme)
+	themes.ChooseTheme(theme)
 
 	return model{
 		theme:                 theme,
@@ -1463,23 +1463,23 @@ func (m *model) Escape() {
 }
 
 func (m *model) NextTheme() {
-	index := slices.Index(colors.Themes, m.theme)
-	if index+1 < len(colors.Themes) {
-		m.theme = colors.Themes[index+1]
+	index := slices.Index(themes.Themes, m.theme)
+	if index+1 < len(themes.Themes) {
+		m.theme = themes.Themes[index+1]
 	} else {
-		m.theme = colors.Themes[0]
+		m.theme = themes.Themes[0]
 	}
-	colors.ChooseTheme(m.theme)
+	themes.ChooseTheme(m.theme)
 }
 
 func (m *model) PrevTheme() {
-	index := slices.Index(colors.Themes, m.theme)
+	index := slices.Index(themes.Themes, m.theme)
 	if index-1 >= 0 {
-		m.theme = colors.Themes[index-1]
+		m.theme = themes.Themes[index-1]
 	} else {
-		m.theme = colors.Themes[len(colors.Themes)-1]
+		m.theme = themes.Themes[len(themes.Themes)-1]
 	}
-	colors.ChooseTheme(m.theme)
+	themes.ChooseTheme(m.theme)
 }
 
 func (m *model) NextSection() {
@@ -2320,19 +2320,19 @@ func (m model) PartView() string {
 	startBeats := m.CurrentSongSection().StartBeat
 	startCycles := m.CurrentSongSection().StartCycles
 
-	beatsInput := colors.NumberStyle.Render(strconv.Itoa(int(beats)))
-	cyclesInput := colors.NumberStyle.Render(strconv.Itoa(int(cycles)))
-	startBeatsInput := colors.NumberStyle.Render(strconv.Itoa(int(startBeats)))
-	startCyclesInput := colors.NumberStyle.Render(strconv.Itoa(int(startCycles)))
+	beatsInput := themes.NumberStyle.Render(strconv.Itoa(int(beats)))
+	cyclesInput := themes.NumberStyle.Render(strconv.Itoa(int(cycles)))
+	startBeatsInput := themes.NumberStyle.Render(strconv.Itoa(int(startBeats)))
+	startCyclesInput := themes.NumberStyle.Render(strconv.Itoa(int(startCycles)))
 	switch m.selectionIndicator {
 	case SELECT_BEATS:
-		beatsInput = colors.SelectedStyle.Render(strconv.Itoa(int(beats)))
+		beatsInput = themes.SelectedStyle.Render(strconv.Itoa(int(beats)))
 	case SELECT_CYCLES:
-		cyclesInput = colors.SelectedStyle.Render(strconv.Itoa(int(cycles)))
+		cyclesInput = themes.SelectedStyle.Render(strconv.Itoa(int(cycles)))
 	case SELECT_START_BEATS:
-		startBeatsInput = colors.SelectedStyle.Render(strconv.Itoa(int(startBeats)))
+		startBeatsInput = themes.SelectedStyle.Render(strconv.Itoa(int(startBeats)))
 	case SELECT_START_CYCLES:
-		startCyclesInput = colors.SelectedStyle.Render(strconv.Itoa(int(startCycles)))
+		startCyclesInput = themes.SelectedStyle.Render(strconv.Itoa(int(startCycles)))
 	}
 	buf.WriteString("             \n")
 	buf.WriteString("             \n")
@@ -2350,35 +2350,87 @@ func (m model) PartView() string {
 func (m model) TempoView() string {
 	var buf strings.Builder
 	var tempo, division string
+	tempo = themes.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
+	division = themes.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
 	switch m.selectionIndicator {
 	case SELECT_TEMPO:
-		tempo = colors.SelectedStyle.Render(strconv.Itoa(m.definition.tempo))
-		division = colors.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
+		tempo = themes.SelectedStyle.Render(strconv.Itoa(m.definition.tempo))
 	case SELECT_TEMPO_SUBDIVISION:
-		tempo = colors.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
-		division = colors.SelectedStyle.Render(strconv.Itoa(m.definition.subdivisions))
-	default:
-		tempo = colors.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
-		division = colors.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
+		division = themes.SelectedStyle.Render(strconv.Itoa(m.definition.subdivisions))
 	}
-	heart := colors.HeartStyle.Render("♡")
+	heart := themes.ArtStyle.Render("♡")
 	if m.hasUIFocus {
-		buf.WriteString(fmt.Sprintf("       %s %5s\n", heart, mappings.KeycomboView()))
+		buf.WriteString(fmt.Sprintf("       %s\n", heart))
 	} else {
 		buf.WriteString("             \n")
 	}
-	buf.WriteString(colors.HeartStyle.Render("   ♡♡♡☆ ☆♡♡♡ ") + "\n")
-	buf.WriteString(colors.HeartStyle.Render("  ♡    ◊    ♡") + "\n")
-	buf.WriteString(colors.HeartStyle.Render("  ♡  TEMPO  ♡") + "\n")
+	buf.WriteString(themes.ArtStyle.Render("   ♡♡♡☆ ☆♡♡♡ ") + "\n")
+	buf.WriteString(themes.ArtStyle.Render("  ♡    ◊    ♡") + "\n")
+	buf.WriteString(themes.ArtStyle.Render("  ♡  TEMPO  ♡") + "\n")
 	buf.WriteString(fmt.Sprintf("  %s   %s   %s\n", heart, tempo, heart))
-	buf.WriteString(colors.HeartStyle.Render("   ♡ BEATS ♡") + "\n")
+	buf.WriteString(themes.ArtStyle.Render("   ♡ BEATS ♡") + "\n")
 	buf.WriteString(fmt.Sprintf("    %s  %s  %s  \n", heart, division, heart))
-	buf.WriteString(colors.HeartStyle.Render("     ♡   ♡   ") + "\n")
-	buf.WriteString(colors.HeartStyle.Render("      ♡ ♡    ") + "\n")
+	buf.WriteString(themes.ArtStyle.Render("     ♡   ♡   ") + "\n")
+	buf.WriteString(themes.ArtStyle.Render("      ♡ ♡    ") + "\n")
 	if m.midiLoopMode == MLM_RECEIVER && !m.connected {
-		buf.WriteString(colors.HeartStyle.Render("       ╳     ") + "\n")
+		buf.WriteString(themes.ArtStyle.Render("       ╳     ") + "\n")
 	} else {
-		buf.WriteString(colors.HeartStyle.Render("       †     ") + "\n")
+		buf.WriteString(themes.ArtStyle.Render("       †     ") + "\n")
+	}
+	return buf.String()
+}
+
+func (m model) LeftSideView() string {
+	var tempo, division string
+	tempo = themes.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
+	division = themes.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
+	switch m.selectionIndicator {
+	case SELECT_TEMPO:
+		tempo = themes.SelectedStyle.Render(strconv.Itoa(m.definition.tempo))
+	case SELECT_TEMPO_SUBDIVISION:
+		division = themes.SelectedStyle.Render(strconv.Itoa(m.definition.subdivisions))
+	}
+	var connected string
+	if m.midiLoopMode == MLM_RECEIVER && !m.connected {
+		connected = themes.ArtStyle.Render(themes.Unconnected)
+	} else {
+		connected = themes.ArtStyle.Render(themes.Connected)
+	}
+	var focus string
+	if m.hasUIFocus {
+		focus = themes.ArtStyle.Render(themes.Focused)
+	}
+
+	var buf strings.Builder
+	lines := strings.Split(themes.LeftSideTemplate, "\n")
+	for _, line := range lines {
+		switch {
+		case strings.Contains(line, "TTT"):
+			parts := strings.Split(line, "TTT")
+			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(tempo)
+			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+		case strings.Contains(line, "BB"):
+			parts := strings.Split(line, "BB")
+			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(division)
+			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+		case strings.Contains(line, "FF"):
+			parts := strings.Split(line, "FF")
+			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(focus)
+			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+		case strings.Contains(line, "CC"):
+			parts := strings.Split(line, "CC")
+			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(connected)
+			if len(parts) > 1 {
+				buf.WriteString(themes.ArtStyle.Render(parts[1]))
+			}
+		default:
+			buf.WriteString(themes.ArtStyle.Render(line))
+		}
+		buf.WriteString("\n")
 	}
 	return buf.String()
 }
@@ -2420,7 +2472,8 @@ func (m model) View() string {
 	if slices.Contains([]Selection{SELECT_BEATS, SELECT_CYCLES, SELECT_START_BEATS, SELECT_START_CYCLES}, m.selectionIndicator) {
 		leftSideView = m.PartView()
 	} else {
-		leftSideView = m.TempoView()
+		// leftSideView = m.TempoView()
+		leftSideView = m.LeftSideView()
 	}
 
 	seqView := m.ViewTriggerSeq()
@@ -2447,52 +2500,52 @@ func (m model) AccentKeyView() string {
 	}
 
 	if m.selectionIndicator == SELECT_ACCENT_DIFF {
-		accentDiffString = colors.SelectedStyle.Render(fmt.Sprintf("%2d", accentDiff))
+		accentDiffString = themes.SelectedStyle.Render(fmt.Sprintf("%2d", accentDiff))
 	} else {
-		accentDiffString = colors.NumberStyle.Render(fmt.Sprintf("%2d", accentDiff))
+		accentDiffString = themes.NumberStyle.Render(fmt.Sprintf("%2d", accentDiff))
 	}
 
 	var accentTargetString string
 	if m.selectionIndicator == SELECT_ACCENT_TARGET {
-		accentTargetString = colors.SelectedStyle.Render(fmt.Sprintf(" %s", accentTarget))
+		accentTargetString = themes.SelectedStyle.Render(fmt.Sprintf(" %s", accentTarget))
 	} else {
-		accentTargetString = colors.NumberStyle.Render(fmt.Sprintf(" %s", accentTarget))
+		accentTargetString = themes.NumberStyle.Render(fmt.Sprintf(" %s", accentTarget))
 	}
 
-	title := lipgloss.NewStyle().Foreground(colors.RightSideTitleColor).Render("Setup")
+	title := lipgloss.NewStyle().Foreground(themes.RightSideTitleColor).Render("Setup")
 	buf.WriteString(fmt.Sprintf(" %s %s %s\n", title, accentDiffString, accentTargetString))
-	buf.WriteString(colors.SeqBorderStyle.Render("──────────────"))
+	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
 
 	var accentStartString string
 	if m.selectionIndicator == SELECT_ACCENT_START {
-		accentStartString = colors.SelectedStyle.Render(fmt.Sprintf("%2d", accentStart))
+		accentStartString = themes.SelectedStyle.Render(fmt.Sprintf("%2d", accentStart))
 	} else {
-		accentStartString = colors.NumberStyle.Render(fmt.Sprintf("%2d", accentStart))
+		accentStartString = themes.NumberStyle.Render(fmt.Sprintf("%2d", accentStart))
 	}
 
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color(colors.AccentColors[1]))
-	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(colors.AccentIcons[1])), accentStartString))
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color(themes.AccentColors[1]))
+	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(themes.AccentIcons[1])), accentStartString))
 	for i, accent := range m.definition.accents.Data[2:] {
-		style := lipgloss.NewStyle().Foreground(lipgloss.Color(colors.AccentColors[i+2]))
-		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(colors.AccentIcons[i+2])), accent.Value))
+		style := lipgloss.NewStyle().Foreground(lipgloss.Color(themes.AccentColors[i+2]))
+		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(themes.AccentIcons[i+2])), accent.Value))
 	}
 	return buf.String()
 }
 
 func (m model) SetupView() string {
 	var buf strings.Builder
-	buf.WriteString(lipgloss.NewStyle().Foreground(colors.RightSideTitleColor).Render("Setup"))
+	buf.WriteString(lipgloss.NewStyle().Foreground(themes.RightSideTitleColor).Render("Setup"))
 	buf.WriteString("\n")
-	buf.WriteString(colors.SeqBorderStyle.Render("──────────────"))
+	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
 	for i, line := range m.definition.lines {
 
 		buf.WriteString("CH ")
 		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_CHANNEL {
-			buf.WriteString(colors.SelectedStyle.Render(fmt.Sprintf("%2d", line.Channel)))
+			buf.WriteString(themes.SelectedStyle.Render(fmt.Sprintf("%2d", line.Channel)))
 		} else {
-			buf.WriteString(colors.NumberStyle.Render(fmt.Sprintf("%2d", line.Channel)))
+			buf.WriteString(themes.NumberStyle.Render(fmt.Sprintf("%2d", line.Channel)))
 		}
 
 		var messageType string
@@ -2504,7 +2557,7 @@ func (m model) SetupView() string {
 		}
 
 		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE {
-			messageType = fmt.Sprintf(" %s ", colors.SelectedStyle.Render(messageType))
+			messageType = fmt.Sprintf(" %s ", themes.SelectedStyle.Render(messageType))
 		} else {
 			messageType = fmt.Sprintf(" %s ", messageType)
 		}
@@ -2512,9 +2565,9 @@ func (m model) SetupView() string {
 		buf.WriteString(messageType)
 
 		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_VALUE {
-			buf.WriteString(colors.SelectedStyle.Render(strconv.Itoa(int(line.Note))))
+			buf.WriteString(themes.SelectedStyle.Render(strconv.Itoa(int(line.Note))))
 		} else {
-			buf.WriteString(colors.NumberStyle.Render(strconv.Itoa(int(line.Note))))
+			buf.WriteString(themes.NumberStyle.Render(strconv.Itoa(int(line.Note))))
 		}
 		buf.WriteString(fmt.Sprintf(" %s\n", LineValueName(line, m.definition.instrument)))
 	}
@@ -2537,21 +2590,21 @@ func LineValueName(ld grid.LineDefinition, instrument string) string {
 
 func (m model) OverlaysView() string {
 	var buf strings.Builder
-	buf.WriteString(lipgloss.NewStyle().Foreground(colors.RightSideTitleColor).Render("Overlays"))
+	buf.WriteString(lipgloss.NewStyle().Foreground(themes.RightSideTitleColor).Render("Overlays"))
 	buf.WriteString("\n")
-	buf.WriteString(colors.SeqBorderStyle.Render("──────────────"))
+	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
-	style := lipgloss.NewStyle().Background(colors.SeqOverlayColor)
+	style := lipgloss.NewStyle().Background(themes.SeqOverlayColor)
 	var playingOverlayKeys = m.PlayingOverlayKeys()
 	for currentOverlay := m.CurrentPart().Overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
 		var playing = ""
 		if m.playing != PLAY_STOPPED && playingOverlayKeys[0] == currentOverlay.Key {
-			playing = colors.OverlayCurrentlyPlayingSymbol
+			playing = themes.OverlayCurrentlyPlayingSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""
 		} else if m.playing != PLAY_STOPPED && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
-			playing = colors.ActiveSymbol
+			playing = themes.ActiveSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""
 		}
@@ -2588,16 +2641,16 @@ func (m model) ViewTriggerSeq() string {
 
 	if m.patternMode == PATTERN_ACCENT {
 		mode = " Accent Mode "
-		buf.WriteString(fmt.Sprintf("    %s\n", colors.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_GATE {
 		mode = " Gate Mode "
-		buf.WriteString(fmt.Sprintf("    %s\n", colors.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_WAIT {
 		mode = " Wait Mode "
-		buf.WriteString(fmt.Sprintf("    %s\n", colors.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_RATCHET {
 		mode = " Ratchet Mode "
-		buf.WriteString(fmt.Sprintf("    %s\n", colors.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetEditView())
 	} else if m.selectionIndicator == SELECT_PART {
@@ -2619,14 +2672,14 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(fmt.Sprintf("Seq - %s\n", m.CurrentPart().GetName()))
 	} else {
 		buf.WriteString(m.WriteView())
-		buf.WriteString(colors.AppTitleStyle.Render(" Seq "))
-		buf.WriteString(colors.AppDescriptorStyle.Render("- A sequencer for your cli"))
+		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
+		buf.WriteString(themes.AppDescriptorStyle.Render("- A sequencer for your cli"))
 		buf.WriteString("\n")
 	}
 	beats := m.CurrentPart().Beats
 	topLine := strings.Repeat("─", max(32, int(beats)))
 	buf.WriteString("   ")
-	buf.WriteString(colors.SeqBorderStyle.Render(fmt.Sprintf("┌%s", topLine)))
+	buf.WriteString(themes.SeqBorderStyle.Render(fmt.Sprintf("┌%s", topLine)))
 	buf.WriteString("\n")
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
 		buf.WriteString(lineView(i, m, visualCombinedPattern))
@@ -2661,7 +2714,7 @@ func (m model) ChoosePartView() string {
 	} else {
 		name = (*m.definition.parts)[m.partSelectorIndex].GetName()
 	}
-	buf.WriteString(colors.SelectedStyle.Render(name))
+	buf.WriteString(themes.SelectedStyle.Render(name))
 	buf.WriteString("\n")
 	return buf.String()
 }
@@ -2669,7 +2722,7 @@ func (m model) ChoosePartView() string {
 func (m model) ConfirmNewSequenceView() string {
 	var buf strings.Builder
 	buf.WriteString("   New Sequence: ")
-	buf.WriteString(colors.SelectedStyle.Render("Confirm"))
+	buf.WriteString(themes.SelectedStyle.Render("Confirm"))
 	buf.WriteString("\n")
 	return buf.String()
 }
@@ -2677,7 +2730,7 @@ func (m model) ConfirmNewSequenceView() string {
 func (m model) ConfirmQuitView() string {
 	var buf strings.Builder
 	buf.WriteString("   Quit: ")
-	buf.WriteString(colors.SelectedStyle.Render("Confirm"))
+	buf.WriteString(themes.SelectedStyle.Render("Confirm"))
 	buf.WriteString("\n")
 	return buf.String()
 }
@@ -2692,12 +2745,12 @@ func (m model) RatchetEditView() string {
 		var backgroundColor lipgloss.Color
 		if i <= currentNote.Ratchets.Length {
 			if m.ratchetCursor == i && m.selectionIndicator == SELECT_RATCHETS {
-				backgroundColor = colors.SelectedAttributeColor
+				backgroundColor = themes.SelectedAttributeColor
 			}
 			if currentNote.Ratchets.HitAt(i) {
-				ratchetsBuf.WriteString(colors.ActiveStyle.Background(backgroundColor).Render("\u25CF"))
+				ratchetsBuf.WriteString(themes.ActiveStyle.Background(backgroundColor).Render("\u25CF"))
 			} else {
-				ratchetsBuf.WriteString(colors.MutedStyle.Background(backgroundColor).Render("\u25C9"))
+				ratchetsBuf.WriteString(themes.MutedStyle.Background(backgroundColor).Render("\u25C9"))
 			}
 			ratchetsBuf.WriteString(" ")
 		} else {
@@ -2707,9 +2760,9 @@ func (m model) RatchetEditView() string {
 	}
 	buf.WriteString(fmt.Sprintf("%*s", 32, ratchetsBuf.String()))
 	if m.selectionIndicator == SELECT_RATCHET_SPAN {
-		buf.WriteString(fmt.Sprintf(" Span %s ", colors.SelectedStyle.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
+		buf.WriteString(fmt.Sprintf(" Span %s ", themes.SelectedStyle.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
 	} else {
-		buf.WriteString(fmt.Sprintf(" Span %s ", colors.NumberStyle.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
+		buf.WriteString(fmt.Sprintf(" Span %s ", themes.NumberStyle.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
 	}
 	buf.WriteString("\n")
 
@@ -2730,12 +2783,12 @@ func (m model) CurrentOverlayView() string {
 
 	var editOverlayTitle string
 	if m.playEditing {
-		editOverlayTitle = lipgloss.NewStyle().Background(colors.SeqOverlayColor).Foreground(colors.AppTitleColor).Render("Edit")
+		editOverlayTitle = lipgloss.NewStyle().Background(themes.SeqOverlayColor).Foreground(themes.AppTitleColor).Render("Edit")
 	} else {
-		editOverlayTitle = lipgloss.NewStyle().Foreground(colors.AppTitleColor).Render("Edit")
+		editOverlayTitle = lipgloss.NewStyle().Foreground(themes.AppTitleColor).Render("Edit")
 	}
 
-	playOverlayTitle := lipgloss.NewStyle().Foreground(colors.AppTitleColor).Render("Play")
+	playOverlayTitle := lipgloss.NewStyle().Foreground(themes.AppTitleColor).Render("Play")
 
 	editOverlay := fmt.Sprintf("%s %s", editOverlayTitle, lipgloss.PlaceHorizontal(11, 0, m.ViewOverlay()))
 	playOverlay := fmt.Sprintf("%s %s", playOverlayTitle, lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
@@ -2753,9 +2806,9 @@ func KeyLineIndicator(k uint8, l uint8) string {
 var blackNotes = []uint8{1, 3, 6, 8, 10}
 
 func (m model) LineIndicator(lineNumber uint8) string {
-	indicator := colors.SeqBorderStyle.Render("│")
+	indicator := themes.SeqBorderStyle.Render("│")
 	if lineNumber == m.cursorPos.Line {
-		indicator = colors.SelectedStyle.Render("┤")
+		indicator = themes.SelectedStyle.Render("┤")
 	}
 	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PLAY_STATE_MUTE {
 		indicator = "M"
@@ -2768,12 +2821,12 @@ func (m model) LineIndicator(lineNumber uint8) string {
 	if m.definition.templateUIStyle == "blackwhite" {
 		notename := NoteName(m.definition.lines[lineNumber].Note)
 		if slices.Contains(blackNotes, m.definition.lines[lineNumber].Note%12) {
-			lineName = colors.BlackKeyStyle.Render(notename[0:4])
+			lineName = themes.BlackKeyStyle.Render(notename[0:4])
 		} else {
-			lineName = colors.WhiteKeyStyle.Render(notename)
+			lineName = themes.WhiteKeyStyle.Render(notename)
 		}
 	} else {
-		lineName = colors.LineNumberStyle.Render(fmt.Sprintf(" %d", lineNumber))
+		lineName = themes.LineNumberStyle.Render(fmt.Sprintf(" %d", lineNumber))
 	}
 
 	return fmt.Sprintf("%2s%s%s", lineName, KeyLineIndicator(m.definition.keyline, lineNumber), indicator)
@@ -2812,17 +2865,17 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 
 		var backgroundSeqColor lipgloss.Color
 		if m.playing != PLAY_STOPPED && m.playState[lineNumber].currentBeat == i {
-			backgroundSeqColor = colors.SeqCursorColor
+			backgroundSeqColor = themes.SeqCursorColor
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
-			backgroundSeqColor = colors.SeqVisualColor
+			backgroundSeqColor = themes.SeqVisualColor
 		} else if hasNote && overlayNote.HighestOverlay && overlayNote.OverlayKey != overlaykey.ROOT {
-			backgroundSeqColor = colors.SeqOverlayColor
+			backgroundSeqColor = themes.SeqOverlayColor
 		} else if hasNote && !overlayNote.HighestOverlay && overlayNote.OverlayKey != overlaykey.ROOT {
-			backgroundSeqColor = colors.SeqMiddleOverlayColor
+			backgroundSeqColor = themes.SeqMiddleOverlayColor
 		} else if i%8 > 3 {
-			backgroundSeqColor = colors.AltSeqBackgroundColor
+			backgroundSeqColor = themes.AltSeqBackgroundColor
 		} else {
-			backgroundSeqColor = colors.SeqBackgroundColor
+			backgroundSeqColor = themes.SeqBackgroundColor
 		}
 
 		char, foregroundColor := ViewNoteComponents(overlayNote.Note)
@@ -2839,7 +2892,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
-			style = style.Foreground(colors.Black)
+			style = style.Foreground(themes.Black)
 		} else if hasGateTail {
 			style = style.Foreground(gateSpace.Color)
 		} else {
@@ -2946,8 +2999,8 @@ func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 		waitShape = "\u0320"
 	}
 	if currentAction == grid.ACTION_NOTHING && currentNote != zeronote {
-		currentAccentShape := colors.AccentIcons[currentNote.AccentIndex]
-		currentAccentColor := colors.AccentColors[currentNote.AccentIndex]
+		currentAccentShape := themes.AccentIcons[currentNote.AccentIndex]
+		currentAccentColor := themes.AccentColors[currentNote.AccentIndex]
 		char = string(currentAccentShape) +
 			string(config.Ratchets[currentNote.Ratchets.Length]) +
 			ShortGate(currentNote) +
@@ -2955,7 +3008,7 @@ func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 		foregroundColor = lipgloss.Color(currentAccentColor)
 	} else {
 		lineaction := config.Lineactions[currentAction]
-		lineActionColor := colors.ActionColors[currentAction]
+		lineActionColor := themes.ActionColors[currentAction]
 		char = string(lineaction.Shape)
 		foregroundColor = lipgloss.Color(lineActionColor)
 	}

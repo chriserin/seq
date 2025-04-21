@@ -1,6 +1,8 @@
-package colors
+package themes
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/chriserin/seq/internal/grid"
 )
@@ -10,6 +12,15 @@ type Theme struct {
 	accentColors     []string
 	accentIcons      []rune
 	lineActionColors map[grid.Action]string
+	art              Art
+}
+
+type Art struct {
+	leftSideTemplate     string
+	focusedIndicator     string
+	unfocusedIndicator   string
+	connectedIndicator   string
+	unconnectedIndicator string
 }
 
 var defaultColors = map[string]string{
@@ -73,6 +84,24 @@ var defaultTheme = Theme{
 		grid.ACTION_RESET:          "#fcf6b1",
 		grid.ACTION_LINE_BOUNCE:    "#fcf6b1",
 		grid.ACTION_LINE_DELAY:     "#cc4bc2",
+	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ♡♡♡☆ ☆♡♡♡  
+♡    ◊    ♡ 
+♡  TEMPO  ♡ 
+♡   TTT   ♡ 
+ ♡ BEATS ♡  
+  ♡  BB  ♡   
+   ♡   ♡    
+    ♡ ♡     
+     CC    
+	`,
+		focusedIndicator:     "♡",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "†",
+		unconnectedIndicator: "╳",
 	},
 }
 
@@ -138,6 +167,24 @@ var seafoamTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#c5d86d",
 		grid.ACTION_LINE_DELAY:     "#a682ff",
 	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ♢♢♢⊛ ⊛♢♢♢  
+♢    ❂    ♢ 
+♢  TEMPO  ♢ 
+♢   TTT   ♢ 
+ ♢ BEATS ♢  
+  ♢  BB  ♢   
+   ♢   ♢    
+    ♢ ♢     
+     CC    
+	`,
+		focusedIndicator:     "♢",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "⚡",
+		unconnectedIndicator: "✗",
+	},
 }
 
 var dynamiteColors = map[string]string{
@@ -201,6 +248,24 @@ var dynamiteTheme = Theme{
 		grid.ACTION_RESET:          "#ffeb3b",
 		grid.ACTION_LINE_BOUNCE:    "#ffd700",
 		grid.ACTION_LINE_DELAY:     "#e91e63",
+	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ✧✧✧☄ ☄✧✧✧  
+✧    ✸    ✧ 
+✧  TEMPO  ✧ 
+✧   TTT   ✧ 
+ ✧ BEATS ✧  
+  ✧  BB  ✧   
+   ✧   ✧    
+    ✧ ✧     
+     CC    
+	`,
+		focusedIndicator:     "✧",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "☢",
+		unconnectedIndicator: "⚠",
 	},
 }
 
@@ -266,6 +331,24 @@ var springtimeTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#9ed36a",
 		grid.ACTION_LINE_DELAY:     "#ff9eb3",
 	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ❀❀❀✿ ✿❀❀❀  
+❀    ❁    ❀ 
+❀  TEMPO  ❀ 
+❀   TTT   ❀ 
+ ❀ BEATS ❀  
+  ❀  BB  ❀   
+   ❀   ❀    
+    ❀ ❀     
+     CC    
+	`,
+		focusedIndicator:     "❀",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "✾",
+		unconnectedIndicator: "✽",
+	},
 }
 
 var orangegroveColors = map[string]string{
@@ -329,6 +412,24 @@ var orangegroveTheme = Theme{
 		grid.ACTION_RESET:          "#f8c537",
 		grid.ACTION_LINE_BOUNCE:    "#ffcb69",
 		grid.ACTION_LINE_DELAY:     "#c05746",
+	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ♦♦♦♣ ♣♦♦♦  
+♦    ❂    ♦ 
+♦  TEMPO  ♦ 
+♦   TTT   ♦ 
+ ♦ BEATS ♦  
+  ♦  BB  ♦   
+   ♦   ♦    
+    ♦ ♦     
+     CC    
+	`,
+		focusedIndicator:     "♦",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "☀",
+		unconnectedIndicator: "✺",
 	},
 }
 
@@ -394,6 +495,24 @@ var cyberpunkTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#c100fd",
 		grid.ACTION_LINE_DELAY:     "#ff00ff",
 	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ◎◎◎◍ ◍◎◎◎  
+◎    ◉    ◎ 
+◎  TEMPO  ◎ 
+◎   TTT   ◎ 
+ ◎ BEATS ◎  
+  ◎  BB  ◎   
+   ◎   ◎    
+    ◎ ◎     
+     CC    
+	`,
+		focusedIndicator:     "◎",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "Ω",
+		unconnectedIndicator: "⚠",
+	},
 }
 
 var brainiacColors = map[string]string{
@@ -457,6 +576,24 @@ var brainiacTheme = Theme{
 		grid.ACTION_RESET:          "#66b3ba",
 		grid.ACTION_LINE_BOUNCE:    "#8bd7d2",
 		grid.ACTION_LINE_DELAY:     "#c4dfe6",
+	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ⌥⌥⌥∂ ∂⌥⌥⌥  
+⌥    ⌘    ⌥ 
+⌥  TEMPO  ⌥ 
+⌥   TTT   ⌥ 
+ ⌥ BEATS ⌥  
+  ⌥  BB  ⌥   
+   ⌥   ⌥    
+    ⌥ ⌥     
+     CC    
+	`,
+		focusedIndicator:     "⌥",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "Σ",
+		unconnectedIndicator: "≈",
 	},
 }
 
@@ -522,6 +659,24 @@ var spaceodysseyTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#a0a0ff",
 		grid.ACTION_LINE_DELAY:     "#f0c0c0",
 	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ★★★☽ ☽★★★  
+★    ⋆    ★ 
+★  TEMPO  ★ 
+★   TTT   ★ 
+ ★ BEATS ★  
+  ★  BB  ★   
+   ★   ★    
+    ★ ★     
+     CC    
+	`,
+		focusedIndicator:     "★",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "☼",
+		unconnectedIndicator: "✧",
+	},
 }
 
 var nineteenfiftyeightColors = map[string]string{
@@ -585,6 +740,24 @@ var nineteenfiftyeightTheme = Theme{
 		grid.ACTION_RESET:          "#b1b85a",
 		grid.ACTION_LINE_BOUNCE:    "#8ba353",
 		grid.ACTION_LINE_DELAY:     "#6b5744",
+	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ◆◆◆■ ■◆◆◆  
+◆    ●    ◆ 
+◆  TEMPO  ◆ 
+◆   TTT   ◆ 
+ ◆ BEATS ◆  
+  ◆  BB  ◆   
+   ◆   ◆    
+    ◆ ◆     
+     CC    
+	`,
+		focusedIndicator:     "◆",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "▲",
+		unconnectedIndicator: "◇",
 	},
 }
 
@@ -650,6 +823,24 @@ var appleiiplusTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#33cc33",
 		grid.ACTION_LINE_DELAY:     "#9933cc",
 	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ○○○◎ ◎○○○  
+○    ●    ○ 
+○  TEMPO  ○ 
+○   TTT   ○ 
+ ○ BEATS ○  
+  ○  BB  ○   
+   ○   ○    
+    ○ ○     
+     CC    
+	`,
+		focusedIndicator:     "○",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "□",
+		unconnectedIndicator: "△",
+	},
 }
 
 var matrixColors = map[string]string{
@@ -713,6 +904,24 @@ var matrixTheme = Theme{
 		grid.ACTION_RESET:          "#00ff00",
 		grid.ACTION_LINE_BOUNCE:    "#88ff88",
 		grid.ACTION_LINE_DELAY:     "#00cc00",
+	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ 010Φ Φ0101  
+0    Ψ    0 
+0  TEMPO  0 
+0   TTT   0 
+ 0 BEATS 0  
+  0  BB  0   
+   0   0    
+    0 0     
+     CC    
+	`,
+		focusedIndicator:     "0",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "Ω",
+		unconnectedIndicator: "Δ",
 	},
 }
 
@@ -778,6 +987,24 @@ var herbieTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#f9a03f",
 		grid.ACTION_LINE_DELAY:     "#4c7f9e",
 	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ◉◉◉◈ ◈◉◉◉  
+◉    ◎    ◉ 
+◉  TEMPO  ◉ 
+◉   TTT   ◉ 
+ ◉ BEATS ◉  
+  ◉  BB  ◉   
+   ◉   ◉    
+    ◉ ◉     
+     CC    
+	`,
+		focusedIndicator:     "◉",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "◔",
+		unconnectedIndicator: "◇",
+	},
 }
 
 var milesColors = map[string]string{
@@ -842,6 +1069,24 @@ var milesTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#1abc9c",
 		grid.ACTION_LINE_DELAY:     "#8e44ad",
 	},
+	art: Art{
+		leftSideTemplate: `
+     FF      
+ ▣▣▣▢ ▢▣▣▣  
+▣    ▤    ▣ 
+▣  TEMPO  ▣ 
+▣   TTT   ▣ 
+ ▣ BEATS ▣  
+  ▣  BB  ▣   
+   ▣   ▣    
+    ▣ ▣     
+     CC    
+	`,
+		focusedIndicator:     "▣",
+		unfocusedIndicator:   "",
+		connectedIndicator:   "▥",
+		unconnectedIndicator: "▧",
+	},
 }
 
 var AccentColors = []string{
@@ -878,8 +1123,9 @@ var ActionColors = map[grid.Action]string{
 	grid.ACTION_LINE_DELAY:     "#cc4bc2",
 }
 
-// Colors
+var LeftSideTemplate, Connected, Unconnected, Focused, Unfocused string
 
+// Colors
 var AppTitleColor,
 	AppDescriptorColor,
 	LineNumberColor,
@@ -912,7 +1158,7 @@ var AppTitleStyle,
 	AppDescriptorStyle,
 	ActiveStyle,
 	MutedStyle,
-	HeartStyle,
+	ArtStyle,
 	SelectedStyle,
 	NumberStyle,
 	AccentModeStyle,
@@ -985,6 +1231,7 @@ func ApplyTheme(theme Theme) {
 	SetAccentColors(theme.accentColors)
 	SetAccentIcons(theme.accentIcons)
 	SetActionColors(theme.lineActionColors)
+	SetArt(theme.art)
 }
 
 func SetColors(newColors map[string]string) {
@@ -1057,7 +1304,7 @@ func EvaluateStyles() {
 
 	ActiveStyle = lipgloss.NewStyle().Foreground(ActiveRatchetColor)
 	MutedStyle = lipgloss.NewStyle().Foreground(MutedRatchetColor)
-	HeartStyle = lipgloss.NewStyle().Foreground(Heart)
+	ArtStyle = lipgloss.NewStyle().Foreground(Heart)
 	SelectedStyle = lipgloss.NewStyle().Background(SelectedAttributeColor).Foreground(Black)
 	NumberStyle = lipgloss.NewStyle().Foreground(NumberColor)
 	AccentModeStyle = lipgloss.NewStyle().Background(PatternModeColor).Foreground(Black)
@@ -1110,4 +1357,16 @@ func SetActionColors(actionColors map[grid.Action]string) {
 		}
 		ActionColors[k] = actionColors[k]
 	}
+}
+
+func SetArt(art Art) {
+	if strings.Contains(art.leftSideTemplate, "TTT") {
+		LeftSideTemplate = art.leftSideTemplate
+	} else {
+		LeftSideTemplate = defaultTheme.art.leftSideTemplate
+	}
+	Connected = art.connectedIndicator
+	Unconnected = art.unconnectedIndicator
+	Focused = art.focusedIndicator
+	Unfocused = art.unfocusedIndicator
 }
