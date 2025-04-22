@@ -2404,7 +2404,19 @@ func (m model) LeftSideView() string {
 	}
 
 	var buf strings.Builder
-	lines := strings.Split(themes.LeftSideTemplate, "\n")
+	leftSideTemplate := `
+┌─────────────┐
+│ TEMPO       │
+│ TTT         │
+│             │
+│ BEATS       │
+│ BB           │
+│             │
+│             │
+│             │
+└─────────────┘
+	`
+	lines := strings.Split(leftSideTemplate, "\n")
 	for _, line := range lines {
 		switch {
 
