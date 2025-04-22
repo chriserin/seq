@@ -977,7 +977,7 @@ func (m model) LogFromBeatTime() {
 
 func RunProgram(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, "orangegrove")
+	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, "1958")
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
 	model.SyncTempo()
@@ -2399,12 +2399,35 @@ func (m model) LeftSideView() string {
 	var focus string
 	if m.hasUIFocus {
 		focus = themes.ArtStyle.Render(themes.Focused)
+	} else {
+		focus = themes.ArtStyle.Render(themes.Unfocused)
 	}
 
 	var buf strings.Builder
 	lines := strings.Split(themes.LeftSideTemplate, "\n")
 	for _, line := range lines {
 		switch {
+
+		case strings.Contains(line, "beats"):
+			parts := strings.Split(line, "beats")
+			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(themes.AltArtStyle.Render("beats"))
+			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+		case strings.Contains(line, "BEATS"):
+			parts := strings.Split(line, "BEATS")
+			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(themes.AltArtStyle.Render("BEATS"))
+			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+		case strings.Contains(line, "tempo"):
+			parts := strings.Split(line, "tempo")
+			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(themes.AltArtStyle.Render("tempo"))
+			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+		case strings.Contains(line, "TEMPO"):
+			parts := strings.Split(line, "TEMPO")
+			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(themes.AltArtStyle.Render("TEMPO"))
+			buf.WriteString(themes.ArtStyle.Render(parts[1]))
 		case strings.Contains(line, "TTT"):
 			parts := strings.Split(line, "TTT")
 			buf.WriteString(themes.ArtStyle.Render(parts[0]))

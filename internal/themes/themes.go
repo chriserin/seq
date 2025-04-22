@@ -38,7 +38,8 @@ var defaultColors = map[string]string{
 	"NumberColor":                  "#fcbd15",
 	"Black":                        "#000000",
 	"White":                        "#ffffff",
-	"Heart":                        "#ed3902",
+	"ArtColor":                     "#ed3902",
+	"AltArtColor":                  "#1e89ef",
 	"ActiveRatchetColor":           "#abfaa9",
 	"MutedRatchetColor":            "#f34213",
 	"CurrentPlayingColor":          "#abfaa9",
@@ -85,24 +86,7 @@ var defaultTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#fcf6b1",
 		grid.ACTION_LINE_DELAY:     "#cc4bc2",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ♡♡♡☆ ☆♡♡♡  
-♡    ◊    ♡ 
-♡  TEMPO  ♡ 
-♡   TTT   ♡ 
- ♡ BEATS ♡  
-  ♡  BB  ♡   
-   ♡   ♡    
-    ♡ ♡     
-     CC    
-	`,
-		focusedIndicator:     "♡",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "†",
-		unconnectedIndicator: "╳",
-	},
+	art: defaultArt,
 }
 
 var seafoamColors = map[string]string{
@@ -120,7 +104,8 @@ var seafoamColors = map[string]string{
 	"NumberColor":                  "#c5d86d",
 	"Black":                        "#0a2622",
 	"White":                        "#e6f2ef",
-	"Heart":                        "#f76c5e",
+	"ArtColor":                     "#f76c5e",
+	"AltArtColor":                  "#2ec4b6",
 	"ActiveRatchetColor":           "#90e0c9",
 	"MutedRatchetColor":            "#f76c5e",
 	"CurrentPlayingColor":          "#90e0c9",
@@ -167,24 +152,7 @@ var seafoamTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#c5d86d",
 		grid.ACTION_LINE_DELAY:     "#a682ff",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ♢♢♢⊛ ⊛♢♢♢  
-♢    ❂    ♢ 
-♢  TEMPO  ♢ 
-♢   TTT   ♢ 
- ♢ BEATS ♢  
-  ♢  BB  ♢   
-   ♢   ♢    
-    ♢ ♢     
-     CC    
-	`,
-		focusedIndicator:     "♢",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "⚡",
-		unconnectedIndicator: "✗",
-	},
+	art: seafoamArt,
 }
 
 var dynamiteColors = map[string]string{
@@ -202,7 +170,8 @@ var dynamiteColors = map[string]string{
 	"NumberColor":                  "#ff914d",
 	"Black":                        "#1c0404",
 	"White":                        "#fff8f0",
-	"Heart":                        "#f44336",
+	"ArtColor":                     "#f44336",
+	"AltArtColor":                  "#00e5ff",
 	"ActiveRatchetColor":           "#ffeb3b",
 	"MutedRatchetColor":            "#f44336",
 	"CurrentPlayingColor":          "#ffeb3b",
@@ -249,24 +218,7 @@ var dynamiteTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#ffd700",
 		grid.ACTION_LINE_DELAY:     "#e91e63",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ✧✧✧☄ ☄✧✧✧  
-✧    ✸    ✧ 
-✧  TEMPO  ✧ 
-✧   TTT   ✧ 
- ✧ BEATS ✧  
-  ✧  BB  ✧   
-   ✧   ✧    
-    ✧ ✧     
-     CC    
-	`,
-		focusedIndicator:     "✧",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "☢",
-		unconnectedIndicator: "⚠",
-	},
+	art: dynamiteArt,
 }
 
 var springtimeColors = map[string]string{
@@ -284,7 +236,8 @@ var springtimeColors = map[string]string{
 	"NumberColor":                  "#ff9eb3",
 	"Black":                        "#070215",
 	"White":                        "#f9fdf5",
-	"Heart":                        "#fc6c85",
+	"ArtColor":                     "#fc6c85",
+	"AltArtColor":                  "#7dcfb6",
 	"ActiveRatchetColor":           "#c3f584",
 	"MutedRatchetColor":            "#fc6c85",
 	"CurrentPlayingColor":          "#c3f584",
@@ -331,24 +284,7 @@ var springtimeTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#9ed36a",
 		grid.ACTION_LINE_DELAY:     "#ff9eb3",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ❀❀❀✿ ✿❀❀❀  
-❀    ❁    ❀ 
-❀  TEMPO  ❀ 
-❀   TTT   ❀ 
- ❀ BEATS ❀  
-  ❀  BB  ❀   
-   ❀   ❀    
-    ❀ ❀     
-     CC    
-	`,
-		focusedIndicator:     "❀",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "✾",
-		unconnectedIndicator: "✽",
-	},
+	art: springtimeArt,
 }
 
 var orangegroveColors = map[string]string{
@@ -366,7 +302,8 @@ var orangegroveColors = map[string]string{
 	"NumberColor":                  "#ffcb69",
 	"Black":                        "#1a1410",
 	"White":                        "#fff4e6",
-	"Heart":                        "#f45d48",
+	"ArtColor":                     "#f45d48",
+	"AltArtColor":                  "#00c8ff",
 	"ActiveRatchetColor":           "#f8c537",
 	"MutedRatchetColor":            "#f45d48",
 	"CurrentPlayingColor":          "#f8c537",
@@ -413,24 +350,7 @@ var orangegroveTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#ffcb69",
 		grid.ACTION_LINE_DELAY:     "#c05746",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ♦♦♦♣ ♣♦♦♦  
-♦    ❂    ♦ 
-♦  TEMPO  ♦ 
-♦   TTT   ♦ 
- ♦ BEATS ♦  
-  ♦  BB  ♦   
-   ♦   ♦    
-    ♦ ♦     
-     CC    
-	`,
-		focusedIndicator:     "♦",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "☀",
-		unconnectedIndicator: "✺",
-	},
+	art: orangegroveArt,
 }
 
 var cyberpunkColors = map[string]string{
@@ -448,7 +368,8 @@ var cyberpunkColors = map[string]string{
 	"NumberColor":                  "#ff00ff",
 	"Black":                        "#070215",
 	"White":                        "#edfdfd",
-	"Heart":                        "#ff003c",
+	"ArtColor":                     "#ff003c",
+	"AltArtColor":                  "#00ff9f",
 	"ActiveRatchetColor":           "#00ff9f",
 	"MutedRatchetColor":            "#ff003c",
 	"CurrentPlayingColor":          "#00ff9f",
@@ -495,24 +416,7 @@ var cyberpunkTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#c100fd",
 		grid.ACTION_LINE_DELAY:     "#ff00ff",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ◎◎◎◍ ◍◎◎◎  
-◎    ◉    ◎ 
-◎  TEMPO  ◎ 
-◎   TTT   ◎ 
- ◎ BEATS ◎  
-  ◎  BB  ◎   
-   ◎   ◎    
-    ◎ ◎     
-     CC    
-	`,
-		focusedIndicator:     "◎",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "Ω",
-		unconnectedIndicator: "⚠",
-	},
+	art: cyberpunkArt,
 }
 
 var brainiacColors = map[string]string{
@@ -530,7 +434,8 @@ var brainiacColors = map[string]string{
 	"NumberColor":                  "#c4dfe6",
 	"Black":                        "#002b00",
 	"White":                        "#e8f1f2",
-	"Heart":                        "#4fb99f",
+	"ArtColor":                     "#4fb99f",
+	"AltArtColor":                  "#f8b24b",
 	"ActiveRatchetColor":           "#66b3ba",
 	"MutedRatchetColor":            "#4fb99f",
 	"CurrentPlayingColor":          "#66b3ba",
@@ -577,24 +482,7 @@ var brainiacTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#8bd7d2",
 		grid.ACTION_LINE_DELAY:     "#c4dfe6",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ⌥⌥⌥∂ ∂⌥⌥⌥  
-⌥    ⌘    ⌥ 
-⌥  TEMPO  ⌥ 
-⌥   TTT   ⌥ 
- ⌥ BEATS ⌥  
-  ⌥  BB  ⌥   
-   ⌥   ⌥    
-    ⌥ ⌥     
-     CC    
-	`,
-		focusedIndicator:     "⌥",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "Σ",
-		unconnectedIndicator: "≈",
-	},
+	art: brainiacArt,
 }
 
 var spaceodysseyColors = map[string]string{
@@ -612,7 +500,8 @@ var spaceodysseyColors = map[string]string{
 	"NumberColor":                  "#f0c0c0",
 	"Black":                        "#020210",
 	"White":                        "#e6e6ff",
-	"Heart":                        "#c050c0",
+	"ArtColor":                     "#c050c0",
+	"AltArtColor":                  "#ffcf00",
 	"ActiveRatchetColor":           "#c0c0f0",
 	"MutedRatchetColor":            "#c050c0",
 	"CurrentPlayingColor":          "#c0c0f0",
@@ -659,24 +548,7 @@ var spaceodysseyTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#a0a0ff",
 		grid.ACTION_LINE_DELAY:     "#f0c0c0",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ★★★☽ ☽★★★  
-★    ⋆    ★ 
-★  TEMPO  ★ 
-★   TTT   ★ 
- ★ BEATS ★  
-  ★  BB  ★   
-   ★   ★    
-    ★ ★     
-     CC    
-	`,
-		focusedIndicator:     "★",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "☼",
-		unconnectedIndicator: "✧",
-	},
+	art: spaceodysseyArt,
 }
 
 var nineteenfiftyeightColors = map[string]string{
@@ -694,7 +566,8 @@ var nineteenfiftyeightColors = map[string]string{
 	"NumberColor":                  "#d09554",
 	"Black":                        "#1a1610",
 	"White":                        "#ecdfce",
-	"Heart":                        "#c94a35",
+	"ArtColor":                     "#c94a35",
+	"AltArtColor":                  "#4587be",
 	"ActiveRatchetColor":           "#b1b85a",
 	"MutedRatchetColor":            "#c94a35",
 	"CurrentPlayingColor":          "#b1b85a",
@@ -741,24 +614,7 @@ var nineteenfiftyeightTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#8ba353",
 		grid.ACTION_LINE_DELAY:     "#6b5744",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ◆◆◆■ ■◆◆◆  
-◆    ●    ◆ 
-◆  TEMPO  ◆ 
-◆   TTT   ◆ 
- ◆ BEATS ◆  
-  ◆  BB  ◆   
-   ◆   ◆    
-    ◆ ◆     
-     CC    
-	`,
-		focusedIndicator:     "◆",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "▲",
-		unconnectedIndicator: "◇",
-	},
+	art: nineteenfiftyeightArt,
 }
 
 var appleiiplusColors = map[string]string{
@@ -776,7 +632,8 @@ var appleiiplusColors = map[string]string{
 	"NumberColor":                  "#cc9933",
 	"Black":                        "#000000",
 	"White":                        "#33ff33",
-	"Heart":                        "#cc3333",
+	"ArtColor":                     "#cc3333",
+	"AltArtColor":                  "#9933cc",
 	"ActiveRatchetColor":           "#66ff66",
 	"MutedRatchetColor":            "#cc3333",
 	"CurrentPlayingColor":          "#66ff66",
@@ -823,24 +680,7 @@ var appleiiplusTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#33cc33",
 		grid.ACTION_LINE_DELAY:     "#9933cc",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ○○○◎ ◎○○○  
-○    ●    ○ 
-○  TEMPO  ○ 
-○   TTT   ○ 
- ○ BEATS ○  
-  ○  BB  ○   
-   ○   ○    
-    ○ ○     
-     CC    
-	`,
-		focusedIndicator:     "○",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "□",
-		unconnectedIndicator: "△",
-	},
+	art: appleiiplusArt,
 }
 
 var matrixColors = map[string]string{
@@ -858,7 +698,8 @@ var matrixColors = map[string]string{
 	"NumberColor":                  "#88ff88",
 	"Black":                        "#000000",
 	"White":                        "#00ff00",
-	"Heart":                        "#55ff55",
+	"ArtColor":                     "#55ff55",
+	"AltArtColor":                  "#ffffff",
 	"ActiveRatchetColor":           "#00ff00",
 	"MutedRatchetColor":            "#008800",
 	"CurrentPlayingColor":          "#00ff00",
@@ -905,24 +746,7 @@ var matrixTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#88ff88",
 		grid.ACTION_LINE_DELAY:     "#00cc00",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- 010Φ Φ0101  
-0    Ψ    0 
-0  TEMPO  0 
-0   TTT   0 
- 0 BEATS 0  
-  0  BB  0   
-   0   0    
-    0 0     
-     CC    
-	`,
-		focusedIndicator:     "0",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "Ω",
-		unconnectedIndicator: "Δ",
-	},
+	art: matrixArt,
 }
 
 var herbieColors = map[string]string{
@@ -940,7 +764,8 @@ var herbieColors = map[string]string{
 	"NumberColor":                  "#ffe01b",
 	"Black":                        "#0c0c0c",
 	"White":                        "#ffe01b",
-	"Heart":                        "#e84a5f",
+	"ArtColor":                     "#e84a5f",
+	"AltArtColor":                  "#1b95e0",
 	"ActiveRatchetColor":           "#1b95e0",
 	"MutedRatchetColor":            "#e84a5f",
 	"CurrentPlayingColor":          "#1b95e0",
@@ -987,24 +812,7 @@ var herbieTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#f9a03f",
 		grid.ACTION_LINE_DELAY:     "#4c7f9e",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ◉◉◉◈ ◈◉◉◉  
-◉    ◎    ◉ 
-◉  TEMPO  ◉ 
-◉   TTT   ◉ 
- ◉ BEATS ◉  
-  ◉  BB  ◉   
-   ◉   ◉    
-    ◉ ◉     
-     CC    
-	`,
-		focusedIndicator:     "◉",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "◔",
-		unconnectedIndicator: "◇",
-	},
+	art: herbieArt,
 }
 
 var milesColors = map[string]string{
@@ -1022,7 +830,8 @@ var milesColors = map[string]string{
 	"NumberColor":                  "#f39c12",
 	"Black":                        "#000e1a",
 	"White":                        "#ecf0f1",
-	"Heart":                        "#e74c3c",
+	"ArtColor":                     "#e74c3c",
+	"AltArtColor":                  "#2ecc71",
 	"ActiveRatchetColor":           "#2ecc71",
 	"MutedRatchetColor":            "#e74c3c",
 	"CurrentPlayingColor":          "#2ecc71",
@@ -1069,24 +878,7 @@ var milesTheme = Theme{
 		grid.ACTION_LINE_BOUNCE:    "#1abc9c",
 		grid.ACTION_LINE_DELAY:     "#8e44ad",
 	},
-	art: Art{
-		leftSideTemplate: `
-     FF      
- ▣▣▣▢ ▢▣▣▣  
-▣    ▤    ▣ 
-▣  TEMPO  ▣ 
-▣   TTT   ▣ 
- ▣ BEATS ▣  
-  ▣  BB  ▣   
-   ▣   ▣    
-    ▣ ▣     
-     CC    
-	`,
-		focusedIndicator:     "▣",
-		unfocusedIndicator:   "",
-		connectedIndicator:   "▥",
-		unconnectedIndicator: "▧",
-	},
+	art: milesArt,
 }
 
 var AccentColors = []string{
@@ -1142,7 +934,8 @@ var AppTitleColor,
 	NumberColor,
 	Black,
 	White,
-	Heart,
+	ArtColor,
+	AltArtColor,
 	ActiveRatchetColor,
 	MutedRatchetColor,
 	CurrentPlayingColor,
@@ -1159,6 +952,7 @@ var AppTitleStyle,
 	ActiveStyle,
 	MutedStyle,
 	ArtStyle,
+	AltArtStyle,
 	SelectedStyle,
 	NumberStyle,
 	AccentModeStyle,
@@ -1266,8 +1060,10 @@ func SetColors(newColors map[string]string) {
 			Black = newColor
 		case "White":
 			White = newColor
-		case "Heart":
-			Heart = newColor
+		case "ArtColor":
+			ArtColor = newColor
+		case "AltArtColor":
+			AltArtColor = newColor
 		case "ActiveRatchetColor":
 			ActiveRatchetColor = newColor
 		case "MutedRatchetColor":
@@ -1304,7 +1100,8 @@ func EvaluateStyles() {
 
 	ActiveStyle = lipgloss.NewStyle().Foreground(ActiveRatchetColor)
 	MutedStyle = lipgloss.NewStyle().Foreground(MutedRatchetColor)
-	ArtStyle = lipgloss.NewStyle().Foreground(Heart)
+	ArtStyle = lipgloss.NewStyle().Foreground(ArtColor)
+	AltArtStyle = lipgloss.NewStyle().Foreground(AltArtColor)
 	SelectedStyle = lipgloss.NewStyle().Background(SelectedAttributeColor).Foreground(Black)
 	NumberStyle = lipgloss.NewStyle().Foreground(NumberColor)
 	AccentModeStyle = lipgloss.NewStyle().Background(PatternModeColor).Foreground(Black)
