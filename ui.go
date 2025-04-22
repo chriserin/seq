@@ -977,7 +977,7 @@ func (m model) LogFromBeatTime() {
 
 func RunProgram(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, "1958")
+	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, "miles")
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
 	model.SyncTempo()
@@ -2642,7 +2642,7 @@ func (m model) OverlaysView() string {
 			stackModifier = " \u2191\u0305"
 		}
 
-		overlayLine := fmt.Sprintf("%s%2s%2s", overlaykey.View(currentOverlay.Key), stackModifier, editing)
+		overlayLine := fmt.Sprintf("%s%2s%2s", overlaykey.View(currentOverlay.Key), themes.AltArtStyle.Render(stackModifier), themes.AltArtStyle.Render(editing))
 
 		buf.WriteString(playingSpacer)
 		if m.playing != PLAY_STOPPED && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
@@ -2820,7 +2820,7 @@ func (m model) CurrentOverlayView() string {
 
 func KeyLineIndicator(k uint8, l uint8) string {
 	if k == l {
-		return "K"
+		return themes.AltArtStyle.Render("K")
 	} else {
 		return " "
 	}

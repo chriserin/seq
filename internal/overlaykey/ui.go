@@ -192,13 +192,13 @@ func View(ok OverlayPeriodicity) string {
 
 	buf.WriteString(shift)
 	if ok.Width > 0 {
-		buf.WriteString(":")
+		buf.WriteString(themes.AltArtStyle.Render(":"))
 		buf.WriteString(width)
 	}
-	buf.WriteString("/")
+	buf.WriteString(themes.AltArtStyle.Render("/"))
 	buf.WriteString(interval)
 	if ok.StartCycle > 0 {
-		buf.WriteString("S")
+		buf.WriteString(themes.AltArtStyle.Render("S"))
 		buf.WriteString(start)
 	}
 	return buf.String()
@@ -247,5 +247,5 @@ func SelectedColor(number uint8) string {
 }
 
 func NormalColor(number uint8) string {
-	return strconv.Itoa(int(number))
+	return themes.AltArtStyle.Render(strconv.Itoa(int(number)))
 }
