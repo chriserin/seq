@@ -2535,7 +2535,7 @@ func (m model) AccentKeyView() string {
 		accentTargetString = themes.NumberStyle.Render(fmt.Sprintf(" %s", accentTarget))
 	}
 
-	title := lipgloss.NewStyle().Foreground(themes.RightSideTitleColor).Render("Setup")
+	title := themes.AppDescriptorStyle.Render("Accents")
 	buf.WriteString(fmt.Sprintf(" %s %s %s\n", title, accentDiffString, accentTargetString))
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
@@ -2558,7 +2558,7 @@ func (m model) AccentKeyView() string {
 
 func (m model) SetupView() string {
 	var buf strings.Builder
-	buf.WriteString(lipgloss.NewStyle().Foreground(themes.RightSideTitleColor).Render("Setup"))
+	buf.WriteString(themes.AppDescriptorStyle.Render("Setup"))
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
@@ -2613,11 +2613,12 @@ func LineValueName(ld grid.LineDefinition, instrument string) string {
 
 func (m model) OverlaysView() string {
 	var buf strings.Builder
-	buf.WriteString(lipgloss.NewStyle().Foreground(themes.RightSideTitleColor).Render("Overlays"))
+	buf.WriteString(themes.AppDescriptorStyle.Render("Overlays"))
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
-	style := lipgloss.NewStyle().Background(themes.SeqOverlayColor)
+	playingStyle := lipgloss.NewStyle().Background(themes.SeqOverlayColor).Foreground(themes.AltArtColor)
+	notPlayingStyle := lipgloss.NewStyle().Foreground(themes.AltArtColor)
 	var playingOverlayKeys = m.PlayingOverlayKeys()
 	for currentOverlay := m.CurrentPart().Overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
@@ -2642,13 +2643,13 @@ func (m model) OverlaysView() string {
 			stackModifier = " \u2191\u0305"
 		}
 
-		overlayLine := fmt.Sprintf("%s%2s%2s", overlaykey.View(currentOverlay.Key), themes.AltArtStyle.Render(stackModifier), themes.AltArtStyle.Render(editing))
+		overlayLine := fmt.Sprintf("%s%2s%2s", overlaykey.View(currentOverlay.Key), stackModifier, editing)
 
 		buf.WriteString(playingSpacer)
 		if m.playing != PLAY_STOPPED && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
-			buf.WriteString(style.Render(overlayLine))
+			buf.WriteString(playingStyle.Render(overlayLine))
 		} else {
-			buf.WriteString(overlayLine)
+			buf.WriteString(notPlayingStyle.Render(overlayLine))
 		}
 		buf.WriteString(playing)
 		buf.WriteString(playingSpacer)
