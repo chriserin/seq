@@ -1510,8 +1510,7 @@ func (m *model) Start() {
 		m.arrangement.Cursor.MoveNext()
 		m.arrangement.Cursor.ResetIterations()
 	case LOOP_PART:
-		m.arrangement.SavedCursor = m.arrangement.Cursor
-		m.arrangement.Cursor = m.arrangement.CurrentNodeCursor(m.arrangement.Cursor)
+		m.arrangement.SetCurrentNodeInfinite()
 	}
 
 	m.arrangement.Root.ResetAllPlayCycles()
@@ -1532,7 +1531,6 @@ func (m *model) Start() {
 
 func (m *model) Stop() {
 	if m.loopMode == LOOP_PART {
-		m.arrangement.Cursor = m.arrangement.SavedCursor
 		m.arrangement.ResetDepth()
 	}
 	m.arrangement.Root.ResetCycles()

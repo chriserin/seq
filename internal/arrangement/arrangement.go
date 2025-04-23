@@ -23,6 +23,10 @@ func (a *Arrangement) Reset() {
 	a.playingIterations = a.Iterations
 }
 
+func (a *Arrangement) IsInfinite() bool {
+	return math.MaxInt64 == a.playingIterations
+}
+
 func (a *Arrangement) DrawDown() {
 	if a.playingIterations == math.MaxInt64 {
 		return
@@ -50,7 +54,7 @@ func (a *Arrangement) ResetIterations() {
 
 func (a *Arrangement) ResetCycles() {
 	if len(a.Nodes) == 0 {
-		a.Section.ResetCycles()
+		a.Section.ResetInfinite()
 	} else {
 		for _, n := range a.Nodes {
 			n.ResetCycles()
@@ -325,22 +329,13 @@ func MoveToLastChild(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
 	}
 }
 
-func (m Model) CurrentNodeCursor(currentCursor ArrCursor) ArrCursor {
-	if m.depthCursor == len(currentCursor)-1 {
-		currentNode := currentCursor[len(currentCursor)-1]
+func (m Model) SetCurrentNodeInfinite() {
+	if m.depthCursor == len(m.Cursor)-1 {
+		currentNode := m.Cursor[len(m.Cursor)-1]
 		currentNode.Section.infinite = true
-		partGroup := &Arrangement{
-			Nodes:      []*Arrangement{currentNode},
-			Iterations: 1,
-		}
-		cursor := ArrCursor{partGroup, currentNode}
-		return cursor
 	} else {
-		group := currentCursor[m.depthCursor]
+		group := m.Cursor[m.depthCursor]
 		group.SetInfinite()
-		cursor := ArrCursor{group}
-		cursor.MoveNext()
-		return cursor
 	}
 }
 
@@ -407,7 +402,6 @@ const (
 
 type Model struct {
 	Focus       bool
-	SavedCursor ArrCursor
 	Cursor      ArrCursor
 	oldCursor   cursor
 	Root        *Arrangement
@@ -916,7 +910,7 @@ func (ss SongSection) PlayCycles() int {
 	return ss.playCycles
 }
 
-func (ss *SongSection) ResetCycles() {
+func (ss *SongSection) ResetInfinite() {
 	ss.infinite = false
 }
 

@@ -217,7 +217,11 @@ func (ac ArrCursor) PlayStateView(cycles int) string {
 
 func (arr Arrangement) PlayStateView(buf *strings.Builder, cycles int) {
 	if arr.IsGroup() {
-		fmt.Fprintf(buf, "%d/%d", arr.playingIterations, arr.Iterations)
+		if arr.IsInfinite() {
+			fmt.Fprintf(buf, "∞/%d", arr.Iterations)
+		} else {
+			fmt.Fprintf(buf, "%d/%d", arr.playingIterations, arr.Iterations)
+		}
 	} else {
 		if arr.Section.infinite {
 			fmt.Fprintf(buf, "%d/∞", cycles)
