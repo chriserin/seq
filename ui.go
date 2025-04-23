@@ -1634,7 +1634,11 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.OverlayTriggerRemove:
 		m.OverlayRemoveTrigger()
 	case mappings.ClearLine:
-		m.ClearOverlayLine()
+		if m.visualMode {
+			m.RemoveTrigger()
+		} else {
+			m.ClearOverlayLine()
+		}
 	case mappings.RatchetIncrease:
 		m.IncreaseRatchet()
 	case mappings.RatchetDecrease:
