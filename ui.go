@@ -975,9 +975,9 @@ func (m model) LogFromBeatTime() {
 	}
 }
 
-func RunProgram(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode) *tea.Program {
+func RunProgram(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
-	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, "springtime")
+	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
 	model.SyncTempo()
@@ -2405,65 +2405,66 @@ func (m model) LeftSideView() string {
 
 	var buf strings.Builder
 	leftSideTemplate := `
-┌─────────────┐
-│ TEMPO       │
-│ TTT         │
-│             │
-│ BEATS       │
-│ BB           │
-│             │
-│             │
-│             │
-└─────────────┘
+
+  TEMPO       ▌
+  TTT         ▌
+              ▌
+  BEATS       ▌
+  BB           ▌
+              ▌
+              ▌
+              ▌
+
 	`
 	lines := strings.Split(leftSideTemplate, "\n")
+	borderStyle := themes.SeqBorderStyle
 	for _, line := range lines {
 		switch {
 
 		case strings.Contains(line, "beats"):
 			parts := strings.Split(line, "beats")
-			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(borderStyle.Render(parts[0]))
 			buf.WriteString(themes.AltArtStyle.Render("beats"))
-			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+			buf.WriteString(borderStyle.Render(parts[1]))
 		case strings.Contains(line, "BEATS"):
 			parts := strings.Split(line, "BEATS")
-			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(borderStyle.Render(parts[0]))
 			buf.WriteString(themes.AltArtStyle.Render("BEATS"))
-			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+			buf.WriteString(borderStyle.Render(parts[1]))
 		case strings.Contains(line, "tempo"):
 			parts := strings.Split(line, "tempo")
-			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(borderStyle.Render(parts[0]))
 			buf.WriteString(themes.AltArtStyle.Render("tempo"))
-			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+			buf.WriteString(borderStyle.Render(parts[1]))
 		case strings.Contains(line, "TEMPO"):
 			parts := strings.Split(line, "TEMPO")
-			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(borderStyle.Render(parts[0]))
 			buf.WriteString(themes.AltArtStyle.Render("TEMPO"))
-			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+			buf.WriteString(borderStyle.Render(parts[1]))
 		case strings.Contains(line, "TTT"):
 			parts := strings.Split(line, "TTT")
-			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(borderStyle.Render(parts[0]))
 			buf.WriteString(tempo)
-			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+			buf.WriteString(borderStyle.Render(parts[1]))
 		case strings.Contains(line, "BB"):
 			parts := strings.Split(line, "BB")
-			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(borderStyle.Render(parts[0]))
 			buf.WriteString(division)
-			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+			buf.WriteString(borderStyle.Render(parts[1]))
 		case strings.Contains(line, "FF"):
 			parts := strings.Split(line, "FF")
-			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(borderStyle.Render(parts[0]))
 			buf.WriteString(focus)
-			buf.WriteString(themes.ArtStyle.Render(parts[1]))
+			buf.WriteString(borderStyle.Render(parts[1]))
 		case strings.Contains(line, "CC"):
 			parts := strings.Split(line, "CC")
-			buf.WriteString(themes.ArtStyle.Render(parts[0]))
+			buf.WriteString(borderStyle.Render(parts[0]))
 			buf.WriteString(connected)
 			if len(parts) > 1 {
-				buf.WriteString(themes.ArtStyle.Render(parts[1]))
+				buf.WriteString(borderStyle.Render(parts[1]))
 			}
 		default:
-			buf.WriteString(themes.ArtStyle.Render(line))
+			buf.WriteString(borderStyle.Render(line))
 		}
 		buf.WriteString("\n")
 	}
@@ -2512,7 +2513,7 @@ func (m model) View() string {
 	}
 
 	seqView := m.ViewTriggerSeq()
-	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "  ", seqView, "  ", sideView))
+	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "", seqView, "  ", sideView))
 	buf.WriteString("\n")
 	if m.showArrangementView {
 		buf.WriteString(m.arrangement.View())
@@ -2629,8 +2630,8 @@ func (m model) OverlaysView() string {
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
-	playingStyle := lipgloss.NewStyle().Background(themes.SeqOverlayColor).Foreground(themes.AltArtColor)
-	notPlayingStyle := lipgloss.NewStyle().Foreground(themes.AltArtColor)
+	playingStyle := lipgloss.NewStyle().Background(themes.SeqOverlayColor).Foreground(themes.AppDescriptorColor)
+	notPlayingStyle := themes.AppDescriptorStyle
 	var playingOverlayKeys = m.PlayingOverlayKeys()
 	for currentOverlay := m.CurrentPart().Overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
@@ -2705,7 +2706,9 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
 	} else if len(*m.definition.parts) > 1 {
 		buf.WriteString(m.WriteView())
-		buf.WriteString(fmt.Sprintf("Seq - %s\n", m.CurrentPart().GetName()))
+		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
+		buf.WriteString(themes.AppDescriptorStyle.Render(fmt.Sprintf("- %s", m.CurrentPart().GetName())))
+		buf.WriteString("\n")
 	} else {
 		buf.WriteString(m.WriteView())
 		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
@@ -2844,7 +2847,7 @@ var blackNotes = []uint8{1, 3, 6, 8, 10}
 func (m model) LineIndicator(lineNumber uint8) string {
 	indicator := themes.SeqBorderStyle.Render("│")
 	if lineNumber == m.cursorPos.Line {
-		indicator = themes.SelectedStyle.Render("┤")
+		indicator = themes.LineCursorStyle.Render("┤")
 	}
 	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PLAY_STATE_MUTE {
 		indicator = "M"

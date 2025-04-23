@@ -10,31 +10,16 @@ import (
 	themes "github.com/chriserin/seq/internal/themes"
 )
 
-var (
-	// Styles for header
-	headerStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(themes.ArrangementHeaderColor).
-			PaddingRight(1).
-			PaddingLeft(1)
-
-	// Title style
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(themes.ArrangementTitleColor).
-			MarginLeft(1)
-)
-
 func (m Model) View() string {
 	var buf strings.Builder
 
 	// Create stylish header
 	header := lipgloss.JoinHorizontal(lipgloss.Top,
-		lipgloss.PlaceHorizontal(24, lipgloss.Left, titleStyle.Render("Section "), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
-		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("Start Beat"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
-		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("⟳ Start"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
-		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("⟳ Amount"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
-		lipgloss.PlaceHorizontal(12, lipgloss.Right, headerStyle.Render("⟳ Keep"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(24, lipgloss.Left, themes.AppTitleStyle.Render("Section "), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("Start Beat"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("⟳ Start"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("⟳ Amount"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("⟳ Keep"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
 	)
 
 	buf.WriteString(header)
@@ -115,9 +100,9 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 			}
 			indentChars := strings.Repeat("│ ", depth-2) + indentChar
 			indentation = themes.IndentStyle.Render(indentChars)
-			section = fmt.Sprintf("%s %s", indentation, themes.SectionNameStyle.Render(sectionName))
+			section = fmt.Sprintf("%s %s", indentation, themes.AppTitleStyle.Bold(false).Render(sectionName))
 		} else {
-			section = themes.SectionNameStyle.Render(sectionName)
+			section = themes.AppTitleStyle.Bold(false).Render(sectionName)
 		}
 
 		isSelected := len(m.Cursor)-1 == m.depthCursor &&

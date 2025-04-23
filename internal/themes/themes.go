@@ -90,7 +90,7 @@ var defaultTheme = Theme{
 }
 
 var seafoamColors = map[string]string{
-	"AppTitleColor":                "#e6f2ef",
+	"AppTitleColor":                "#a6d0c7",
 	"AppDescriptorColor":           "#cce7e0",
 	"LineNumberColor":              "#a6d0c7",
 	"RightSideTitleColor":          "#8abdb2",
@@ -156,7 +156,7 @@ var seafoamTheme = Theme{
 }
 
 var dynamiteColors = map[string]string{
-	"AppTitleColor":                "#fff8f0",
+	"AppTitleColor":                "#ee4242",
 	"AppDescriptorColor":           "#ffe6d1",
 	"LineNumberColor":              "#ffcbad",
 	"RightSideTitleColor":          "#ffb38f",
@@ -226,7 +226,7 @@ var springtimeColors = map[string]string{
 	"AppDescriptorColor":           "#ff9eb3",
 	"LineNumberColor":              "#617852",
 	"RightSideTitleColor":          "#769164",
-	"AltSeqBackgroundColor":        "#353038",
+	"AltSeqBackgroundColor":        "#154018",
 	"SeqBackgroundColor":           "#090d05",
 	"SeqCursorColor":               "#27735e",
 	"SeqVisualColor":               "#8eb656",
@@ -354,15 +354,15 @@ var orangegroveTheme = Theme{
 }
 
 var cyberpunkColors = map[string]string{
-	"AppTitleColor":                "#edfdfd",
+	"AppTitleColor":                "#4da55a",
 	"AppDescriptorColor":           "#c0f0f0",
 	"LineNumberColor":              "#a0e0e0",
 	"RightSideTitleColor":          "#80c0c0",
-	"AltSeqBackgroundColor":        "#13032e",
+	"AltSeqBackgroundColor":        "#300330",
 	"SeqBackgroundColor":           "#070215",
 	"SeqCursorColor":               "#2d555a",
 	"SeqVisualColor":               "#8e44ad",
-	"SeqOverlayColor":              "#3e1f6d",
+	"SeqOverlayColor":              "#4e1f7d",
 	"SeqMiddleOverlayColor":        "#2e0f50",
 	"SelectedAttributeColor":       "#fcee21",
 	"NumberColor":                  "#ff00ff",
@@ -420,7 +420,7 @@ var cyberpunkTheme = Theme{
 }
 
 var brainiacColors = map[string]string{
-	"AppTitleColor":                "#e8f1f2",
+	"AppTitleColor":                "#4fb99f",
 	"AppDescriptorColor":           "#c4dfe6",
 	"LineNumberColor":              "#a0c7d3",
 	"RightSideTitleColor":          "#7cafbf",
@@ -486,7 +486,7 @@ var brainiacTheme = Theme{
 }
 
 var spaceodysseyColors = map[string]string{
-	"AppTitleColor":                "#e6e6ff",
+	"AppTitleColor":                "#d070f0",
 	"AppDescriptorColor":           "#c0c0f0",
 	"LineNumberColor":              "#a0a0d6",
 	"RightSideTitleColor":          "#8080c0",
@@ -953,6 +953,7 @@ var AppTitleStyle,
 	MutedStyle,
 	ArtStyle,
 	AltArtStyle,
+	LineCursorStyle,
 	SelectedStyle,
 	NumberStyle,
 	AccentModeStyle,
@@ -1101,13 +1102,14 @@ func EvaluateStyles() {
 	ActiveStyle = lipgloss.NewStyle().Foreground(ActiveRatchetColor)
 	MutedStyle = lipgloss.NewStyle().Foreground(MutedRatchetColor)
 	ArtStyle = lipgloss.NewStyle().Foreground(ArtColor)
-	AltArtStyle = lipgloss.NewStyle().Foreground(AltArtColor)
+	AltArtStyle = lipgloss.NewStyle().Foreground(Darken(AppTitleColor, 20.0))
+	LineCursorStyle = lipgloss.NewStyle().Foreground(Black).Background(Lighten(AltSeqBackgroundColor, 150.0))
 	SelectedStyle = lipgloss.NewStyle().Background(SelectedAttributeColor).Foreground(Black)
 	NumberStyle = lipgloss.NewStyle().Foreground(NumberColor)
 	AccentModeStyle = lipgloss.NewStyle().Background(PatternModeColor).Foreground(Black)
 	BlackKeyStyle = lipgloss.NewStyle().Background(Black).Foreground(White)
 	WhiteKeyStyle = lipgloss.NewStyle().Background(White).Foreground(Black)
-	LineNumberStyle = lipgloss.NewStyle().Foreground(LineNumberColor)
+	LineNumberStyle = lipgloss.NewStyle().Foreground(Lighten(AppTitleColor, 10.0))
 
 	GroupStyle = lipgloss.NewStyle().
 		Foreground(ArrangementGroupColor).
@@ -1124,9 +1126,9 @@ func EvaluateStyles() {
 	SectionNameStyle = lipgloss.NewStyle().
 		Foreground(ArrangementHeaderColor)
 
-	SeqBorderStyle = lipgloss.NewStyle().Background(Black).Foreground(SeqBorderLineColor)
-	AppTitleStyle = lipgloss.NewStyle().Bold(true).Background(Black).Foreground(AppTitleColor)
-	AppDescriptorStyle = lipgloss.NewStyle().Background(Black).Foreground(AppDescriptorColor)
+	SeqBorderStyle = lipgloss.NewStyle().Foreground(Lighten(AltSeqBackgroundColor, 100.0))
+	AppTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(AppTitleColor)
+	AppDescriptorStyle = lipgloss.NewStyle().Foreground(Darken(AppTitleColor, 30.0))
 }
 
 func SetAccentColors(accentColors []string) {

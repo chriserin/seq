@@ -14,6 +14,7 @@ var gridTemplate string
 var instrument string
 var transmitter bool
 var receiver bool
+var theme string
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -34,7 +35,7 @@ func main() {
 			if len(args) > 0 {
 				filename = args[0]
 			}
-			p := RunProgram(filename, midiConnection, gridTemplate, instrument, midiLoopMode)
+			p := RunProgram(filename, midiConnection, gridTemplate, instrument, midiLoopMode, theme)
 			var err error
 			_, err = p.Run()
 			if err != nil {
@@ -70,6 +71,7 @@ func main() {
 	rootCmd.Flags().StringVar(&instrument, "instrument", "Standard", "Choose an instrument for CC integration (default: Standard)")
 	rootCmd.Flags().BoolVar(&transmitter, "transmitter", false, "Seq will run in transmitter mode")
 	rootCmd.Flags().BoolVar(&receiver, "receiver", false, "Seq will run in receiver mode")
+	rootCmd.Flags().StringVar(&theme, "theme", "miles", "Choose an theme for the sequencer visual representation")
 
 	err := rootCmd.Execute()
 	if err != nil {
