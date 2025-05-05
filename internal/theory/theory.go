@@ -1,6 +1,8 @@
 package theory
 
-import "slices"
+import (
+	"slices"
+)
 
 func InitChord() Chord {
 	return Chord{}
@@ -61,8 +63,41 @@ const (
 )
 
 // AddNotes adds specified notes to the chord
-func (c *Chord) AddNotes(noteConstant uint32) {
-	c.notes |= noteConstant
+func (c *Chord) AddNotes(noteConstant uint32) Chord {
+	oldNotes := c.notes
+	if IsTriad(noteConstant) {
+		currentTriad := c.CurrentTriad()
+		c.Replace(currentTriad, noteConstant)
+	} else {
+		c.notes |= noteConstant
+	}
+
+	return Chord{notes: oldNotes}
+}
+
+var triads = []uint32{MajorTriad, MinorTriad, DiminishedTriad, AugmentedTriad}
+
+func IsTriad(noteConstant uint32) bool {
+	for _, t := range triads {
+		if ContainsBits(noteConstant, t) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c Chord) CurrentTriad() uint32 {
+	for _, t := range triads {
+		if ContainsBits(c.notes, t) {
+			return t
+		}
+	}
+	return 0
+}
+
+func (c *Chord) Replace(oldNotes uint32, newNotes uint32) {
+	c.notes ^= oldNotes
+	c.notes |= newNotes
 }
 
 func (c Chord) UninvertedNotes() []int {
@@ -102,4 +137,20 @@ func (c Chord) Notes() []int {
 	}
 
 	return notes
+}
+
+func ContainsBits(source, pattern uint32) bool {
+	return (source & pattern) == pattern
+}
+
+func ChordFromNotes(notes []uint8) Chord {
+	var chordBits uint32
+
+	for _, note := range notes {
+		if note < 32 {
+			chordBits |= uint32(1 << note)
+		}
+	}
+
+	return Chord{notes: chordBits}
 }

@@ -1670,13 +1670,15 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.Paste:
 		m.Paste()
 	case mappings.MajorTriad:
-		chord := theory.InitChord()
-		chord.AddNotes(theory.MajorTriad)
-		m.AddChordNotes(chord.Notes())
+		chord, pos := m.CurrentChord()
+		oldChord := chord.AddNotes(theory.MajorTriad)
+		m.RemoveChordNotes(oldChord.Notes(), pos)
+		m.AddChordNotes(chord.Notes(), pos)
 	case mappings.MinorTriad:
-		chord := theory.InitChord()
-		chord.AddNotes(theory.MinorTriad)
-		m.AddChordNotes(chord.Notes())
+		chord, pos := m.CurrentChord()
+		oldChord := chord.AddNotes(theory.MinorTriad)
+		m.RemoveChordNotes(oldChord.Notes(), pos)
+		m.AddChordNotes(chord.Notes(), pos)
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1711,10 +1713,47 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	return m
 }
 
-func (m *model) AddChordNotes(notes []int) {
+func (m *model) CurrentChord() (theory.Chord, uint8) {
+	currentNotes, position := m.ChordNotes()
+	if len(currentNotes) > 0 {
+		return theory.ChordFromNotes(currentNotes), uint8(position)
+	}
+	return theory.InitChord(), m.cursorPos.Line
+}
+
+func (m *model) ChordNotes() ([]uint8, int) {
+	pattern := make(overlays.OverlayPattern)
+	m.currentOverlay.CombineOverlayPattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle())
+	notes := make([]uint8, 0)
+	var startPosition int
+	for i, line := range m.definition.lines {
+		key := GK(uint8(i), m.cursorPos.Beat)
+		note, exists := pattern[key]
+		if exists && note.Note.AccentIndex > 0 {
+			notes = append(notes, line.Note)
+			if i > startPosition {
+				startPosition = i
+			}
+		}
+	}
+	if len(notes) > 0 {
+		return theory.ShiftToZero(notes), startPosition
+	} else {
+		return []uint8{}, 0
+	}
+}
+
+func (m *model) AddChordNotes(notes []int, pos uint8) {
 	for _, n := range notes {
-		gk := gridKey{Line: m.cursorPos.Line - uint8(n), Beat: m.cursorPos.Beat}
+		gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
 		m.currentOverlay.SetNote(gk, grid.InitNote())
+	}
+}
+
+func (m *model) RemoveChordNotes(notes []int, pos uint8) {
+	for _, n := range notes {
+		gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
+		m.currentOverlay.RemoveNote(gk)
 	}
 }
 
