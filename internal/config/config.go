@@ -137,6 +137,24 @@ type Template struct {
 	Lines         []grid.LineDefinition
 	UIStyle       string
 	MaxGateLength int
+	SequencerType grid.SequencerType
+}
+
+func InitTemplate(
+	name string,
+	uIStyle string,
+	maxGateLength int,
+	sequencerType string,
+
+) Template {
+	var seqType grid.SequencerType
+	switch sequencerType {
+	case "trigger":
+		seqType = grid.SEQTYPE_TRIGGER
+	case "polyphony":
+		seqType = grid.SEQTYPE_POLYPHONY
+	}
+	return Template{Name: name, UIStyle: uIStyle, MaxGateLength: maxGateLength, SequencerType: seqType}
 }
 
 func (t Template) GetGateLengths() []Gate {
@@ -261,6 +279,12 @@ func addTemplate(L *lua.State) int {
 			uistyle = "plain"
 		}
 		L.Pop(1)
+		L.GetField(1, "seqtype")
+		seqtype := L.ToString(2)
+		if seqtype == "" {
+			seqtype = "trigger"
+		}
+		L.Pop(1)
 		L.GetField(1, "maxgatelength")
 		maxGateLength := L.ToInteger(2)
 		if maxGateLength == 0 {
@@ -268,7 +292,7 @@ func addTemplate(L *lua.State) int {
 		}
 		L.Pop(1)
 
-		template := Template{Name: name, UIStyle: uistyle, MaxGateLength: maxGateLength}
+		template := InitTemplate(name, uistyle, maxGateLength, seqtype)
 
 		L.GetField(1, "lines")
 		if L.IsTable(2) {

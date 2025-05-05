@@ -6,6 +6,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/chriserin/seq/internal/grid"
 )
 
 var Keycombo = make([]tea.KeyMsg, 0, 3)
@@ -98,81 +99,24 @@ const (
 	RotateRight
 	RotateLeft
 	Paste
+	MajorTriad
+	MinorTriad
 )
 
 type mappingKey [3]string
 type registry map[mappingKey]Command
 
 var mappings = registry{
-	k("q"):      Quit,
-	k("q"):      Quit,
-	k("?"):      Help,
-	k("k"):      CursorUp,
-	k("j"):      CursorDown,
-	k("h"):      CursorLeft,
-	k("l"):      CursorRight,
-	k("<"):      CursorLineStart,
-	k(">"):      CursorLineEnd,
-	k("esc"):    Escape,
 	k(" "):      PlayStop,
-	k("ctrl+@"): PlayPart,
-	k("alt+ "):  PlayLoop,
+	k("!"):      NumberPattern,
+	k("#"):      NumberPattern,
+	k("$"):      NumberPattern,
+	k("%"):      NumberPattern,
+	k("&"):      NumberPattern,
+	k("("):      NumberPattern,
+	k("*"):      NumberPattern,
 	k("+"):      Increase,
-	k("="):      Increase,
 	k("-"):      Decrease,
-	k("enter"):  Enter,
-	k("ctrl+t"): TempoInputSwitch,
-	k("ctrl+o"): OverlayInputSwitch,
-	k("ctrl+s"): SetupInputSwitch,
-	k("ctrl+e"): AccentInputSwitch,
-	k("ctrl+y"): RatchetInputSwitch,
-	k("ctrl+b"): BeatsInputSwitch,
-	k("ctrl+x"): ArrangementInputSwitch,
-	k("ctrl+f"): ToggleArrangementView,
-	k("ctrl+r"): ToggleRatchetMode,
-	k("ctrl+g"): ToggleGateMode,
-	k("ctrl+w"): ToggleWaitMode,
-	k("ctrl+a"): ToggleAccentMode,
-	k("{"):      NextOverlay,
-	k("}"):      PrevOverlay,
-	k("ctrl+v"): Save,
-	k("u"):      Undo,
-	k("U"):      Redo,
-	k("v"):      ToggleVisualMode,
-	k("e"):      TogglePlayEdit,
-	k("ctrl+n"): New,
-	k("ctrl+l"): NewLine,
-	k("ctrl+]"): NewSectionAfter,
-	k("ctrl+p"): NewSectionBefore,
-	k("ctrl+c"): ChangePart,
-	k("]", "s"): NextSection,
-	k("[", "s"): PrevSection,
-	k("]", "c"): NextTheme,
-	k("[", "c"): PrevTheme,
-	k("y"):      Yank,
-	k("m"):      Mute,
-	k("M"):      Solo,
-	k("f"):      TriggerAdd,
-	k("d"):      TriggerRemove,
-	k("A"):      AccentIncrease,
-	k("a"):      AccentDecrease,
-	k("G"):      GateIncrease,
-	k("g"):      GateDecrease,
-	k("W"):      WaitIncrease,
-	k("w"):      WaitDecrease,
-	k("x"):      OverlayTriggerRemove,
-	k("c"):      ClearLine,
-	k("C"):      ClearSeq,
-	k("R"):      RatchetIncrease,
-	k("r"):      RatchetDecrease,
-	k("s"):      ActionAddLineReset,
-	k("S"):      ActionAddLineReverse,
-	k("B"):      ActionAddLineBounce,
-	k("z"):      ActionAddLineDelay,
-	k("b"):      ActionAddSkipBeat,
-	k("T"):      ActionAddReset,
-	k("K"):      SelectKeyLine,
-	k("ctrl+u"): PressDownOverlay,
 	k("1"):      NumberPattern,
 	k("2"):      NumberPattern,
 	k("3"):      NumberPattern,
@@ -182,18 +126,81 @@ var mappings = registry{
 	k("7"):      NumberPattern,
 	k("8"):      NumberPattern,
 	k("9"):      NumberPattern,
-	k("!"):      NumberPattern,
+	k("<"):      CursorLineStart,
+	k("="):      Increase,
+	k(">"):      CursorLineEnd,
+	k("?"):      Help,
 	k("@"):      NumberPattern,
-	k("#"):      NumberPattern,
-	k("$"):      NumberPattern,
-	k("%"):      NumberPattern,
-	k("^"):      NumberPattern,
-	k("&"):      NumberPattern,
-	k("*"):      NumberPattern,
-	k("("):      NumberPattern,
-	k("L"):      RotateRight,
+	k("A"):      AccentIncrease,
+	k("B"):      ActionAddLineBounce,
+	k("C"):      ClearSeq,
+	k("G"):      GateIncrease,
 	k("H"):      RotateLeft,
+	k("K"):      SelectKeyLine,
+	k("L"):      RotateRight,
+	k("M"):      Solo,
+	k("R"):      RatchetIncrease,
+	k("S"):      ActionAddLineReverse,
+	k("T"):      ActionAddReset,
+	k("U"):      Redo,
+	k("W"):      WaitIncrease,
+	k("[", "c"): PrevTheme,
+	k("[", "s"): PrevSection,
+	k("]", "c"): NextTheme,
+	k("]", "s"): NextSection,
+	k("^"):      NumberPattern,
+	k("a"):      AccentDecrease,
+	k("alt+ "):  PlayLoop,
+	k("b"):      ActionAddSkipBeat,
+	k("c"):      ClearLine,
+	k("ctrl+@"): PlayPart,
+	k("ctrl+]"): NewSectionAfter,
+	k("ctrl+a"): ToggleAccentMode,
+	k("ctrl+b"): BeatsInputSwitch,
+	k("ctrl+c"): ChangePart,
+	k("ctrl+e"): AccentInputSwitch,
+	k("ctrl+f"): ToggleArrangementView,
+	k("ctrl+g"): ToggleGateMode,
+	k("ctrl+l"): NewLine,
+	k("ctrl+n"): New,
+	k("ctrl+o"): OverlayInputSwitch,
+	k("ctrl+p"): NewSectionBefore,
+	k("ctrl+r"): ToggleRatchetMode,
+	k("ctrl+s"): SetupInputSwitch,
+	k("ctrl+t"): TempoInputSwitch,
+	k("ctrl+u"): PressDownOverlay,
+	k("ctrl+v"): Save,
+	k("ctrl+w"): ToggleWaitMode,
+	k("ctrl+x"): ArrangementInputSwitch,
+	k("ctrl+y"): RatchetInputSwitch,
+	k("d"):      TriggerRemove,
+	k("e"):      TogglePlayEdit,
+	k("enter"):  Enter,
+	k("esc"):    Escape,
+	k("f"):      TriggerAdd,
+	k("g"):      GateDecrease,
+	k("h"):      CursorLeft,
+	k("j"):      CursorDown,
+	k("k"):      CursorUp,
+	k("l"):      CursorRight,
+	k("m"):      Mute,
 	k("p"):      Paste,
+	k("q"):      Quit,
+	k("r"):      RatchetDecrease,
+	k("s"):      ActionAddLineReset,
+	k("u"):      Undo,
+	k("v"):      ToggleVisualMode,
+	k("w"):      WaitDecrease,
+	k("x"):      OverlayTriggerRemove,
+	k("y"):      Yank,
+	k("z"):      ActionAddLineDelay,
+	k("{"):      NextOverlay,
+	k("}"):      PrevOverlay,
+}
+
+var chordMappings = registry{
+	k("T"): MajorTriad,
+	k("t"): MinorTriad,
 }
 
 func k(x ...string) [3]string {
@@ -206,7 +213,7 @@ func k(x ...string) [3]string {
 	}
 }
 
-func ProcessKey(key tea.KeyMsg) Mapping {
+func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType) Mapping {
 	if len(Keycombo) < 3 {
 		Keycombo = append(Keycombo, key)
 	} else {
@@ -219,6 +226,13 @@ func ProcessKey(key tea.KeyMsg) Mapping {
 	}
 
 	command, exists := mappings[ToMappingKey(Keycombo)]
+	if seqtype == grid.SEQTYPE_POLYPHONY {
+		chordCommand, chordExists := chordMappings[ToMappingKey(Keycombo)]
+		if chordExists {
+			command = chordCommand
+			exists = chordExists
+		}
+	}
 
 	if !exists {
 		timer = time.AfterFunc(time.Millisecond*750, func() {

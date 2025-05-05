@@ -17,6 +17,13 @@ const (
 	ACTION_LINE_DELAY
 )
 
+type SequencerType uint8
+
+const (
+	SEQTYPE_TRIGGER SequencerType = iota
+	SEQTYPE_POLYPHONY
+)
+
 type GridKey struct {
 	Line uint8
 	Beat uint8

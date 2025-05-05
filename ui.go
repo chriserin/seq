@@ -23,6 +23,7 @@ import (
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/overlays"
 	themes "github.com/chriserin/seq/internal/themes"
+	"github.com/chriserin/seq/internal/theory"
 	midi "gitlab.com/gomidi/midi/v2"
 )
 
@@ -460,16 +461,17 @@ func (m *model) Redo() UndoStack {
 }
 
 type Definition struct {
-	parts           *[]arrangement.Part
-	arrangement     *arrangement.Arrangement
-	lines           []grid.LineDefinition
-	tempo           int
-	subdivisions    int
-	keyline         uint8
-	accents         patternAccents
-	instrument      string
-	template        string
-	templateUIStyle string
+	parts                 *[]arrangement.Part
+	arrangement           *arrangement.Arrangement
+	lines                 []grid.LineDefinition
+	tempo                 int
+	subdivisions          int
+	keyline               uint8
+	accents               patternAccents
+	instrument            string
+	template              string
+	templateUIStyle       string
+	templateSequencerType grid.SequencerType
 }
 
 type patternAccents struct {
@@ -851,16 +853,17 @@ func InitDefinition(template string, instrument string) Definition {
 
 	parts := InitParts()
 	return Definition{
-		parts:           &parts,
-		arrangement:     InitArrangement(parts),
-		tempo:           120,
-		keyline:         0,
-		subdivisions:    2,
-		lines:           newLines,
-		accents:         patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
-		template:        template,
-		instrument:      instrument,
-		templateUIStyle: gridTemplate.UIStyle,
+		parts:                 &parts,
+		arrangement:           InitArrangement(parts),
+		tempo:                 120,
+		keyline:               0,
+		subdivisions:          2,
+		lines:                 newLines,
+		accents:               patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
+		template:              template,
+		instrument:            instrument,
+		templateUIStyle:       gridTemplate.UIStyle,
+		templateSequencerType: gridTemplate.SequencerType,
 	}
 }
 
@@ -1092,7 +1095,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ResetCurrentOverlay()
 			return m, cmd
 		}
-		mappingsCommand := mappings.ProcessKey(msg)
+		mappingsCommand := mappings.ProcessKey(msg, m.definition.templateSequencerType)
 		switch mappingsCommand.Command {
 		case mappings.HoldingKeys:
 			return m, nil
@@ -1666,6 +1669,14 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.RotateLeft()
 	case mappings.Paste:
 		m.Paste()
+	case mappings.MajorTriad:
+		chord := theory.InitChord()
+		chord.AddNotes(theory.MajorTriad)
+		m.AddChordNotes(chord.Notes())
+	case mappings.MinorTriad:
+		chord := theory.InitChord()
+		chord.AddNotes(theory.MinorTriad)
+		m.AddChordNotes(chord.Notes())
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1698,6 +1709,13 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		}
 	}
 	return m
+}
+
+func (m *model) AddChordNotes(notes []int) {
+	for _, n := range notes {
+		gk := gridKey{Line: m.cursorPos.Line - uint8(n), Beat: m.cursorPos.Beat}
+		m.currentOverlay.SetNote(gk, grid.InitNote())
+	}
 }
 
 func IsShiftSymbol(symbol string) bool {
@@ -2717,14 +2735,17 @@ func (m model) ViewTriggerSeq() string {
 		buf.WriteString(themes.AppDescriptorStyle.Render("- A sequencer for your cli"))
 		buf.WriteString("\n")
 	}
+
 	beats := m.CurrentPart().Beats
 	topLine := strings.Repeat("─", max(32, int(beats)))
 	buf.WriteString("   ")
 	buf.WriteString(themes.SeqBorderStyle.Render(fmt.Sprintf("┌%s", topLine)))
 	buf.WriteString("\n")
+
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
 		buf.WriteString(lineView(i, m, visualCombinedPattern))
 	}
+
 	buf.WriteString(m.CurrentOverlayView())
 	buf.WriteString("\n")
 	return buf.String()

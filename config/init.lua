@@ -31,6 +31,7 @@ end
 
 seq.addtemplate({
 	name = "Piano2",
+	seqtype = "polyphony",
 	maxgatelength = 32,
 	uistyle = "blackwhite",
 	lines = pianoLines,
