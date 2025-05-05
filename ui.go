@@ -2358,11 +2358,11 @@ func (m model) PartView() string {
 	buf.WriteString("             \n")
 	buf.WriteString("     BEATS   \n")
 	buf.WriteString(fmt.Sprintf("      %3s    \n", beatsInput))
-	buf.WriteString("    CYCLES   \n")
+	buf.WriteString("    ⟳ Amount   \n")
 	buf.WriteString(fmt.Sprintf("      %s      \n", cyclesInput))
-	buf.WriteString("  START BEATS\n")
+	buf.WriteString("  START BEAT\n")
 	buf.WriteString(fmt.Sprintf("      %s      \n", startBeatsInput))
-	buf.WriteString("  START CYCLE\n")
+	buf.WriteString("  ⟳ Start\n")
 	buf.WriteString(fmt.Sprintf("      %s      \n", startCyclesInput))
 	return buf.String()
 }
@@ -2697,17 +2697,17 @@ func (m model) ViewTriggerSeq() string {
 	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
 
 	if m.patternMode == PATTERN_ACCENT {
-		mode = " Accent Mode "
+		mode = " Accent "
 		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_GATE {
-		mode = " Gate Mode "
+		mode = " Gate "
 		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_WAIT {
-		mode = " Wait Mode "
+		mode = " Wait "
 		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_RATCHET {
-		mode = " Ratchet Mode "
-		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
+		mode = " Ratchet "
+		buf.WriteString(fmt.Sprintf("    %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetEditView())
 	} else if m.selectionIndicator == SELECT_PART {

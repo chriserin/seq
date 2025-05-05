@@ -1128,7 +1128,7 @@ func EvaluateStyles() {
 
 	SeqBorderStyle = lipgloss.NewStyle().Foreground(Lighten(AltSeqBackgroundColor, 100.0))
 	AppTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(AppTitleColor)
-	AppDescriptorStyle = lipgloss.NewStyle().Foreground(Darken(AppTitleColor, 30.0))
+	AppDescriptorStyle = lipgloss.NewStyle().Foreground(Darken(AppTitleColor, 20.0))
 }
 
 func SetAccentColors(accentColors []string) {
