@@ -68,6 +68,12 @@ func (c *Chord) AddNotes(noteConstant uint32) Chord {
 	if IsTriad(noteConstant) {
 		currentTriad := c.CurrentTriad()
 		c.Replace(currentTriad, noteConstant)
+	} else if IsSeventh(noteConstant) {
+		currentSeventh := c.CurrentSeventh()
+		c.Replace(currentSeventh, noteConstant)
+	} else if IsFifth(noteConstant) {
+		currentFifth := c.CurrentFifth()
+		c.Replace(currentFifth, noteConstant)
 	} else {
 		c.notes |= noteConstant
 	}
@@ -88,6 +94,46 @@ func IsTriad(noteConstant uint32) bool {
 
 func (c Chord) CurrentTriad() uint32 {
 	for _, t := range triads {
+		if ContainsBits(c.notes, t) {
+			return t
+		}
+	}
+	return 0
+}
+
+var fifths = []uint32{Perfect5, Dim5, Aug5}
+
+func IsFifth(noteConstant uint32) bool {
+	for _, t := range fifths {
+		if ContainsBits(noteConstant, t) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c Chord) CurrentFifth() uint32 {
+	for _, t := range fifths {
+		if ContainsBits(c.notes, t) {
+			return t
+		}
+	}
+	return 0
+}
+
+var sevenths = []uint32{MajorSeventh, MinorSeventh}
+
+func IsSeventh(noteConstant uint32) bool {
+	for _, t := range sevenths {
+		if ContainsBits(noteConstant, t) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c Chord) CurrentSeventh() uint32 {
+	for _, t := range sevenths {
 		if ContainsBits(c.notes, t) {
 			return t
 		}

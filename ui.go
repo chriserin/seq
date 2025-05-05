@@ -1670,15 +1670,23 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.Paste:
 		m.Paste()
 	case mappings.MajorTriad:
-		chord, pos := m.CurrentChord()
-		oldChord := chord.AddNotes(theory.MajorTriad)
-		m.RemoveChordNotes(oldChord.Notes(), pos)
-		m.AddChordNotes(chord.Notes(), pos)
+		m.AlterChord(theory.MajorTriad)
 	case mappings.MinorTriad:
-		chord, pos := m.CurrentChord()
-		oldChord := chord.AddNotes(theory.MinorTriad)
-		m.RemoveChordNotes(oldChord.Notes(), pos)
-		m.AddChordNotes(chord.Notes(), pos)
+		m.AlterChord(theory.MinorTriad)
+	case mappings.AugmentedTriad:
+		m.AlterChord(theory.AugmentedTriad)
+	case mappings.DiminishedTriad:
+		m.AlterChord(theory.DiminishedTriad)
+	case mappings.MajorSeventh:
+		m.AlterChord(theory.MajorSeventh)
+	case mappings.MinorSeventh:
+		m.AlterChord(theory.MinorSeventh)
+	case mappings.AugFifth:
+		m.AlterChord(theory.Aug5)
+	case mappings.DimFifth:
+		m.AlterChord(theory.Dim5)
+	case mappings.PerfectFifth:
+		m.AlterChord(theory.Perfect5)
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1711,6 +1719,28 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		}
 	}
 	return m
+}
+
+func (m *model) AlterChord(chordAlteration uint32) {
+	chord, pos := m.CurrentChord()
+	oldChord := chord.AddNotes(chordAlteration)
+	m.RemoveChordNotes(oldChord.Notes(), pos)
+	m.AddChordNotes(chord.Notes(), pos)
+	m.PlayChord(chord, pos)
+}
+
+func (m model) PlayChord(chord theory.Chord, pos uint8) {
+	for _, n := range chord.Notes() {
+		onMessage, offMessage := NoteMessages(
+			m.definition.lines[pos-uint8(n)],
+			m.definition.accents.Data[4].Value,
+			400*time.Millisecond,
+			ACCENT_TARGET_VELOCITY,
+			0,
+		)
+		m.ProcessNoteMsg(onMessage)
+		m.ProcessNoteMsg(offMessage)
+	}
 }
 
 func (m *model) CurrentChord() (theory.Chord, uint8) {

@@ -101,6 +101,13 @@ const (
 	Paste
 	MajorTriad
 	MinorTriad
+	AugmentedTriad
+	DiminishedTriad
+	MinorSeventh
+	MajorSeventh
+	AugFifth
+	DimFifth
+	PerfectFifth
 )
 
 type mappingKey [3]string
@@ -108,29 +115,12 @@ type registry map[mappingKey]Command
 
 var mappings = registry{
 	k(" "):      PlayStop,
-	k("!"):      NumberPattern,
-	k("#"):      NumberPattern,
-	k("$"):      NumberPattern,
-	k("%"):      NumberPattern,
-	k("&"):      NumberPattern,
-	k("("):      NumberPattern,
-	k("*"):      NumberPattern,
 	k("+"):      Increase,
 	k("-"):      Decrease,
-	k("1"):      NumberPattern,
-	k("2"):      NumberPattern,
-	k("3"):      NumberPattern,
-	k("4"):      NumberPattern,
-	k("5"):      NumberPattern,
-	k("6"):      NumberPattern,
-	k("7"):      NumberPattern,
-	k("8"):      NumberPattern,
-	k("9"):      NumberPattern,
 	k("<"):      CursorLineStart,
 	k("="):      Increase,
 	k(">"):      CursorLineEnd,
 	k("?"):      Help,
-	k("@"):      NumberPattern,
 	k("A"):      AccentIncrease,
 	k("B"):      ActionAddLineBounce,
 	k("C"):      ClearSeq,
@@ -148,7 +138,6 @@ var mappings = registry{
 	k("[", "s"): PrevSection,
 	k("]", "c"): NextTheme,
 	k("]", "s"): NextSection,
-	k("^"):      NumberPattern,
 	k("a"):      AccentDecrease,
 	k("alt+ "):  PlayLoop,
 	k("b"):      ActionAddSkipBeat,
@@ -198,9 +187,37 @@ var mappings = registry{
 	k("}"):      PrevOverlay,
 }
 
+var triggerMappings = registry{
+	k("!"): NumberPattern,
+	k("@"): NumberPattern,
+	k("#"): NumberPattern,
+	k("$"): NumberPattern,
+	k("%"): NumberPattern,
+	k("^"): NumberPattern,
+	k("&"): NumberPattern,
+	k("*"): NumberPattern,
+	k("("): NumberPattern,
+	k("1"): NumberPattern,
+	k("2"): NumberPattern,
+	k("3"): NumberPattern,
+	k("4"): NumberPattern,
+	k("5"): NumberPattern,
+	k("6"): NumberPattern,
+	k("7"): NumberPattern,
+	k("8"): NumberPattern,
+	k("9"): NumberPattern,
+}
+
 var chordMappings = registry{
-	k("T"): MajorTriad,
-	k("t"): MinorTriad,
+	k("t", "M"): MajorTriad,
+	k("t", "m"): MinorTriad,
+	k("t", "d"): DiminishedTriad,
+	k("t", "a"): AugmentedTriad,
+	k("7", "m"): MinorSeventh,
+	k("7", "M"): MajorSeventh,
+	k("5", "a"): AugFifth,
+	k("5", "d"): DimFifth,
+	k("5", "p"): PerfectFifth,
 }
 
 func k(x ...string) [3]string {
@@ -226,7 +243,14 @@ func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType) Mapping {
 	}
 
 	command, exists := mappings[ToMappingKey(Keycombo)]
-	if seqtype == grid.SEQTYPE_POLYPHONY {
+	switch seqtype {
+	case grid.SEQTYPE_TRIGGER:
+		triggerCommand, triggerExists := triggerMappings[ToMappingKey(Keycombo)]
+		if triggerExists {
+			command = triggerCommand
+			exists = triggerExists
+		}
+	case grid.SEQTYPE_POLYPHONY:
 		chordCommand, chordExists := chordMappings[ToMappingKey(Keycombo)]
 		if chordExists {
 			command = chordCommand
