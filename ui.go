@@ -2337,6 +2337,13 @@ func (m *model) AccentModify(modifier int8) {
 }
 
 func (m *model) GateModify(modifier int8) {
+	modifyFunc := func(key gridKey, currentNote note) {
+		m.currentOverlay.SetNote(key, currentNote.IncrementGate(modifier, len(config.ShortGates)+len(config.LongGates)))
+	}
+	m.Modify(modifyFunc)
+}
+
+func (m *model) Modify(modifyFunc func(gridKey, note)) {
 	bounds := m.YankBounds()
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
@@ -2366,7 +2373,7 @@ func (m *model) GateModify(modifier int8) {
 	for key, currentNote := range combinedOverlay {
 		if slices.Contains(keys, key) {
 			if currentNote != zeronote {
-				m.currentOverlay.SetNote(key, currentNote.IncrementGate(modifier, len(config.ShortGates)+len(config.LongGates)))
+				modifyFunc(key, currentNote)
 			}
 		}
 	}
