@@ -679,14 +679,10 @@ func (m *model) OverlayRemoveTrigger() {
 }
 
 func (m *model) RatchetModify(modifier int8) {
-	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
-	bounds := m.YankBounds()
-
-	for key, currentNote := range combinedPattern {
-		if bounds.InBounds(key) {
-			m.currentOverlay.SetNote(key, currentNote.IncrementRatchet(modifier))
-		}
+	modifyFunc := func(key gridKey, currentNote note) {
+		m.currentOverlay.SetNote(key, currentNote.IncrementRatchet(modifier))
 	}
+	m.Modify(modifyFunc)
 }
 
 func (m *model) EnsureRatchetCursorVisisble() {
@@ -2324,16 +2320,10 @@ func (m *model) incrementWait(every uint8, modifier int8) {
 }
 
 func (m *model) AccentModify(modifier int8) {
-	bounds := m.YankBounds()
-	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
-
-	for key, currentNote := range combinedOverlay {
-		if bounds.InBounds(key) {
-			if currentNote != zeronote {
-				m.currentOverlay.SetNote(key, currentNote.IncrementAccent(modifier, uint8(len(config.Accents))))
-			}
-		}
+	modifyFunc := func(key gridKey, currentNote note) {
+		m.currentOverlay.SetNote(key, currentNote.IncrementAccent(modifier, uint8(len(config.Accents))))
 	}
+	m.Modify(modifyFunc)
 }
 
 func (m *model) GateModify(modifier int8) {
@@ -2380,16 +2370,11 @@ func (m *model) Modify(modifyFunc func(gridKey, note)) {
 }
 
 func (m *model) WaitModify(modifier int8) {
-	bounds := m.YankBounds()
-	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
-
-	for key, currentNote := range combinedOverlay {
-		if bounds.InBounds(key) {
-			if currentNote != zeronote {
-				m.currentOverlay.SetNote(key, currentNote.IncrementWait(modifier))
-			}
-		}
+	modifyFunc := func(key gridKey, currentNote note) {
+		m.currentOverlay.SetNote(key, currentNote.IncrementWait(modifier))
 	}
+
+	m.Modify(modifyFunc)
 }
 
 func (m model) PatternActionBeatBoundaries() (uint8, uint8) {
