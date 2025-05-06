@@ -100,6 +100,8 @@ const (
 	NumberPattern
 	RotateRight
 	RotateLeft
+	RotateUp
+	RotateDown
 	Paste
 	MajorTriad
 	MinorTriad
@@ -128,9 +130,11 @@ var mappings = registry{
 	k("C"):      ClearSeq,
 	k("]", "g"): GateIncrease,
 	k("]", "e"): GateBigIncrease,
+	k("J"):      RotateDown,
+	k("K"):      RotateUp,
 	k("H"):      RotateLeft,
-	k("K"):      SelectKeyLine,
 	k("L"):      RotateRight,
+	k("Y"):      SelectKeyLine,
 	k("M"):      Solo,
 	k("R"):      RatchetIncrease,
 	k("S"):      ActionAddLineReverse,

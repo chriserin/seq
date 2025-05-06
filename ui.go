@@ -1657,6 +1657,10 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.RotateRight()
 	case mappings.RotateLeft:
 		m.RotateLeft()
+	case mappings.RotateUp:
+		m.RotateUp()
+	case mappings.RotateDown:
+		m.RotateDown()
 	case mappings.Paste:
 		m.Paste()
 	case mappings.MajorTriad:
@@ -2030,6 +2034,34 @@ func (m *model) RotateLeft() {
 		m.currentOverlay.SetNote(GK(l, end), firstNote)
 	}
 
+}
+
+func (m *model) RotateUp() {
+	pattern := m.CombinedBeatPattern(m.currentOverlay)
+	beat := m.cursorPos.Beat
+	for l := uint8(0); l < uint8(len(m.definition.lines)); l++ {
+		key := GK(l, beat)
+		newKey := GK(l-1, beat)
+		note, exists := pattern[key]
+		if exists {
+			m.currentOverlay.RemoveNote(key)
+			m.currentOverlay.SetNote(newKey, note)
+		}
+	}
+}
+
+func (m *model) RotateDown() {
+	pattern := m.CombinedBeatPattern(m.currentOverlay)
+	beat := m.cursorPos.Beat
+	for l := uint8(len(m.definition.lines)); l > 0; l-- {
+		key := GK(l, beat)
+		newKey := GK(l+1, beat)
+		note, exists := pattern[key]
+		if exists {
+			m.currentOverlay.RemoveNote(key)
+			m.currentOverlay.SetNote(newKey, note)
+		}
+	}
 }
 
 func Mute(playState []linestate, line uint8) []linestate {
