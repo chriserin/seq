@@ -1714,8 +1714,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 func (m *model) AlterChord(chordAlteration uint32) {
 	chord, pos := m.CurrentChord()
 	oldChord := chord.AddNotes(chordAlteration)
-	m.RemoveChordNotes(oldChord.Notes(), pos)
-	chordKeys := m.AddChordNotes(chord.Notes(), pos)
+	removedNotes := m.RemoveChordNotes(oldChord.Notes(), pos)
+	chordKeys := m.AddChordNotes(chord.Notes(), pos, removedNotes)
 	m.currentChordKeys = chordKeys
 	m.PlayChord(chord, pos)
 }
@@ -1764,21 +1764,35 @@ func (m *model) ChordNotes() ([]uint8, int) {
 	}
 }
 
-func (m *model) AddChordNotes(notes []int, pos uint8) []gridKey {
+func (m *model) AddChordNotes(notes []int, pos uint8, previousNotes []note) []gridKey {
 	chordKeys := make([]gridKey, len(notes))
 	for i, n := range notes {
+		var noteToUse note
+		if i < len(previousNotes) {
+			noteToUse = previousNotes[i]
+		} else if len(previousNotes) > 0 {
+			noteToUse = previousNotes[0]
+		} else {
+			noteToUse = grid.InitNote()
+		}
 		gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
-		m.currentOverlay.SetNote(gk, grid.InitNote())
+		m.currentOverlay.SetNote(gk, noteToUse)
 		chordKeys[i] = gk
 	}
 	return chordKeys
 }
 
-func (m *model) RemoveChordNotes(notes []int, pos uint8) {
+func (m *model) RemoveChordNotes(notes []int, pos uint8) []note {
+	removedNotes := make([]note, 0, len(notes))
 	for _, n := range notes {
 		gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
+		note, exists := m.currentOverlay.GetNote(gk)
+		if exists {
+			removedNotes = append(removedNotes, note)
+		}
 		m.currentOverlay.RemoveNote(gk)
 	}
+	return removedNotes
 }
 
 func IsShiftSymbol(symbol string) bool {
