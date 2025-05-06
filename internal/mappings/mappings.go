@@ -80,6 +80,8 @@ const (
 	AccentDecrease
 	GateIncrease
 	GateDecrease
+	GateBigIncrease
+	GateBigDecrease
 	WaitIncrease
 	WaitDecrease
 	OverlayTriggerRemove
@@ -124,7 +126,8 @@ var mappings = registry{
 	k("A"):      AccentIncrease,
 	k("B"):      ActionAddLineBounce,
 	k("C"):      ClearSeq,
-	k("G"):      GateIncrease,
+	k("]", "g"): GateIncrease,
+	k("]", "e"): GateBigIncrease,
 	k("H"):      RotateLeft,
 	k("K"):      SelectKeyLine,
 	k("L"):      RotateRight,
@@ -167,7 +170,8 @@ var mappings = registry{
 	k("enter"):  Enter,
 	k("esc"):    Escape,
 	k("f"):      TriggerAdd,
-	k("g"):      GateDecrease,
+	k("[", "g"): GateDecrease,
+	k("[", "e"): GateBigDecrease,
 	k("h"):      CursorLeft,
 	k("j"):      CursorDown,
 	k("k"):      CursorUp,

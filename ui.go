@@ -268,6 +268,7 @@ type model struct {
 	programChannel        chan midiEventLoopMsg
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
+	currentChordKeys      []gridKey
 	// save everything below here
 	definition Definition
 }
@@ -677,24 +678,13 @@ func (m *model) OverlayRemoveTrigger() {
 	}
 }
 
-func (m *model) IncreaseRatchet() {
+func (m *model) RatchetModify(modifier int8) {
 	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
 	bounds := m.YankBounds()
 
 	for key, currentNote := range combinedPattern {
 		if bounds.InBounds(key) {
-			m.currentOverlay.SetNote(key, currentNote.IncrementRatchet(1))
-		}
-	}
-}
-
-func (m *model) DecreaseRatchet() {
-	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
-	bounds := m.YankBounds()
-
-	for key, currentNote := range combinedOverlay {
-		if bounds.InBounds(key) {
-			m.currentOverlay.SetNote(key, currentNote.IncrementRatchet(-1))
+			m.currentOverlay.SetNote(key, currentNote.IncrementRatchet(modifier))
 		}
 	}
 }
@@ -1628,6 +1618,10 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.GateModify(1)
 	case mappings.GateDecrease:
 		m.GateModify(-1)
+	case mappings.GateBigIncrease:
+		m.GateModify(8)
+	case mappings.GateBigDecrease:
+		m.GateModify(-8)
 	case mappings.WaitIncrease:
 		m.WaitModify(1)
 	case mappings.WaitDecrease:
@@ -1641,9 +1635,9 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 			m.ClearOverlayLine()
 		}
 	case mappings.RatchetIncrease:
-		m.IncreaseRatchet()
+		m.RatchetModify(1)
 	case mappings.RatchetDecrease:
-		m.DecreaseRatchet()
+		m.RatchetModify(-1)
 		m.EnsureRatchetCursorVisisble()
 	case mappings.ActionAddLineReset:
 		m.AddAction(grid.ACTION_LINE_RESET)
@@ -1725,7 +1719,8 @@ func (m *model) AlterChord(chordAlteration uint32) {
 	chord, pos := m.CurrentChord()
 	oldChord := chord.AddNotes(chordAlteration)
 	m.RemoveChordNotes(oldChord.Notes(), pos)
-	m.AddChordNotes(chord.Notes(), pos)
+	chordKeys := m.AddChordNotes(chord.Notes(), pos)
+	m.currentChordKeys = chordKeys
 	m.PlayChord(chord, pos)
 }
 
@@ -1773,11 +1768,14 @@ func (m *model) ChordNotes() ([]uint8, int) {
 	}
 }
 
-func (m *model) AddChordNotes(notes []int, pos uint8) {
-	for _, n := range notes {
+func (m *model) AddChordNotes(notes []int, pos uint8) []gridKey {
+	chordKeys := make([]gridKey, len(notes))
+	for i, n := range notes {
 		gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
 		m.currentOverlay.SetNote(gk, grid.InitNote())
+		chordKeys[i] = gk
 	}
+	return chordKeys
 }
 
 func (m *model) RemoveChordNotes(notes []int, pos uint8) {
@@ -2342,8 +2340,31 @@ func (m *model) GateModify(modifier int8) {
 	bounds := m.YankBounds()
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
+	boundsKeys := make([]gridKey, 0)
+	var isBoth bool
+	for key := range combinedOverlay {
+		isChordKey := len(m.currentChordKeys) > 0 && slices.Contains(m.currentChordKeys, key)
+		isBoundsKey := bounds.InBounds(key)
+
+		if isChordKey && isBoundsKey {
+			isBoth = true
+		}
+		if isBoundsKey {
+			boundsKeys = append(boundsKeys, key)
+		}
+	}
+
+	var keys []gridKey
+	if isBoth && len(boundsKeys) == 1 {
+		keys = m.currentChordKeys
+	} else if len(boundsKeys) > 0 {
+		keys = boundsKeys
+	} else {
+		keys = m.currentChordKeys
+	}
+
 	for key, currentNote := range combinedOverlay {
-		if bounds.InBounds(key) {
+		if slices.Contains(keys, key) {
 			if currentNote != zeronote {
 				m.currentOverlay.SetNote(key, currentNote.IncrementGate(modifier, len(config.ShortGates)+len(config.LongGates)))
 			}
