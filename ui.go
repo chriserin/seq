@@ -1724,8 +1724,9 @@ type chordChangeFn = func(theory.Chord) (theory.Chord, theory.Chord)
 func (m *model) ChordChange(fn chordChangeFn) {
 	chord, pos := m.CurrentChord()
 	oldChord, chord := fn(chord)
-	removedNotes := m.RemoveChordNotes(oldChord.Notes(), pos)
-	chordKeys := m.AddChordNotes(chord.Notes(), pos, removedNotes)
+	theory.UpdateChord(chord)
+	removedNotes := m.RemoveChordNotes(oldChord, pos)
+	chordKeys := m.AddChordNotes(chord, pos, removedNotes)
 	m.currentChordKeys = chordKeys
 	m.PlayChord(chord, pos)
 }
@@ -1766,29 +1767,34 @@ func (m model) PlayChord(chord theory.Chord, pos uint8) {
 }
 
 func (m *model) CurrentChord() (theory.Chord, uint8) {
-	currentNotes, position := m.ChordNotes()
+	gridKeys := make([]grid.GridKey, 0, len(m.definition.lines))
+	m.CursorBeatGridKeys(&gridKeys)
+	chordId := m.currentOverlay.CurrentChordId(m.currentOverlay.Key.GetMinimumKeyCycle(), gridKeys)
+
+	currentNotes, position := m.ChordNotes(chordId)
 	if len(currentNotes) > 0 {
 		identifiedChord := theory.FromNotesWithAnalysis(currentNotes)
+		identifiedChord.Id = chordId
 		return identifiedChord, uint8(identifiedChord.RelativePosition(position))
 	}
-	return theory.InitChord(), m.cursorPos.Line
+	newChord := theory.InitChord()
+	return newChord, m.cursorPos.Line
 }
 
-func (m *model) ChordNotes() ([]uint8, uint8) {
-	pattern := make(overlays.OverlayPattern)
-	m.currentOverlay.CombineOverlayPattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle())
+func (m *model) ChordNotes(chordId int) ([]uint8, uint8) {
+	chordPattern := make(grid.Pattern)
+	m.currentOverlay.CurrentChord(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
+
 	notes := make([]uint8, 0)
 	var startPosition uint8
-	for i, line := range m.definition.lines {
-		key := GK(uint8(i), m.cursorPos.Beat)
-		note, exists := pattern[key]
-		if exists && note.Note.AccentIndex > 0 {
-			notes = append(notes, line.Note)
-			if uint8(i) > startPosition {
-				startPosition = uint8(i)
-			}
+	for gk := range chordPattern {
+		line := m.definition.lines[gk.Line]
+		notes = append(notes, line.Note)
+		if gk.Line > startPosition {
+			startPosition = gk.Line
 		}
 	}
+
 	if len(notes) > 0 {
 		return theory.ShiftToZero(notes), startPosition
 	} else {
@@ -1796,8 +1802,10 @@ func (m *model) ChordNotes() ([]uint8, uint8) {
 	}
 }
 
-func (m *model) AddChordNotes(notes []uint8, pos uint8, previousNotes []note) []gridKey {
+func (m *model) AddChordNotes(chord theory.Chord, pos uint8, previousNotes []note) []gridKey {
+	notes := chord.Notes()
 	chordKeys := make([]gridKey, len(notes))
+
 	for i, n := range notes {
 		var noteToUse note
 		if i < len(previousNotes) {
@@ -1807,14 +1815,17 @@ func (m *model) AddChordNotes(notes []uint8, pos uint8, previousNotes []note) []
 		} else {
 			noteToUse = grid.InitNote()
 		}
+		noteToUse.ChordId = chord.Id
 		gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
 		m.currentOverlay.SetNote(gk, noteToUse)
 		chordKeys[i] = gk
 	}
+
 	return chordKeys
 }
 
-func (m *model) RemoveChordNotes(notes []uint8, pos uint8) []note {
+func (m *model) RemoveChordNotes(chord theory.Chord, pos uint8) []note {
+	notes := chord.Notes()
 	removedNotes := make([]note, 0, len(notes))
 	for _, n := range notes {
 		gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
@@ -2183,6 +2194,12 @@ func (m model) CurrentBeatGridKeys(gridKeys *[]grid.GridKey) {
 		if linestate.IsSolo() || (!linestate.IsMuted() && !m.hasSolo) {
 			*gridKeys = append(*gridKeys, linestate.GridKey())
 		}
+	}
+}
+
+func (m model) CursorBeatGridKeys(gridKeys *[]grid.GridKey) {
+	for i := range m.definition.lines {
+		*gridKeys = append(*gridKeys, GK(uint8(i), m.cursorPos.Beat))
 	}
 }
 

@@ -5,13 +5,16 @@ import (
 )
 
 func InitChord() Chord {
-	return Chord{}
+	chord := Chord{}
+	chordId := RegisterChord(chord)
+	return Chord{Id: chordId}
 }
 
 type Chord struct {
 	notes     uint32
 	inversion int8
 	score     int
+	Id        int
 }
 
 func (c Chord) Score() int {

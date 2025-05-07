@@ -39,14 +39,15 @@ type Note struct {
 	Action      Action
 	GateIndex   uint8
 	WaitIndex   uint8
+	ChordId     int
 }
 
 func InitNote() Note {
-	return Note{5, InitRatchet(), ACTION_NOTHING, 0, 0}
+	return Note{5, InitRatchet(), ACTION_NOTHING, 0, 0, 0}
 }
 
 func InitActionNote(act Action) Note {
-	return Note{0, InitRatchet(), act, 0, 0}
+	return Note{0, InitRatchet(), act, 0, 0, 0}
 }
 
 func (n Note) IncrementAccent(modifier int8, accentsLength uint8) Note {
