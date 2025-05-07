@@ -1724,6 +1724,7 @@ type chordChangeFn = func(theory.Chord) theory.Chord
 
 func (m model) CurrentChordKeys() []gridKey {
 	chordId := m.CurrentChordId()
+	fmt.Println("CurrentChordId", chordId)
 	chordPattern := make(grid.Pattern)
 	m.currentOverlay.CurrentChord(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
 	return slices.Collect(maps.Keys(chordPattern))
@@ -1771,15 +1772,18 @@ func (m *model) PreviousInversion() {
 
 func (m model) PlayChord(chord theory.Chord, pos uint8) {
 	for _, n := range chord.Notes() {
-		onMessage, offMessage := NoteMessages(
-			m.definition.lines[pos-uint8(n)],
-			m.definition.accents.Data[4].Value,
-			400*time.Millisecond,
-			ACCENT_TARGET_VELOCITY,
-			0,
-		)
-		m.ProcessNoteMsg(onMessage)
-		m.ProcessNoteMsg(offMessage)
+		index := pos - uint8(n)
+		if int(index) < len(m.definition.lines) {
+			onMessage, offMessage := NoteMessages(
+				m.definition.lines[pos-uint8(n)],
+				m.definition.accents.Data[4].Value,
+				400*time.Millisecond,
+				ACCENT_TARGET_VELOCITY,
+				0,
+			)
+			m.ProcessNoteMsg(onMessage)
+			m.ProcessNoteMsg(offMessage)
+		}
 	}
 }
 
@@ -1837,14 +1841,21 @@ func (m *model) AddChordNotes(chord theory.Chord, pos uint8, previousNotes grid.
 		} else if len(previousNotes) > 0 {
 			noteToUse = previousGridNotes[0]
 		} else {
-			gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
-			noteToUse = GridNote{gk, grid.InitNote()}
+			index := pos - uint8(n)
+			if int(index) < len(m.definition.lines) {
+				gk := gridKey{Line: index, Beat: m.cursorPos.Beat}
+				noteToUse = GridNote{gk, grid.InitNote()}
+			}
 		}
 		newNote := noteToUse.note
 		newNote.ChordId = chord.Id
-		gk := gridKey{Line: pos - uint8(n), Beat: noteToUse.gridKey.Beat}
-		m.currentOverlay.SetNote(gk, newNote)
-		chordKeys[i] = gk
+
+		index := pos - uint8(n)
+		if int(index) < len(m.definition.lines) {
+			gk := gridKey{Line: index, Beat: noteToUse.gridKey.Beat}
+			m.currentOverlay.SetNote(gk, newNote)
+			chordKeys[i] = gk
+		}
 	}
 
 	return chordKeys
@@ -2099,13 +2110,15 @@ func (m *model) RotateLeft() {
 func (m *model) RotateUp() {
 	pattern := m.CombinedBeatPattern(m.currentOverlay)
 	beat := m.cursorPos.Beat
-	for l := uint8(0); l < uint8(len(m.definition.lines)); l++ {
-		key := GK(l, beat)
-		newKey := GK(l-1, beat)
-		note, exists := pattern[key]
-		if exists {
-			m.currentOverlay.RemoveNote(key)
-			m.currentOverlay.SetNote(newKey, note)
+	for l := 0; l < len(m.definition.lines); l++ {
+		key := GK(uint8(l), beat)
+		m.currentOverlay.RemoveNote(key)
+		if l != 0 {
+			newKey := GK(uint8(l-1), beat)
+			note, exists := pattern[key]
+			if exists {
+				m.currentOverlay.SetNote(newKey, note)
+			}
 		}
 	}
 }
@@ -2115,11 +2128,14 @@ func (m *model) RotateDown() {
 	beat := m.cursorPos.Beat
 	for l := uint8(len(m.definition.lines)); l > 0; l-- {
 		key := GK(l, beat)
-		newKey := GK(l+1, beat)
-		note, exists := pattern[key]
-		if exists {
-			m.currentOverlay.RemoveNote(key)
-			m.currentOverlay.SetNote(newKey, note)
+		m.currentOverlay.RemoveNote(key)
+		index := l + 1
+		if int(index) < len(m.definition.lines) {
+			newKey := GK(index, beat)
+			note, exists := pattern[key]
+			if exists {
+				m.currentOverlay.SetNote(newKey, note)
+			}
 		}
 	}
 }
