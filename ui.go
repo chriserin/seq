@@ -270,7 +270,6 @@ type model struct {
 	programChannel        chan midiEventLoopMsg
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
-	currentChordKeys      []gridKey
 	// save everything below here
 	definition Definition
 }
@@ -1723,6 +1722,13 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 
 type chordChangeFn = func(theory.Chord) theory.Chord
 
+func (m model) CurrentChordKeys() []gridKey {
+	chordId := m.CurrentChordId()
+	chordPattern := make(grid.Pattern)
+	m.currentOverlay.CurrentChord(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
+	return slices.Collect(maps.Keys(chordPattern))
+}
+
 func (m *model) ChordChange(fn chordChangeFn) {
 	chordId := m.CurrentChordId()
 	chordPattern := make(grid.Pattern)
@@ -1738,8 +1744,7 @@ func (m *model) ChordChange(fn chordChangeFn) {
 
 	theory.UpdateChord(chord)
 	m.RemoveChordNotes(maps.Keys(chordPattern))
-	chordKeys := m.AddChordNotes(chord, pos, chordPattern)
-	m.currentChordKeys = chordKeys
+	m.AddChordNotes(chord, pos, chordPattern)
 	m.PlayChord(chord, pos)
 }
 
@@ -2443,11 +2448,11 @@ func (m *model) GateModify(modifier int8) {
 func (m *model) Modify(modifyFunc func(gridKey, note)) {
 	bounds := m.YankBounds()
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
-
+	currentChordKeys := m.CurrentChordKeys()
 	boundsKeys := make([]gridKey, 0)
 	var isBoth bool
 	for key := range combinedOverlay {
-		isChordKey := len(m.currentChordKeys) > 0 && slices.Contains(m.currentChordKeys, key)
+		isChordKey := len(currentChordKeys) > 0 && slices.Contains(currentChordKeys, key)
 		isBoundsKey := bounds.InBounds(key)
 
 		if isChordKey && isBoundsKey {
@@ -2460,11 +2465,11 @@ func (m *model) Modify(modifyFunc func(gridKey, note)) {
 
 	var keys []gridKey
 	if isBoth && len(boundsKeys) == 1 {
-		keys = m.currentChordKeys
+		keys = currentChordKeys
 	} else if len(boundsKeys) > 0 {
 		keys = boundsKeys
 	} else {
-		keys = m.currentChordKeys
+		keys = currentChordKeys
 	}
 
 	for key, currentNote := range combinedOverlay {
