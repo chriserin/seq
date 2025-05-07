@@ -14,6 +14,10 @@ type Chord struct {
 	score     int
 }
 
+func (c Chord) Score() int {
+	return c.score - int(c.inversion)
+}
+
 // Individual note constants in the chromatic scale (relative to root)
 const (
 	Root      = uint32(1 << 0)  // Root note (0)
@@ -146,9 +150,9 @@ func (c *Chord) Replace(oldNotes uint32, newNotes uint32) {
 	c.notes |= newNotes
 }
 
-func (c Chord) UninvertedNotes() []int {
-	notes := make([]int, 0)
-	for i := 0; i < 32; i++ {
+func (c Chord) UninvertedNotes() []uint8 {
+	notes := make([]uint8, 0)
+	for i := uint8(0); i < 32; i++ {
 		if c.notes&(1<<i) != 0 {
 			notes = append(notes, i)
 		}
@@ -159,7 +163,7 @@ func (c Chord) UninvertedNotes() []int {
 // Notes returns a slice of integers representing the notes in the chord
 // If the chord has an inversion value, the appropriate number of notes
 // from the bottom of the chord are moved to the top
-func (c Chord) Notes() []int {
+func (c Chord) Notes() []uint8 {
 	// First collect all notes without considering inversion
 	notes := c.UninvertedNotes()
 
@@ -167,7 +171,7 @@ func (c Chord) Notes() []int {
 	noteCount := len(notes)
 	if noteCount > 0 && c.inversion > 0 && int(c.inversion) < noteCount {
 		// Move the first 'inversion' notes to the end, raising them by an octave
-		invertedNotes := make([]int, 0, noteCount)
+		invertedNotes := make([]uint8, 0, noteCount)
 
 		// Add the remaining notes first (notes after the inversion point)
 		invertedNotes = append(invertedNotes, notes[c.inversion:]...)
@@ -198,5 +202,167 @@ func ChordFromNotes(notes []uint8) Chord {
 		}
 	}
 
-	return Chord{notes: chordBits}
+	result := IdentifyTriadBasedChord(chordBits)
+
+	return result
+}
+
+// NextInversion increases the inversion by 1, but not beyond the number of notes
+func (c *Chord) NextInversion() Chord {
+	oldInversions := c.inversion
+	noteCount := len(c.Notes())
+	if noteCount > 0 {
+		c.inversion = (c.inversion + 1) % int8(noteCount)
+	}
+
+	return Chord{notes: c.notes, inversion: oldInversions}
+}
+
+// PreviousInversion decreases the inversion by 1, cycling back to the highest possible value if at 0
+func (c *Chord) PreviousInversion() Chord {
+
+	oldInversions := c.inversion
+	noteCount := len(c.Notes())
+	if noteCount > 0 {
+		if c.inversion == 0 {
+			c.inversion = int8(noteCount - 1)
+		} else {
+			c.inversion--
+		}
+	}
+	return Chord{notes: c.notes, inversion: oldInversions}
+}
+
+var allTriads = []uint32{MajorTriad, MinorTriad, MajorTriadI1, MinorTriadI1, MajorTriadI2, MinorTriadI2}
+
+type FoundTriad struct {
+	triad    uint32
+	position int
+}
+
+func ContainsTriads(pattern uint32) []FoundTriad {
+	var results = make([]FoundTriad, 0)
+	for _, triad := range allTriads {
+		found, position := ContainsPatternWithRotation(pattern, triad, 24)
+		if found {
+			results = append(results, FoundTriad{triad: triad, position: position})
+		}
+	}
+	return results
+}
+
+func IdentifyTriadBasedChord(pattern uint32) Chord {
+	triads := ContainsTriads(pattern)
+	sortedTriads := sortTriads(triads)
+	likelyTriad := sortedTriads[0]
+	remainingPattern := pattern ^ likelyTriad.triad
+	switch likelyTriad.triad {
+	case MajorTriad:
+		return Chord{notes: MajorTriad | remainingPattern, inversion: 0}
+	case MinorTriad:
+		return Chord{notes: MinorTriad | remainingPattern, inversion: 0}
+	case MajorTriadI1:
+		return Chord{notes: MajorTriad | remainingPattern, inversion: 1}
+	case MinorTriadI1:
+		return Chord{notes: MinorTriad | remainingPattern, inversion: 1}
+	case MajorTriadI2:
+		return Chord{notes: MajorTriad | remainingPattern, inversion: 2}
+	case MinorTriadI2:
+		return Chord{notes: MinorTriad | remainingPattern, inversion: 2}
+	}
+
+	return Chord{}
+}
+
+func sortTriads(triads []FoundTriad) []FoundTriad {
+	// If the input slice is empty, return it as is
+	if len(triads) == 0 {
+		return triads
+	}
+
+	// Create a copy of the input slice to avoid modifying the original
+	result := make([]FoundTriad, len(triads))
+	copy(result, triads)
+
+	// Sort the slice first by position, then by the order in allTriads
+	slices.SortFunc(result, func(a, b FoundTriad) int {
+		// First compare by position
+		if a.position != b.position {
+			return a.position - b.position
+		}
+
+		// If positions are equal, sort by the order in allTriads
+		aIndex := -1
+		bIndex := -1
+
+		for i, triad := range allTriads {
+			if a.triad == triad {
+				aIndex = i
+			}
+			if b.triad == triad {
+				bIndex = i
+			}
+		}
+
+		// If both triads are found in allTriads, compare their indices
+		if aIndex != -1 && bIndex != -1 {
+			return aIndex - bIndex
+		}
+
+		// If only one triad is found in allTriads, it comes first
+		if aIndex != -1 {
+			return -1
+		}
+		if bIndex != -1 {
+			return 1
+		}
+
+		// If neither triad is found in allTriads, maintain their original order
+		return 0
+	})
+
+	return result
+}
+
+// ContainsPatternWithRotation checks if a source bit pattern contains a target bit pattern
+// in any of its rotations. Returns whether the pattern was found and the rotation required.
+// If no match is found, returns false and -1 for the rotation.
+// maxRotations specifies how many rotations to try (typically 12 for musical patterns).
+func ContainsPatternWithRotation(source, target uint32, maxRotations int) (bool, int) {
+	// Try the source as is first
+	if ContainsBits(source, target) {
+		return true, 0
+	}
+
+	// Try all possible rotations up to maxRotations
+	for i := 1; i < maxRotations; i++ {
+		// Try rotating the target instead of the source for more consistent results
+		rotatedTarget := RotateBits(target, i) // Negative rotation to match expected direction
+		if ContainsBits(source, rotatedTarget) {
+			return true, i
+		}
+	}
+	return false, -1
+}
+
+// RotateBits rotates the first 24 bits of a uint32 by the specified number of positions.
+// A positive count rotates to the left, negative to the right.
+func RotateBits(n uint32, count int) uint32 {
+	// Extract only the first 24 bits
+	n &= 0xFFFFFF
+
+	// Handle negative rotations
+	count %= 24
+	if count < 0 {
+		count += 24
+	}
+
+	// Perform the rotation
+	return ((n << count) | (n >> (24 - count))) & 0xFFFFFF
+}
+
+func (c Chord) RelativePosition(firstNotePosition uint8) uint8 {
+	notes := c.UninvertedNotes()
+	n := notes[c.inversion]
+	return firstNotePosition + n
 }

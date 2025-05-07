@@ -112,6 +112,8 @@ const (
 	AugFifth
 	DimFifth
 	PerfectFifth
+	IncreaseInversions
+	DecreaseInversions
 )
 
 type mappingKey [3]string
@@ -226,6 +228,8 @@ var chordMappings = registry{
 	k("5", "a"): AugFifth,
 	k("5", "d"): DimFifth,
 	k("5", "p"): PerfectFifth,
+	k("[", "i"): DecreaseInversions,
+	k("]", "i"): IncreaseInversions,
 }
 
 func k(x ...string) [3]string {

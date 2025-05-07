@@ -1681,6 +1681,10 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.AlterChord(theory.Dim5)
 	case mappings.PerfectFifth:
 		m.AlterChord(theory.Perfect5)
+	case mappings.IncreaseInversions:
+		m.NextInversion()
+	case mappings.DecreaseInversions:
+		m.PreviousInversion()
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1715,13 +1719,36 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	return m
 }
 
-func (m *model) AlterChord(chordAlteration uint32) {
+type chordChangeFn = func(theory.Chord) (theory.Chord, theory.Chord)
+
+func (m *model) ChordChange(fn chordChangeFn) {
 	chord, pos := m.CurrentChord()
-	oldChord := chord.AddNotes(chordAlteration)
+	oldChord, chord := fn(chord)
 	removedNotes := m.RemoveChordNotes(oldChord.Notes(), pos)
 	chordKeys := m.AddChordNotes(chord.Notes(), pos, removedNotes)
 	m.currentChordKeys = chordKeys
 	m.PlayChord(chord, pos)
+}
+
+func (m *model) AlterChord(chordAlteration uint32) {
+	m.ChordChange(func(chord theory.Chord) (theory.Chord, theory.Chord) {
+		oldChord := chord.AddNotes(chordAlteration)
+		return oldChord, chord
+	})
+}
+
+func (m *model) NextInversion() {
+	m.ChordChange(func(chord theory.Chord) (theory.Chord, theory.Chord) {
+		oldChord := chord.NextInversion()
+		return oldChord, chord
+	})
+}
+
+func (m *model) PreviousInversion() {
+	m.ChordChange(func(chord theory.Chord) (theory.Chord, theory.Chord) {
+		oldChord := chord.PreviousInversion()
+		return oldChord, chord
+	})
 }
 
 func (m model) PlayChord(chord theory.Chord, pos uint8) {
@@ -1741,23 +1768,24 @@ func (m model) PlayChord(chord theory.Chord, pos uint8) {
 func (m *model) CurrentChord() (theory.Chord, uint8) {
 	currentNotes, position := m.ChordNotes()
 	if len(currentNotes) > 0 {
-		return theory.ChordFromNotes(currentNotes), uint8(position)
+		identifiedChord := theory.FromNotesWithAnalysis(currentNotes)
+		return identifiedChord, uint8(identifiedChord.RelativePosition(position))
 	}
 	return theory.InitChord(), m.cursorPos.Line
 }
 
-func (m *model) ChordNotes() ([]uint8, int) {
+func (m *model) ChordNotes() ([]uint8, uint8) {
 	pattern := make(overlays.OverlayPattern)
 	m.currentOverlay.CombineOverlayPattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle())
 	notes := make([]uint8, 0)
-	var startPosition int
+	var startPosition uint8
 	for i, line := range m.definition.lines {
 		key := GK(uint8(i), m.cursorPos.Beat)
 		note, exists := pattern[key]
 		if exists && note.Note.AccentIndex > 0 {
 			notes = append(notes, line.Note)
-			if i > startPosition {
-				startPosition = i
+			if uint8(i) > startPosition {
+				startPosition = uint8(i)
 			}
 		}
 	}
@@ -1768,7 +1796,7 @@ func (m *model) ChordNotes() ([]uint8, int) {
 	}
 }
 
-func (m *model) AddChordNotes(notes []int, pos uint8, previousNotes []note) []gridKey {
+func (m *model) AddChordNotes(notes []uint8, pos uint8, previousNotes []note) []gridKey {
 	chordKeys := make([]gridKey, len(notes))
 	for i, n := range notes {
 		var noteToUse note
@@ -1786,7 +1814,7 @@ func (m *model) AddChordNotes(notes []int, pos uint8, previousNotes []note) []gr
 	return chordKeys
 }
 
-func (m *model) RemoveChordNotes(notes []int, pos uint8) []note {
+func (m *model) RemoveChordNotes(notes []uint8, pos uint8) []note {
 	removedNotes := make([]note, 0, len(notes))
 	for _, n := range notes {
 		gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
