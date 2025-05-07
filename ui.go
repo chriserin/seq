@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"iter"
+	"maps"
 	"math/rand"
 	"os"
 	"slices"
@@ -1719,36 +1721,46 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	return m
 }
 
-type chordChangeFn = func(theory.Chord) (theory.Chord, theory.Chord)
+type chordChangeFn = func(theory.Chord) theory.Chord
 
 func (m *model) ChordChange(fn chordChangeFn) {
-	chord, pos := m.CurrentChord()
-	oldChord, chord := fn(chord)
+	chordId := m.CurrentChordId()
+	chordPattern := make(grid.Pattern)
+	m.currentOverlay.CurrentChord(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
+
+	identifiedChord, pos := m.CurrentChord(chordPattern)
+	if chordId != 0 {
+		identifiedChord.Id = chordId
+	}
+
+	chord := fn(identifiedChord)
+	chord.Id = identifiedChord.Id
+
 	theory.UpdateChord(chord)
-	removedNotes := m.RemoveChordNotes(oldChord, pos)
-	chordKeys := m.AddChordNotes(chord, pos, removedNotes)
+	m.RemoveChordNotes(maps.Keys(chordPattern))
+	chordKeys := m.AddChordNotes(chord, pos, chordPattern)
 	m.currentChordKeys = chordKeys
 	m.PlayChord(chord, pos)
 }
 
 func (m *model) AlterChord(chordAlteration uint32) {
-	m.ChordChange(func(chord theory.Chord) (theory.Chord, theory.Chord) {
-		oldChord := chord.AddNotes(chordAlteration)
-		return oldChord, chord
+	m.ChordChange(func(chord theory.Chord) theory.Chord {
+		chord.AddNotes(chordAlteration)
+		return chord
 	})
 }
 
 func (m *model) NextInversion() {
-	m.ChordChange(func(chord theory.Chord) (theory.Chord, theory.Chord) {
-		oldChord := chord.NextInversion()
-		return oldChord, chord
+	m.ChordChange(func(chord theory.Chord) theory.Chord {
+		chord.NextInversion()
+		return chord
 	})
 }
 
 func (m *model) PreviousInversion() {
-	m.ChordChange(func(chord theory.Chord) (theory.Chord, theory.Chord) {
-		oldChord := chord.PreviousInversion()
-		return oldChord, chord
+	m.ChordChange(func(chord theory.Chord) theory.Chord {
+		chord.PreviousInversion()
+		return chord
 	})
 }
 
@@ -1766,25 +1778,24 @@ func (m model) PlayChord(chord theory.Chord, pos uint8) {
 	}
 }
 
-func (m *model) CurrentChord() (theory.Chord, uint8) {
+func (m *model) CurrentChordId() int {
 	gridKeys := make([]grid.GridKey, 0, len(m.definition.lines))
 	m.CursorBeatGridKeys(&gridKeys)
 	chordId := m.currentOverlay.CurrentChordId(m.currentOverlay.Key.GetMinimumKeyCycle(), gridKeys)
+	return chordId
+}
 
-	currentNotes, position := m.ChordNotes(chordId)
+func (m *model) CurrentChord(chordPattern grid.Pattern) (theory.Chord, uint8) {
+	currentNotes, position := m.ChordNotes(chordPattern)
 	if len(currentNotes) > 0 {
 		identifiedChord := theory.FromNotesWithAnalysis(currentNotes)
-		identifiedChord.Id = chordId
 		return identifiedChord, uint8(identifiedChord.RelativePosition(position))
 	}
 	newChord := theory.InitChord()
 	return newChord, m.cursorPos.Line
 }
 
-func (m *model) ChordNotes(chordId int) ([]uint8, uint8) {
-	chordPattern := make(grid.Pattern)
-	m.currentOverlay.CurrentChord(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
-
+func (m *model) ChordNotes(chordPattern grid.Pattern) ([]uint8, uint8) {
 	notes := make([]uint8, 0)
 	var startPosition uint8
 	for gk := range chordPattern {
@@ -1802,40 +1813,45 @@ func (m *model) ChordNotes(chordId int) ([]uint8, uint8) {
 	}
 }
 
-func (m *model) AddChordNotes(chord theory.Chord, pos uint8, previousNotes []note) []gridKey {
+func (m *model) AddChordNotes(chord theory.Chord, pos uint8, previousNotes grid.Pattern) []gridKey {
+
+	previousGridNotes := make([]GridNote, 0, len(previousNotes))
+	for k, v := range previousNotes {
+		previousGridNotes = append(previousGridNotes, GridNote{k, v})
+	}
+
+	slices.SortFunc(previousGridNotes, func(a GridNote, b GridNote) int { return int(b.gridKey.Line) - int(a.gridKey.Line) })
+
 	notes := chord.Notes()
 	chordKeys := make([]gridKey, len(notes))
 
 	for i, n := range notes {
-		var noteToUse note
+		var noteToUse GridNote
 		if i < len(previousNotes) {
-			noteToUse = previousNotes[i]
+			noteToUse = previousGridNotes[i]
 		} else if len(previousNotes) > 0 {
-			noteToUse = previousNotes[0]
+			noteToUse = previousGridNotes[0]
 		} else {
-			noteToUse = grid.InitNote()
+			gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
+			noteToUse = GridNote{gk, grid.InitNote()}
 		}
-		noteToUse.ChordId = chord.Id
-		gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
-		m.currentOverlay.SetNote(gk, noteToUse)
+		newNote := noteToUse.note
+		newNote.ChordId = chord.Id
+		gk := gridKey{Line: pos - uint8(n), Beat: noteToUse.gridKey.Beat}
+		m.currentOverlay.SetNote(gk, newNote)
 		chordKeys[i] = gk
 	}
 
 	return chordKeys
 }
 
-func (m *model) RemoveChordNotes(chord theory.Chord, pos uint8) []note {
-	notes := chord.Notes()
-	removedNotes := make([]note, 0, len(notes))
-	for _, n := range notes {
-		gk := gridKey{Line: pos - uint8(n), Beat: m.cursorPos.Beat}
-		note, exists := m.currentOverlay.GetNote(gk)
+func (m *model) RemoveChordNotes(keys iter.Seq[grid.GridKey]) {
+	for gk := range keys {
+		_, exists := m.currentOverlay.GetNote(gk)
 		if exists {
-			removedNotes = append(removedNotes, note)
+			m.currentOverlay.RemoveNote(gk)
 		}
-		m.currentOverlay.RemoveNote(gk)
 	}
-	return removedNotes
 }
 
 func IsShiftSymbol(symbol string) bool {

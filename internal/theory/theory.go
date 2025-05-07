@@ -70,8 +70,7 @@ const (
 )
 
 // AddNotes adds specified notes to the chord
-func (c *Chord) AddNotes(noteConstant uint32) Chord {
-	oldNotes := c.notes
+func (c *Chord) AddNotes(noteConstant uint32) {
 	if IsTriad(noteConstant) {
 		currentTriad := c.CurrentTriad()
 		c.Replace(currentTriad, noteConstant)
@@ -84,8 +83,6 @@ func (c *Chord) AddNotes(noteConstant uint32) Chord {
 	} else {
 		c.notes |= noteConstant
 	}
-
-	return Chord{notes: oldNotes}
 }
 
 var triads = []uint32{MajorTriad, MinorTriad, DiminishedTriad, AugmentedTriad}
@@ -211,20 +208,16 @@ func ChordFromNotes(notes []uint8) Chord {
 }
 
 // NextInversion increases the inversion by 1, but not beyond the number of notes
-func (c *Chord) NextInversion() Chord {
-	oldInversions := c.inversion
+func (c *Chord) NextInversion() {
 	noteCount := len(c.Notes())
 	if noteCount > 0 {
 		c.inversion = (c.inversion + 1) % int8(noteCount)
 	}
-
-	return Chord{notes: c.notes, inversion: oldInversions}
 }
 
 // PreviousInversion decreases the inversion by 1, cycling back to the highest possible value if at 0
-func (c *Chord) PreviousInversion() Chord {
+func (c *Chord) PreviousInversion() {
 
-	oldInversions := c.inversion
 	noteCount := len(c.Notes())
 	if noteCount > 0 {
 		if c.inversion == 0 {
@@ -233,7 +226,6 @@ func (c *Chord) PreviousInversion() Chord {
 			c.inversion--
 		}
 	}
-	return Chord{notes: c.notes, inversion: oldInversions}
 }
 
 var allTriads = []uint32{MajorTriad, MinorTriad, MajorTriadI1, MinorTriadI1, MajorTriadI2, MinorTriadI2}
