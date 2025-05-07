@@ -3,6 +3,7 @@ package mappings
 import (
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,6 +12,7 @@ import (
 
 var Keycombo = make([]tea.KeyMsg, 0, 3)
 var timer *time.Timer
+var mutex = sync.Mutex{}
 
 func KeycomboView() string {
 	var buf strings.Builder
@@ -243,6 +245,8 @@ func k(x ...string) [3]string {
 }
 
 func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType) Mapping {
+	mutex.Lock()
+	defer mutex.Unlock()
 	if len(Keycombo) < 3 {
 		Keycombo = append(Keycombo, key)
 	} else {
@@ -272,6 +276,8 @@ func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType) Mapping {
 
 	if !exists {
 		timer = time.AfterFunc(time.Millisecond*750, func() {
+			mutex.Lock()
+			defer mutex.Unlock()
 			Keycombo = make([]tea.KeyMsg, 0, 3)
 		})
 	}
