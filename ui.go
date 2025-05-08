@@ -1724,7 +1724,6 @@ type chordChangeFn = func(theory.Chord) theory.Chord
 
 func (m model) CurrentChordKeys() []gridKey {
 	chordId := m.CurrentChordId()
-	fmt.Println("CurrentChordId", chordId)
 	chordPattern := make(grid.Pattern)
 	m.currentOverlay.CurrentChord(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
 	return slices.Collect(maps.Keys(chordPattern))
@@ -2108,7 +2107,7 @@ func (m *model) RotateLeft() {
 }
 
 func (m *model) RotateUp() {
-	pattern := m.CombinedBeatPattern(m.currentOverlay)
+	pattern := m.CombinedEditPattern(m.currentOverlay)
 	beat := m.cursorPos.Beat
 	for l := 0; l < len(m.definition.lines); l++ {
 		key := GK(uint8(l), beat)
@@ -2124,7 +2123,7 @@ func (m *model) RotateUp() {
 }
 
 func (m *model) RotateDown() {
-	pattern := m.CombinedBeatPattern(m.currentOverlay)
+	pattern := m.CombinedEditPattern(m.currentOverlay)
 	beat := m.cursorPos.Beat
 	for l := uint8(len(m.definition.lines)); l > 0; l-- {
 		key := GK(l, beat)
