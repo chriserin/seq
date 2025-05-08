@@ -2205,13 +2205,31 @@ func (m *model) Paste() {
 		keyModifier = m.cursorPos
 	}
 
-	for _, gridNote := range m.yankBuffer.gridNotes {
-		key := gridNote.gridKey
-		newKey := GK(key.Line+keyModifier.Line, key.Beat+keyModifier.Beat)
-		if bounds.InBounds(newKey) {
-			m.currentOverlay.SetNote(newKey, gridNote.note)
+	chordedGridNotes := GroupByChordId(m.yankBuffer.gridNotes)
+
+	for chordId, gridNotes := range chordedGridNotes {
+		var newChordId int
+		if chordId != 0 {
+			newChordId = theory.RegisterChord(theory.Chord{})
+		}
+		for _, gridNote := range gridNotes {
+			key := gridNote.gridKey
+			newKey := GK(key.Line+keyModifier.Line, key.Beat+keyModifier.Beat)
+			note := gridNote.note
+			note.ChordId = newChordId
+			if bounds.InBounds(newKey) {
+				m.currentOverlay.SetNote(newKey, note)
+			}
 		}
 	}
+}
+
+func GroupByChordId(gridnotes []GridNote) map[int][]GridNote {
+	groups := make(map[int][]GridNote)
+	for _, gridnote := range gridnotes {
+		groups[gridnote.note.ChordId] = append(groups[gridnote.note.ChordId], gridnote)
+	}
+	return groups
 }
 
 func (m *model) advanceCurrentBeat(playingOverlay *overlays.Overlay) {
