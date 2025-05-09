@@ -270,6 +270,7 @@ type model struct {
 	programChannel        chan midiEventLoopMsg
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
+	currentChordId        int
 	// save everything below here
 	definition Definition
 }
@@ -1421,7 +1422,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
-
+	m.currentChordId = m.CurrentChordId()
 	return m, cmd
 }
 
@@ -2791,8 +2792,7 @@ func (m model) View() string {
 
 		var chordView string
 		if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
-			chordId := m.CurrentChordId()
-			chord, exists := theory.GetChord(chordId)
+			chord, exists := theory.GetChord(m.currentChordId)
 			if exists {
 				chordView = m.ChordView(chord)
 			}
@@ -3246,7 +3246,8 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		}
 
 		style := lipgloss.NewStyle().Background(backgroundSeqColor)
-		if m.cursorPos.Line == uint8(lineNumber) && m.cursorPos.Beat == i {
+		cursorMatch := m.cursorPos.Line == uint8(lineNumber) && m.cursorPos.Beat == i
+		if cursorMatch {
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
@@ -3261,6 +3262,12 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 			gateSpaceValue := config.LongGates[overlayNote.Note.GateIndex-8].Shape
 			gateSpace.StringValue = []rune(gateSpaceValue)
 			gateSpace.Color = foregroundColor
+		}
+
+		if m.currentChordId != 0 && m.currentChordId == overlayNote.Note.ChordId && !cursorMatch {
+			fg := style.GetForeground()
+			bg := style.GetBackground()
+			style = style.Background(fg).Foreground(bg)
 		}
 
 		buf.WriteString(style.Render(char))
