@@ -101,4 +101,3 @@ func TestWriteAdditionalProperties(t *testing.T) {
 		assert.Contains(t, contentStr, "PART TestPart")
 	})
 }
-

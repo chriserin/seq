@@ -68,7 +68,7 @@ func identifyChord(normalizedNotes []int) Chord {
 func InitPossibleChord(notes []int, inversions int) Chord {
 	return Chord{
 		notes:     FromNotes(notes),
-		inversion: int8(inversions),
+		Inversion: int8(inversions),
 		score:     scoreChord(notes),
 	}
 }

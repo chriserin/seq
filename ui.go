@@ -1659,9 +1659,19 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.RotateLeft:
 		m.RotateLeft()
 	case mappings.RotateUp:
-		m.RotateChordUp()
+		switch m.definition.templateSequencerType {
+		case grid.SEQTYPE_TRIGGER:
+			m.RotateUp()
+		case grid.SEQTYPE_POLYPHONY:
+			m.RotateChordUp()
+		}
 	case mappings.RotateDown:
-		m.RotateChordDown()
+		switch m.definition.templateSequencerType {
+		case grid.SEQTYPE_TRIGGER:
+			m.RotateDown()
+		case grid.SEQTYPE_POLYPHONY:
+			m.RotateChordDown()
+		}
 	case mappings.Paste:
 		m.Paste()
 	case mappings.MajorTriad:
@@ -2778,6 +2788,16 @@ func (m model) View() string {
 		sideView = m.SetupView()
 	} else {
 		sideView = m.OverlaysView()
+
+		var chordView string
+		if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
+			chordId := m.CurrentChordId()
+			chord, exists := theory.GetChord(chordId)
+			if exists {
+				chordView = m.ChordView(chord)
+			}
+		}
+		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
 	}
 
 	var leftSideView string
@@ -2898,6 +2918,26 @@ func LineValueName(ld grid.LineDefinition, instrument string) string {
 		return config.FindCC(ld.Note, instrument).Name
 	}
 	return ""
+}
+
+func (m model) ChordView(chord theory.Chord) string {
+
+	var buf strings.Builder
+	buf.WriteString(themes.AppDescriptorStyle.Render("Chord"))
+	buf.WriteString("\n")
+	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
+	buf.WriteString("\n")
+
+	buf.WriteString(fmt.Sprintf("Inversions: %d", chord.Inversion))
+	buf.WriteString("\n")
+
+	intervals := chord.Intervals()
+	for i, n := range chord.UninvertedNotes() {
+		buf.WriteString(fmt.Sprintf("%d - %s", n, intervals[i]))
+		buf.WriteString("\n")
+	}
+
+	return buf.String()
 }
 
 func (m model) OverlaysView() string {

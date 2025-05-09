@@ -12,13 +12,13 @@ func InitChord() Chord {
 
 type Chord struct {
 	notes     uint32
-	inversion int8
+	Inversion int8
 	score     int
 	Id        int
 }
 
 func (c Chord) Score() int {
-	return c.score - int(c.inversion)
+	return c.score - int(c.Inversion)
 }
 
 // Individual note constants in the chromatic scale (relative to root)
@@ -160,6 +160,48 @@ func (c Chord) UninvertedNotes() []uint8 {
 	return notes
 }
 
+func (c Chord) Intervals() []string {
+	notes := make([]string, 0)
+	for i := 0; i < 32; i++ {
+		if c.notes&(1<<i) != 0 {
+			notes = append(notes, interval(i))
+		}
+	}
+	return notes
+}
+
+func interval(n int) string {
+	switch n {
+	case 0:
+		return "P1"
+	case 1:
+		return "m2"
+	case 2:
+		return "M2"
+	case 3:
+		return "m3"
+	case 4:
+		return "M3"
+	case 5:
+		return "P4"
+	case 6:
+		return "d5"
+	case 7:
+		return "P5"
+	case 8:
+		return "m6"
+	case 9:
+		return "M6"
+	case 10:
+		return "m7"
+	case 11:
+		return "M7"
+	case 12:
+		return "P8"
+	}
+	return ""
+}
+
 // Notes returns a slice of integers representing the notes in the chord
 // If the chord has an inversion value, the appropriate number of notes
 // from the bottom of the chord are moved to the top
@@ -169,15 +211,15 @@ func (c Chord) Notes() []uint8 {
 
 	// Apply inversion if needed
 	noteCount := len(notes)
-	if noteCount > 0 && c.inversion > 0 && int(c.inversion) < noteCount {
+	if noteCount > 0 && c.Inversion > 0 && int(c.Inversion) < noteCount {
 		// Move the first 'inversion' notes to the end, raising them by an octave
 		invertedNotes := make([]uint8, 0, noteCount)
 
 		// Add the remaining notes first (notes after the inversion point)
-		invertedNotes = append(invertedNotes, notes[c.inversion:]...)
+		invertedNotes = append(invertedNotes, notes[c.Inversion:]...)
 
 		// Add the inverted notes (notes before the inversion point), raised by an octave (12 semitones)
-		for i := 0; i < int(c.inversion); i++ {
+		for i := 0; i < int(c.Inversion); i++ {
 			// For the second inversion of a C major triad (0,4,7),
 			// we want to move 0 and 4 up an octave, resulting in (7,12,16)
 			invertedNotes = append(invertedNotes, notes[i]+12)
@@ -211,7 +253,7 @@ func ChordFromNotes(notes []uint8) Chord {
 func (c *Chord) NextInversion() {
 	noteCount := len(c.Notes())
 	if noteCount > 0 {
-		c.inversion = (c.inversion + 1) % int8(noteCount)
+		c.Inversion = (c.Inversion + 1) % int8(noteCount)
 	}
 }
 
@@ -220,10 +262,10 @@ func (c *Chord) PreviousInversion() {
 
 	noteCount := len(c.Notes())
 	if noteCount > 0 {
-		if c.inversion == 0 {
-			c.inversion = int8(noteCount - 1)
+		if c.Inversion == 0 {
+			c.Inversion = int8(noteCount - 1)
 		} else {
-			c.inversion--
+			c.Inversion--
 		}
 	}
 }
@@ -253,17 +295,17 @@ func IdentifyTriadBasedChord(pattern uint32) Chord {
 	remainingPattern := pattern ^ likelyTriad.triad
 	switch likelyTriad.triad {
 	case MajorTriad:
-		return Chord{notes: MajorTriad | remainingPattern, inversion: 0}
+		return Chord{notes: MajorTriad | remainingPattern, Inversion: 0}
 	case MinorTriad:
-		return Chord{notes: MinorTriad | remainingPattern, inversion: 0}
+		return Chord{notes: MinorTriad | remainingPattern, Inversion: 0}
 	case MajorTriadI1:
-		return Chord{notes: MajorTriad | remainingPattern, inversion: 1}
+		return Chord{notes: MajorTriad | remainingPattern, Inversion: 1}
 	case MinorTriadI1:
-		return Chord{notes: MinorTriad | remainingPattern, inversion: 1}
+		return Chord{notes: MinorTriad | remainingPattern, Inversion: 1}
 	case MajorTriadI2:
-		return Chord{notes: MajorTriad | remainingPattern, inversion: 2}
+		return Chord{notes: MajorTriad | remainingPattern, Inversion: 2}
 	case MinorTriadI2:
-		return Chord{notes: MinorTriad | remainingPattern, inversion: 2}
+		return Chord{notes: MinorTriad | remainingPattern, Inversion: 2}
 	}
 
 	return Chord{}
@@ -358,6 +400,6 @@ func RotateBits(n uint32, count int) uint32 {
 
 func (c Chord) RelativePosition(firstNotePosition uint8) uint8 {
 	notes := c.UninvertedNotes()
-	n := notes[c.inversion]
+	n := notes[c.Inversion]
 	return firstNotePosition + n
 }
