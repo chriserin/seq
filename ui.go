@@ -1659,9 +1659,9 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.RotateLeft:
 		m.RotateLeft()
 	case mappings.RotateUp:
-		m.RotateUp()
+		m.RotateChordUp()
 	case mappings.RotateDown:
-		m.RotateDown()
+		m.RotateChordDown()
 	case mappings.Paste:
 		m.Paste()
 	case mappings.MajorTriad:
@@ -1720,14 +1720,19 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	return m
 }
 
-type chordChangeFn = func(theory.Chord) theory.Chord
-
 func (m model) CurrentChordKeys() []gridKey {
+	chordPattern := m.CurrentChordPattern()
+	return slices.Collect(maps.Keys(chordPattern))
+}
+
+func (m model) CurrentChordPattern() grid.Pattern {
 	chordId := m.CurrentChordId()
 	chordPattern := make(grid.Pattern)
 	m.currentOverlay.CurrentChord(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
-	return slices.Collect(maps.Keys(chordPattern))
+	return chordPattern
 }
+
+type chordChangeFn = func(theory.Chord) theory.Chord
 
 func (m *model) ChordChange(fn chordChangeFn) {
 	chordId := m.CurrentChordId()
@@ -2122,6 +2127,30 @@ func (m *model) RotateUp() {
 	}
 }
 
+func (m *model) RotateChordUp() {
+	pattern := m.CurrentChordPattern()
+	for key, note := range pattern {
+		m.currentOverlay.RemoveNote(key)
+		newLine := key.Line - 1
+		if newLine != 0 {
+			newKey := GK(newLine, key.Beat)
+			m.currentOverlay.SetNote(newKey, note)
+		}
+	}
+}
+
+func (m *model) RotateChordDown() {
+	pattern := m.CurrentChordPattern()
+	for key, note := range pattern {
+		m.currentOverlay.RemoveNote(key)
+		newLine := key.Line + 1
+		if newLine < uint8(len(m.definition.lines)) {
+			newKey := GK(newLine, key.Beat)
+			m.currentOverlay.SetNote(newKey, note)
+		}
+	}
+}
+
 func (m *model) RotateDown() {
 	pattern := m.CombinedEditPattern(m.currentOverlay)
 	beat := m.cursorPos.Beat
@@ -2207,9 +2236,9 @@ func (m *model) Paste() {
 
 	chordedGridNotes := GroupByChordId(m.yankBuffer.gridNotes)
 
-	for chordId, gridNotes := range chordedGridNotes {
+	for originalChordId, gridNotes := range chordedGridNotes {
 		var newChordId int
-		if chordId != 0 {
+		if originalChordId != 0 {
 			newChordId = theory.RegisterChord(theory.Chord{})
 		}
 		for _, gridNote := range gridNotes {

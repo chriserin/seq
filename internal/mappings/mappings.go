@@ -116,6 +116,8 @@ const (
 	PerfectFifth
 	IncreaseInversions
 	DecreaseInversions
+	ChordMode
+	PatternMode
 )
 
 type mappingKey [3]string
@@ -185,6 +187,8 @@ var mappings = registry{
 	k("k"):      CursorUp,
 	k("l"):      CursorRight,
 	k("m"):      Mute,
+	k("o"):      ChordMode,
+	k("n"):      PatternMode,
 	k("p"):      Paste,
 	k("q"):      Quit,
 	k("r"):      RatchetDecrease,
