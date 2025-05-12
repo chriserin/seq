@@ -398,7 +398,7 @@ func RotateBits(n uint32, count int) uint32 {
 	return ((n << count) | (n >> (24 - count))) & 0xFFFFFF
 }
 
-func (c Chord) RelativePosition(firstNotePosition uint8) uint8 {
+func (c *Chord) GetRootPosition(firstNotePosition uint8) uint8 {
 	notes := c.UninvertedNotes()
 	n := notes[c.Inversion]
 	return firstNotePosition + n

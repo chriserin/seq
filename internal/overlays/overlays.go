@@ -157,7 +157,7 @@ func (ol Overlay) CurrentChordId(keyCycles int, beats []grid.GridKey) int {
 	return chordId
 }
 
-func (ol Overlay) CurrentChord(pattern *grid.Pattern, keyCycles int, chordId int) {
+func (ol Overlay) CurrentChordPattern(pattern *grid.Pattern, keyCycles int, chordId int) {
 	var addFunc = func(overlayPattern grid.Pattern, currentKey Key) bool {
 		for gridKey, note := range overlayPattern {
 			_, hasNote := (*pattern)[gridKey]

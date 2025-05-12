@@ -1739,7 +1739,7 @@ func (m model) CurrentChordKeys() []gridKey {
 func (m model) CurrentChordPattern() grid.Pattern {
 	chordId := m.CurrentChordId()
 	chordPattern := make(grid.Pattern)
-	m.currentOverlay.CurrentChord(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
+	m.currentOverlay.CurrentChordPattern(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
 	return chordPattern
 }
 
@@ -1748,7 +1748,7 @@ type chordChangeFn = func(theory.Chord) theory.Chord
 func (m *model) ChordChange(fn chordChangeFn) {
 	chordId := m.CurrentChordId()
 	chordPattern := make(grid.Pattern)
-	m.currentOverlay.CurrentChord(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
+	m.currentOverlay.CurrentChordPattern(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
 
 	identifiedChord, pos := m.CurrentChord(chordPattern)
 	if chordId != 0 {
@@ -1811,10 +1811,12 @@ func (m *model) CurrentChordId() int {
 
 func (m *model) CurrentChord(chordPattern grid.Pattern) (theory.Chord, uint8) {
 	currentNotes, position := m.ChordNotes(chordPattern)
+
 	if len(currentNotes) > 0 {
 		identifiedChord := theory.FromNotesWithAnalysis(currentNotes)
-		return identifiedChord, uint8(identifiedChord.RelativePosition(position))
+		return identifiedChord, uint8(identifiedChord.GetRootPosition(position))
 	}
+
 	newChord := theory.InitChord()
 	return newChord, m.cursorPos.Line
 }
@@ -2928,6 +2930,11 @@ func (m model) ChordView(chord theory.Chord) string {
 
 	var buf strings.Builder
 	buf.WriteString(themes.AppDescriptorStyle.Render("Chord"))
+	buf.WriteString(" - ")
+	pattern := m.CurrentChordPattern()
+	_, position := m.ChordNotes(pattern)
+	note := m.definition.lines[position].Note
+	buf.WriteString(NoteName(note))
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
