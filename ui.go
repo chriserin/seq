@@ -1804,7 +1804,7 @@ func (m model) PlayChord(chord theory.Chord, pos uint8) {
 
 func (m *model) CurrentChordId() int {
 	gridKeys := make([]grid.GridKey, 0, len(m.definition.lines))
-	m.CursorBeatGridKeys(&gridKeys)
+	m.ChordFindBeatGridKeys(&gridKeys)
 	chordId := m.currentOverlay.CurrentChordId(m.currentOverlay.Key.GetMinimumKeyCycle(), gridKeys)
 	return chordId
 }
@@ -2291,8 +2291,12 @@ func (m model) CurrentBeatGridKeys(gridKeys *[]grid.GridKey) {
 	}
 }
 
-func (m model) CursorBeatGridKeys(gridKeys *[]grid.GridKey) {
-	for i := range m.definition.lines {
+var chordFindDistance int = 3
+
+func (m model) ChordFindBeatGridKeys(gridKeys *[]grid.GridKey) {
+	start := max(0, int(m.cursorPos.Line)-chordFindDistance)
+	end := min(len(m.definition.lines)-1, int(m.cursorPos.Line)+chordFindDistance)
+	for i := start; i <= end; i++ {
 		*gridKeys = append(*gridKeys, GK(uint8(i), m.cursorPos.Beat))
 	}
 }
