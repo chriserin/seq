@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"iter"
-	"maps"
 	"math/rand"
 	"os"
 	"slices"
@@ -1721,20 +1720,6 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	return m
 }
 
-func (m model) CurrentChordKeys() []gridKey {
-	chordPattern, _ := m.CurrentChordPattern()
-	return slices.Collect(maps.Keys(chordPattern))
-}
-
-func (m model) CurrentChordPattern() (grid.Pattern, int) {
-	chordId := m.CurrentChordId()
-	chordPattern := make(grid.Pattern)
-	m.currentOverlay.CurrentChordPattern(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
-	return chordPattern, chordId
-}
-
-type chordChangeFn = func(theory.Chord) theory.Chord
-
 func (m *model) ChordChange(alteration uint32) {
 	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
 	if !exists {
@@ -1773,13 +1758,6 @@ func (m model) PlayChord(chord theory.Chord, pos uint8) {
 			m.ProcessNoteMsg(offMessage)
 		}
 	}
-}
-
-func (m *model) CurrentChordId() int {
-	gridKeys := make([]grid.GridKey, 0, len(m.definition.lines))
-	m.ChordFindBeatGridKeys(&gridKeys)
-	chordId := m.currentOverlay.CurrentChordId(m.currentOverlay.Key.GetMinimumKeyCycle(), gridKeys)
-	return chordId
 }
 
 func ChordStartPosition(chordPattern grid.Pattern) uint8 {
@@ -2174,32 +2152,16 @@ func (m *model) Paste() {
 	} else {
 		keyModifier = m.cursorPos
 	}
+	gridNotes := m.yankBuffer.gridNotes
 
-	chordedGridNotes := GroupByChordId(m.yankBuffer.gridNotes)
-
-	for _, gridNotes := range chordedGridNotes {
-		var newChordId int
-		// if originalChordId != 0 {
-		// 	newChordId = theory.RegisterChord(theory.Chord{})
-		// }
-		for _, gridNote := range gridNotes {
-			key := gridNote.gridKey
-			newKey := GK(key.Line+keyModifier.Line, key.Beat+keyModifier.Beat)
-			note := gridNote.note
-			note.ChordId = newChordId
-			if bounds.InBounds(newKey) {
-				m.currentOverlay.SetNote(newKey, note)
-			}
+	for _, gridNote := range gridNotes {
+		key := gridNote.gridKey
+		newKey := GK(key.Line+keyModifier.Line, key.Beat+keyModifier.Beat)
+		note := gridNote.note
+		if bounds.InBounds(newKey) {
+			m.currentOverlay.SetNote(newKey, note)
 		}
 	}
-}
-
-func GroupByChordId(gridnotes []GridNote) map[int][]GridNote {
-	groups := make(map[int][]GridNote)
-	for _, gridnote := range gridnotes {
-		groups[gridnote.note.ChordId] = append(groups[gridnote.note.ChordId], gridnote)
-	}
-	return groups
 }
 
 func (m *model) advanceCurrentBeat(playingOverlay *overlays.Overlay) {
@@ -2455,32 +2417,9 @@ func (m *model) GateModify(modifier int8) {
 func (m *model) Modify(modifyFunc func(gridKey, note)) {
 	bounds := m.YankBounds()
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
-	currentChordKeys := m.CurrentChordKeys()
-	boundsKeys := make([]gridKey, 0)
-	var isBoth bool
-	for key := range combinedOverlay {
-		isChordKey := len(currentChordKeys) > 0 && slices.Contains(currentChordKeys, key)
-		isBoundsKey := bounds.InBounds(key)
-
-		if isChordKey && isBoundsKey {
-			isBoth = true
-		}
-		if isBoundsKey {
-			boundsKeys = append(boundsKeys, key)
-		}
-	}
-
-	var keys []gridKey
-	if isBoth && len(boundsKeys) == 1 {
-		keys = currentChordKeys
-	} else if len(boundsKeys) > 0 {
-		keys = boundsKeys
-	} else {
-		keys = currentChordKeys
-	}
 
 	for key, currentNote := range combinedOverlay {
-		if slices.Contains(keys, key) {
+		if bounds.InBounds(key) {
 			if currentNote != zeronote {
 				modifyFunc(key, currentNote)
 			}
@@ -2859,9 +2798,13 @@ func (m model) ChordView(chord theory.Chord) string {
 	var buf strings.Builder
 	buf.WriteString(themes.AppDescriptorStyle.Render("Chord"))
 	buf.WriteString(" - ")
-	pattern, _ := m.CurrentChordPattern()
-	_, position := m.ChordNotes(pattern)
-	note := m.definition.lines[position].Note
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if !exists {
+		return ""
+	}
+	pattern := make(grid.Pattern)
+	gridChord.ChordNotes(&pattern)
+	note := m.definition.lines[gridChord.Root.Line].Note
 	buf.WriteString(NoteName(note))
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))

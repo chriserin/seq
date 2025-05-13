@@ -144,36 +144,6 @@ func (ol Overlay) CurrentBeatOverlayPattern(pattern *grid.Pattern, keyCycles int
 	ol.combine(keyCycles, addFunc)
 }
 
-func (ol Overlay) CurrentChordId(keyCycles int, beats []grid.GridKey) int {
-	var chordId int
-	var addFunc = func(overlayPattern grid.Pattern, currentKey Key) bool {
-		for _, gridKey := range beats {
-			note, hasNote := overlayPattern[gridKey]
-			if hasNote && chordId == 0 {
-				if note.ChordId != 0 {
-					chordId = note.ChordId
-				}
-			}
-		}
-		return chordId == 0
-	}
-	ol.combine(keyCycles, addFunc)
-	return chordId
-}
-
-func (ol Overlay) CurrentChordPattern(pattern *grid.Pattern, keyCycles int, chordId int) {
-	var addFunc = func(overlayPattern grid.Pattern, currentKey Key) bool {
-		for gridKey, note := range overlayPattern {
-			_, hasNote := (*pattern)[gridKey]
-			if !hasNote && chordId != 0 && chordId == note.ChordId {
-				(*pattern)[gridKey] = note
-			}
-		}
-		return true
-	}
-	ol.combine(keyCycles, addFunc)
-}
-
 type OverlayNote struct {
 	OverlayKey     overlaykey.OverlayPeriodicity
 	Note           grid.Note
@@ -271,9 +241,13 @@ func (ol *Overlay) ToggleOverlayStackOptions() {
 
 func (ol Overlay) chordNotes(pattern *grid.Pattern) {
 	for _, gridChord := range ol.Chords {
-		for i, interval := range gridChord.Chord.Notes() {
-			beatnote := gridChord.Notes[i]
-			(*pattern)[grid.GridKey{Line: gridChord.Root.Line - interval, Beat: gridChord.Root.Beat + beatnote.beat}] = beatnote.note
-		}
+		gridChord.ChordNotes(pattern)
+	}
+}
+
+func (gc GridChord) ChordNotes(pattern *grid.Pattern) {
+	for i, interval := range gc.Chord.Notes() {
+		beatnote := gc.Notes[i]
+		(*pattern)[grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + beatnote.beat}] = beatnote.note
 	}
 }
