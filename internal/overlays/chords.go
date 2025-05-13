@@ -13,6 +13,10 @@ type GridChord struct {
 	Root  grid.GridKey
 }
 
+func (gc GridChord) InBounds(gridKey grid.GridKey) bool {
+	return gc.HasNote(gridKey)
+}
+
 type BeatNote struct {
 	beat uint8
 	note grid.Note
@@ -37,7 +41,6 @@ func (cs Chords) FindChordWithNote(gridKey grid.GridKey) (*GridChord, bool) {
 }
 
 func (gc GridChord) SetChordNote(position grid.GridKey, note grid.Note) {
-
 	for i, interval := range gc.Chord.Notes() {
 		beatnote := gc.Notes[i]
 		potentialNotePosition := grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + beatnote.beat}

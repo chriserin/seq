@@ -2414,8 +2414,19 @@ func (m *model) GateModify(modifier int8) {
 	m.Modify(modifyFunc)
 }
 
+type Boundable interface {
+	InBounds(key grid.GridKey) bool
+}
+
 func (m *model) Modify(modifyFunc func(gridKey, note)) {
-	bounds := m.YankBounds()
+
+	var bounds Boundable
+	chord, hasChord := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if !m.visualMode && hasChord {
+		bounds = chord
+	} else {
+		bounds = m.YankBounds()
+	}
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	for key, currentNote := range combinedOverlay {
