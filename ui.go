@@ -1683,10 +1683,10 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.ChordChange(theory.Dim5)
 	case mappings.PerfectFifth:
 		m.ChordChange(theory.Perfect5)
-		// case mappings.IncreaseInversions:
-		// 	m.NextInversion()
-		// case mappings.DecreaseInversions:
-		// 	m.PreviousInversion()
+	case mappings.IncreaseInversions:
+		m.NextInversion()
+	case mappings.DecreaseInversions:
+		m.PreviousInversion()
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1741,6 +1741,20 @@ func (m *model) ChordChange(alteration uint32) {
 		m.currentOverlay.CreateChord(m.cursorPos, alteration)
 	} else {
 		gridChord.ApplyAlteration(alteration)
+	}
+}
+
+func (m *model) NextInversion() {
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if exists {
+		gridChord.Chord.NextInversion()
+	}
+}
+
+func (m *model) PreviousInversion() {
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if exists {
+		gridChord.Chord.PreviousInversion()
 	}
 }
 
@@ -2059,9 +2073,23 @@ func (m *model) RotateUp() {
 }
 
 func (m *model) RotateChordUp() {
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if exists {
+		newLine := gridChord.Root.Line - 1
+		if newLine >= 0 {
+			gridChord.Root.Line = newLine
+		}
+	}
 }
 
 func (m *model) RotateChordDown() {
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if exists {
+		newLine := gridChord.Root.Line + 1
+		if newLine < uint8(len(m.definition.lines)) {
+			gridChord.Root.Line = newLine
+		}
+	}
 }
 
 func (m *model) RotateDown() {
