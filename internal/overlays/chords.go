@@ -71,8 +71,14 @@ func (gc GridChord) Positions() []grid.GridKey {
 
 func (gc GridChord) ChordBounds() grid.Bounds {
 	notes := theory.ShiftToZero(gc.Chord.Notes())
+	var top uint8
+	if int(gc.Root.Line)-int(notes[len(notes)-1]) < 0 {
+		top = 0
+	} else {
+		top = gc.Root.Line - notes[len(notes)-1]
+	}
 	return grid.Bounds{
-		Top:    min(gc.Root.Line-notes[len(notes)-1], 0),
+		Top:    top,
 		Right:  gc.Root.Beat + gc.Notes[len(gc.Notes)-1].beat,
 		Bottom: gc.Root.Line + 2,
 		Left:   gc.Root.Beat,
@@ -81,6 +87,16 @@ func (gc GridChord) ChordBounds() grid.Bounds {
 
 func (ol *Overlay) CreateChord(root grid.GridKey, alteration uint32) {
 	ol.Chords = append(ol.Chords, InitChord(root, alteration))
+}
+
+func (ol *Overlay) PasteChord(root grid.GridKey, gridChord *GridChord) {
+	dst := new(GridChord)
+	*dst = *gridChord
+	notes := make([]BeatNote, len(gridChord.Notes))
+	copy(notes, gridChord.Notes)
+	dst.Notes = notes
+	dst.Root = root
+	ol.Chords = append(ol.Chords, dst)
 }
 
 func InitChord(root grid.GridKey, alteration uint32) *GridChord {

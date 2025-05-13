@@ -2123,43 +2123,68 @@ func (m model) HasSolo() bool {
 type Buffer struct {
 	bounds    grid.Bounds
 	gridNotes []GridNote
+	gridChord *overlays.GridChord
+}
+
+func (b Buffer) IsChord() bool {
+	return len(b.gridChord.Notes) > 0
+}
+
+func InitChordBuffer(gridChord *overlays.GridChord) Buffer {
+	return Buffer{
+		gridChord: gridChord,
+	}
+}
+
+func InitBuffer(bounds grid.Bounds, notes []GridNote) Buffer {
+	return Buffer{
+		bounds:    bounds.Normalized(),
+		gridNotes: notes,
+	}
 }
 
 func (m model) Yank() Buffer {
-	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
-	bounds := m.YankBounds()
-	capturedGridNotes := make([]GridNote, 0, len(combinedPattern))
+	gridChord, chordExists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if !m.visualMode && chordExists {
+		return InitChordBuffer(gridChord)
+	} else {
+		bounds := m.YankBounds()
+		combinedPattern := m.CombinedEditPattern(m.currentOverlay)
+		capturedGridNotes := make([]GridNote, 0, len(combinedPattern))
 
-	for key, note := range combinedPattern {
-		if bounds.InBounds(key) {
-			normalizedGridKey := GK(key.Line-bounds.Top, key.Beat-bounds.Left)
-			capturedGridNotes = append(capturedGridNotes, GridNote{normalizedGridKey, note})
+		for key, note := range combinedPattern {
+			if bounds.InBounds(key) {
+				normalizedGridKey := GK(key.Line-bounds.Top, key.Beat-bounds.Left)
+				capturedGridNotes = append(capturedGridNotes, GridNote{normalizedGridKey, note})
+			}
 		}
+
+		return InitBuffer(bounds, capturedGridNotes)
 	}
 
-	return Buffer{
-		bounds:    bounds.Normalized(),
-		gridNotes: capturedGridNotes,
-	}
 }
 
 func (m *model) Paste() {
-	bounds := m.PasteBounds()
-
-	var keyModifier gridKey
-	if m.visualMode {
-		keyModifier = bounds.TopLeft()
+	if m.yankBuffer.IsChord() {
+		m.currentOverlay.PasteChord(m.cursorPos, m.yankBuffer.gridChord)
 	} else {
-		keyModifier = m.cursorPos
-	}
-	gridNotes := m.yankBuffer.gridNotes
+		bounds := m.PasteBounds()
 
-	for _, gridNote := range gridNotes {
-		key := gridNote.gridKey
-		newKey := GK(key.Line+keyModifier.Line, key.Beat+keyModifier.Beat)
-		note := gridNote.note
-		if bounds.InBounds(newKey) {
-			m.currentOverlay.SetNote(newKey, note)
+		var keyModifier gridKey
+		if m.visualMode {
+			keyModifier = bounds.TopLeft()
+		} else {
+			keyModifier = m.cursorPos
+		}
+		gridNotes := m.yankBuffer.gridNotes
+
+		for _, gridNote := range gridNotes {
+			key := gridNote.gridKey
+			newKey := GK(key.Line+keyModifier.Line, key.Beat+keyModifier.Beat)
+			note := gridNote.note
+			if bounds.InBounds(newKey) {
+				m.currentOverlay.SetNote(newKey, note)
+			}
 		}
 	}
 }
