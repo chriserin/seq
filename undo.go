@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/chriserin/seq/internal/arrangement"
+	"github.com/chriserin/seq/internal/grid"
 )
 
 type Undoable interface {
@@ -92,7 +93,7 @@ func (ulgn UndoLineGridNotes) ApplyUndo(m *model) Location {
 type UndoBounds struct {
 	overlayKey
 	cursorPosition gridKey
-	bounds         Bounds
+	bounds         grid.Bounds
 	gridNotes      []GridNote
 	ArrCursor      arrangement.ArrCursor
 }

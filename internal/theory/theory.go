@@ -4,17 +4,14 @@ import (
 	"slices"
 )
 
-func InitChord() Chord {
-	chord := Chord{}
-	chordId := RegisterChord(chord)
-	return Chord{Id: chordId}
+func InitChord(alteration uint32) Chord {
+	return Chord{notes: alteration}
 }
 
 type Chord struct {
 	notes     uint32
 	Inversion int8
 	score     int
-	Id        int
 }
 
 func (c Chord) Score() int {
@@ -398,7 +395,7 @@ func RotateBits(n uint32, count int) uint32 {
 	return ((n << count) | (n >> (24 - count))) & 0xFFFFFF
 }
 
-func (c *Chord) GetRootPosition(firstNotePosition uint8) uint8 {
+func (c Chord) GetRootPosition(firstNotePosition uint8) uint8 {
 	notes := c.UninvertedNotes()
 	n := notes[c.Inversion]
 	return firstNotePosition + n

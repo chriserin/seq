@@ -14,6 +14,7 @@ type Overlay struct {
 	Key       Key
 	Below     *Overlay
 	Notes     grid.Pattern
+	Chords    Chords
 	PressUp   bool
 	PressDown bool
 }
@@ -115,6 +116,9 @@ func (ol Overlay) combine(keyCycles int, addFunc AddFunc) {
 			(!firstMatch && currentOverlay.Key.DoesMatch(keyCycles)) ||
 			(currentOverlay.PressUp && currentOverlay.Key.DoesMatch(keyCycles)) {
 			firstMatch = true
+			chordPattern := make(grid.Pattern)
+			currentOverlay.chordNotes(&chordPattern)
+			addFunc(chordPattern, currentOverlay.Key)
 			if !addFunc(currentOverlay.Notes, currentOverlay.Key) {
 				break
 			}
@@ -235,14 +239,21 @@ func (ol Overlay) GetNote(gridKey grid.GridKey) (grid.Note, bool) {
 }
 
 func (ol *Overlay) SetNote(gridKey grid.GridKey, note grid.Note) {
-	(*ol).Notes[gridKey] = note
+	_, exists := (*ol).Notes[gridKey]
+	if exists {
+		(*ol).Notes[gridKey] = note
+		return
+	}
+	chord, exists := ol.Chords.FindChordWithNote(gridKey)
+	if exists {
+		chord.SetChordNote(gridKey, note)
+	} else {
+		(*ol).Notes[gridKey] = note
+	}
 }
 
 func (ol *Overlay) RemoveNote(gridKey grid.GridKey) {
 	delete((*ol).Notes, gridKey)
-}
-
-func (ol Overlay) GridKeysInUse(gridKey grid.GridKey) {
 }
 
 func (ol *Overlay) ToggleOverlayStackOptions() {
@@ -255,5 +266,14 @@ func (ol *Overlay) ToggleOverlayStackOptions() {
 	} else {
 		ol.PressUp = false
 		ol.PressDown = false
+	}
+}
+
+func (ol Overlay) chordNotes(pattern *grid.Pattern) {
+	for _, gridChord := range ol.Chords {
+		for i, interval := range gridChord.Chord.Notes() {
+			beatnote := gridChord.Notes[i]
+			(*pattern)[grid.GridKey{Line: gridChord.Root.Line - interval, Beat: gridChord.Root.Beat + beatnote.beat}] = beatnote.note
+		}
 	}
 }

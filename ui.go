@@ -270,7 +270,6 @@ type model struct {
 	programChannel        chan midiEventLoopMsg
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
-	currentChordId        int
 	// save everything below here
 	definition Definition
 }
@@ -633,14 +632,6 @@ func (m *model) EnsureOverlayWithKey(key overlayKey) {
 		newOverlay := m.CurrentPart().Overlays.Add(key)
 		(*m.definition.parts)[partId].Overlays = newOverlay
 		m.currentOverlay = newOverlay.FindOverlay(key)
-	}
-}
-
-func absdiff(a, b uint8) uint8 {
-	if a > b {
-		return a - b
-	} else {
-		return b - a
 	}
 }
 
@@ -1422,7 +1413,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
-	m.currentChordId = m.CurrentChordId()
 	return m, cmd
 }
 
@@ -1676,27 +1666,27 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.Paste:
 		m.Paste()
 	case mappings.MajorTriad:
-		m.AlterChord(theory.MajorTriad)
+		m.ChordChange(theory.MajorTriad)
 	case mappings.MinorTriad:
-		m.AlterChord(theory.MinorTriad)
+		m.ChordChange(theory.MinorTriad)
 	case mappings.AugmentedTriad:
-		m.AlterChord(theory.AugmentedTriad)
+		m.ChordChange(theory.AugmentedTriad)
 	case mappings.DiminishedTriad:
-		m.AlterChord(theory.DiminishedTriad)
+		m.ChordChange(theory.DiminishedTriad)
 	case mappings.MajorSeventh:
-		m.AlterChord(theory.MajorSeventh)
+		m.ChordChange(theory.MajorSeventh)
 	case mappings.MinorSeventh:
-		m.AlterChord(theory.MinorSeventh)
+		m.ChordChange(theory.MinorSeventh)
 	case mappings.AugFifth:
-		m.AlterChord(theory.Aug5)
+		m.ChordChange(theory.Aug5)
 	case mappings.DimFifth:
-		m.AlterChord(theory.Dim5)
+		m.ChordChange(theory.Dim5)
 	case mappings.PerfectFifth:
-		m.AlterChord(theory.Perfect5)
-	case mappings.IncreaseInversions:
-		m.NextInversion()
-	case mappings.DecreaseInversions:
-		m.PreviousInversion()
+		m.ChordChange(theory.Perfect5)
+		// case mappings.IncreaseInversions:
+		// 	m.NextInversion()
+		// case mappings.DecreaseInversions:
+		// 	m.PreviousInversion()
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1745,44 +1735,13 @@ func (m model) CurrentChordPattern() (grid.Pattern, int) {
 
 type chordChangeFn = func(theory.Chord) theory.Chord
 
-func (m *model) ChordChange(fn chordChangeFn) {
-	chordId := m.CurrentChordId()
-	chordPattern := make(grid.Pattern)
-	m.currentOverlay.CurrentChordPattern(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle(), chordId)
-
-	identifiedChord, pos := m.CurrentChord(chordPattern, chordId)
-	if chordId != 0 {
-		identifiedChord.Id = chordId
+func (m *model) ChordChange(alteration uint32) {
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if !exists {
+		m.currentOverlay.CreateChord(m.cursorPos, alteration)
+	} else {
+		gridChord.ApplyAlteration(alteration)
 	}
-
-	chord := fn(identifiedChord)
-	chord.Id = identifiedChord.Id
-
-	theory.UpdateChord(chord)
-	m.RemoveChordNotes(maps.Keys(chordPattern))
-	m.AddChordNotes(chord, pos, chordPattern)
-	m.PlayChord(chord, pos)
-}
-
-func (m *model) AlterChord(chordAlteration uint32) {
-	m.ChordChange(func(chord theory.Chord) theory.Chord {
-		chord.AddNotes(chordAlteration)
-		return chord
-	})
-}
-
-func (m *model) NextInversion() {
-	m.ChordChange(func(chord theory.Chord) theory.Chord {
-		chord.NextInversion()
-		return chord
-	})
-}
-
-func (m *model) PreviousInversion() {
-	m.ChordChange(func(chord theory.Chord) theory.Chord {
-		chord.PreviousInversion()
-		return chord
-	})
 }
 
 func (m model) PlayChord(chord theory.Chord, pos uint8) {
@@ -1807,21 +1766,6 @@ func (m *model) CurrentChordId() int {
 	m.ChordFindBeatGridKeys(&gridKeys)
 	chordId := m.currentOverlay.CurrentChordId(m.currentOverlay.Key.GetMinimumKeyCycle(), gridKeys)
 	return chordId
-}
-
-func (m *model) CurrentChord(chordPattern grid.Pattern, chordId int) (theory.Chord, uint8) {
-	currentNotes, position := m.ChordNotes(chordPattern)
-
-	if chordId > 0 {
-		registeredChord, _ := theory.GetChord(chordId)
-		return registeredChord, registeredChord.GetRootPosition(position)
-	} else if len(currentNotes) > 0 {
-		identifiedChord := theory.FromNotesWithAnalysis(currentNotes)
-		return identifiedChord, identifiedChord.GetRootPosition(position)
-	}
-
-	newChord := theory.InitChord()
-	return newChord, m.cursorPos.Line
 }
 
 func ChordStartPosition(chordPattern grid.Pattern) uint8 {
@@ -1850,45 +1794,6 @@ func (m *model) ChordNotes(chordPattern grid.Pattern) ([]uint8, uint8) {
 	} else {
 		return []uint8{}, 0
 	}
-}
-
-func (m *model) AddChordNotes(chord theory.Chord, pos uint8, previousNotes grid.Pattern) []gridKey {
-
-	previousGridNotes := make([]GridNote, 0, len(previousNotes))
-	for k, v := range previousNotes {
-		previousGridNotes = append(previousGridNotes, GridNote{k, v})
-	}
-
-	slices.SortFunc(previousGridNotes, func(a GridNote, b GridNote) int { return int(b.gridKey.Line) - int(a.gridKey.Line) })
-
-	notes := chord.Notes()
-	chordKeys := make([]gridKey, len(notes))
-
-	for i, n := range notes {
-		var noteToUse GridNote
-		if i < len(previousNotes) {
-			noteToUse = previousGridNotes[i]
-		} else if len(previousNotes) > 0 {
-			noteToUse = previousGridNotes[0]
-		} else {
-			index := pos - uint8(n)
-			if int(index) < len(m.definition.lines) {
-				gk := gridKey{Line: index, Beat: m.cursorPos.Beat}
-				noteToUse = GridNote{gk, grid.InitNote()}
-			}
-		}
-		newNote := noteToUse.note
-		newNote.ChordId = chord.Id
-
-		index := pos - uint8(n)
-		if int(index) < len(m.definition.lines) {
-			gk := gridKey{Line: index, Beat: noteToUse.gridKey.Beat}
-			m.currentOverlay.SetNote(gk, newNote)
-			chordKeys[i] = gk
-		}
-	}
-
-	return chordKeys
 }
 
 func (m *model) RemoveChordNotes(keys iter.Seq[grid.GridKey]) {
@@ -2154,23 +2059,9 @@ func (m *model) RotateUp() {
 }
 
 func (m *model) RotateChordUp() {
-	chordPattern, chordId := m.CurrentChordPattern()
-	chord, exists := theory.GetChord(chordId)
-	if exists {
-		pos := chord.GetRootPosition(ChordStartPosition(chordPattern))
-		m.RemoveChordNotes(maps.Keys(chordPattern))
-		m.AddChordNotes(chord, pos-1, chordPattern)
-	}
 }
 
 func (m *model) RotateChordDown() {
-	chordPattern, chordId := m.CurrentChordPattern()
-	chord, exists := theory.GetChord(chordId)
-	if exists {
-		pos := chord.GetRootPosition(ChordStartPosition(chordPattern))
-		m.RemoveChordNotes(maps.Keys(chordPattern))
-		m.AddChordNotes(chord, pos+1, chordPattern)
-	}
 }
 
 func (m *model) RotateDown() {
@@ -2224,7 +2115,7 @@ func (m model) HasSolo() bool {
 }
 
 type Buffer struct {
-	bounds    Bounds
+	bounds    grid.Bounds
 	gridNotes []GridNote
 }
 
@@ -2235,7 +2126,7 @@ func (m model) Yank() Buffer {
 
 	for key, note := range combinedPattern {
 		if bounds.InBounds(key) {
-			normalizedGridKey := GK(key.Line-bounds.top, key.Beat-bounds.left)
+			normalizedGridKey := GK(key.Line-bounds.Top, key.Beat-bounds.Left)
 			capturedGridNotes = append(capturedGridNotes, GridNote{normalizedGridKey, note})
 		}
 	}
@@ -2258,11 +2149,11 @@ func (m *model) Paste() {
 
 	chordedGridNotes := GroupByChordId(m.yankBuffer.gridNotes)
 
-	for originalChordId, gridNotes := range chordedGridNotes {
+	for _, gridNotes := range chordedGridNotes {
 		var newChordId int
-		if originalChordId != 0 {
-			newChordId = theory.RegisterChord(theory.Chord{})
-		}
+		// if originalChordId != 0 {
+		// 	newChordId = theory.RegisterChord(theory.Chord{})
+		// }
 		for _, gridNote := range gridNotes {
 			key := gridNote.gridKey
 			newKey := GK(key.Line+keyModifier.Line, key.Beat+keyModifier.Beat)
@@ -2807,9 +2698,9 @@ func (m model) View() string {
 
 		var chordView string
 		if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
-			chord, exists := theory.GetChord(m.currentChordId)
+			chord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
 			if exists {
-				chordView = m.ChordView(chord)
+				chordView = m.ChordView(chord.Chord)
 			}
 		}
 		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
@@ -2952,8 +2843,10 @@ func (m model) ChordView(chord theory.Chord) string {
 	buf.WriteString("\n")
 
 	intervals := chord.Intervals()
-	for i, n := range chord.UninvertedNotes() {
-		buf.WriteString(fmt.Sprintf("%d - %s", n, intervals[i]))
+	uninvertedNotes := chord.UninvertedNotes()
+	slices.Reverse(uninvertedNotes)
+	for i, n := range uninvertedNotes {
+		buf.WriteString(fmt.Sprintf("%d - %s - %s", n, intervals[i], NoteName(note+n)))
 		buf.WriteString("\n")
 	}
 
@@ -3237,6 +3130,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 	buf.WriteString(m.LineIndicator(lineNumber))
 
 	gateSpace := GateSpace{}
+	currentChord, _ := m.currentOverlay.Chords.FindChord(m.cursorPos)
 	for i := uint8(0); i < m.CurrentPart().Beats; i++ {
 		currentGridKey := GK(uint8(lineNumber), i)
 		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
@@ -3283,8 +3177,8 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 			gateSpace.StringValue = []rune(gateSpaceValue)
 			gateSpace.Color = foregroundColor
 		}
-
-		if m.currentChordId != 0 && m.currentChordId == overlayNote.Note.ChordId && !cursorMatch {
+		gridChord, exists := m.currentOverlay.Chords.FindChordWithNote(currentGridKey)
+		if exists && gridChord == currentChord && !cursorMatch {
 			fg := style.GetForeground()
 			bg := style.GetBackground()
 			style = style.Background(fg).Foreground(bg)
@@ -3297,64 +3191,29 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 	return buf.String()
 }
 
-func InitBounds(cursorA, cursorB gridKey) Bounds {
-	return Bounds{
-		top:    min(cursorA.Line, cursorB.Line),
-		right:  max(cursorA.Beat, cursorB.Beat),
-		bottom: max(cursorA.Line, cursorB.Line),
-		left:   min(cursorA.Beat, cursorB.Beat),
+func InitBounds(cursorA, cursorB gridKey) grid.Bounds {
+	return grid.Bounds{
+		Top:    min(cursorA.Line, cursorB.Line),
+		Right:  max(cursorA.Beat, cursorB.Beat),
+		Bottom: max(cursorA.Line, cursorB.Line),
+		Left:   min(cursorA.Beat, cursorB.Beat),
 	}
 }
 
-type Bounds struct {
-	top    uint8
-	right  uint8
-	bottom uint8
-	left   uint8
-}
-
-func (b Bounds) Area() int {
-	return int(absdiff(b.top, b.bottom) * absdiff(b.left, b.right))
-}
-
-func (bounds Bounds) GridKeys() []gridKey {
-	keys := make([]gridKey, 0, bounds.Area())
-	for i := bounds.top; i <= bounds.bottom; i++ {
-		for j := bounds.left; j <= bounds.right; j++ {
-			keys = append(keys, GK(i, j))
-		}
-	}
-	return keys
-}
-
-func (b Bounds) InBounds(key gridKey) bool {
-	return key.Line >= b.top &&
-		key.Line <= b.bottom &&
-		key.Beat >= b.left &&
-		key.Beat <= b.right
-}
-
-func (b Bounds) Normalized() Bounds {
-	return Bounds{top: 0, right: b.right - b.left, bottom: b.bottom - b.top, left: 0}
-}
-
-func (b Bounds) BottomRightFrom(key gridKey) gridKey {
-	return GK(key.Line+b.bottom, key.Beat+b.right)
-}
-
-func (b Bounds) TopLeft() gridKey {
-	return GK(b.top, b.left)
-}
-
-func (m model) VisualSelectionBounds() Bounds {
+func (m model) VisualSelectionBounds() grid.Bounds {
 	return InitBounds(m.cursorPos, m.visualAnchorCursor)
 }
 
-func (m model) PatternBounds() Bounds {
-	return Bounds{0, m.CurrentPart().Beats - 1, uint8(len(m.definition.lines)), 0}
+func (m model) PatternBounds() grid.Bounds {
+	return grid.Bounds{
+		Top:    0,
+		Right:  m.CurrentPart().Beats - 1,
+		Bottom: uint8(len(m.definition.lines)),
+		Left:   0,
+	}
 }
 
-func (m model) PasteBounds() Bounds {
+func (m model) PasteBounds() grid.Bounds {
 	if m.visualMode {
 		return m.VisualSelectionBounds()
 	} else {
@@ -3362,7 +3221,7 @@ func (m model) PasteBounds() Bounds {
 	}
 }
 
-func (m model) YankBounds() Bounds {
+func (m model) YankBounds() grid.Bounds {
 	if m.visualMode {
 		return m.VisualSelectionBounds()
 	} else {
