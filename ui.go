@@ -1993,6 +1993,8 @@ func (m *model) ClearOverlay() {
 	(*m.definition.parts)[m.CurrentPartId()].Overlays.Remove(m.currentOverlay.Key)
 }
 
+type MoveFunc func()
+
 func (m *model) RotateRight() {
 	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
 
@@ -2000,18 +2002,43 @@ func (m *model) RotateRight() {
 	start, end := m.PatternActionBeatBoundaries()
 
 	for l := lineStart; l <= lineEnd; l++ {
-		lastNote := combinedPattern[GK(l, end)]
+
+		moves := make([]MoveFunc, 0, (end - start))
+		lastKey := GK(l, end)
+		firstKey := GK(l, start)
+		lastNote := combinedPattern[lastKey]
 		previousNote := zeronote
+		var previousKey grid.GridKey
 		for i := start; i <= end; i++ {
-			gridKey := GK(l, i)
-			currentNote := combinedPattern[gridKey]
+			currentKey := GK(l, i)
+			currentNote := combinedPattern[currentKey]
 
-			m.currentOverlay.SetNote(gridKey, previousNote)
+			chord, chordExists := m.currentOverlay.Chords.FindChordWithNote(previousKey)
+			if chordExists {
+				fromKey := previousKey
+				moves = append(moves, func() {
+					chord.Move(fromKey, currentKey)
+				})
+			} else {
+				noteToMove := previousNote
+				moves = append(moves, func() {
+					m.currentOverlay.MoveNoteTo(currentKey, noteToMove)
+				})
+			}
 			previousNote = currentNote
+			previousKey = currentKey
 		}
-		m.currentOverlay.SetNote(GK(l, start), lastNote)
-	}
+		noteToMove := lastNote
+		moves = append(moves, func() {
+			m.currentOverlay.MoveNoteTo(firstKey, noteToMove)
+		})
 
+		for _, moveFn := range moves {
+			if moveFn != nil {
+				moveFn()
+			}
+		}
+	}
 }
 
 func (m *model) RotateLeft() {
@@ -2020,18 +2047,41 @@ func (m *model) RotateLeft() {
 	lineStart, lineEnd := m.PatternActionLineBoundaries()
 	start, end := m.PatternActionBeatBoundaries()
 	for l := lineStart; l <= lineEnd; l++ {
+		moves := make([]MoveFunc, 0, (end - start))
 		firstNote := combinedPattern[GK(l, start)]
 		previousNote := zeronote
+		var previousKey grid.GridKey
 		for i := int8(end); i >= int8(start); i-- {
-			gridKey := GK(l, uint8(i))
-			currentNote := combinedPattern[gridKey]
+			currentKey := GK(l, uint8(i))
+			currentNote := combinedPattern[currentKey]
 
-			m.currentOverlay.SetNote(gridKey, previousNote)
+			chord, chordExists := m.currentOverlay.Chords.FindChordWithNote(previousKey)
+			if chordExists {
+				fromKey := previousKey
+				moves = append(moves, func() {
+					chord.Move(fromKey, currentKey)
+				})
+			} else {
+				noteToMove := previousNote
+				moves = append(moves, func() {
+					m.currentOverlay.MoveNoteTo(currentKey, noteToMove)
+				})
+			}
+
 			previousNote = currentNote
+			previousKey = currentKey
 		}
-		m.currentOverlay.SetNote(GK(l, end), firstNote)
-	}
 
+		moves = append(moves, func() {
+			m.currentOverlay.MoveNoteTo(GK(l, end), firstNote)
+		})
+
+		for _, moveFn := range moves {
+			if moveFn != nil {
+				moveFn()
+			}
+		}
+	}
 }
 
 func (m *model) RotateUp() {
@@ -2910,7 +2960,6 @@ func (m model) OverlaysView() string {
 func (m model) ViewTriggerSeq() string {
 	var buf strings.Builder
 	var mode string
-	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
 
 	if m.patternMode == PATTERN_ACCENT {
 		mode = " Accent "
@@ -2958,6 +3007,7 @@ func (m model) ViewTriggerSeq() string {
 	buf.WriteString(themes.SeqBorderStyle.Render(fmt.Sprintf("┌%s", topLine)))
 	buf.WriteString("\n")
 
+	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
 		buf.WriteString(lineView(i, m, visualCombinedPattern))
 	}

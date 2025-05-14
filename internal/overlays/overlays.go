@@ -208,6 +208,10 @@ func (ol Overlay) GetNote(gridKey grid.GridKey) (grid.Note, bool) {
 	return grid.Note{}, false
 }
 
+func (ol *Overlay) MoveNoteTo(gridKey grid.GridKey, note grid.Note) {
+	(*ol).Notes[gridKey] = note
+}
+
 func (ol *Overlay) SetNote(gridKey grid.GridKey, note grid.Note) {
 	_, exists := (*ol).Notes[gridKey]
 	if exists {
@@ -248,6 +252,7 @@ func (ol Overlay) chordNotes(pattern *grid.Pattern) {
 func (gc GridChord) ChordNotes(pattern *grid.Pattern) {
 	for i, interval := range gc.Chord.Notes() {
 		beatnote := gc.Notes[i]
-		(*pattern)[grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + beatnote.beat}] = beatnote.note
+		b := uint8(int(gc.Root.Beat) + beatnote.beat)
+		(*pattern)[grid.GridKey{Line: gc.Root.Line - interval, Beat: b}] = beatnote.note
 	}
 }

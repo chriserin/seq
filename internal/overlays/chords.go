@@ -18,7 +18,7 @@ func (gc GridChord) InBounds(gridKey grid.GridKey) bool {
 }
 
 type BeatNote struct {
-	beat uint8
+	beat int
 	note grid.Note
 }
 
@@ -40,10 +40,21 @@ func (cs Chords) FindChordWithNote(gridKey grid.GridKey) (*GridChord, bool) {
 	return &GridChord{}, false
 }
 
-func (gc GridChord) SetChordNote(position grid.GridKey, note grid.Note) {
+func (gc *GridChord) Move(fromKey grid.GridKey, toKey grid.GridKey) {
 	for i, interval := range gc.Chord.Notes() {
 		beatnote := gc.Notes[i]
-		potentialNotePosition := grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + beatnote.beat}
+		potentialNotePosition := grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + uint8(beatnote.beat)}
+		if potentialNotePosition == fromKey {
+			newRelativeBeat := int(toKey.Beat) - int(gc.Root.Beat)
+			gc.Notes[i] = BeatNote{newRelativeBeat, beatnote.note}
+		}
+	}
+}
+
+func (gc *GridChord) SetChordNote(position grid.GridKey, note grid.Note) {
+	for i, interval := range gc.Chord.Notes() {
+		beatnote := gc.Notes[i]
+		potentialNotePosition := grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + uint8(beatnote.beat)}
 		if potentialNotePosition == position {
 			gc.Notes[i] = BeatNote{beatnote.beat, note}
 		}
@@ -64,24 +75,33 @@ func (gc GridChord) Positions() []grid.GridKey {
 
 	for i, interval := range gc.Chord.Notes() {
 		beatnote := gc.Notes[i]
-		positions[i] = grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + beatnote.beat}
+		positions[i] = grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + uint8(beatnote.beat)}
 	}
 	return positions
 }
 
 func (gc GridChord) ChordBounds() grid.Bounds {
-	notes := theory.ShiftToZero(gc.Chord.Notes())
+	notes := gc.Chord.Notes()
+
+	var leftMost int
+	var rightMost int
+	for _, note := range gc.Notes {
+		leftMost = min(leftMost, note.beat)
+		rightMost = max(rightMost, note.beat)
+	}
+
 	var top uint8
 	if int(gc.Root.Line)-int(notes[len(notes)-1]) < 0 {
 		top = 0
 	} else {
 		top = gc.Root.Line - notes[len(notes)-1]
 	}
+
 	return grid.Bounds{
 		Top:    top,
-		Right:  gc.Root.Beat + gc.Notes[len(gc.Notes)-1].beat,
-		Bottom: gc.Root.Line + 2,
-		Left:   gc.Root.Beat,
+		Right:  uint8(int(gc.Root.Beat) + rightMost),
+		Bottom: gc.Root.Line - notes[0],
+		Left:   uint8(int(gc.Root.Beat) + leftMost),
 	}
 }
 
