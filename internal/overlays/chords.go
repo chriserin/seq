@@ -1,6 +1,8 @@
 package overlays
 
 import (
+	"slices"
+
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/theory"
 )
@@ -12,6 +14,7 @@ type GridChord struct {
 	Notes    []BeatNote
 	Root     grid.GridKey
 	Arppegio arp
+	Double   uint8
 }
 
 func (gc GridChord) InBounds(gridKey grid.GridKey) bool {
@@ -154,21 +157,43 @@ func (gc *GridChord) NextArp() {
 	gc.ApplyArppegiation()
 }
 
+func (gc *GridChord) NextDouble() {
+	gc.Double = gc.Double + 1
+	gc.ApplyArppegiation()
+}
+
 func (gc *GridChord) ApplyArppegiation() {
 	intervals := gc.ArppegioIntervals()
 	gc.Notes = make([]BeatNote, 0, len(intervals))
 	for i := range intervals {
-		gc.Notes = append(gc.Notes, BeatNote{i, grid.InitNote()})
+		var step int
+		if gc.Arppegio == ARP_NOTHING {
+			step = 0
+		} else {
+			step = i
+		}
+		gc.Notes = append(gc.Notes, BeatNote{step, grid.InitNote()})
 	}
 }
 
 func (gc GridChord) ArppegioIntervals() []uint8 {
-	notes := gc.Chord.Notes()
+	intervals := gc.Chord.Notes()
+	doubledIntervals := gc.ApplyDoubles(intervals)
 	switch gc.Arppegio {
 	case ARP_NOTHING:
-		return notes
+		return doubledIntervals
 	case ARP_UP:
-		return notes
+		return doubledIntervals
 	}
-	return notes
+	return doubledIntervals
+}
+
+func (gc GridChord) ApplyDoubles(intervals []uint8) []uint8 {
+	grownIntervals := slices.Grow(intervals, int(gc.Double))
+	for i := range gc.Double {
+		if int(i) < len(intervals) {
+			grownIntervals = append(grownIntervals, intervals[i]+12)
+		}
+	}
+	return grownIntervals
 }

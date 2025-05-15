@@ -119,6 +119,7 @@ const (
 	ChordMode
 	PatternMode
 	NextArppegio
+	NextDouble
 )
 
 type mappingKey [3]string
@@ -203,6 +204,7 @@ var mappings = registry{
 	k("{"):      NextOverlay,
 	k("}"):      PrevOverlay,
 	k("]", "p"): NextArppegio,
+	k("]", "d"): NextDouble,
 }
 
 var triggerMappings = registry{
