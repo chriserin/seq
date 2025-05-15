@@ -2205,7 +2205,11 @@ type Buffer struct {
 }
 
 func (b Buffer) IsChord() bool {
-	return len(b.gridChord.Notes) > 0
+	if b.gridChord != nil {
+		return len(b.gridChord.Notes) > 0
+	} else {
+		return false
+	}
 }
 
 func InitChordBuffer(gridChord *overlays.GridChord) Buffer {
