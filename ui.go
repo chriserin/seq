@@ -1692,6 +1692,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.PrevArppegio()
 	case mappings.NextDouble:
 		m.NextDouble()
+	case mappings.PrevDouble:
+		m.PrevDouble()
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1764,10 +1766,16 @@ func (m *model) PrevArppegio() {
 }
 
 func (m *model) NextDouble() {
-
 	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
 	if exists {
 		gridChord.NextDouble()
+	}
+}
+
+func (m *model) PrevDouble() {
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if exists {
+		gridChord.PrevDouble()
 	}
 }
 

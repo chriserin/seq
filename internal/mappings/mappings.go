@@ -121,6 +121,7 @@ const (
 	NextArppegio
 	PrevArppegio
 	NextDouble
+	PrevDouble
 )
 
 type mappingKey [3]string
@@ -207,6 +208,7 @@ var mappings = registry{
 	k("]", "p"): NextArppegio,
 	k("[", "p"): PrevArppegio,
 	k("]", "d"): NextDouble,
+	k("[", "d"): PrevDouble,
 }
 
 var triggerMappings = registry{

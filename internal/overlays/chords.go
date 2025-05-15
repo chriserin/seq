@@ -163,14 +163,25 @@ func (gc *GridChord) PrevArp() {
 	if gc.Arppegio == 0 {
 		newArp = 3
 	} else {
-		newArp = gc.Arppegio - 1%3
+		newArp = gc.Arppegio - 1
 	}
 	gc.Arppegio = newArp
 	gc.ApplyArppegiation()
 }
 
 func (gc *GridChord) NextDouble() {
-	gc.Double = gc.Double + 1
+	gc.Double = (gc.Double + 1) % (uint8(len(gc.Chord.Notes())) + 1)
+	gc.ApplyArppegiation()
+}
+
+func (gc *GridChord) PrevDouble() {
+	var newDouble uint8
+	if gc.Double == 0 {
+		newDouble = uint8(len(gc.Chord.Notes()))
+	} else {
+		newDouble = gc.Double - 1
+	}
+	gc.Double = newDouble
 	gc.ApplyArppegiation()
 }
 
