@@ -150,10 +150,22 @@ type arp int
 const (
 	ARP_NOTHING arp = iota
 	ARP_UP
+	ARP_REVERSE
 )
 
 func (gc *GridChord) NextArp() {
-	gc.Arppegio = ARP_UP
+	gc.Arppegio = (gc.Arppegio + 1) % 3
+	gc.ApplyArppegiation()
+}
+
+func (gc *GridChord) PrevArp() {
+	var newArp arp
+	if gc.Arppegio == 0 {
+		newArp = 3
+	} else {
+		newArp = gc.Arppegio - 1%3
+	}
+	gc.Arppegio = newArp
 	gc.ApplyArppegiation()
 }
 
@@ -183,6 +195,9 @@ func (gc GridChord) ArppegioIntervals() []uint8 {
 	case ARP_NOTHING:
 		return doubledIntervals
 	case ARP_UP:
+		return doubledIntervals
+	case ARP_REVERSE:
+		slices.Reverse(doubledIntervals)
 		return doubledIntervals
 	}
 	return doubledIntervals

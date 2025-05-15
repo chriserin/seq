@@ -119,6 +119,7 @@ const (
 	ChordMode
 	PatternMode
 	NextArppegio
+	PrevArppegio
 	NextDouble
 )
 
@@ -204,6 +205,7 @@ var mappings = registry{
 	k("{"):      NextOverlay,
 	k("}"):      PrevOverlay,
 	k("]", "p"): NextArppegio,
+	k("[", "p"): PrevArppegio,
 	k("]", "d"): NextDouble,
 }
 

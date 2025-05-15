@@ -1688,6 +1688,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.PreviousInversion()
 	case mappings.NextArppegio:
 		m.NextArppegio()
+	case mappings.PrevArppegio:
+		m.PrevArppegio()
 	case mappings.NextDouble:
 		m.NextDouble()
 	}
@@ -1748,10 +1750,16 @@ func (m *model) PreviousInversion() {
 }
 
 func (m *model) NextArppegio() {
-
 	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
 	if exists {
 		gridChord.NextArp()
+	}
+}
+
+func (m *model) PrevArppegio() {
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if exists {
+		gridChord.PrevArp()
 	}
 }
 
