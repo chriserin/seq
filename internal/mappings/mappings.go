@@ -118,6 +118,7 @@ const (
 	DecreaseInversions
 	ChordMode
 	PatternMode
+	NextArppegio
 )
 
 type mappingKey [3]string
@@ -201,6 +202,7 @@ var mappings = registry{
 	k("z"):      ActionAddLineDelay,
 	k("{"):      NextOverlay,
 	k("}"):      PrevOverlay,
+	k("]", "p"): NextArppegio,
 }
 
 var triggerMappings = registry{

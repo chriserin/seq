@@ -8,9 +8,10 @@ import (
 type Chords []*GridChord
 
 type GridChord struct {
-	Chord theory.Chord
-	Notes []BeatNote
-	Root  grid.GridKey
+	Chord    theory.Chord
+	Notes    []BeatNote
+	Root     grid.GridKey
+	Arppegio arp
 }
 
 func (gc GridChord) InBounds(gridKey grid.GridKey) bool {
@@ -43,7 +44,7 @@ func (cs Chords) FindChordWithNote(gridKey grid.GridKey) (*GridChord, bool) {
 func (gc *GridChord) Move(fromKey grid.GridKey, toKey grid.GridKey) {
 	for i, interval := range gc.Chord.Notes() {
 		beatnote := gc.Notes[i]
-		potentialNotePosition := grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + uint8(beatnote.beat)}
+		potentialNotePosition := gc.Key(interval, beatnote)
 		if potentialNotePosition == fromKey {
 			newRelativeBeat := int(toKey.Beat) - int(gc.Root.Beat)
 			gc.Notes[i] = BeatNote{newRelativeBeat, beatnote.note}
@@ -54,7 +55,7 @@ func (gc *GridChord) Move(fromKey grid.GridKey, toKey grid.GridKey) {
 func (gc *GridChord) SetChordNote(position grid.GridKey, note grid.Note) {
 	for i, interval := range gc.Chord.Notes() {
 		beatnote := gc.Notes[i]
-		potentialNotePosition := grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + uint8(beatnote.beat)}
+		potentialNotePosition := gc.Key(interval, beatnote)
 		if potentialNotePosition == position {
 			gc.Notes[i] = BeatNote{beatnote.beat, note}
 		}
@@ -75,7 +76,7 @@ func (gc GridChord) Positions() []grid.GridKey {
 
 	for i, interval := range gc.Chord.Notes() {
 		beatnote := gc.Notes[i]
-		positions[i] = grid.GridKey{Line: gc.Root.Line - interval, Beat: gc.Root.Beat + uint8(beatnote.beat)}
+		positions[i] = gc.Key(interval, beatnote)
 	}
 	return positions
 }
@@ -138,10 +139,36 @@ func InitChord(root grid.GridKey, alteration uint32) *GridChord {
 
 func (gc *GridChord) ApplyAlteration(alteration uint32) {
 	gc.Chord.AddNotes(alteration)
-	notes := gc.Chord.Notes()
-	if len(notes) < len(gc.Notes) {
-		for range len(gc.Notes) - len(notes) {
-			gc.Notes = append(gc.Notes, BeatNote{0, grid.InitNote()})
-		}
+	gc.ApplyArppegiation()
+}
+
+type arp int
+
+const (
+	ARP_NOTHING arp = iota
+	ARP_UP
+)
+
+func (gc *GridChord) NextArp() {
+	gc.Arppegio = ARP_UP
+	gc.ApplyArppegiation()
+}
+
+func (gc *GridChord) ApplyArppegiation() {
+	intervals := gc.ArppegioIntervals()
+	gc.Notes = make([]BeatNote, 0, len(intervals))
+	for i := range intervals {
+		gc.Notes = append(gc.Notes, BeatNote{i, grid.InitNote()})
 	}
+}
+
+func (gc GridChord) ArppegioIntervals() []uint8 {
+	notes := gc.Chord.Notes()
+	switch gc.Arppegio {
+	case ARP_NOTHING:
+		return notes
+	case ARP_UP:
+		return notes
+	}
+	return notes
 }

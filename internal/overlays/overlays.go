@@ -245,14 +245,25 @@ func (ol *Overlay) ToggleOverlayStackOptions() {
 
 func (ol Overlay) chordNotes(pattern *grid.Pattern) {
 	for _, gridChord := range ol.Chords {
-		gridChord.ChordNotes(pattern)
+		gridChord.ArppegiatedPattern(pattern)
 	}
 }
 
 func (gc GridChord) ChordNotes(pattern *grid.Pattern) {
 	for i, interval := range gc.Chord.Notes() {
 		beatnote := gc.Notes[i]
-		b := uint8(int(gc.Root.Beat) + beatnote.beat)
-		(*pattern)[grid.GridKey{Line: gc.Root.Line - interval, Beat: b}] = beatnote.note
+		(*pattern)[gc.Key(interval, beatnote)] = beatnote.note
 	}
+}
+
+func (gc GridChord) ArppegiatedPattern(pattern *grid.Pattern) {
+	for i, interval := range gc.ArppegioIntervals() {
+		beatnote := gc.Notes[i]
+		(*pattern)[gc.Key(interval, beatnote)] = beatnote.note
+	}
+}
+
+func (gc GridChord) Key(interval uint8, beatnote BeatNote) grid.GridKey {
+	b := uint8(int(gc.Root.Beat) + beatnote.beat)
+	return grid.GridKey{Line: gc.Root.Line - interval, Beat: b}
 }

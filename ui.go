@@ -1686,6 +1686,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.NextInversion()
 	case mappings.DecreaseInversions:
 		m.PreviousInversion()
+	case mappings.NextArppegio:
+		m.NextArppegio()
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1740,6 +1742,14 @@ func (m *model) PreviousInversion() {
 	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
 	if exists {
 		gridChord.Chord.PreviousInversion()
+	}
+}
+
+func (m *model) NextArppegio() {
+
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if exists {
+		gridChord.NextArp()
 	}
 }
 
