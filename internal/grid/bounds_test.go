@@ -1,4 +1,4 @@
-package main
+package grid
 
 import (
 	"testing"
@@ -10,25 +10,25 @@ func TestInBounds(t *testing.T) {
 	testCases := []struct {
 		desc   string
 		bounds Bounds
-		value  gridKey
+		value  GridKey
 		result bool
 	}{
 		{
 			desc:   "A",
 			bounds: Bounds{1, 1, 1, 1},
-			value:  GK(1, 1),
+			value:  GridKey{1, 1},
 			result: true,
 		},
 		{
 			desc:   "B",
 			bounds: Bounds{0, 1, 1, 0},
-			value:  GK(1, 1),
+			value:  GridKey{1, 1},
 			result: true,
 		},
 		{
 			desc:   "C",
 			bounds: Bounds{0, 0, 1, 1},
-			value:  GK(1, 1),
+			value:  GridKey{1, 1},
 			result: false,
 		},
 	}
