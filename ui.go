@@ -1079,15 +1079,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case mappings.CursorDown:
 			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
-				if m.cursorPos.Line < uint8(len(m.definition.lines)-1) {
-					m.cursorPos.Line++
-				}
+				m.CursorDown()
 			}
 		case mappings.CursorUp:
 			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
-				if m.cursorPos.Line > 0 {
-					m.cursorPos.Line--
-				}
+				m.CursorUp()
 			}
 		case mappings.CursorLeft:
 			if m.selectionIndicator == SELECT_RATCHETS {
@@ -1097,9 +1093,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.selectionIndicator > 0 {
 				// Do Nothing
 			} else {
-				if m.cursorPos.Beat > 0 {
-					m.cursorPos.Beat--
-				}
+				m.CursorLeft()
 			}
 		case mappings.CursorRight:
 			if m.selectionIndicator == SELECT_RATCHETS {
@@ -1110,9 +1104,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.selectionIndicator > 0 {
 				// Do Nothing
 			} else {
-				if m.cursorPos.Beat < m.CurrentPart().Beats-1 {
-					m.cursorPos.Beat++
-				}
+				m.CursorRight()
 			}
 		case mappings.CursorLineStart:
 			m.cursorPos.Beat = 0
@@ -1415,6 +1407,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m *model) CursorDown() {
+	if m.cursorPos.Line < uint8(len(m.definition.lines)-1) {
+		m.cursorPos.Line++
+	}
+}
+
+func (m *model) CursorUp() {
+	if m.cursorPos.Line > 0 {
+		m.cursorPos.Line--
+	}
+}
+
+func (m *model) CursorRight() {
+	if m.cursorPos.Beat < m.CurrentPart().Beats-1 {
+		m.cursorPos.Beat++
+	}
+}
+
+func (m *model) CursorLeft() {
+	if m.cursorPos.Beat > 0 {
+		m.cursorPos.Beat--
+	}
+}
+
 func (m *model) SetSelectionIndicator(indicator Selection) {
 	m.selectionIndicator = indicator
 	m.patternMode = PATTERN_FILL
@@ -1645,22 +1661,36 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.ClearSeq:
 		m.ClearOverlay()
 	case mappings.RotateRight:
-		m.RotateRight()
+		switch m.definition.templateSequencerType {
+		case grid.SEQTYPE_TRIGGER:
+			m.RotateRight()
+		case grid.SEQTYPE_POLYPHONY:
+			m.MoveChordRight()
+			m.CursorRight()
+		}
 	case mappings.RotateLeft:
-		m.RotateLeft()
+		switch m.definition.templateSequencerType {
+		case grid.SEQTYPE_TRIGGER:
+			m.RotateLeft()
+		case grid.SEQTYPE_POLYPHONY:
+			m.MoveChordLeft()
+			m.CursorLeft()
+		}
 	case mappings.RotateUp:
 		switch m.definition.templateSequencerType {
 		case grid.SEQTYPE_TRIGGER:
 			m.RotateUp()
 		case grid.SEQTYPE_POLYPHONY:
-			m.RotateChordUp()
+			m.MoveChordUp()
+			m.CursorUp()
 		}
 	case mappings.RotateDown:
 		switch m.definition.templateSequencerType {
 		case grid.SEQTYPE_TRIGGER:
 			m.RotateDown()
 		case grid.SEQTYPE_POLYPHONY:
-			m.RotateChordDown()
+			m.MoveChordDown()
+			m.CursorDown()
 		}
 	case mappings.Paste:
 		m.Paste()
@@ -2136,23 +2166,35 @@ func (m *model) RotateUp() {
 	}
 }
 
-func (m *model) RotateChordUp() {
+func (m *model) MoveChordLeft() {
 	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
 	if exists {
-		newLine := gridChord.Root.Line - 1
-		if newLine >= 0 {
-			gridChord.Root.Line = newLine
-		}
+		newBeat := gridChord.Root.Beat - 1
+		gridChord.Root.Beat = newBeat
 	}
 }
 
-func (m *model) RotateChordDown() {
+func (m *model) MoveChordRight() {
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if exists {
+		newBeat := gridChord.Root.Beat + 1
+		gridChord.Root.Beat = newBeat
+	}
+}
+
+func (m *model) MoveChordUp() {
+	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	if exists {
+		newLine := gridChord.Root.Line - 1
+		gridChord.Root.Line = newLine
+	}
+}
+
+func (m *model) MoveChordDown() {
 	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
 	if exists {
 		newLine := gridChord.Root.Line + 1
-		if newLine < uint8(len(m.definition.lines)) {
-			gridChord.Root.Line = newLine
-		}
+		gridChord.Root.Line = newLine
 	}
 }
 
@@ -2781,7 +2823,7 @@ func (m model) View() string {
 
 	if m.patternMode == PATTERN_ACCENT || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
-	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && len(m.CurrentPart().Overlays.Notes) == 0 && len(*m.definition.parts) == 1 && m.CurrentPartId() == 0) ||
+	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && m.CurrentPart().Overlays.IsFresh() && len(*m.definition.parts) == 1 && m.CurrentPartId() == 0) ||
 		m.selectionIndicator == SELECT_SETUP_VALUE ||
 		m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE ||
 		m.selectionIndicator == SELECT_SETUP_CHANNEL {
@@ -2930,8 +2972,8 @@ func (m model) ChordView(chord theory.Chord) string {
 	}
 	pattern := make(grid.Pattern)
 	gridChord.ChordNotes(&pattern)
-	note := m.definition.lines[gridChord.Root.Line].Note
-	buf.WriteString(NoteName(note))
+	baseNote := m.definition.lines[0].Note
+	buf.WriteString(NoteName(baseNote - gridChord.Root.Line))
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
@@ -2939,11 +2981,11 @@ func (m model) ChordView(chord theory.Chord) string {
 	buf.WriteString(fmt.Sprintf("Inversions: %d", chord.Inversion))
 	buf.WriteString("\n")
 
-	intervals := chord.Intervals()
+	intervals := chord.NamedIntervals()
 	uninvertedNotes := chord.UninvertedNotes()
 	slices.Reverse(uninvertedNotes)
 	for i, n := range uninvertedNotes {
-		buf.WriteString(fmt.Sprintf("%d - %s - %s", n, intervals[i], NoteName(note+n)))
+		buf.WriteString(fmt.Sprintf("%d - %s - %s", n, intervals[i], NoteName(baseNote-gridChord.Root.Line+n)))
 		buf.WriteString("\n")
 	}
 

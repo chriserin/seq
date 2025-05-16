@@ -157,9 +157,9 @@ func (c Chord) UninvertedNotes() []uint8 {
 	return notes
 }
 
-func (c Chord) Intervals() []string {
+func (c Chord) NamedIntervals() []string {
 	notes := make([]string, 0)
-	for i := 0; i < 32; i++ {
+	for i := 31; i >= 0; i-- {
 		if c.notes&(1<<i) != 0 {
 			notes = append(notes, interval(i))
 		}

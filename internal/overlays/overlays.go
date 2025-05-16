@@ -19,6 +19,10 @@ type Overlay struct {
 	PressDown bool
 }
 
+func (ol Overlay) IsFresh() bool {
+	return len(ol.Notes) == 0 && len(ol.Chords) == 0
+}
+
 func (ol Overlay) Add(key Key) *Overlay {
 	aboveComparison := overlaykey.Compare(key, ol.Key)
 	var belowComparison int
