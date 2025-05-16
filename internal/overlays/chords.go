@@ -84,31 +84,6 @@ func (gc GridChord) Positions() []grid.GridKey {
 	return positions
 }
 
-func (gc GridChord) ChordBounds() grid.Bounds {
-	notes := gc.Chord.Notes()
-
-	var leftMost int
-	var rightMost int
-	for _, note := range gc.Notes {
-		leftMost = min(leftMost, note.beat)
-		rightMost = max(rightMost, note.beat)
-	}
-
-	var top uint8
-	if int(gc.Root.Line)-int(notes[len(notes)-1]) < 0 {
-		top = 0
-	} else {
-		top = gc.Root.Line - notes[len(notes)-1]
-	}
-
-	return grid.Bounds{
-		Top:    top,
-		Right:  uint8(int(gc.Root.Beat) + rightMost),
-		Bottom: gc.Root.Line - notes[0],
-		Left:   uint8(int(gc.Root.Beat) + leftMost),
-	}
-}
-
 func (ol *Overlay) CreateChord(root grid.GridKey, alteration uint32) {
 	ol.Chords = append(ol.Chords, InitChord(root, alteration))
 }
