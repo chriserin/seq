@@ -162,6 +162,7 @@ func (gc *GridChord) PrevDouble() {
 
 func (gc *GridChord) ApplyArppegiation() {
 	intervals := gc.ArppegioIntervals()
+	existingNotes := gc.Notes
 	gc.Notes = make([]BeatNote, 0, len(intervals))
 	for i := range intervals {
 		var step int
@@ -170,7 +171,13 @@ func (gc *GridChord) ApplyArppegiation() {
 		} else {
 			step = i
 		}
-		gc.Notes = append(gc.Notes, BeatNote{step, grid.InitNote()})
+		var newNote grid.Note
+		if len(existingNotes) > i {
+			newNote = existingNotes[i].note
+		} else {
+			newNote = existingNotes[i-len(existingNotes)].note
+		}
+		gc.Notes = append(gc.Notes, BeatNote{step, newNote})
 	}
 }
 
