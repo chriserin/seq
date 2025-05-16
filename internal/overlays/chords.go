@@ -28,7 +28,7 @@ type BeatNote struct {
 
 func (cs Chords) FindChord(position grid.GridKey) (*GridChord, bool) {
 	for _, gridChord := range cs {
-		if gridChord.ChordBounds().InBounds(position) {
+		if gridChord.InBounds(position) {
 			return gridChord, true
 		}
 	}
