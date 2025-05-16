@@ -56,7 +56,7 @@ func (gc *GridChord) Move(fromKey grid.GridKey, toKey grid.GridKey) {
 }
 
 func (gc *GridChord) SetChordNote(position grid.GridKey, note grid.Note) {
-	for i, interval := range gc.Chord.Notes() {
+	for i, interval := range gc.ArppegioIntervals() {
 		beatnote := gc.Notes[i]
 		potentialNotePosition := gc.Key(interval, beatnote)
 		if potentialNotePosition == position {
@@ -77,7 +77,7 @@ func (gc GridChord) HasNote(position grid.GridKey) bool {
 func (gc GridChord) Positions() []grid.GridKey {
 	positions := make([]grid.GridKey, len(gc.Notes))
 
-	for i, interval := range gc.Chord.Notes() {
+	for i, interval := range gc.ArppegioIntervals() {
 		beatnote := gc.Notes[i]
 		positions[i] = gc.Key(interval, beatnote)
 	}
