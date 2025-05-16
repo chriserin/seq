@@ -269,6 +269,7 @@ type model struct {
 	programChannel        chan midiEventLoopMsg
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
+	activeChord           *overlays.GridChord
 	// save everything below here
 	definition Definition
 }
@@ -1080,10 +1081,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case mappings.CursorDown:
 			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
 				m.CursorDown()
+				m.activeChord = nil
 			}
 		case mappings.CursorUp:
 			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
 				m.CursorUp()
+				m.activeChord = nil
 			}
 		case mappings.CursorLeft:
 			if m.selectionIndicator == SELECT_RATCHETS {
@@ -1094,6 +1097,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Do Nothing
 			} else {
 				m.CursorLeft()
+				m.activeChord = nil
 			}
 		case mappings.CursorRight:
 			if m.selectionIndicator == SELECT_RATCHETS {
@@ -1105,6 +1109,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Do Nothing
 			} else {
 				m.CursorRight()
+				m.activeChord = nil
 			}
 		case mappings.CursorLineStart:
 			m.cursorPos.Beat = 0
@@ -1606,6 +1611,12 @@ func AdvanceSelectionState(states []Selection, currentSelection Selection) Selec
 }
 
 func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
+	if m.activeChord == nil {
+		chord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
+		if exists {
+			m.activeChord = chord
+		}
+	}
 	switch mapping.Command {
 	case mappings.TriggerAdd:
 		m.AddTrigger()
@@ -1758,9 +1769,20 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	return m
 }
 
-func (m *model) ChordChange(alteration uint32) {
+func (m model) CurrentChord() *overlays.GridChord {
 	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if !exists {
+	if exists {
+		return gridChord
+	} else if m.activeChord != nil {
+		return m.activeChord
+	} else {
+		return nil
+	}
+}
+
+func (m *model) ChordChange(alteration uint32) {
+	gridChord := m.CurrentChord()
+	if gridChord == nil {
 		m.currentOverlay.CreateChord(m.cursorPos, alteration)
 	} else {
 		gridChord.ApplyAlteration(alteration)
@@ -1768,43 +1790,43 @@ func (m *model) ChordChange(alteration uint32) {
 }
 
 func (m *model) NextInversion() {
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if exists {
+	gridChord := m.CurrentChord()
+	if gridChord != nil {
 		gridChord.Chord.NextInversion()
 	}
 }
 
 func (m *model) PreviousInversion() {
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if exists {
+	gridChord := m.CurrentChord()
+	if gridChord != nil {
 		gridChord.Chord.PreviousInversion()
 	}
 }
 
 func (m *model) NextArppegio() {
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if exists {
+	gridChord := m.CurrentChord()
+	if gridChord != nil {
 		gridChord.NextArp()
 	}
 }
 
 func (m *model) PrevArppegio() {
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if exists {
+	gridChord := m.CurrentChord()
+	if gridChord != nil {
 		gridChord.PrevArp()
 	}
 }
 
 func (m *model) NextDouble() {
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if exists {
+	gridChord := m.CurrentChord()
+	if gridChord != nil {
 		gridChord.NextDouble()
 	}
 }
 
 func (m *model) PrevDouble() {
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if exists {
+	gridChord := m.CurrentChord()
+	if gridChord != nil {
 		gridChord.PrevDouble()
 	}
 }
@@ -2167,32 +2189,32 @@ func (m *model) RotateUp() {
 }
 
 func (m *model) MoveChordLeft() {
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if exists {
+	gridChord := m.CurrentChord()
+	if gridChord != nil {
 		newBeat := gridChord.Root.Beat - 1
 		gridChord.Root.Beat = newBeat
 	}
 }
 
 func (m *model) MoveChordRight() {
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if exists {
+	gridChord := m.CurrentChord()
+	if gridChord != nil {
 		newBeat := gridChord.Root.Beat + 1
 		gridChord.Root.Beat = newBeat
 	}
 }
 
 func (m *model) MoveChordUp() {
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if exists {
+	gridChord := m.CurrentChord()
+	if gridChord != nil {
 		newLine := gridChord.Root.Line - 1
 		gridChord.Root.Line = newLine
 	}
 }
 
 func (m *model) MoveChordDown() {
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if exists {
+	gridChord := m.CurrentChord()
+	if gridChord != nil {
 		newLine := gridChord.Root.Line + 1
 		gridChord.Root.Line = newLine
 	}
@@ -2276,8 +2298,8 @@ func InitBuffer(bounds grid.Bounds, notes []GridNote) Buffer {
 }
 
 func (m model) Yank() Buffer {
-	gridChord, chordExists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if !m.visualMode && chordExists {
+	gridChord := m.CurrentChord()
+	if !m.visualMode && gridChord != nil {
 		return InitChordBuffer(gridChord)
 	} else {
 		bounds := m.YankBounds()
@@ -2578,8 +2600,8 @@ type Boundable interface {
 func (m *model) Modify(modifyFunc func(gridKey, note)) {
 
 	var bounds Boundable
-	chord, hasChord := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if !m.visualMode && hasChord {
+	chord := m.CurrentChord()
+	if !m.visualMode && chord != nil {
 		bounds = chord
 	} else {
 		bounds = m.YankBounds()
@@ -2833,9 +2855,9 @@ func (m model) View() string {
 
 		var chordView string
 		if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
-			chord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-			if exists {
-				chordView = m.ChordView(chord.Chord)
+			chord := m.CurrentChord()
+			if chord != nil {
+				chordView = m.ChordView(chord)
 			}
 		}
 		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
@@ -2961,15 +2983,15 @@ func LineValueName(ld grid.LineDefinition, instrument string) string {
 	return ""
 }
 
-func (m model) ChordView(chord theory.Chord) string {
+func (m model) ChordView(gridChord *overlays.GridChord) string {
 
 	var buf strings.Builder
 	buf.WriteString(themes.AppDescriptorStyle.Render("Chord"))
 	buf.WriteString(" - ")
-	gridChord, exists := m.currentOverlay.Chords.FindChord(m.cursorPos)
-	if !exists {
+	if gridChord == nil {
 		return ""
 	}
+	chord := gridChord.Chord
 	pattern := make(grid.Pattern)
 	gridChord.ChordNotes(&pattern)
 	baseNote := m.definition.lines[0].Note
@@ -3269,7 +3291,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 	buf.WriteString(m.LineIndicator(lineNumber))
 
 	gateSpace := GateSpace{}
-	currentChord, _ := m.currentOverlay.Chords.FindChord(m.cursorPos)
+	currentChord := m.CurrentChord()
 	for i := uint8(0); i < m.CurrentPart().Beats; i++ {
 		currentGridKey := GK(uint8(lineNumber), i)
 		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
