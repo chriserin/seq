@@ -82,6 +82,23 @@ func (c *Chord) AddNotes(noteConstant uint32) {
 	}
 }
 
+const (
+	OmitRoot       = Root
+	OmitSecond     = Minor2 | Major2
+	OmitThird      = Minor3 | Major3
+	OmitFourth     = Perfect4
+	OmitFifth      = Dim5 | Perfect5 | Aug5
+	OmitSixth      = Major6
+	OmitSeventh    = Minor7 | Major7
+	OmitNinth      = Minor9 | Major9
+	OmitEleventh   = Dim11 | Perfect11 | Aug11
+	OmitThirteenth = Dim13 | Major13 | Aug13
+)
+
+func (c *Chord) OmitNote(omitNoteConstant uint32) {
+	c.notes &= ^omitNoteConstant
+}
+
 var triads = []uint32{MajorTriad, MinorTriad, DiminishedTriad, AugmentedTriad}
 
 func IsTriad(noteConstant uint32) bool {

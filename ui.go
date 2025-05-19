@@ -1758,6 +1758,30 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.PrevDouble:
 		m.EnsureChord()
 		m.PrevDouble()
+	case mappings.OmitRoot:
+		m.EnsureChord()
+		m.OmitChordNote(theory.OmitRoot)
+	case mappings.OmitSecond:
+		m.EnsureChord()
+		m.OmitChordNote(theory.OmitSecond)
+	case mappings.OmitThird:
+		m.EnsureChord()
+		m.OmitChordNote(theory.OmitThird)
+	case mappings.OmitFourth:
+		m.EnsureChord()
+		m.OmitChordNote(theory.OmitFourth)
+	case mappings.OmitFifth:
+		m.EnsureChord()
+		m.OmitChordNote(theory.OmitFifth)
+	case mappings.OmitSixth:
+		m.EnsureChord()
+		m.OmitChordNote(theory.OmitSixth)
+	case mappings.OmitSeventh:
+		m.EnsureChord()
+		m.OmitChordNote(theory.OmitSeventh)
+	case mappings.OmitNinth:
+		m.EnsureChord()
+		m.OmitChordNote(theory.OmitNinth)
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1819,6 +1843,12 @@ func (m *model) ChordChange(alteration uint32) {
 		m.currentOverlay.CreateChord(m.cursorPos, alteration)
 	} else {
 		overlayChord.GridChord.ApplyAlteration(alteration)
+	}
+}
+
+func (m *model) OmitChordNote(omission uint32) {
+	if m.activeChord.HasValue() {
+		m.activeChord.GridChord.Chord.OmitNote(omission)
 	}
 }
 

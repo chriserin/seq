@@ -122,6 +122,14 @@ const (
 	PrevArppegio
 	NextDouble
 	PrevDouble
+	OmitRoot
+	OmitSecond
+	OmitThird
+	OmitFourth
+	OmitFifth
+	OmitSixth
+	OmitSeventh
+	OmitNinth
 )
 
 type mappingKey [3]string
@@ -244,6 +252,14 @@ var chordMappings = registry{
 	k("5", "p"): PerfectFifth,
 	k("[", "i"): DecreaseInversions,
 	k("]", "i"): IncreaseInversions,
+	k("1", "o"): OmitRoot,
+	k("2", "o"): OmitSecond,
+	k("3", "o"): OmitThird,
+	k("4", "o"): OmitFourth,
+	k("5", "o"): OmitFifth,
+	k("6", "o"): OmitSixth,
+	k("7", "o"): OmitSeventh,
+	k("9", "o"): OmitNinth,
 }
 
 func k(x ...string) [3]string {
