@@ -3,6 +3,7 @@ package overlays
 import (
 	"testing"
 
+	"github.com/chriserin/seq/internal/grid"
 	overlaykey "github.com/chriserin/seq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
@@ -59,6 +60,17 @@ func TestAddOverlays(t *testing.T) {
 		newOverlay := overlay.Add(secondKey)
 		nextOverlay := newOverlay.Add(thirdKey)
 		assert.Equal(t, nextOverlay.Below.Key, secondKey)
+	})
+}
+
+func TestFindAboveOverlay(t *testing.T) {
+	t.Run("Chords len should be the same", func(t *testing.T) {
+		overlayA := InitOverlay(overlaykey.InitOverlayKey(1, 1), nil)
+		overlayB := InitOverlay(overlaykey.InitOverlayKey(2, 1), overlayA)
+		overlayB.CreateChord(grid.GridKey{Line: 1, Beat: 1}, 0)
+		assert.Equal(t, 1, len(overlayB.Chords))
+		resultOverlay := overlayB.FindAboveOverlay(overlaykey.InitOverlayKey(2, 1))
+		assert.Equal(t, 1, len(resultOverlay.Chords))
 	})
 }
 

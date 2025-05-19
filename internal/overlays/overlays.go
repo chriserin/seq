@@ -1,6 +1,8 @@
 package overlays
 
 import (
+	"fmt"
+
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/overlaykey"
 )
@@ -15,8 +17,13 @@ type Overlay struct {
 	Below     *Overlay
 	Notes     grid.Pattern
 	Chords    Chords
+	blockers  []grid.GridKey
 	PressUp   bool
 	PressDown bool
+}
+
+func (ol Overlay) String() string {
+	return fmt.Sprintf("%v %d", ol.Key, len(ol.Chords))
 }
 
 func (ol Overlay) IsFresh() bool {
@@ -66,6 +73,7 @@ func InitOverlay(key Key, below *Overlay) *Overlay {
 		Below:   below,
 		Notes:   make(grid.Pattern),
 		PressUp: overlaykey.ROOT == key,
+		Chords:  []*GridChord{},
 	}
 }
 
@@ -73,6 +81,41 @@ func (ol Overlay) CollectKeys(collection *[]Key) {
 	for currentOverlay := &ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		(*collection) = append((*collection), currentOverlay.Key)
 	}
+}
+
+type OverlayChord struct {
+	Overlay   *Overlay
+	GridChord *GridChord
+}
+
+func (oc OverlayChord) HasValue() bool {
+	return oc.GridChord != nil
+}
+
+func (oc OverlayChord) BelongsTo(anotherOverlay *Overlay) bool {
+	return oc.Overlay == anotherOverlay
+}
+
+func (ol *Overlay) FindChord(position grid.GridKey) (OverlayChord, bool) {
+	var currentOverlay *Overlay
+	for currentOverlay = ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
+		gridChord, exists := currentOverlay.Chords.FindChord(position)
+		if exists {
+			return OverlayChord{currentOverlay, gridChord}, true
+		}
+	}
+	return OverlayChord{}, false
+}
+
+func (ol *Overlay) FindChordWithNote(position grid.GridKey) (*GridChord, bool) {
+	var currentOverlay *Overlay
+	for currentOverlay = ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
+		gridChord, exists := currentOverlay.Chords.FindChordWithNote(position)
+		if exists {
+			return gridChord, exists
+		}
+	}
+	return nil, false
 }
 
 func (ol Overlay) CombinePattern(pattern *grid.Pattern, keyCycles int) {
@@ -111,17 +154,32 @@ func (ol Overlay) GetMatchingOverlayKeys(keys *[]Key, keyCycles int) {
 
 type AddFunc = func(grid.Pattern, Key) bool
 
-func (ol Overlay) combine(keyCycles int, addFunc AddFunc) {
+func (ol *Overlay) combine(keyCycles int, addFunc AddFunc) {
 	previousPressDown := false
 	firstMatch := false
-	for currentOverlay := &ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 
+	blockedChords := make(map[grid.GridKey]struct{})
+
+	var currentOverlay *Overlay
+	for currentOverlay = ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		if previousPressDown ||
 			(!firstMatch && currentOverlay.Key.DoesMatch(keyCycles)) ||
 			(currentOverlay.PressUp && currentOverlay.Key.DoesMatch(keyCycles)) {
 			firstMatch = true
 			chordPattern := make(grid.Pattern)
-			currentOverlay.chordNotes(&chordPattern)
+
+			for _, gridChord := range currentOverlay.Chords {
+				_, chordAlreadyPlaced := blockedChords[gridChord.Root]
+				if !chordAlreadyPlaced {
+					gridChord.ArppegiatedPattern(&chordPattern)
+					blockedChords[gridChord.Root] = struct{}{}
+				}
+			}
+
+			for _, gridKey := range currentOverlay.blockers {
+				blockedChords[gridKey] = struct{}{}
+			}
+
 			addFunc(chordPattern, currentOverlay.Key)
 			if !addFunc(currentOverlay.Notes, currentOverlay.Key) {
 				break
@@ -155,7 +213,7 @@ type OverlayNote struct {
 }
 type OverlayPattern map[grid.GridKey]OverlayNote
 
-func (ol Overlay) CombineOverlayPattern(pattern *OverlayPattern, keyCycles int) {
+func (ol *Overlay) CombineOverlayPattern(pattern *OverlayPattern, keyCycles int) {
 	var firstMatch = true
 	var addFunc = func(overlayPattern grid.Pattern, currentKey Key) bool {
 		for gridKey, note := range overlayPattern {
@@ -172,8 +230,9 @@ func (ol Overlay) CombineOverlayPattern(pattern *OverlayPattern, keyCycles int) 
 	ol.combine(keyCycles, addFunc)
 }
 
-func (ol Overlay) FindOverlay(key Key) *Overlay {
-	for currentOverlay := &ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
+func (ol *Overlay) FindOverlay(key Key) *Overlay {
+	var currentOverlay *Overlay
+	for currentOverlay = ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		if currentOverlay.Key == key {
 			return currentOverlay
 		}
@@ -228,6 +287,14 @@ func (ol *Overlay) SetNote(gridKey grid.GridKey, note grid.Note) {
 	} else {
 		(*ol).Notes[gridKey] = note
 	}
+}
+
+func (ol *Overlay) SetChord(gridChord *GridChord) *GridChord {
+	ol.blockers = append(ol.blockers, gridChord.Root)
+	newGridChord := *gridChord
+	chordRef := &newGridChord
+	ol.Chords = append(ol.Chords, chordRef)
+	return chordRef
 }
 
 func (ol *Overlay) RemoveNote(gridKey grid.GridKey) {
