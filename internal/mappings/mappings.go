@@ -130,6 +130,7 @@ const (
 	OmitSixth
 	OmitSeventh
 	OmitNinth
+	RemoveChord
 )
 
 type mappingKey [3]string
@@ -146,6 +147,7 @@ var mappings = registry{
 	k("A"):      AccentIncrease,
 	k("B"):      ActionAddLineBounce,
 	k("C"):      ClearSeq,
+	k("D"):      RemoveChord,
 	k("]", "g"): GateIncrease,
 	k("]", "e"): GateBigIncrease,
 	k("J"):      RotateDown,

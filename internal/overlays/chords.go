@@ -26,6 +26,11 @@ type BeatNote struct {
 	note grid.Note
 }
 
+func (cs Chords) Remove(gridChord *GridChord) Chords {
+	index := slices.Index(cs, gridChord)
+	return slices.Delete(cs, index, index+1)
+}
+
 func (cs Chords) FindChord(position grid.GridKey) (*GridChord, bool) {
 	for _, gridChord := range cs {
 		if gridChord.InBounds(position) {

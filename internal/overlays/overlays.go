@@ -301,6 +301,14 @@ func (ol *Overlay) RemoveNote(gridKey grid.GridKey) {
 	delete((*ol).Notes, gridKey)
 }
 
+func (ol *Overlay) RemoveChord(overlayChord OverlayChord) {
+	if overlayChord.Overlay == ol {
+		ol.Chords = ol.Chords.Remove(overlayChord.GridChord)
+	} else {
+		ol.blockers = append(ol.blockers, overlayChord.GridChord.Root)
+	}
+}
+
 func (ol *Overlay) ToggleOverlayStackOptions() {
 	if !ol.PressDown && !ol.PressUp {
 		ol.PressUp = true

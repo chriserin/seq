@@ -1782,6 +1782,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.OmitNinth:
 		m.EnsureChord()
 		m.OmitChordNote(theory.OmitNinth)
+	case mappings.RemoveChord:
+		m.RemoveChord()
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1843,6 +1845,14 @@ func (m *model) ChordChange(alteration uint32) {
 		m.currentOverlay.CreateChord(m.cursorPos, alteration)
 	} else {
 		overlayChord.GridChord.ApplyAlteration(alteration)
+	}
+}
+
+func (m *model) RemoveChord() {
+
+	if m.activeChord.HasValue() {
+		m.currentOverlay.RemoveChord(m.activeChord)
+		m.UnsetActiveChord()
 	}
 }
 
