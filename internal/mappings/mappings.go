@@ -147,7 +147,6 @@ var mappings = registry{
 	k("A"):      AccentIncrease,
 	k("B"):      ActionAddLineBounce,
 	k("C"):      ClearSeq,
-	k("D"):      RemoveChord,
 	k("]", "g"): GateIncrease,
 	k("]", "e"): GateBigIncrease,
 	k("J"):      RotateDown,
@@ -202,7 +201,10 @@ var mappings = registry{
 	k("l"):      CursorRight,
 	k("m"):      Mute,
 	k("o"):      ChordMode,
-	k("n"):      PatternMode,
+	k("n", "a"): ToggleAccentMode,
+	k("n", "w"): ToggleWaitMode,
+	k("n", "g"): ToggleGateMode,
+	k("n", "r"): ToggleRatchetMode,
 	k("p"):      Paste,
 	k("q"):      Quit,
 	k("r"):      RatchetDecrease,
@@ -215,13 +217,9 @@ var mappings = registry{
 	k("z"):      ActionAddLineDelay,
 	k("{"):      NextOverlay,
 	k("}"):      PrevOverlay,
-	k("]", "p"): NextArppegio,
-	k("[", "p"): PrevArppegio,
-	k("]", "d"): NextDouble,
-	k("[", "d"): PrevDouble,
 }
 
-var triggerMappings = registry{
+var patternModeMappings = registry{
 	k("!"): NumberPattern,
 	k("@"): NumberPattern,
 	k("#"): NumberPattern,
@@ -262,6 +260,11 @@ var chordMappings = registry{
 	k("6", "o"): OmitSixth,
 	k("7", "o"): OmitSeventh,
 	k("9", "o"): OmitNinth,
+	k("D"):      RemoveChord,
+	k("]", "p"): NextArppegio,
+	k("[", "p"): PrevArppegio,
+	k("]", "d"): NextDouble,
+	k("[", "d"): PrevDouble,
 }
 
 func k(x ...string) [3]string {
@@ -274,7 +277,7 @@ func k(x ...string) [3]string {
 	}
 }
 
-func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType) Mapping {
+func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType, patternMode bool) Mapping {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if len(Keycombo) < 3 {
@@ -291,13 +294,21 @@ func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType) Mapping {
 	command, exists := mappings[ToMappingKey(Keycombo)]
 	switch seqtype {
 	case grid.SEQTYPE_TRIGGER:
-		triggerCommand, triggerExists := triggerMappings[ToMappingKey(Keycombo)]
+		triggerCommand, triggerExists := patternModeMappings[ToMappingKey(Keycombo)]
 		if triggerExists {
 			command = triggerCommand
 			exists = triggerExists
 		}
 	case grid.SEQTYPE_POLYPHONY:
-		chordCommand, chordExists := chordMappings[ToMappingKey(Keycombo)]
+		var chordCommand Command
+		var chordExists bool
+
+		if patternMode {
+			chordCommand, chordExists = patternModeMappings[ToMappingKey(Keycombo)]
+		} else {
+			chordCommand, chordExists = chordMappings[ToMappingKey(Keycombo)]
+		}
+
 		if chordExists {
 			command = chordCommand
 			exists = chordExists

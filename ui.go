@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"iter"
+	"maps"
 	"math/rand"
 	"os"
 	"slices"
@@ -1078,7 +1079,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ResetCurrentOverlay()
 			return m, cmd
 		}
-		mappingsCommand := mappings.ProcessKey(msg, m.definition.templateSequencerType)
+		mappingsCommand := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PATTERN_FILL)
 		switch mappingsCommand.Command {
 		case mappings.HoldingKeys:
 			return m, nil
@@ -2564,12 +2565,28 @@ func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.Overla
 }
 
 func (m *model) Every(every uint8, everyFn func(gridKey)) {
-	lineStart, lineEnd := m.PatternActionLineBoundaries()
-	start, end := m.PatternActionBeatBoundaries()
+	if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
+		bounds := m.PasteBounds()
+		combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
+		keys := slices.Collect(maps.Keys(combinedOverlay))
+		slices.SortFunc(keys, grid.Compare)
+		counter := 0
+		for _, gk := range keys {
+			if bounds.InBounds(gk) {
+				if counter%int(every) == 0 {
+					everyFn(gk)
+				}
+				counter++
+			}
+		}
+	} else {
+		lineStart, lineEnd := m.PatternActionLineBoundaries()
+		start, end := m.PatternActionBeatBoundaries()
 
-	for l := lineStart; l <= lineEnd; l++ {
-		for i := start; i <= end; i += every {
-			everyFn(GK(l, i))
+		for l := lineStart; l <= lineEnd; l++ {
+			for i := start; i <= end; i += every {
+				everyFn(GK(l, i))
+			}
 		}
 	}
 }

@@ -33,6 +33,14 @@ func (gk GridKey) String() string {
 	return fmt.Sprintf("Grid-%0.2d-%0.2d", gk.Line, gk.Beat)
 }
 
+func Compare(a GridKey, b GridKey) int {
+	if a.Beat == b.Beat {
+		return int(b.Line) - int(a.Line)
+	} else {
+		return int(a.Beat) - int(b.Beat)
+	}
+}
+
 type Note struct {
 	AccentIndex uint8
 	Ratchets    Ratchet
