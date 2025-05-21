@@ -59,7 +59,7 @@ func shiftToZero(notes []int) []int {
 func identifyChord(normalizedNotes []int) Chord {
 	// One note is just a single note
 	if len(normalizedNotes) == 1 {
-		return Chord{notes: uint32(1 << normalizedNotes[0])}
+		return Chord{Notes: uint32(1 << normalizedNotes[0])}
 	}
 
 	return GetBestScoreChord(normalizedNotes, 0)
@@ -67,7 +67,7 @@ func identifyChord(normalizedNotes []int) Chord {
 
 func InitPossibleChord(notes []int, inversions int) Chord {
 	return Chord{
-		notes:     FromNotes(notes),
+		Notes:     FromNotes(notes),
 		Inversion: int8(inversions),
 		score:     scoreChord(notes),
 	}
@@ -313,59 +313,59 @@ func (c Chord) GetChordComponents() []uint32 {
 	components := make([]uint32, 0)
 
 	// Check for triads first
-	if (c.notes & MinorTriad) == MinorTriad {
+	if (c.Notes & MinorTriad) == MinorTriad {
 		components = append(components, MinorTriad)
-	} else if (c.notes & MajorTriad) == MajorTriad {
+	} else if (c.Notes & MajorTriad) == MajorTriad {
 		components = append(components, MajorTriad)
-	} else if (c.notes & AugmentedTriad) == AugmentedTriad {
+	} else if (c.Notes & AugmentedTriad) == AugmentedTriad {
 		components = append(components, AugmentedTriad)
-	} else if (c.notes & DiminishedTriad) == DiminishedTriad {
+	} else if (c.Notes & DiminishedTriad) == DiminishedTriad {
 		components = append(components, DiminishedTriad)
 	} else {
 		// Add individual notes if no specific triad is found
-		if (c.notes & Root) != 0 {
+		if (c.Notes & Root) != 0 {
 			components = append(components, Root)
 		}
-		if (c.notes & Minor3) != 0 {
+		if (c.Notes & Minor3) != 0 {
 			components = append(components, Minor3)
-		} else if (c.notes & Major3) != 0 {
+		} else if (c.Notes & Major3) != 0 {
 			components = append(components, Major3)
 		}
-		if (c.notes & Dim5) != 0 {
+		if (c.Notes & Dim5) != 0 {
 			components = append(components, Dim5)
-		} else if (c.notes & Perfect5) != 0 {
+		} else if (c.Notes & Perfect5) != 0 {
 			components = append(components, Perfect5)
-		} else if (c.notes & Aug5) != 0 {
+		} else if (c.Notes & Aug5) != 0 {
 			components = append(components, Aug5)
 		}
 	}
 
 	// Check for extensions
-	if (c.notes & MinorSeventh) != 0 {
+	if (c.Notes & MinorSeventh) != 0 {
 		components = append(components, MinorSeventh)
-	} else if (c.notes & MajorSeventh) != 0 {
+	} else if (c.Notes & MajorSeventh) != 0 {
 		components = append(components, MajorSeventh)
 	}
 
 	// Check for 9th, 11th, 13th extensions
-	if (c.notes & Extend91113) == Extend91113 {
+	if (c.Notes & Extend91113) == Extend91113 {
 		components = append(components, Extend91113)
-	} else if (c.notes & Extend911) == Extend911 {
+	} else if (c.Notes & Extend911) == Extend911 {
 		components = append(components, Extend911)
-	} else if (c.notes & Extend9) == Extend9 {
+	} else if (c.Notes & Extend9) == Extend9 {
 		components = append(components, Extend9)
 	}
 
 	// Check for alterations
-	if (c.notes & Aug11) != 0 {
+	if (c.Notes & Aug11) != 0 {
 		components = append(components, Aug11)
-	} else if (c.notes & Dim11) != 0 {
+	} else if (c.Notes & Dim11) != 0 {
 		components = append(components, Dim11)
 	}
 
-	if (c.notes & Aug13) != 0 {
+	if (c.Notes & Aug13) != 0 {
 		components = append(components, Aug13)
-	} else if (c.notes & Dim13) != 0 {
+	} else if (c.Notes & Dim13) != 0 {
 		components = append(components, Dim13)
 	}
 

@@ -50,7 +50,7 @@ func (cs Chords) FindChordWithNote(gridKey grid.GridKey) (*GridChord, bool) {
 }
 
 func (gc *GridChord) Move(fromKey grid.GridKey, toKey grid.GridKey) {
-	for i, interval := range gc.Chord.Notes() {
+	for i, interval := range gc.Chord.Intervals() {
 		beatnote := gc.Notes[i]
 		potentialNotePosition := gc.Key(interval, beatnote)
 		if potentialNotePosition == fromKey {
@@ -105,10 +105,10 @@ func (ol *Overlay) PasteChord(root grid.GridKey, gridChord *GridChord) {
 
 func InitChord(root grid.GridKey, alteration uint32) *GridChord {
 	chord := theory.InitChord(alteration)
-	chordNotes := chord.Notes()
+	chordNotes := chord.Intervals()
 	beatNotes := make([]BeatNote, len(chordNotes))
 
-	for i := range chord.Notes() {
+	for i := range chord.Intervals() {
 		note := grid.InitNote()
 		beatNotes[i] = BeatNote{0, note}
 	}
@@ -150,14 +150,14 @@ func (gc *GridChord) PrevArp() {
 }
 
 func (gc *GridChord) NextDouble() {
-	gc.Double = (gc.Double + 1) % (uint8(len(gc.Chord.Notes())) + 1)
+	gc.Double = (gc.Double + 1) % (uint8(len(gc.Chord.Intervals())) + 1)
 	gc.ApplyArppegiation()
 }
 
 func (gc *GridChord) PrevDouble() {
 	var newDouble uint8
 	if gc.Double == 0 {
-		newDouble = uint8(len(gc.Chord.Notes()))
+		newDouble = uint8(len(gc.Chord.Intervals()))
 	} else {
 		newDouble = gc.Double - 1
 	}
@@ -187,7 +187,7 @@ func (gc *GridChord) ApplyArppegiation() {
 }
 
 func (gc GridChord) ArppegioIntervals() []uint8 {
-	intervals := gc.Chord.Notes()
+	intervals := gc.Chord.Intervals()
 	doubledIntervals := gc.ApplyDoubles(intervals)
 	switch gc.Arppegio {
 	case ARP_NOTHING:
@@ -209,4 +209,32 @@ func (gc GridChord) ApplyDoubles(intervals []uint8) []uint8 {
 		}
 	}
 	return grownIntervals
+}
+
+// DeepCopy creates a deep copy of the GridChord
+func (gc GridChord) DeepCopy() GridChord {
+	// Create a new GridChord
+	copy := GridChord{
+		Root:     gc.Root,     // GridKey is a simple struct, so a direct copy is fine
+		Chord:    gc.Chord,    // Direct copy of the Chord
+		Arppegio: gc.Arppegio, // arp is just an int, so direct copy is fine
+		Double:   gc.Double,   // uint8 is a simple type, so direct copy is fine
+	}
+
+	// Deep copy the Notes slice
+	copy.Notes = make([]BeatNote, len(gc.Notes))
+	for i, bn := range gc.Notes {
+		copy.Notes[i] = BeatNote{
+			beat: bn.beat,
+			note: grid.Note{
+				AccentIndex: bn.note.AccentIndex,
+				Ratchets:    bn.note.Ratchets,
+				Action:      bn.note.Action,
+				GateIndex:   bn.note.GateIndex,
+				WaitIndex:   bn.note.WaitIndex,
+			},
+		}
+	}
+
+	return copy
 }

@@ -5,11 +5,11 @@ import (
 )
 
 func InitChord(alteration uint32) Chord {
-	return Chord{notes: alteration}
+	return Chord{Notes: alteration}
 }
 
 type Chord struct {
-	notes     uint32
+	Notes     uint32
 	Inversion int8
 	score     int
 }
@@ -78,7 +78,7 @@ func (c *Chord) AddNotes(noteConstant uint32) {
 		currentFifth := c.CurrentFifth()
 		c.Replace(currentFifth, noteConstant)
 	} else {
-		c.notes |= noteConstant
+		c.Notes |= noteConstant
 	}
 }
 
@@ -96,7 +96,7 @@ const (
 )
 
 func (c *Chord) OmitNote(omitNoteConstant uint32) {
-	c.notes &= ^omitNoteConstant
+	c.Notes &= ^omitNoteConstant
 }
 
 var triads = []uint32{MajorTriad, MinorTriad, DiminishedTriad, AugmentedTriad}
@@ -112,7 +112,7 @@ func IsTriad(noteConstant uint32) bool {
 
 func (c Chord) CurrentTriad() uint32 {
 	for _, t := range triads {
-		if ContainsBits(c.notes, t) {
+		if ContainsBits(c.Notes, t) {
 			return t
 		}
 	}
@@ -132,7 +132,7 @@ func IsFifth(noteConstant uint32) bool {
 
 func (c Chord) CurrentFifth() uint32 {
 	for _, t := range fifths {
-		if ContainsBits(c.notes, t) {
+		if ContainsBits(c.Notes, t) {
 			return t
 		}
 	}
@@ -152,7 +152,7 @@ func IsSeventh(noteConstant uint32) bool {
 
 func (c Chord) CurrentSeventh() uint32 {
 	for _, t := range sevenths {
-		if ContainsBits(c.notes, t) {
+		if ContainsBits(c.Notes, t) {
 			return t
 		}
 	}
@@ -160,14 +160,14 @@ func (c Chord) CurrentSeventh() uint32 {
 }
 
 func (c *Chord) Replace(oldNotes uint32, newNotes uint32) {
-	c.notes ^= oldNotes
-	c.notes |= newNotes
+	c.Notes ^= oldNotes
+	c.Notes |= newNotes
 }
 
 func (c Chord) UninvertedNotes() []uint8 {
 	notes := make([]uint8, 0)
 	for i := uint8(0); i < 32; i++ {
-		if c.notes&(1<<i) != 0 {
+		if c.Notes&(1<<i) != 0 {
 			notes = append(notes, i)
 		}
 	}
@@ -177,7 +177,7 @@ func (c Chord) UninvertedNotes() []uint8 {
 func (c Chord) NamedIntervals() []string {
 	notes := make([]string, 0)
 	for i := 31; i >= 0; i-- {
-		if c.notes&(1<<i) != 0 {
+		if c.Notes&(1<<i) != 0 {
 			notes = append(notes, interval(i))
 		}
 	}
@@ -216,10 +216,10 @@ func interval(n int) string {
 	return ""
 }
 
-// Notes returns a slice of integers representing the notes in the chord
+// Intervals returns a slice of integers representing the notes in the chord
 // If the chord has an inversion value, the appropriate number of notes
 // from the bottom of the chord are moved to the top
-func (c Chord) Notes() []uint8 {
+func (c Chord) Intervals() []uint8 {
 	// First collect all notes without considering inversion
 	notes := c.UninvertedNotes()
 
@@ -265,7 +265,7 @@ func ChordFromNotes(notes []uint8) Chord {
 
 // NextInversion increases the inversion by 1, but not beyond the number of notes
 func (c *Chord) NextInversion() {
-	noteCount := len(c.Notes())
+	noteCount := len(c.Intervals())
 	if noteCount > 0 {
 		c.Inversion = (c.Inversion + 1) % int8(noteCount)
 	}
@@ -274,7 +274,7 @@ func (c *Chord) NextInversion() {
 // PreviousInversion decreases the inversion by 1, cycling back to the highest possible value if at 0
 func (c *Chord) PreviousInversion() {
 
-	noteCount := len(c.Notes())
+	noteCount := len(c.Intervals())
 	if noteCount > 0 {
 		if c.Inversion == 0 {
 			c.Inversion = int8(noteCount - 1)
@@ -309,17 +309,17 @@ func IdentifyTriadBasedChord(pattern uint32) Chord {
 	remainingPattern := pattern ^ likelyTriad.triad
 	switch likelyTriad.triad {
 	case MajorTriad:
-		return Chord{notes: MajorTriad | remainingPattern, Inversion: 0}
+		return Chord{Notes: MajorTriad | remainingPattern, Inversion: 0}
 	case MinorTriad:
-		return Chord{notes: MinorTriad | remainingPattern, Inversion: 0}
+		return Chord{Notes: MinorTriad | remainingPattern, Inversion: 0}
 	case MajorTriadI1:
-		return Chord{notes: MajorTriad | remainingPattern, Inversion: 1}
+		return Chord{Notes: MajorTriad | remainingPattern, Inversion: 1}
 	case MinorTriadI1:
-		return Chord{notes: MinorTriad | remainingPattern, Inversion: 1}
+		return Chord{Notes: MinorTriad | remainingPattern, Inversion: 1}
 	case MajorTriadI2:
-		return Chord{notes: MajorTriad | remainingPattern, Inversion: 2}
+		return Chord{Notes: MajorTriad | remainingPattern, Inversion: 2}
 	case MinorTriadI2:
-		return Chord{notes: MinorTriad | remainingPattern, Inversion: 2}
+		return Chord{Notes: MinorTriad | remainingPattern, Inversion: 2}
 	}
 
 	return Chord{}

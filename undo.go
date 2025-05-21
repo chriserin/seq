@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/chriserin/seq/internal/arrangement"
 	"github.com/chriserin/seq/internal/grid"
+	"github.com/chriserin/seq/internal/overlays"
 )
 
 type Undoable interface {
@@ -179,4 +180,26 @@ type UndoArrangement struct {
 func (ua UndoArrangement) ApplyUndo(m *model) Location {
 	m.arrangement.ApplyArrUndo(ua.arrUndo)
 	return Location{ApplyLocation: false}
+}
+
+type UndoOverlayDiff struct {
+	overlayKey     overlayKey
+	cursorPosition gridKey
+	ArrCursor      arrangement.ArrCursor
+	overlayDiff    overlays.OverlayDiff
+}
+
+func (uod UndoOverlayDiff) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = uod.ArrCursor
+	overlay := m.CurrentPart().Overlays.FindOverlay(uod.overlayKey)
+	if overlay == nil {
+		m.currentOverlay = m.CurrentPart().Overlays
+	} else {
+		m.currentOverlay = overlay
+	}
+	uod.overlayDiff.Apply(m.currentOverlay)
+	if len(uod.overlayDiff.RemovedChords) > 0 {
+		m.UnsetActiveChord()
+	}
+	return Location{uod.overlayKey, uod.cursorPosition, true}
 }

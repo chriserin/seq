@@ -329,7 +329,7 @@ func (ol Overlay) chordNotes(pattern *grid.Pattern) {
 }
 
 func (gc GridChord) ChordNotes(pattern *grid.Pattern) {
-	for i, interval := range gc.Chord.Notes() {
+	for i, interval := range gc.Chord.Intervals() {
 		beatnote := gc.Notes[i]
 		(*pattern)[gc.Key(interval, beatnote)] = beatnote.note
 	}

@@ -1900,7 +1900,7 @@ func (m *model) PrevDouble() {
 }
 
 func (m model) PlayChord(chord theory.Chord, pos uint8) {
-	for _, n := range chord.Notes() {
+	for _, n := range chord.Intervals() {
 		index := pos - uint8(n)
 		if int(index) < len(m.definition.lines) {
 			onMessage, offMessage := NoteMessages(
@@ -1982,40 +1982,13 @@ func convertSymbolToInt(symbol string) int64 {
 }
 
 func (m model) UpdateDefinition(mapping mappings.Mapping) model {
-	if m.visualMode && (IsLineWiseKey(mapping.Command) || IsNoteWiseKey(mapping.Command) || mappings.Paste == mapping.Command) {
-		undoable := m.UndoableBounds(m.visualAnchorCursor, m.cursorPos)
-		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(mapping)
-		redoable := m.UndoableBounds(m.visualAnchorCursor, m.cursorPos)
-		m.PushUndoables(undoable, redoable)
-	} else if IsNoteWiseKey(mapping.Command) {
-		undoable := m.UndoableNote()
-		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(mapping)
-		redoable := m.UndoableNote()
-		m.PushUndoables(undoable, redoable)
-	} else if IsLineWiseKey(mapping.Command) {
-		undoable := m.UndoableLine()
-		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(mapping)
-		redoable := m.UndoableLine()
-		m.PushUndoables(undoable, redoable)
-	} else if IsOverlayWiseKey(mapping.Command) {
-		undoable := m.UndoableOverlay()
-		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(mapping)
-		redoable := m.UndoableOverlay()
-		m.PushUndoables(undoable, redoable)
-	} else if mappings.Paste == mapping.Command {
-		undoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRightFrom(m.cursorPos))
-		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(mapping)
-		redoable := m.UndoableBounds(m.cursorPos, m.yankBuffer.bounds.BottomRightFrom(m.cursorPos))
-		m.PushUndoables(undoable, redoable)
-	} else {
-		m.EnsureOverlay()
-		m = m.UpdateDefinitionKeys(mapping)
-	}
+
+	deepCopy := overlays.DeepCopy(m.currentOverlay)
+	m.EnsureOverlay()
+	m = m.UpdateDefinitionKeys(mapping)
+	undoable := m.UndoableOverlay(m.currentOverlay, deepCopy)
+	redoable := m.UndoableOverlay(deepCopy, m.currentOverlay)
+	m.PushUndoables(undoable, redoable)
 
 	if m.playing != PLAY_STOPPED {
 		m.playEditing = true
@@ -2037,21 +2010,9 @@ func (m model) UndoableNote() Undoable {
 	}
 }
 
-func (m model) UndoableBounds(pointA, pointB gridKey) Undoable {
-	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
-	if overlay == nil {
-		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.arrangement.Cursor}
-	}
-	bounds := InitBounds(pointA, pointB)
-	gridKeys := bounds.GridKeys()
-	gridNotes := make([]GridNote, 0, len(gridKeys))
-	for _, k := range gridKeys {
-		currentNote, hasNote := overlay.Notes[k]
-		if hasNote {
-			gridNotes = append(gridNotes, GridNote{k, currentNote})
-		}
-	}
-	return UndoBounds{m.currentOverlay.Key, m.cursorPos, bounds, gridNotes, m.arrangement.Cursor}
+func (m model) UndoableOverlay(overlayA, overlayB *overlays.Overlay) Undoable {
+	diff := overlays.DiffOverlays(overlayA, overlayB)
+	return UndoOverlayDiff{m.currentOverlay.Key, m.cursorPos, m.arrangement.Cursor, diff}
 }
 
 func (m model) UndoableLine() Undoable {
@@ -2075,7 +2036,7 @@ func (m model) UndoableLine() Undoable {
 	return UndoLineGridNotes{m.currentOverlay.Key, m.cursorPos, m.cursorPos.Line, notesToUndo, m.arrangement.Cursor}
 }
 
-func (m model) UndoableOverlay() Undoable {
+func (m model) UndoableGridNotes() Undoable {
 	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
 	if overlay == nil {
 		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.arrangement.Cursor}
