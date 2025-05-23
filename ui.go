@@ -891,6 +891,8 @@ func InitModel(filename string, midiConnection MidiConnection, template string, 
 	var fileErr error
 	if filename != "" {
 		definition, fileErr = Read(filename)
+		gridTemplate := config.GetTemplate(definition.template)
+		config.LongGates = gridTemplate.GetGateLengths()
 	}
 
 	if filename == "" || fileErr != nil {
