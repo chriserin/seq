@@ -289,6 +289,85 @@ func TestReadWrite(t *testing.T) {
 	})
 }
 
+func TestReadFileWithChords(t *testing.T) {
+	// Test reading the checkchord.seq file which contains chord definitions
+	readDef, err := Read("checkchord.seq")
+	assert.NoError(t, err)
+	assert.NotNil(t, readDef)
+
+	// Verify basic settings from checkchord.seq
+	assert.Equal(t, 120, readDef.tempo)
+	assert.Equal(t, 2, readDef.subdivisions)
+	assert.Equal(t, uint8(0), readDef.keyline)
+	assert.Equal(t, "Standard", readDef.instrument)
+	assert.Equal(t, "Piano2", readDef.template)
+	assert.Equal(t, "blackwhite", readDef.templateUIStyle)
+
+	// Verify parts exist
+	assert.NotNil(t, readDef.parts)
+	assert.Len(t, *readDef.parts, 1)
+	part := (*readDef.parts)[0]
+	assert.Equal(t, "Part 1", part.Name)
+	assert.Equal(t, uint8(32), part.Beats)
+
+	// Verify overlay exists
+	assert.NotNil(t, part.Overlays)
+	overlay := part.Overlays
+	assert.Equal(t, uint8(1), overlay.Key.Shift)
+	assert.Equal(t, uint8(1), overlay.Key.Interval)
+	assert.Equal(t, uint8(0), overlay.Key.Width)
+	assert.Equal(t, uint8(0), overlay.Key.StartCycle)
+	assert.Equal(t, true, overlay.PressUp)
+	assert.Equal(t, false, overlay.PressDown)
+
+	// Verify chord exists
+	assert.NotEmpty(t, overlay.Chords)
+	assert.Len(t, overlay.Chords, 1)
+	chord := overlay.Chords[0]
+
+	// Verify chord properties from checkchord.seq
+	expectedGridKey := grid.GridKey{Line: 24, Beat: 0}
+	assert.Equal(t, expectedGridKey, chord.Root)
+	assert.Equal(t, overlays.Arp(2), chord.Arppegio)
+	assert.Equal(t, uint8(3), chord.Double)
+	assert.Equal(t, uint32(137), chord.Chord.Notes)
+	assert.Equal(t, int8(0), chord.Chord.Inversion)
+
+	// Verify chord has beat notes
+	assert.Len(t, chord.Notes, 6)
+	for i, beatNote := range chord.Notes {
+		assert.Equal(t, i, beatNote.Beat)
+		assert.Equal(t, uint8(5), beatNote.Note.AccentIndex)
+		assert.Equal(t, uint8(1), beatNote.Note.Ratchets.Hits)
+		assert.Equal(t, uint8(0), beatNote.Note.Ratchets.Length)
+		assert.Equal(t, uint8(0), beatNote.Note.Ratchets.Span)
+		assert.Equal(t, grid.Action(0), beatNote.Note.Action)
+		assert.Equal(t, uint8(0), beatNote.Note.GateIndex)
+		assert.Equal(t, uint8(0), beatNote.Note.WaitIndex)
+	}
+
+	// Verify lines exist (25 lines from 0-24)
+	assert.Len(t, readDef.lines, 25)
+	
+	// Verify accent configuration
+	assert.Equal(t, uint8(15), readDef.accents.Diff)
+	assert.Equal(t, uint8(120), readDef.accents.Start)
+	assert.Equal(t, ACCENT_TARGET_VELOCITY, readDef.accents.Target)
+	assert.Len(t, readDef.accents.Data, 9)
+
+	// Verify arrangement exists
+	assert.NotNil(t, readDef.arrangement)
+	assert.Equal(t, 1, readDef.arrangement.Iterations)
+	assert.Len(t, readDef.arrangement.Nodes, 1)
+	sectionNode := readDef.arrangement.Nodes[0]
+	assert.Equal(t, 1, sectionNode.Iterations)
+	assert.Equal(t, 0, sectionNode.Section.Part)
+	assert.Equal(t, 1, sectionNode.Section.Cycles)
+	assert.Equal(t, 0, sectionNode.Section.StartBeat)
+	assert.Equal(t, 1, sectionNode.Section.StartCycles)
+	assert.Equal(t, false, sectionNode.Section.KeepCycles)
+}
+
 func TestReadFileError(t *testing.T) {
 	// Test reading from a non-existent file
 	_, err := Read("/nonexistent/path/to/file.txt")

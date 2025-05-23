@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"sort"
 
 	"github.com/charmbracelet/log"
@@ -234,6 +235,29 @@ func writeOverlays(w io.Writer, overlay *overlays.Overlay) error {
 	fmt.Fprintf(w, "StartCycle: %d\n", overlay.Key.StartCycle)
 	fmt.Fprintf(w, "PressUp: %t\n", overlay.PressUp)
 	fmt.Fprintf(w, "PressDown: %t\n", overlay.PressDown)
+
+	fmt.Fprintln(w, "------------------------ CHORDS --------------------------")
+	if len(overlay.Chords) > 0 {
+		slices.SortFunc(overlay.Chords, func(a, b *overlays.GridChord) int {
+			return grid.Compare(a.Root, b.Root)
+		})
+
+		for _, gridChord := range overlay.Chords {
+			fmt.Fprintln(w, "------------------------ CHORD --------------------------")
+			fmt.Fprintf(w, "GridKey(%d,%d): Arppegio=%d, Double=%d, Notes=%d, Inversion=%d\n", gridChord.Root.Line, gridChord.Root.Beat, gridChord.Arppegio, gridChord.Double, gridChord.Chord.Notes, gridChord.Chord.Inversion)
+
+			fmt.Fprintln(w, "------------------------ BEATNOTES --------------------------")
+			for _, beatNote := range gridChord.Notes {
+				note := beatNote.Note
+				fmt.Fprintf(w, "Beat(%d): AccentIndex=%d, Ratchets={Hits:%d,Length:%d,Span:%d}, Action=%d, GateIndex=%d, WaitIndex=%d\n",
+					beatNote.Beat,
+					note.AccentIndex, note.Ratchets.Hits, note.Ratchets.Length, note.Ratchets.Span,
+					note.Action, note.GateIndex, note.WaitIndex)
+			}
+		}
+	} else {
+		fmt.Fprintln(w, "(empty)")
+	}
 
 	// Write notes in a formatted way
 	fmt.Fprintln(w, "------------------------ NOTES --------------------------")

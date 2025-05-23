@@ -331,18 +331,18 @@ func (ol Overlay) chordNotes(pattern *grid.Pattern) {
 func (gc GridChord) ChordNotes(pattern *grid.Pattern) {
 	for i, interval := range gc.Chord.Intervals() {
 		beatnote := gc.Notes[i]
-		(*pattern)[gc.Key(interval, beatnote)] = beatnote.note
+		(*pattern)[gc.Key(interval, beatnote)] = beatnote.Note
 	}
 }
 
 func (gc GridChord) ArppegiatedPattern(pattern *grid.Pattern) {
 	for i, interval := range gc.ArppegioIntervals() {
 		beatnote := gc.Notes[i]
-		(*pattern)[gc.Key(interval, beatnote)] = beatnote.note
+		(*pattern)[gc.Key(interval, beatnote)] = beatnote.Note
 	}
 }
 
 func (gc GridChord) Key(interval uint8, beatnote BeatNote) grid.GridKey {
-	b := uint8(int(gc.Root.Beat) + beatnote.beat)
+	b := uint8(int(gc.Root.Beat) + beatnote.Beat)
 	return grid.GridKey{Line: gc.Root.Line - interval, Beat: b}
 }

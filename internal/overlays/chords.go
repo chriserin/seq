@@ -13,7 +13,7 @@ type GridChord struct {
 	Chord    theory.Chord
 	Notes    []BeatNote
 	Root     grid.GridKey
-	Arppegio arp
+	Arppegio Arp
 	Double   uint8
 }
 
@@ -22,8 +22,8 @@ func (gc GridChord) InBounds(gridKey grid.GridKey) bool {
 }
 
 type BeatNote struct {
-	beat int
-	note grid.Note
+	Beat int
+	Note grid.Note
 }
 
 func (cs Chords) Remove(gridChord *GridChord) Chords {
@@ -55,7 +55,7 @@ func (gc *GridChord) Move(fromKey grid.GridKey, toKey grid.GridKey) {
 		potentialNotePosition := gc.Key(interval, beatnote)
 		if potentialNotePosition == fromKey {
 			newRelativeBeat := int(toKey.Beat) - int(gc.Root.Beat)
-			gc.Notes[i] = BeatNote{newRelativeBeat, beatnote.note}
+			gc.Notes[i] = BeatNote{newRelativeBeat, beatnote.Note}
 		}
 	}
 }
@@ -65,7 +65,7 @@ func (gc *GridChord) SetChordNote(position grid.GridKey, note grid.Note) {
 		beatnote := gc.Notes[i]
 		potentialNotePosition := gc.Key(interval, beatnote)
 		if potentialNotePosition == position {
-			gc.Notes[i] = BeatNote{beatnote.beat, note}
+			gc.Notes[i] = BeatNote{beatnote.Beat, note}
 		}
 	}
 }
@@ -125,10 +125,10 @@ func (gc *GridChord) ApplyAlteration(alteration uint32) {
 	gc.ApplyArppegiation()
 }
 
-type arp int
+type Arp int
 
 const (
-	ARP_NOTHING arp = iota
+	ARP_NOTHING Arp = iota
 	ARP_UP
 	ARP_REVERSE
 )
@@ -139,7 +139,7 @@ func (gc *GridChord) NextArp() {
 }
 
 func (gc *GridChord) PrevArp() {
-	var newArp arp
+	var newArp Arp
 	if gc.Arppegio == 0 {
 		newArp = 3
 	} else {
@@ -178,9 +178,9 @@ func (gc *GridChord) ApplyArppegiation() {
 		}
 		var newNote grid.Note
 		if len(existingNotes) > i {
-			newNote = existingNotes[i].note
+			newNote = existingNotes[i].Note
 		} else {
-			newNote = existingNotes[i-len(existingNotes)].note
+			newNote = existingNotes[i-len(existingNotes)].Note
 		}
 		gc.Notes = append(gc.Notes, BeatNote{step, newNote})
 	}
@@ -225,13 +225,13 @@ func (gc GridChord) DeepCopy() GridChord {
 	copy.Notes = make([]BeatNote, len(gc.Notes))
 	for i, bn := range gc.Notes {
 		copy.Notes[i] = BeatNote{
-			beat: bn.beat,
-			note: grid.Note{
-				AccentIndex: bn.note.AccentIndex,
-				Ratchets:    bn.note.Ratchets,
-				Action:      bn.note.Action,
-				GateIndex:   bn.note.GateIndex,
-				WaitIndex:   bn.note.WaitIndex,
+			Beat: bn.Beat,
+			Note: grid.Note{
+				AccentIndex: bn.Note.AccentIndex,
+				Ratchets:    bn.Note.Ratchets,
+				Action:      bn.Note.Action,
+				GateIndex:   bn.Note.GateIndex,
+				WaitIndex:   bn.Note.WaitIndex,
 			},
 		}
 	}

@@ -57,6 +57,7 @@ func Scan(scanner *bufio.Scanner, definition *Definition) {
 	var currentSection string
 	var currentPart *arrangement.Part
 	var currentOverlay *overlays.Overlay
+	var currentChord *overlays.GridChord
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -126,8 +127,19 @@ func Scan(scanner *bufio.Scanner, definition *Definition) {
 					currentOverlay = currentOverlay.Below
 				}
 
+			case strings.Contains(sectionLine, "BEATNOTES"):
+				currentSection = "BEATNOTES"
+
 			case strings.Contains(sectionLine, "NOTES"):
 				currentSection = "NOTES"
+
+			case strings.Contains(sectionLine, "CHORDS"):
+				currentSection = "CHORDS"
+
+			case strings.Contains(sectionLine, "CHORD"):
+				currentSection = "CHORD"
+				currentChord = &overlays.GridChord{}
+				currentOverlay.Chords = append(currentOverlay.Chords, currentChord)
 
 			case strings.Contains(sectionLine, "ARRANGEMENT"):
 				currentSection = "ARRANGEMENT"
@@ -348,111 +360,70 @@ func Scan(scanner *bufio.Scanner, definition *Definition) {
 				}
 			}
 
+		case "BEATNOTES":
+			if currentOverlay == nil || line == "(empty)" {
+				continue
+			}
+
+			beat, coordEnd := GetBeat(line)
+
+			// Parse note properties
+			propStr := line[coordEnd+2:] // "AccentIndex=Z, ..."
+
+			note := noteprops(propStr)
+
+			currentChord.Notes = append(currentChord.Notes, overlays.BeatNote{Beat: beat, Note: note})
+
 		case "NOTES":
 			if currentOverlay == nil || line == "(empty)" {
 				continue
 			}
 
-			// Parse grid key and note
-			// Format: GridKey(X,Y): AccentIndex=Z, Ratchets={Hits:A,Length:B,Span:C}, Action=D, GateIndex=E, WaitIndex=F
-			if !strings.HasPrefix(line, "GridKey(") {
-				continue
-			}
-
-			// Extract grid key coordinates
-			coordEnd := strings.Index(line, ")")
-			if coordEnd == -1 {
-				continue
-			}
-
-			coordStr := line[8:coordEnd] // "X,Y"
-			coords := strings.Split(coordStr, ",")
-			if len(coords) != 2 {
-				continue
-			}
-
-			line8, err1 := strconv.ParseUint(coords[0], 10, 8)
-			beat8, err2 := strconv.ParseUint(coords[1], 10, 8)
-			if err1 != nil || err2 != nil {
-				continue
-			}
-
-			gridKey := grid.GridKey{
-				Line: uint8(line8),
-				Beat: uint8(beat8),
-			}
+			gridKey, coordEnd := GetGridKey(line)
 
 			// Parse note properties
 			propStr := line[coordEnd+2:] // "AccentIndex=Z, ..."
-			props := strings.Split(propStr, ", ")
 
-			note := grid.InitNote()
+			note := noteprops(propStr)
 
-			for _, prop := range props {
-				if strings.Contains(prop, "Ratchets={") {
-					// Handle ratchets property separately
-					ratchetsStr := prop[strings.Index(prop, "{")+1 : strings.Index(prop, "}")]
-					ratchetsProps := strings.Split(ratchetsStr, ",")
-
-					for _, rProp := range ratchetsProps {
-						rKeyVal := strings.SplitN(rProp, ":", 2)
-						if len(rKeyVal) != 2 {
-							continue
-						}
-
-						rKey := strings.TrimSpace(rKeyVal[0])
-						rValue := strings.TrimSpace(rKeyVal[1])
-
-						switch rKey {
-						case "Hits":
-							if hits, err := strconv.ParseUint(rValue, 10, 8); err == nil {
-								note.Ratchets.Hits = uint8(hits)
-							}
-						case "Length":
-							if length, err := strconv.ParseUint(rValue, 10, 8); err == nil {
-								note.Ratchets.Length = uint8(length)
-							}
-						case "Span":
-							if span, err := strconv.ParseUint(rValue, 10, 8); err == nil {
-								note.Ratchets.Span = uint8(span)
-							}
-						}
-					}
-				} else {
-					keyVal := strings.SplitN(prop, "=", 2)
-					if len(keyVal) != 2 {
-						continue
-					}
-
-					key := strings.TrimSpace(keyVal[0])
-					value := strings.TrimSpace(keyVal[1])
-
-					switch key {
-					case "AccentIndex":
-						if accentIdx, err := strconv.ParseUint(value, 10, 8); err == nil {
-							note.AccentIndex = uint8(accentIdx)
-						}
-					case "Action":
-						if action, err := strconv.ParseUint(value, 10, 8); err == nil {
-							note.Action = grid.Action(action)
-						}
-					case "GateIndex":
-						if gateIdx, err := strconv.ParseUint(value, 10, 8); err == nil {
-							note.GateIndex = uint8(gateIdx)
-						}
-					case "WaitIndex":
-						if waitIdx, err := strconv.ParseUint(value, 10, 8); err == nil {
-							note.WaitIndex = uint8(waitIdx)
-						}
-					}
-				}
-			}
-
-			// Add note to current overlay
 			currentOverlay.SetNote(gridKey, note)
 
 		case "ARRANGEMENT":
 			// This is just the arrangement header section, handled in section detection
+		case "CHORD":
+			gridKey, coordEnd := GetGridKey(line)
+			currentChord.Root = gridKey
+			propStr := line[coordEnd+2:] // "AccentIndex=Z, ..."
+			props := strings.Split(propStr, ", ")
+
+			for _, prop := range props {
+				keyVal := strings.SplitN(prop, "=", 2)
+				if len(keyVal) != 2 {
+					continue
+				}
+
+				key := strings.TrimSpace(keyVal[0])
+				value := strings.TrimSpace(keyVal[1])
+
+				switch key {
+				case "Arppegio":
+					if arppegio, err := strconv.ParseInt(value, 10, 8); err == nil {
+						currentChord.Arppegio = overlays.Arp(arppegio)
+					}
+				case "Double":
+					if double, err := strconv.ParseUint(value, 10, 8); err == nil {
+						currentChord.Double = uint8(double)
+					}
+				case "Notes":
+					if notes, err := strconv.ParseUint(value, 10, 32); err == nil {
+						currentChord.Chord.Notes = uint32(notes)
+					}
+				case "Inversion":
+					if inversion, err := strconv.ParseUint(value, 10, 8); err == nil {
+						currentChord.Chord.Inversion = int8(inversion)
+					}
+				}
+			}
 
 		default:
 			// Unknown section, ignore
@@ -552,4 +523,126 @@ func ScanArrangement(scanner *bufio.Scanner, currentArrangement *arrangement.Arr
 		}
 	}
 	return false
+}
+
+func GetBeat(line string) (int, int) {
+	if !strings.HasPrefix(line, "Beat(") {
+		return 0, -1
+	}
+
+	coordEnd := strings.Index(line, ")")
+	if coordEnd == -1 {
+		return 0, -1
+	}
+
+	coordStr := line[5:coordEnd]
+
+	beat, err := strconv.ParseInt(coordStr, 10, 8)
+
+	if err == nil {
+		return int(beat), coordEnd
+	}
+
+	return 0, -1
+}
+
+func GetGridKey(line string) (grid.GridKey, int) {
+
+	// Parse grid key and note
+	// Format: GridKey(X,Y): AccentIndex=Z, Ratchets={Hits:A,Length:B,Span:C}, Action=D, GateIndex=E, WaitIndex=F
+	if !strings.HasPrefix(line, "GridKey(") {
+		return grid.GridKey{}, -1
+	}
+
+	// Extract grid key coordinates
+	coordEnd := strings.Index(line, ")")
+	if coordEnd == -1 {
+		return grid.GridKey{}, -1
+	}
+
+	coordStr := line[8:coordEnd] // "X,Y"
+	coords := strings.Split(coordStr, ",")
+	if len(coords) != 2 {
+		return grid.GridKey{}, -1
+	}
+
+	line8, err1 := strconv.ParseUint(coords[0], 10, 8)
+	beat8, err2 := strconv.ParseUint(coords[1], 10, 8)
+	if err1 != nil || err2 != nil {
+		return grid.GridKey{}, -1
+	}
+
+	gridKey := grid.GridKey{
+		Line: uint8(line8),
+		Beat: uint8(beat8),
+	}
+
+	return gridKey, coordEnd
+}
+
+func noteprops(propStr string) grid.Note {
+
+	props := strings.Split(propStr, ", ")
+	note := grid.InitNote()
+
+	for _, prop := range props {
+		if strings.Contains(prop, "Ratchets={") {
+			// Handle ratchets property separately
+			ratchetsStr := prop[strings.Index(prop, "{")+1 : strings.Index(prop, "}")]
+			ratchetsProps := strings.Split(ratchetsStr, ",")
+
+			for _, rProp := range ratchetsProps {
+				rKeyVal := strings.SplitN(rProp, ":", 2)
+				if len(rKeyVal) != 2 {
+					continue
+				}
+
+				rKey := strings.TrimSpace(rKeyVal[0])
+				rValue := strings.TrimSpace(rKeyVal[1])
+
+				switch rKey {
+				case "Hits":
+					if hits, err := strconv.ParseUint(rValue, 10, 8); err == nil {
+						note.Ratchets.Hits = uint8(hits)
+					}
+				case "Length":
+					if length, err := strconv.ParseUint(rValue, 10, 8); err == nil {
+						note.Ratchets.Length = uint8(length)
+					}
+				case "Span":
+					if span, err := strconv.ParseUint(rValue, 10, 8); err == nil {
+						note.Ratchets.Span = uint8(span)
+					}
+				}
+			}
+		} else {
+			keyVal := strings.SplitN(prop, "=", 2)
+			if len(keyVal) != 2 {
+				continue
+			}
+
+			key := strings.TrimSpace(keyVal[0])
+			value := strings.TrimSpace(keyVal[1])
+
+			switch key {
+			case "AccentIndex":
+				if accentIdx, err := strconv.ParseUint(value, 10, 8); err == nil {
+					note.AccentIndex = uint8(accentIdx)
+				}
+			case "Action":
+				if action, err := strconv.ParseUint(value, 10, 8); err == nil {
+					note.Action = grid.Action(action)
+				}
+			case "GateIndex":
+				if gateIdx, err := strconv.ParseUint(value, 10, 8); err == nil {
+					note.GateIndex = uint8(gateIdx)
+				}
+			case "WaitIndex":
+				if waitIdx, err := strconv.ParseUint(value, 10, 8); err == nil {
+					note.WaitIndex = uint8(waitIdx)
+				}
+			}
+		}
+	}
+	return note
 }
