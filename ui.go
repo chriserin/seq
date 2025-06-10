@@ -836,7 +836,10 @@ func InitLineState(previousGroupPlayState groupPlayState, index uint8, startBeat
 }
 
 func InitDefinition(template string, instrument string) Definition {
-	gridTemplate := config.GetTemplate(template)
+	gridTemplate, exists := config.GetTemplate(template)
+	if !exists {
+		gridTemplate, exists = config.GetTemplate("Drums")
+	}
 	config.LongGates = gridTemplate.GetGateLengths()
 	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
 	copy(newLines, gridTemplate.Lines)
@@ -897,8 +900,12 @@ func InitModel(filename string, midiConnection MidiConnection, template string, 
 	var fileErr error
 	if filename != "" {
 		definition, fileErr = Read(filename)
-		gridTemplate := config.GetTemplate(definition.template)
-		config.LongGates = gridTemplate.GetGateLengths()
+		gridTemplate, exists := config.GetTemplate(definition.template)
+		if exists {
+			config.LongGates = gridTemplate.GetGateLengths()
+		} else {
+			panic("Template does not exist")
+		}
 	}
 
 	if filename == "" || fileErr != nil {

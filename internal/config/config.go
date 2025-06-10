@@ -178,13 +178,13 @@ func (t Template) GetGateLengths() []Gate {
 
 var templates []Template
 
-func GetTemplate(name string) Template {
+func GetTemplate(name string) (Template, bool) {
 	for _, template := range templates {
 		if template.Name == name {
-			return template
+			return template, true
 		}
 	}
-	return Template{}
+	return Template{}, false
 }
 
 type Instrument struct {
