@@ -131,11 +131,13 @@ func (ol Overlay) CombinePattern(pattern *grid.Pattern, keyCycles int) {
 	ol.combine(keyCycles, addFunc)
 }
 
+var zeronote grid.Note
+
 func (ol Overlay) CombineActionPattern(pattern *grid.Pattern, keyCycles int) {
 	var addFunc = func(overlayPattern grid.Pattern, key Key) bool {
 		for gridKey, note := range overlayPattern {
 			_, hasNote := (*pattern)[gridKey]
-			if !hasNote && note.Action != grid.ACTION_NOTHING {
+			if !hasNote && (note.Action != grid.ACTION_NOTHING || note == zeronote) {
 				(*pattern)[gridKey] = note
 			}
 		}
@@ -319,12 +321,6 @@ func (ol *Overlay) ToggleOverlayStackOptions() {
 	} else {
 		ol.PressUp = false
 		ol.PressDown = false
-	}
-}
-
-func (ol Overlay) chordNotes(pattern *grid.Pattern) {
-	for _, gridChord := range ol.Chords {
-		gridChord.ArppegiatedPattern(pattern)
 	}
 }
 
