@@ -595,7 +595,13 @@ func Delay(waitIndex uint8, beatInterval time.Duration) time.Duration {
 func GateLength(gateIndex uint8, beatInterval time.Duration) time.Duration {
 	var delay time.Duration
 	if gateIndex < 8 {
-		delay = time.Duration(config.ShortGates[gateIndex].Value) * time.Millisecond
+		var delay time.Duration
+		var value float32 = config.ShortGates[gateIndex].Value
+		if value > 1 {
+			delay = time.Duration(config.ShortGates[gateIndex].Value) * time.Millisecond
+		} else {
+			delay = time.Duration(config.ShortGates[gateIndex].Value * float32(beatInterval))
+		}
 		return delay
 	} else if gateIndex >= 8 {
 		return time.Duration(float64(config.LongGates[gateIndex].Value) * float64(beatInterval))
