@@ -596,7 +596,7 @@ func GateLength(gateIndex uint8, beatInterval time.Duration) time.Duration {
 	var delay time.Duration
 	if gateIndex < 8 {
 		var delay time.Duration
-		var value float32 = config.ShortGates[gateIndex].Value
+		var value = config.ShortGates[gateIndex].Value
 		if value > 1 {
 			delay = time.Duration(config.ShortGates[gateIndex].Value) * time.Millisecond
 		} else {
@@ -838,7 +838,7 @@ func InitLineState(previousGroupPlayState groupPlayState, index uint8, startBeat
 func InitDefinition(template string, instrument string) Definition {
 	gridTemplate, exists := config.GetTemplate(template)
 	if !exists {
-		gridTemplate, exists = config.GetTemplate("Drums")
+		gridTemplate, _ = config.GetTemplate("Drums")
 	}
 	config.LongGates = gridTemplate.GetGateLengths()
 	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
@@ -2000,14 +2000,17 @@ func (m model) UpdateDefinition(mapping mappings.Mapping) model {
 
 	deepCopy := overlays.DeepCopy(m.currentOverlay)
 	m.EnsureOverlay()
+	if m.playing != PLAY_STOPPED && !m.playEditing {
+		m.playEditing = true
+		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
+		m.currentOverlay = playingOverlay
+		m.overlayKeyEdit.SetOverlayKey(playingOverlay.Key)
+	}
 	m = m.UpdateDefinitionKeys(mapping)
 	undoable := m.UndoableOverlay(m.currentOverlay, deepCopy)
 	redoable := m.UndoableOverlay(deepCopy, m.currentOverlay)
 	m.PushUndoables(undoable, redoable)
 
-	if m.playing != PLAY_STOPPED {
-		m.playEditing = true
-	}
 	m.ResetRedo()
 	return m
 }
@@ -2932,7 +2935,7 @@ func (m model) View() string {
 		leftSideView = m.LeftSideView()
 	}
 
-	seqView := m.ViewTriggerSeq()
+	seqView := m.TriggerSeqView()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "", seqView, "  ", sideView))
 	buf.WriteString("\n")
 	if m.showArrangementView {
@@ -3122,7 +3125,7 @@ func (m model) OverlaysView() string {
 	return buf.String()
 }
 
-func (m model) ViewTriggerSeq() string {
+func (m model) TriggerSeqView() string {
 	var buf strings.Builder
 	var mode string
 
