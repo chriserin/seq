@@ -42,6 +42,7 @@ const (
 	PlayStop
 	PlayPart
 	PlayLoop
+	PlayOverlayLoop
 	TempoInputSwitch
 	OverlayInputSwitch
 	SetupInputSwitch
@@ -138,6 +139,7 @@ type registry map[mappingKey]Command
 
 var mappings = registry{
 	k(" "):      PlayStop,
+	k("'", " "): PlayOverlayLoop,
 	k("+"):      Increase,
 	k("-"):      Decrease,
 	k("<"):      CursorLineStart,

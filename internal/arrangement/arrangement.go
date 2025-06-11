@@ -918,6 +918,10 @@ func (ss *SongSection) IncrementPlayCycles() {
 	ss.playCycles++
 }
 
+func (ss *SongSection) SetPlayCycles(keyCycles int) {
+	ss.playCycles = keyCycles
+}
+
 func (ss *SongSection) IsDone() bool {
 	return !ss.infinite &&
 		ss.Cycles+ss.StartCycles <= ss.playCycles

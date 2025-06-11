@@ -306,6 +306,7 @@ type LoopMode uint
 const (
 	LOOP_SONG LoopMode = iota
 	LOOP_PART
+	LOOP_OVERLAY
 )
 
 func (m model) SyncTempo() {
@@ -791,6 +792,11 @@ func (m *model) IncrementPlayCycles() {
 	currentNode.Section.IncrementPlayCycles()
 }
 
+func (m *model) SetPlayCycles(keyCycles int) {
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	currentNode.Section.SetPlayCycles(keyCycles)
+}
+
 func (m *model) DuringPlayResetPlayCycles() {
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
 	currentNode.Section.DuringPlayReset()
@@ -1153,6 +1159,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.arrangement.Root.SetInfinite()
 			m.StartStop()
+		case mappings.PlayOverlayLoop:
+			if m.playing == PLAY_STOPPED {
+				m.loopMode = LOOP_OVERLAY
+			}
+			m.StartStop()
+			m.SetPlayCycles(m.currentOverlay.Key.GetMinimumKeyCycle())
 		case mappings.OverlayInputSwitch:
 			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
@@ -2471,7 +2483,7 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 }
 
 func (m *model) advanceKeyCycle() {
-	if m.playState[m.definition.keyline].currentBeat == 0 {
+	if m.playState[m.definition.keyline].currentBeat == 0 && m.loopMode != LOOP_OVERLAY {
 		m.IncrementPlayCycles()
 		songSection := m.CurrentSongSection()
 
