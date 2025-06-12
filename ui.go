@@ -1300,6 +1300,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.SetPatternMode(PATTERN_ACCENT)
 		case mappings.ToggleRatchetMode:
 			m.SetPatternMode(PATTERN_RATCHET)
+		case mappings.ToggleChordMode:
+			if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
+				m.definition.templateSequencerType = grid.SEQTYPE_TRIGGER
+			} else {
+				m.definition.templateSequencerType = grid.SEQTYPE_POLYPHONY
+			}
 		case mappings.PrevOverlay:
 			m.NextOverlay(-1)
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
@@ -1857,6 +1863,9 @@ func (m *model) EnsureChord() {
 }
 
 func (m model) CurrentChord() overlays.OverlayChord {
+	if m.definition.templateSequencerType == grid.SEQTYPE_TRIGGER {
+		return overlays.OverlayChord{}
+	}
 	overlayChord, exists := m.currentOverlay.FindChord(m.cursorPos)
 	if exists {
 		return overlayChord
@@ -2932,9 +2941,7 @@ func (m model) View() string {
 		var chordView string
 		if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
 			currentChord := m.CurrentChord()
-			if currentChord.HasValue() {
-				chordView = m.ChordView(currentChord.GridChord)
-			}
+			chordView = m.ChordView(currentChord.GridChord)
 		}
 		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
 	}
@@ -3063,10 +3070,12 @@ func (m model) ChordView(gridChord *overlays.GridChord) string {
 
 	var buf strings.Builder
 	buf.WriteString(themes.AppDescriptorStyle.Render("Chord"))
-	buf.WriteString(" - ")
 	if gridChord == nil {
-		return ""
+		buf.WriteString("\n")
+		buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
+		return buf.String()
 	}
+	buf.WriteString(" - ")
 	chord := gridChord.Chord
 	pattern := make(grid.Pattern)
 	gridChord.ChordNotes(&pattern)

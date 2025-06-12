@@ -117,7 +117,7 @@ const (
 	PerfectFifth
 	IncreaseInversions
 	DecreaseInversions
-	ChordMode
+	ToggleChordMode
 	PatternMode
 	NextArppegio
 	PrevArppegio
@@ -202,7 +202,7 @@ var mappings = registry{
 	k("k"):      CursorUp,
 	k("l"):      CursorRight,
 	k("m"):      Mute,
-	k("o"):      ChordMode,
+	k("o"):      ToggleChordMode,
 	k("n", "a"): ToggleAccentMode,
 	k("n", "w"): ToggleWaitMode,
 	k("n", "g"): ToggleGateMode,
