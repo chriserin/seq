@@ -99,6 +99,10 @@ func (c *Chord) OmitNote(omitNoteConstant uint32) {
 	c.Notes &= ^omitNoteConstant
 }
 
+func (c *Chord) OmitInterval(omitNoteConstant uint8) {
+	c.Notes &= ^(uint32(1 << omitNoteConstant))
+}
+
 var triads = []uint32{MajorTriad, MinorTriad, DiminishedTriad, AugmentedTriad}
 
 func IsTriad(noteConstant uint32) bool {

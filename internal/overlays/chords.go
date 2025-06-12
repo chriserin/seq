@@ -65,7 +65,13 @@ func (gc *GridChord) SetChordNote(position grid.GridKey, note grid.Note) {
 		beatnote := gc.Notes[i]
 		potentialNotePosition := gc.Key(interval, beatnote)
 		if potentialNotePosition == position {
-			gc.Notes[i] = BeatNote{beatnote.Beat, note}
+			if note == zeronote {
+				gc.Notes = slices.Delete(gc.Notes, i, i+1)
+				gc.Chord.OmitInterval(interval)
+			} else {
+				gc.Notes[i] = BeatNote{beatnote.Beat, note}
+			}
+			break
 		}
 	}
 }
