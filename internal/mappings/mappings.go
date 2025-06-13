@@ -132,6 +132,7 @@ const (
 	OmitSeventh
 	OmitNinth
 	RemoveChord
+	ConvertToNotes
 )
 
 type mappingKey [3]string
@@ -267,6 +268,7 @@ var chordMappings = registry{
 	k("[", "p"): PrevArppegio,
 	k("]", "d"): NextDouble,
 	k("[", "d"): PrevDouble,
+	k("n", "n"): ConvertToNotes,
 }
 
 func k(x ...string) [3]string {

@@ -1818,6 +1818,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.OmitChordNote(theory.OmitNinth)
 	case mappings.RemoveChord:
 		m.RemoveChord()
+	case mappings.ConvertToNotes:
+		m.ConvertChordToNotes()
 	}
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
@@ -1890,6 +1892,17 @@ func (m *model) RemoveChord() {
 	if m.activeChord.HasValue() {
 		m.currentOverlay.RemoveChord(m.activeChord)
 		m.UnsetActiveChord()
+	}
+}
+
+func (m *model) ConvertChordToNotes() {
+	if m.activeChord.HasValue() {
+		pattern := make(grid.Pattern)
+		m.activeChord.GridChord.ArppegiatedPattern(&pattern)
+		m.currentOverlay.RemoveChord(m.activeChord)
+		for gk, note := range pattern {
+			m.currentOverlay.SetNote(gk, note)
+		}
 	}
 }
 
