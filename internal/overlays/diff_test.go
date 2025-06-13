@@ -5,6 +5,7 @@ import (
 
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/seq/internal/theory"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -188,7 +189,7 @@ func TestDiffOverlays(t *testing.T) {
 
 		// Add a different note
 		newNote := grid.InitNote()
-		newNote.AccentIndex = 3
+		newNote.AccentIndex = 5
 		newGridKey := grid.GridKey{Line: 3, Beat: 4}
 		another.SetNote(newGridKey, newNote)
 
@@ -198,12 +199,44 @@ func TestDiffOverlays(t *testing.T) {
 		// Apply the diff
 		diff.Apply(original)
 
-		original.SetNote(grid.GridKey{Line: 7, Beat: 7}, grid.InitNote())
-
 		comparedDiff := DiffOverlays(original, another)
 
 		// Verify target now matches modified
 		assert.Equal(t, comparedDiff, InitDiff())
+	})
+
+	t.Run("Apply function should transform an overlay with modified chord according to the diff", func(t *testing.T) {
+		// Create original overlay
+		key := overlaykey.InitOverlayKey(2, 1)
+		original := InitOverlay(key, nil)
+
+		// Add a chord
+		gridKey := grid.GridKey{Line: 1, Beat: 2}
+		original.CreateChord(gridKey, theory.MajorTriad)
+
+		another := DeepCopy(original)
+
+		newNote := grid.InitNote()
+		newNote.AccentIndex = 7
+		newGridKey := grid.GridKey{Line: 1, Beat: 2}
+		another.SetNote(newGridKey, newNote)
+
+		// Generate diff
+		diff := DiffOverlays(original, another)
+
+		assert.Len(t, diff.ModifiedChords, 1)
+
+		assert.Equal(t, uint8(5), original.Chords[0].Notes[0].Note.AccentIndex)
+
+		// Apply the diff
+		diff.Apply(original)
+
+		assert.Equal(t, uint8(7), original.Chords[0].Notes[0].Note.AccentIndex)
+
+		comparedDiff := DiffOverlays(original, another)
+
+		// Verify target now matches modified
+		assert.Equal(t, InitDiff(), comparedDiff)
 	})
 }
 

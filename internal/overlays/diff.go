@@ -150,24 +150,36 @@ func noteEqual(a, b grid.Note) bool {
 		a.WaitIndex == b.WaitIndex
 }
 
-// chordsMatch returns true if two chords are considered the same chord
-// (i.e., they refer to the same root position)
 func chordsMatch(a *GridChord, b GridChord) bool {
 	// For simplicity, we'll consider chords the same if they have the same root position
 	return a.Root == b.Root
 }
 
-// compareChords compares two chord instances and returns their differences
 func compareChords(original, modified *GridChord) ChordDiff {
 	diff := ChordDiff{
 		OldChord: modified.DeepCopy(),
 		Modified: original.Arppegio != modified.Arppegio ||
 			!alterationsEqual(original.Chord, modified.Chord) ||
 			original.Double != modified.Double ||
-			original.Chord.Inversion != modified.Chord.Inversion,
+			original.Chord.Inversion != modified.Chord.Inversion ||
+			!notesMatch(original.Notes, modified.Notes),
 	}
 
 	return diff
+}
+
+func notesMatch(a, b []BeatNote) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, an := range a {
+		if an != b[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 // alterationsEqual checks if two chords have the same alterations
