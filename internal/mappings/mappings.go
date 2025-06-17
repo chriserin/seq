@@ -133,6 +133,7 @@ const (
 	OmitNinth
 	RemoveChord
 	ConvertToNotes
+	ReloadFile
 )
 
 type mappingKey [3]string
@@ -167,10 +168,9 @@ var mappings = registry{
 	k("[", "s"): PrevSection,
 	k("]", "c"): NextTheme,
 	k("]", "s"): NextSection,
-	k("a"):      AccentDecrease,
+	k("[", "g"): GateDecrease,
+	k("[", "e"): GateBigDecrease,
 	k("alt+ "):  PlayLoop,
-	k("b"):      ActionAddSkipBeat,
-	k("c"):      ClearLine,
 	k("ctrl+@"): PlayPart,
 	k("ctrl+]"): NewSectionAfter,
 	k("ctrl+a"): ToggleAccentMode,
@@ -191,13 +191,13 @@ var mappings = registry{
 	k("ctrl+w"): ToggleWaitMode,
 	k("ctrl+x"): ArrangementInputSwitch,
 	k("ctrl+y"): RatchetInputSwitch,
+	k("a"):      AccentDecrease,
+	k("b"):      ActionAddSkipBeat,
+	k("c"):      ClearLine,
 	k("d"):      TriggerRemove,
 	k("e"):      TogglePlayEdit,
-	k("enter"):  Enter,
-	k("esc"):    Escape,
 	k("f"):      TriggerAdd,
-	k("[", "g"): GateDecrease,
-	k("[", "e"): GateBigDecrease,
+	k("g", "r"): ReloadFile,
 	k("h"):      CursorLeft,
 	k("j"):      CursorDown,
 	k("k"):      CursorUp,
@@ -220,6 +220,8 @@ var mappings = registry{
 	k("z"):      ActionAddLineDelay,
 	k("{"):      NextOverlay,
 	k("}"):      PrevOverlay,
+	k("enter"):  Enter,
+	k("esc"):    Escape,
 }
 
 var patternModeMappings = registry{

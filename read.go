@@ -16,17 +16,17 @@ import (
 
 // Read loads the model's definition struct from a file
 // The file format should match the format created by the Write function
-func Read(filename string) (*Definition, error) {
+func Read(filename string) (Definition, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Error("Failed to open file", "filename", filename, "error", err)
-		return nil, err
+		return Definition{}, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 
-	definition := &Definition{
+	definition := Definition{
 		parts:           &[]arrangement.Part{},
 		lines:           []grid.LineDefinition{},
 		tempo:           120, // Default values
@@ -43,17 +43,17 @@ func Read(filename string) (*Definition, error) {
 		},
 	}
 
-	Scan(scanner, definition)
+	definition = Scan(scanner, definition)
 	// Check if we got a scanner error
 	if err := scanner.Err(); err != nil {
 		log.Error("Error reading file", "filename", filename, "error", err)
-		return nil, err
+		return Definition{}, err
 	}
 
 	return definition, nil
 }
 
-func Scan(scanner *bufio.Scanner, definition *Definition) {
+func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 	var currentSection string
 	var currentPart *arrangement.Part
 	var currentOverlay *overlays.Overlay
@@ -429,6 +429,8 @@ func Scan(scanner *bufio.Scanner, definition *Definition) {
 			// Unknown section, ignore
 		}
 	}
+
+	return definition
 }
 
 func ScanArrangement(scanner *bufio.Scanner, currentArrangement *arrangement.Arrangement, indentLevel int) bool {

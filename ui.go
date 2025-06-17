@@ -892,6 +892,27 @@ func InitParts() []arrangement.Part {
 	return []arrangement.Part{firstPart}
 }
 
+func LoadFile(filename string, template string) Definition {
+	var definition Definition
+	var fileErr error
+	if filename != "" {
+		definition, fileErr = Read(filename)
+		gridTemplate, exists := config.GetTemplate(definition.template)
+		if exists {
+			config.LongGates = gridTemplate.GetGateLengths()
+		} else {
+			panic(fmt.Sprintf("Template does not exist: %s", definition.template))
+		}
+	}
+
+	if filename == "" || fileErr != nil {
+		newDefinition := InitDefinition(template, instrument)
+		definition = newDefinition
+	}
+
+	return definition
+}
+
 func InitModel(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) model {
 	logFile, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
@@ -902,22 +923,7 @@ func InitModel(filename string, midiConnection MidiConnection, template string, 
 	newCursor.BlinkSpeed = 600 * time.Millisecond
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
-	var definition *Definition
-	var fileErr error
-	if filename != "" {
-		definition, fileErr = Read(filename)
-		gridTemplate, exists := config.GetTemplate(definition.template)
-		if exists {
-			config.LongGates = gridTemplate.GetGateLengths()
-		} else {
-			panic("Template does not exist")
-		}
-	}
-
-	if filename == "" || fileErr != nil {
-		newDefinition := InitDefinition(template, instrument)
-		definition = &newDefinition
-	}
+	definition := LoadFile(filename, template)
 
 	programChannel := make(chan midiEventLoopMsg)
 	lockReceiverChannel := make(chan bool)
@@ -942,7 +948,7 @@ func InitModel(filename string, midiConnection MidiConnection, template string, 
 		currentOverlay:        (*definition.parts)[0].Overlays,
 		overlayKeyEdit:        overlaykey.InitModel(),
 		arrangement:           arrangement.InitModel(definition.arrangement, definition.parts),
-		definition:            *definition,
+		definition:            definition,
 		playState:             InitLineStates(len(definition.lines), []linestate{}, 0),
 	}
 }
@@ -1102,6 +1108,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		mappingsCommand := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PATTERN_FILL)
 		switch mappingsCommand.Command {
+		case mappings.ReloadFile:
+			if m.filename != "" {
+				m.definition = LoadFile(m.filename, m.definition.template)
+				m.ResetCurrentOverlay()
+			}
 		case mappings.HoldingKeys:
 			return m, nil
 		case mappings.CursorDown:
