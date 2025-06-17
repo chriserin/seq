@@ -1050,11 +1050,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectionIndicator = SELECT_NOTHING
 				return m, nil
 			case SELECT_FILE_NAME:
-				m.filename = fmt.Sprintf("%s.seq", m.textInput.Value())
-				m.textInput.Reset()
-				m.selectionIndicator = SELECT_NOTHING
-				m.Save()
-				return m, nil
+				if m.textInput.Value() != "" {
+					m.filename = fmt.Sprintf("%s.seq", m.textInput.Value())
+					m.textInput.Reset()
+					m.selectionIndicator = SELECT_NOTHING
+					m.Save()
+					return m, nil
+				} else {
+					m.selectionIndicator = SELECT_NOTHING
+					return m, nil
+				}
 			case SELECT_PART:
 				_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator, IsPlaying: m.playing != PLAY_STOPPED})
 				m.currentOverlay = m.CurrentPart().Overlays
@@ -1091,6 +1096,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.SetSelectionIndicator(SELECT_CONFIRM_QUIT)
 		}
 		if m.selectionIndicator == SELECT_RENAME_PART || m.selectionIndicator == SELECT_FILE_NAME {
+			if msg.String() == "esc" {
+				m.textInput.Reset()
+				m.selectionIndicator = SELECT_NOTHING
+				return m, nil
+			}
 			tiModel, cmd := m.textInput.Update(msg)
 			m.textInput = tiModel
 			return m, cmd
