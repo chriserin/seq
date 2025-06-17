@@ -2259,9 +2259,44 @@ func (m *model) RotateUp() {
 	beat := m.cursorPos.Beat
 	for l := 0; l < len(m.definition.lines); l++ {
 		key := GK(uint8(l), beat)
-		m.currentOverlay.RemoveNote(key)
+		_, exists := pattern[key]
+		if exists {
+			m.currentOverlay.RemoveNote(key)
+		}
 		if l != 0 {
 			newKey := GK(uint8(l-1), beat)
+			note, exists := pattern[key]
+			if exists {
+				m.currentOverlay.SetNote(newKey, note)
+			}
+		} else {
+			newKey := GK(uint8(len(m.definition.lines)-1), beat)
+			note, exists := pattern[key]
+			if exists {
+				m.currentOverlay.SetNote(newKey, note)
+			}
+		}
+	}
+}
+
+func (m *model) RotateDown() {
+	pattern := m.CombinedEditPattern(m.currentOverlay)
+	beat := m.cursorPos.Beat
+	for l := len(m.definition.lines); l >= 0; l-- {
+		key := GK(uint8(l), beat)
+		_, exists := pattern[key]
+		if exists {
+			m.currentOverlay.RemoveNote(key)
+		}
+		index := l + 1
+		if int(index) < len(m.definition.lines) {
+			newKey := GK(uint8(index), beat)
+			note, exists := pattern[key]
+			if exists {
+				m.currentOverlay.SetNote(newKey, note)
+			}
+		} else {
+			newKey := GK(0, beat)
 			note, exists := pattern[key]
 			if exists {
 				m.currentOverlay.SetNote(newKey, note)
@@ -2299,23 +2334,6 @@ func (m *model) MoveChordDown() {
 		gridChord := m.activeChord.GridChord
 		newLine := gridChord.Root.Line + 1
 		gridChord.Root.Line = newLine
-	}
-}
-
-func (m *model) RotateDown() {
-	pattern := m.CombinedEditPattern(m.currentOverlay)
-	beat := m.cursorPos.Beat
-	for l := uint8(len(m.definition.lines)); l > 0; l-- {
-		key := GK(l, beat)
-		m.currentOverlay.RemoveNote(key)
-		index := l + 1
-		if int(index) < len(m.definition.lines) {
-			newKey := GK(index, beat)
-			note, exists := pattern[key]
-			if exists {
-				m.currentOverlay.SetNote(newKey, note)
-			}
-		}
 	}
 }
 
