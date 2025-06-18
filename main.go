@@ -23,6 +23,13 @@ func main() {
 		Long:  "A sequencer for your cli",
 		Args:  cobra.MinimumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
+
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Printf("Recovered from panic: %v\n", r)
+				}
+			}()
+
 			midiConnection := InitMidiConnection()
 			defer midiConnection.Close()
 			midiLoopMode := MLM_STAND_ALONE

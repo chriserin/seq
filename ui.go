@@ -6,6 +6,7 @@ import (
 	"maps"
 	"math/rand"
 	"os"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -1037,10 +1038,29 @@ func (m model) IsArrangementViewOperation(msg tea.Msg) bool {
 	return false
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+type panicMsg struct {
+	message    string
+	stacktrace []byte
+}
+
+func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
+	defer func() {
+		if r := recover(); r != nil {
+			rModel = m
+			stackTrace := make([]byte, 4096)
+			n := runtime.Stack(stackTrace, false)
+			rCmd = func() tea.Msg {
+				return panicMsg{message: fmt.Sprintf("Update Panic: %v", r), stacktrace: stackTrace[:n]}
+			}
+		}
+	}()
 	keys := transitiveKeys
 
 	switch msg := msg.(type) {
+	case panicMsg:
+		fmt.Println("Panic occurred check debug.log")
+		m.LogString(fmt.Sprintf(" ------ Panic Message ------- \n%s\n", msg.message))
+		m.LogString(fmt.Sprintf(" ------ Stacktrace ---------- \n%s\n", msg.stacktrace))
 	case tea.KeyMsg:
 		if Is(msg, keys.Enter) {
 			switch m.selectionIndicator {
