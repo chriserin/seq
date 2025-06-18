@@ -272,6 +272,7 @@ type model struct {
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
 	activeChord           overlays.OverlayChord
+	currentError          error
 	// save everything below here
 	definition Definition
 }
@@ -513,6 +514,9 @@ type uiStartMsg struct{}
 type uiStopMsg struct{}
 type uiConnectedMsg struct{}
 type uiNotConnectedMsg struct{}
+type errorMsg struct {
+	error error
+}
 
 func BeatTick(beatInterval time.Duration) tea.Cmd {
 	return tea.Tick(
@@ -983,6 +987,13 @@ func (m model) LogString(message string) {
 	}
 }
 
+func (m model) LogError(err error) {
+	_, writeErr := m.logFile.WriteString(err.Error() + "\n")
+	if writeErr != nil {
+		panic("could not write to log file")
+	}
+}
+
 func (m model) LogFromBeatTime() {
 	_, err := fmt.Fprintf(m.logFile, "%d\n", time.Since(m.beatTime))
 	if err != nil {
@@ -1057,6 +1068,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	keys := transitiveKeys
 
 	switch msg := msg.(type) {
+	case errorMsg:
+		m.LogError(msg.error)
+		m.currentError = msg.error
 	case panicMsg:
 		fmt.Println("Panic occurred check debug.log")
 		m.LogString(fmt.Sprintf(" ------ Panic Message ------- \n%s\n", msg.message))
@@ -3029,6 +3043,10 @@ func (m model) View() string {
 	seqView := m.TriggerSeqView()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "", seqView, "  ", sideView))
 	buf.WriteString("\n")
+	if m.currentError != nil {
+		buf.WriteString("ERROR: ")
+		buf.WriteString(m.currentError.Error())
+	}
 	if m.showArrangementView {
 		buf.WriteString(m.arrangement.View())
 	}

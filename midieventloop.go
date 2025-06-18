@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -59,32 +60,36 @@ type Transmitter struct {
 	out drivers.Out
 }
 
-func (tmtr Transmitter) Start() {
+func (tmtr Transmitter) Start() error {
 	err := tmtr.out.Send(midi.Start())
 	if err != nil {
-		panic("could not send start")
+		return fmt.Errorf("could not send midi start %w", err)
 	}
+	return nil
 }
 
-func (tmtr Transmitter) Stop() {
+func (tmtr Transmitter) Stop() error {
 	err := tmtr.out.Send(midi.Stop())
 	if err != nil {
-		panic("could not send stop")
+		return fmt.Errorf("could not send midi stop %w", err)
 	}
+	return nil
 }
 
-func (tmtr Transmitter) Pulse() {
+func (tmtr Transmitter) Pulse() error {
 	err := tmtr.out.Send(midi.TimingClock())
 	if err != nil {
-		panic("could not send timing clock")
+		return fmt.Errorf("could not send midi timing clock msg %w", err)
 	}
+	return nil
 }
 
-func (tmtr Transmitter) ActiveSense() {
+func (tmtr Transmitter) ActiveSense() error {
 	err := tmtr.out.Send(midi.Activesense())
 	if err != nil {
-		panic("could not send activesense")
+		return fmt.Errorf("could not send midi active sense msg %w", err)
 	}
+	return nil
 }
 
 const TRANSMITTER_NAME string = "seq-transmitter"
@@ -134,11 +139,17 @@ func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, prog
 					timing.trackTime = time.Duration(0)
 					timing.pulseCount = 0
 					pulse(timing.PulseInterval())
-					transmitter.Start()
+					err := transmitter.Start()
+					if err != nil {
+						program.Send(errorMsg{err})
+					}
 				case stopMsg:
 					timing.started = false
 					tickTimer.Stop()
-					transmitter.Stop()
+					err := transmitter.Stop()
+					if err != nil {
+						program.Send(errorMsg{err})
+					}
 					// m.playing should be false now.
 				case tempoMsg:
 					timing.tempo = command.tempo
@@ -146,7 +157,11 @@ func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, prog
 				}
 			case pulseTiming := <-tickChannel:
 				if timing.started {
-					transmitter.Pulse()
+					err := transmitter.Pulse()
+					if err != nil {
+						wrappedErr := fmt.Errorf("pulse timer interrupted %w", err)
+						program.Send(errorMsg{wrappedErr})
+					}
 					timing.pulseCount++
 					if timing.pulseCount%(pulseTiming.subdivisions/timing.subdivisions) == 0 {
 						program.Send(beatMsg{timing.BeatInterval()})
@@ -155,7 +170,11 @@ func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, prog
 				}
 			case <-activeSenseChannel:
 				if !timing.started {
-					transmitter.ActiveSense()
+					err := transmitter.ActiveSense()
+					if err != nil {
+						wrappedErr := fmt.Errorf("active sense interrupted %w", err)
+						program.Send(errorMsg{wrappedErr})
+					}
 				}
 				activesense()
 			}
@@ -212,7 +231,11 @@ func (timing *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel ch
 				select {
 				case <-lockReceiverChannel:
 					stopFn()
-					transmitPort.Close()
+					err := transmitPort.Close()
+					if err != nil {
+						wrappedErr := fmt.Errorf("transmit port not closed: %w", err)
+						program.Send(errorMsg{wrappedErr})
+					}
 					timer.Stop()
 					<-unlockReceiverChannel
 					break inner
