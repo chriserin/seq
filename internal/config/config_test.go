@@ -10,7 +10,8 @@ import (
 func TestProcessConfig(t *testing.T) {
 	t.Run("creates templates", func(t *testing.T) {
 		ProcessConfig("./testdata/AddTemplate.lua")
-		template := GetTemplate("Drums")
+		template, exists := GetTemplate("Drums")
+		assert.True(t, exists)
 		assert.Equal(t, "Drums", template.Name)
 		assert.Equal(t, 8, len(template.Lines))
 		assert.Equal(t, uint8(41), template.Lines[5].Note)

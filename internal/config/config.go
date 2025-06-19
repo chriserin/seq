@@ -213,10 +213,8 @@ func ProcessConfig(luafilepath string) {
 
 	err := L.DoFile(luafilepath)
 	if err != nil {
-		fmt.Println("Do File error!!")
 		fmt.Println(err.Error())
-	} else {
-		fmt.Printf("Number of templates %d\n", len(templates))
+		panic("Do File error!!")
 	}
 }
 
