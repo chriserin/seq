@@ -1,8 +1,8 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"iter"
 	"maps"
 	"math/rand"
 	"os"
@@ -197,14 +197,12 @@ func (nm noteMsg) GetId() int {
 	return nm.id
 }
 
-func (nm noteMsg) GetMidi() midi.Message {
-	switch nm.midiType {
-	case midi.NoteOnMsg:
-		return midi.NoteOn(nm.channel, nm.noteValue, nm.velocity)
-	case midi.NoteOffMsg:
-		return midi.NoteOff(nm.channel, nm.noteValue)
-	}
-	panic("No message matching midiType")
+func (nm noteMsg) GetOnMidi() midi.Message {
+	return midi.NoteOn(nm.channel, nm.noteValue, nm.velocity)
+}
+
+func (nm noteMsg) GetOffMidi() midi.Message {
+	return midi.NoteOff(nm.channel, nm.noteValue)
 }
 
 func (nm noteMsg) OffMessage() midi.Message {
@@ -253,6 +251,7 @@ type model struct {
 	visualMode            bool
 	midiConnection        MidiConnection
 	logFile               *os.File
+	logFileAvailable      bool
 	playing               PlayMode
 	beatTime              time.Time
 	playEditing           bool
@@ -271,6 +270,7 @@ type model struct {
 	programChannel        chan midiEventLoopMsg
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
+	errChan               chan error
 	activeChord           overlays.OverlayChord
 	currentError          error
 	// save everything below here
@@ -548,7 +548,7 @@ type lineNote struct {
 	line grid.LineDefinition
 }
 
-func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *[]tea.Cmd) {
+func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *[]tea.Cmd) error {
 
 	lines := m.definition.lines
 	ratchetNotes := make([]lineNote, 0, len(lines))
@@ -572,11 +572,20 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *
 					accents.Target,
 					delay,
 				)
-				m.ProcessNoteMsg(onMessage)
-				m.ProcessNoteMsg(offMessage)
+				err := m.ProcessNoteMsg(onMessage)
+				if err != nil {
+					return fmt.Errorf("cannot process note on msg: %w", err)
+				}
+				err = m.ProcessNoteMsg(offMessage)
+				if err != nil {
+					return fmt.Errorf("cannot process note off msg: %w", err)
+				}
 			case grid.MESSAGE_TYPE_CC:
 				ccMessage := CCMessage(line, note, accents.Data, delay, true, m.definition.instrument)
-				m.ProcessNoteMsg(ccMessage)
+				err := m.ProcessNoteMsg(ccMessage)
+				if err != nil {
+					return fmt.Errorf("cannot process cc msg: %w", err)
+				}
 			}
 		}
 	}
@@ -586,6 +595,8 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *
 			return ratchetMsg{ratchetNote, 0, beatInterval}
 		})
 	}
+
+	return nil
 }
 
 func Delay(waitIndex uint8, beatInterval time.Duration) time.Duration {
@@ -615,21 +626,21 @@ func GateLength(gateIndex uint8, beatInterval time.Duration) time.Duration {
 	return delay
 }
 
-func PlayMessage(delay time.Duration, message midi.Message, sendFn SendFunc) {
+func PlayMessage(delay time.Duration, message midi.Message, sendFn SendFunc, errChan chan error) {
 	time.AfterFunc(delay, func() {
 		err := sendFn(message)
 		if err != nil {
-			panic("midi message send failed")
+			errChan <- fmt.Errorf("cannot send play message: %w", err)
 		}
 	})
 }
 
-func PlayOffMessage(nm noteMsg, sendFn SendFunc) {
+func PlayOffMessage(nm noteMsg, sendFn SendFunc, errChan chan error) {
 	time.AfterFunc(nm.delay, func() {
 		if notereg.RemoveId(nm) {
-			err := sendFn(nm.GetMidi())
+			err := sendFn(nm.GetOffMidi())
 			if err != nil {
-				panic("midi message send failed")
+				errChan <- fmt.Errorf("cannot send off message: %w", err)
 			}
 		}
 	})
@@ -897,7 +908,7 @@ func InitParts() []arrangement.Part {
 	return []arrangement.Part{firstPart}
 }
 
-func LoadFile(filename string, template string) Definition {
+func LoadFile(filename string, template string) (Definition, error) {
 	var definition Definition
 	var fileErr error
 	if filename != "" {
@@ -906,7 +917,7 @@ func LoadFile(filename string, template string) Definition {
 		if exists {
 			config.LongGates = gridTemplate.GetGateLengths()
 		} else {
-			panic(fmt.Sprintf("Template does not exist: %s", definition.template))
+			return Definition{}, fmt.Errorf("template does not exist: %s", definition.template)
 		}
 	}
 
@@ -915,28 +926,32 @@ func LoadFile(filename string, template string) Definition {
 		definition = newDefinition
 	}
 
-	return definition
+	return definition, fileErr
 }
 
 func InitModel(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) model {
-	logFile, err := tea.LogToFile("debug.log", "debug")
-	if err != nil {
-		panic("could not open log file")
-	}
+	logFile, logFileErr := tea.LogToFile("debug.log", "debug")
 
 	newCursor := cursor.New()
 	newCursor.BlinkSpeed = 600 * time.Millisecond
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
-	definition := LoadFile(filename, template)
+	definition, err := LoadFile(filename, template)
 
 	programChannel := make(chan midiEventLoopMsg)
 	lockReceiverChannel := make(chan bool)
 	unlockReceiverChannel := make(chan bool)
+	errorChannel := make(chan error)
 
 	themes.ChooseTheme(theme)
 
+	if err == nil {
+		// No capacity for multiple errors currently
+		err = logFileErr
+	}
+
 	return model{
+		currentError:          err,
 		theme:                 theme,
 		filename:              filename,
 		textInput:             InitTextInput(),
@@ -945,10 +960,12 @@ func InitModel(filename string, midiConnection MidiConnection, template string, 
 		programChannel:        programChannel,
 		lockReceiverChannel:   lockReceiverChannel,
 		unlockReceiverChannel: unlockReceiverChannel,
+		errChan:               errorChannel,
 		help:                  help.New(),
 		cursor:                newCursor,
 		midiConnection:        midiConnection,
 		logFile:               logFile,
+		logFileAvailable:      logFileErr == nil,
 		cursorPos:             GK(0, 0),
 		currentOverlay:        (*definition.parts)[0].Overlays,
 		overlayKeyEdit:        overlaykey.InitModel(),
@@ -980,24 +997,33 @@ func (m model) LogTeaMsg(msg tea.Msg) {
 	}
 }
 
-func (m model) LogString(message string) {
-	_, err := m.logFile.WriteString(message + "\n")
-	if err != nil {
-		panic("could not write to log file")
+func (m *model) LogString(message string) {
+	if m.logFileAvailable {
+		_, err := m.logFile.WriteString(message + "\n")
+		if err != nil {
+			m.logFileAvailable = false
+			panic("could not write to log file")
+		}
 	}
 }
 
-func (m model) LogError(err error) {
-	_, writeErr := m.logFile.WriteString(err.Error() + "\n")
-	if writeErr != nil {
-		panic("could not write to log file")
+func (m *model) LogError(err error) {
+	if m.logFileAvailable {
+		_, writeErr := m.logFile.WriteString(err.Error() + "\n")
+		if writeErr != nil {
+			m.logFileAvailable = false
+			panic("could not write to log file")
+		}
 	}
 }
 
-func (m model) LogFromBeatTime() {
-	_, err := fmt.Fprintf(m.logFile, "%d\n", time.Since(m.beatTime))
-	if err != nil {
-		panic("could not write to log file")
+func (m *model) LogFromBeatTime() {
+	if m.logFileAvailable {
+		_, err := fmt.Fprintf(m.logFile, "%d\n", time.Since(m.beatTime))
+		if err != nil {
+			m.logFileAvailable = false
+			panic("could not write to log file")
+		}
 	}
 }
 
@@ -1006,8 +1032,18 @@ func RunProgram(filename string, midiConnection MidiConnection, template string,
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
+	ErrorLoop(program, model.errChan)
 	model.SyncTempo()
 	return program
+}
+
+func ErrorLoop(program *tea.Program, errChan chan error) {
+	go func() {
+		for {
+			programError := <-errChan
+			program.Send(errorMsg{programError})
+		}
+	}()
 }
 
 func (m model) Init() tea.Cmd {
@@ -1061,7 +1097,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			stackTrace := make([]byte, 4096)
 			n := runtime.Stack(stackTrace, false)
 			rCmd = func() tea.Msg {
-				return panicMsg{message: fmt.Sprintf("Update Panic: %v", r), stacktrace: stackTrace[:n]}
+				return panicMsg{message: fmt.Sprintf("Caught Update Panic: %v", r), stacktrace: stackTrace[:n]}
 			}
 		}
 	}()
@@ -1072,7 +1108,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.LogError(msg.error)
 		m.currentError = msg.error
 	case panicMsg:
-		fmt.Println("Panic occurred check debug.log")
+		m.currentError = errors.New(msg.message)
 		m.LogString(fmt.Sprintf(" ------ Panic Message ------- \n%s\n", msg.message))
 		m.LogString(fmt.Sprintf(" ------ Stacktrace ---------- \n%s\n", msg.stacktrace))
 	case tea.KeyMsg:
@@ -1119,6 +1155,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.programChannel <- quitMsg{}
 				err := m.logFile.Close()
 				if err != nil {
+					// NOTE: no good way to display this error when quitting, just panic
 					panic("Unable to close logfile")
 				}
 				return m, tea.Quit
@@ -1154,7 +1191,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		switch mappingsCommand.Command {
 		case mappings.ReloadFile:
 			if m.filename != "" {
-				m.definition = LoadFile(m.filename, m.definition.template)
+				var err error
+				m.definition, err = LoadFile(m.filename, m.definition.template)
+				if err != nil {
+					m.currentError = err
+				}
 				m.ResetCurrentOverlay()
 			}
 		case mappings.HoldingKeys:
@@ -1447,7 +1488,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		if m.playing == PLAY_STOPPED {
 			m.playing = PLAY_RECEIVER
 		} else {
-			panic("Corrupted play state when starting")
+			m.currentError = errors.New("cannot start when already started")
 		}
 		m.Start()
 	case uiStopMsg:
@@ -1471,7 +1512,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			pattern := make(grid.Pattern)
 			playingOverlay.CurrentBeatOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles(), gridKeys)
 			cmds := make([]tea.Cmd, 0, len(pattern)+1)
-			m.PlayBeat(msg.interval, pattern, &cmds)
+			err := m.PlayBeat(msg.interval, pattern, &cmds)
+			if err != nil {
+				m.currentError = fmt.Errorf("error when playing beat %w", err)
+			}
 			if len(cmds) > 0 {
 				return m, tea.Batch(
 					cmds...,
@@ -1483,8 +1527,14 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			if msg.Ratchets.HitAt(msg.iterations) {
 				shortGateLength := 20 * time.Millisecond
 				onMessage, offMessage := NoteMessages(msg.line, m.definition.accents.Data[msg.AccentIndex].Value, shortGateLength, m.definition.accents.Target, 0)
-				m.ProcessNoteMsg(onMessage)
-				m.ProcessNoteMsg(offMessage)
+				err := m.ProcessNoteMsg(onMessage)
+				if err != nil {
+					m.currentError = fmt.Errorf("cannot turn on ratchet note %w", err)
+				}
+				err = m.ProcessNoteMsg(offMessage)
+				if err != nil {
+					m.currentError = fmt.Errorf("cannot turn off ratchet note %w", err)
+				}
 			}
 			if msg.iterations+1 < (msg.Ratchets.Length + 1) {
 				ratchetTickCmd := RatchetTick(msg.lineNote, msg.iterations+1, msg.beatInterval)
@@ -1594,7 +1644,7 @@ func (m *model) Start() {
 	if !m.midiConnection.IsOpen() {
 		err := m.midiConnection.ConnectAndOpen()
 		if err != nil {
-			panic("No Open Connection")
+			m.currentError = fmt.Errorf("cannot open midi connection: %w", err)
 		}
 	}
 
@@ -1617,7 +1667,10 @@ func (m *model) Start() {
 
 	pattern := m.CombinedBeatPattern(playingOverlay)
 	cmds := make([]tea.Cmd, 0, len(pattern))
-	m.PlayBeat(tickInterval, pattern, &cmds)
+	err := m.PlayBeat(tickInterval, pattern, &cmds)
+	if err != nil {
+		m.currentError = fmt.Errorf("cannot play first beat %w", err)
+	}
 	if m.playing == PLAY_STANDARD {
 		m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 	}
@@ -1637,19 +1690,12 @@ func (m *model) Stop() {
 	for _, n := range notes {
 		switch n := n.(type) {
 		case noteMsg:
-			PlayMessage(time.Duration(0), n.OffMessage(), sendFn)
+			PlayMessage(time.Duration(0), n.OffMessage(), sendFn, m.errChan)
 		}
 	}
 }
 
 func (m *model) StartStop() {
-	if m.playing == PLAY_STOPPED && !m.midiConnection.IsOpen() {
-		err := m.midiConnection.ConnectAndOpen()
-		if err != nil {
-			panic("No Open Connection")
-		}
-	}
-
 	m.playEditing = false
 	if m.playing == PLAY_STOPPED {
 		m.playing = PLAY_STANDARD
@@ -1669,7 +1715,8 @@ func (m *model) StartStop() {
 	}
 }
 
-func (m model) ProcessNoteMsg(msg Delayable) {
+func (m model) ProcessNoteMsg(msg Delayable) error {
+	// TODO: We don't need the redirection, we know what each type of note is when this function is called
 	sendFn := m.midiConnection.AcquireSendFunc()
 	switch msg := msg.(type) {
 	case noteMsg:
@@ -1677,18 +1724,19 @@ func (m model) ProcessNoteMsg(msg Delayable) {
 		case midi.NoteOnMsg:
 			if notereg.Has(msg) {
 				notereg.Remove(msg)
-				PlayMessage(0, msg.OffMessage(), sendFn)
+				PlayMessage(0, msg.OffMessage(), sendFn, m.errChan)
 			}
 			if err := notereg.Add(msg); err != nil {
-				panic("Added a note that was already there")
+				return fmt.Errorf("added a note already in registry %w", err)
 			}
-			PlayMessage(msg.delay, msg.GetMidi(), sendFn)
+			PlayMessage(msg.delay, msg.GetOnMidi(), sendFn, m.errChan)
 		case midi.NoteOffMsg:
-			PlayOffMessage(msg, sendFn)
+			PlayOffMessage(msg, sendFn, m.errChan)
 		}
 	case controlChangeMsg:
-		PlayMessage(msg.delay, msg.MidiMessage(), sendFn)
+		PlayMessage(msg.delay, msg.MidiMessage(), sendFn, m.errChan)
 	}
+	return nil
 }
 
 func AdvanceSelectionState(states []Selection, currentSelection Selection) Selection {
@@ -2003,60 +2051,6 @@ func (m *model) PrevDouble() {
 	}
 }
 
-func (m model) PlayChord(chord theory.Chord, pos uint8) {
-	for _, n := range chord.Intervals() {
-		index := pos - uint8(n)
-		if int(index) < len(m.definition.lines) {
-			onMessage, offMessage := NoteMessages(
-				m.definition.lines[pos-uint8(n)],
-				m.definition.accents.Data[4].Value,
-				400*time.Millisecond,
-				ACCENT_TARGET_VELOCITY,
-				0,
-			)
-			m.ProcessNoteMsg(onMessage)
-			m.ProcessNoteMsg(offMessage)
-		}
-	}
-}
-
-func ChordStartPosition(chordPattern grid.Pattern) uint8 {
-	var startPosition uint8
-	for gk := range chordPattern {
-		if gk.Line > startPosition {
-			startPosition = gk.Line
-		}
-	}
-	return startPosition
-}
-
-func (m *model) ChordNotes(chordPattern grid.Pattern) ([]uint8, uint8) {
-	notes := make([]uint8, 0)
-	var startPosition uint8
-	for gk := range chordPattern {
-		line := m.definition.lines[gk.Line]
-		notes = append(notes, line.Note)
-		if gk.Line > startPosition {
-			startPosition = gk.Line
-		}
-	}
-
-	if len(notes) > 0 {
-		return theory.ShiftToZero(notes), startPosition
-	} else {
-		return []uint8{}, 0
-	}
-}
-
-func (m *model) RemoveChordNotes(keys iter.Seq[grid.GridKey]) {
-	for gk := range keys {
-		_, exists := m.currentOverlay.GetNote(gk)
-		if exists {
-			m.currentOverlay.RemoveNote(gk)
-		}
-	}
-}
-
 func IsShiftSymbol(symbol string) bool {
 	return slices.Contains([]string{"!", "@", "#", "$", "%", "^", "&", "*", "("}, symbol)
 }
@@ -2158,8 +2152,7 @@ func (m model) UndoableGridNotes() Undoable {
 func (m *model) Save() {
 	err := Write(m, m.filename)
 	if err != nil {
-		fmt.Println(err)
-		panic("Could not write file")
+		m.currentError = fmt.Errorf("cannot write file: %w", err)
 	}
 	m.needsWrite = m.undoStack.id
 }
