@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -43,17 +44,24 @@ const (
 	MLM_RECEIVER
 )
 
-func MidiEventLoop(mode MidiLoopMode, lockRecieverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) {
+func MidiEventLoop(mode MidiLoopMode, lockRecieverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) error {
 	timing := Timing{}
 	switch mode {
 	case MLM_STAND_ALONE:
 		timing.StandAloneLoop(programChannel, program)
 	case MLM_TRANSMITTER:
-		timing.TransmitterLoop(programChannel, program)
+		err := timing.TransmitterLoop(programChannel, program)
+		if err != nil {
+			return fmt.Errorf("could not setup transmitter loop: %w", err)
+		}
 	case MLM_RECEIVER:
-		timing.ReceiverLoop(lockRecieverChannel, unlockReceiverChannel, programChannel, program)
+		err := timing.ReceiverLoop(lockRecieverChannel, unlockReceiverChannel, programChannel, program)
+		if err != nil {
+			return fmt.Errorf("could not setup receiver loop: %w", err)
+		}
 		timing.StandAloneLoop(programChannel, program)
 	}
+	return nil
 }
 
 type Transmitter struct {
@@ -94,18 +102,18 @@ func (tmtr Transmitter) ActiveSense() error {
 
 const TRANSMITTER_NAME string = "seq-transmitter"
 
-func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
+func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program) error {
 	driver, err := rtmididrv.New()
 	if err != nil {
-		panic("Could not get driver")
+		return fmt.Errorf("could not get midi driver: %w", err)
 	}
 	out, err := driver.OpenVirtualOut(TRANSMITTER_NAME)
 	if err != nil {
-		panic("Could not open virtual In")
+		return fmt.Errorf("could not open virtual out: %w", err)
 	}
 	err = out.Send(midi.Activesense())
 	if err != nil {
-		panic("Could not send active sense")
+		return fmt.Errorf("could not send active sense: %w", err)
 	}
 	transmitter := Transmitter{out}
 
@@ -182,22 +190,22 @@ func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, prog
 	}()
 	// Start active sense loop
 	activesense()
+	return nil
 }
 
 type ListenFn func(msg []byte, milliseconds int32)
 
-func (timing *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) {
+func (timing *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) error {
+	transmitPort, err := midi.FindInPort(TRANSMITTER_NAME)
+	if err != nil {
+		return fmt.Errorf("could not find transmitter port %w", err)
+	}
+	err = transmitPort.Open()
+	if err != nil {
+		return fmt.Errorf("could not open transmitter connection %w", err)
+	}
 	go func() {
 		for {
-			transmitPort, err := midi.FindInPort(TRANSMITTER_NAME)
-			if err != nil {
-				panic("Could not find transmitter")
-			}
-			err = transmitPort.Open()
-			if err != nil {
-				panic("Could not open transmitter connection")
-			}
-
 			receiverChannel := make(chan midiEventLoopMsg)
 			tickChannel := make(chan Timing)
 			activeSenseChannel := make(chan bool)
@@ -219,7 +227,7 @@ func (timing *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel ch
 			}
 			stopFn, err := transmitPort.Listen(ReceiverFunc, drivers.ListenConfig{TimeCode: true, ActiveSense: true})
 			if err != nil {
-				panic("error in setting up midi listener for transmitter")
+				program.Send(errorMsg{errors.New("error in setting up midi listener for transmitter")})
 			}
 			timer := time.AfterFunc(330*time.Millisecond, func() {
 				program.Send(uiNotConnectedMsg{})
@@ -280,6 +288,7 @@ func (timing *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel ch
 			}
 		}
 	}()
+	return nil
 }
 
 func (timing *Timing) StandAloneLoop(programChannel chan midiEventLoopMsg, program *tea.Program) {
