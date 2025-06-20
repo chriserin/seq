@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Southclaws/fault"
+	"github.com/Southclaws/fault/fmsg"
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -574,17 +576,17 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *
 				)
 				err := m.ProcessNoteMsg(onMessage)
 				if err != nil {
-					return fmt.Errorf("cannot process note on msg: %w", err)
+					return fault.Wrap(err, fmsg.With("cannot process note on msg"))
 				}
 				err = m.ProcessNoteMsg(offMessage)
 				if err != nil {
-					return fmt.Errorf("cannot process note off msg: %w", err)
+					return fault.Wrap(err, fmsg.With("cannot process note off msg"))
 				}
 			case grid.MESSAGE_TYPE_CC:
 				ccMessage := CCMessage(line, note, accents.Data, delay, true, m.definition.instrument)
 				err := m.ProcessNoteMsg(ccMessage)
 				if err != nil {
-					return fmt.Errorf("cannot process cc msg: %w", err)
+					return fault.Wrap(err, fmsg.With("cannot process cc msg"))
 				}
 			}
 		}
@@ -630,7 +632,7 @@ func PlayMessage(delay time.Duration, message midi.Message, sendFn SendFunc, err
 	time.AfterFunc(delay, func() {
 		err := sendFn(message)
 		if err != nil {
-			errChan <- fmt.Errorf("cannot send play message: %w", err)
+			errChan <- fault.Wrap(err, fmsg.With("cannot send play message"))
 		}
 	})
 }
@@ -640,7 +642,7 @@ func PlayOffMessage(nm noteMsg, sendFn SendFunc, errChan chan error) {
 		if notereg.RemoveId(nm) {
 			err := sendFn(nm.GetOffMidi())
 			if err != nil {
-				errChan <- fmt.Errorf("cannot send off message: %w", err)
+				errChan <- fault.Wrap(err, fmsg.With("cannot send off message"))
 			}
 		}
 	})
@@ -917,7 +919,7 @@ func LoadFile(filename string, template string) (Definition, error) {
 		if exists {
 			config.LongGates = gridTemplate.GetGateLengths()
 		} else {
-			return Definition{}, fmt.Errorf("template does not exist: %s", definition.template)
+			return Definition{}, fault.Newf("template does not exist: %s", definition.template)
 		}
 	}
 
@@ -1031,10 +1033,21 @@ func RunProgram(filename string, midiConnection MidiConnection, template string,
 	config.ProcessConfig("./config/init.lua")
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
-	MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
-	ErrorLoop(program, model.errChan)
-	model.SyncTempo()
-	return program
+	err := MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
+	if err != nil {
+		go func() {
+			program.Send(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
+			for {
+				// Eat the messages sent on the program channel so that we can quit and still send the stopMsg
+				<-model.programChannel
+			}
+		}()
+		return program
+	} else {
+		ErrorLoop(program, model.errChan)
+		model.SyncTempo()
+		return program
+	}
 }
 
 func ErrorLoop(program *tea.Program, errChan chan error) {
@@ -1514,7 +1527,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			cmds := make([]tea.Cmd, 0, len(pattern)+1)
 			err := m.PlayBeat(msg.interval, pattern, &cmds)
 			if err != nil {
-				m.currentError = fmt.Errorf("error when playing beat %w", err)
+				m.currentError = fault.Wrap(err, fmsg.With("error when playing beat"))
 			}
 			if len(cmds) > 0 {
 				return m, tea.Batch(
@@ -1529,11 +1542,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				onMessage, offMessage := NoteMessages(msg.line, m.definition.accents.Data[msg.AccentIndex].Value, shortGateLength, m.definition.accents.Target, 0)
 				err := m.ProcessNoteMsg(onMessage)
 				if err != nil {
-					m.currentError = fmt.Errorf("cannot turn on ratchet note %w", err)
+					m.currentError = fault.Wrap(err, fmsg.With("cannot turn on ratchet note"))
 				}
 				err = m.ProcessNoteMsg(offMessage)
 				if err != nil {
-					m.currentError = fmt.Errorf("cannot turn off ratchet note %w", err)
+					m.currentError = fault.Wrap(err, fmsg.With("cannot turn off ratchet note"))
 				}
 			}
 			if msg.iterations+1 < (msg.Ratchets.Length + 1) {
@@ -1644,7 +1657,7 @@ func (m *model) Start() {
 	if !m.midiConnection.IsOpen() {
 		err := m.midiConnection.ConnectAndOpen()
 		if err != nil {
-			m.currentError = fmt.Errorf("cannot open midi connection: %w", err)
+			m.currentError = fault.Wrap(err, fmsg.With("cannot open midi connection"))
 		}
 	}
 
@@ -1669,7 +1682,7 @@ func (m *model) Start() {
 	cmds := make([]tea.Cmd, 0, len(pattern))
 	err := m.PlayBeat(tickInterval, pattern, &cmds)
 	if err != nil {
-		m.currentError = fmt.Errorf("cannot play first beat %w", err)
+		m.currentError = fault.Wrap(err, fmsg.With("cannot play first beat"))
 	}
 	if m.playing == PLAY_STANDARD {
 		m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
@@ -1727,7 +1740,7 @@ func (m model) ProcessNoteMsg(msg Delayable) error {
 				PlayMessage(0, msg.OffMessage(), sendFn, m.errChan)
 			}
 			if err := notereg.Add(msg); err != nil {
-				return fmt.Errorf("added a note already in registry %w", err)
+				return fault.Wrap(err, fmsg.With("added a note already in registry"))
 			}
 			PlayMessage(msg.delay, msg.GetOnMidi(), sendFn, m.errChan)
 		case midi.NoteOffMsg:
@@ -2152,7 +2165,7 @@ func (m model) UndoableGridNotes() Undoable {
 func (m *model) Save() {
 	err := Write(m, m.filename)
 	if err != nil {
-		m.currentError = fmt.Errorf("cannot write file: %w", err)
+		m.currentError = fault.Wrap(err, fmsg.With("cannot write file"))
 	}
 	m.needsWrite = m.undoStack.id
 }
@@ -3035,12 +3048,22 @@ func (m model) View() string {
 
 	seqView := m.TriggerSeqView()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "", seqView, "  ", sideView))
-	buf.WriteString("\n")
 	if m.currentError != nil {
-		buf.WriteString("ERROR: ")
-		buf.WriteString(m.currentError.Error())
+		buf.WriteString("\n")
+		style := lipgloss.NewStyle().Width(80)
+		var errorBuf strings.Builder
+		errorBuf.WriteString("ERROR: ")
+		issue := fmsg.GetIssue(m.currentError)
+		if issue != "" {
+			errorBuf.WriteString(issue)
+		} else {
+			chain := fault.Flatten(m.currentError)
+			errorBuf.WriteString(chain[0].Message)
+		}
+		buf.WriteString(style.Render(errorBuf.String()))
 	}
 	if m.showArrangementView {
+		buf.WriteString("\n")
 		buf.WriteString(m.arrangement.View())
 	}
 	return buf.String()

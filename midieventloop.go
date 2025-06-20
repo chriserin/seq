@@ -2,9 +2,10 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
+	"github.com/Southclaws/fault"
+	"github.com/Southclaws/fault/fmsg"
 	tea "github.com/charmbracelet/bubbletea"
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
@@ -52,12 +53,12 @@ func MidiEventLoop(mode MidiLoopMode, lockRecieverChannel, unlockReceiverChannel
 	case MLM_TRANSMITTER:
 		err := timing.TransmitterLoop(programChannel, program)
 		if err != nil {
-			return fmt.Errorf("could not setup transmitter loop: %w", err)
+			return fault.Wrap(err, fmsg.With("cannot start transmitter loop"))
 		}
 	case MLM_RECEIVER:
 		err := timing.ReceiverLoop(lockRecieverChannel, unlockReceiverChannel, programChannel, program)
 		if err != nil {
-			return fmt.Errorf("could not setup receiver loop: %w", err)
+			return fault.Wrap(err, fmsg.With("cannot start receiver loop"))
 		}
 		timing.StandAloneLoop(programChannel, program)
 	}
@@ -71,7 +72,7 @@ type Transmitter struct {
 func (tmtr Transmitter) Start() error {
 	err := tmtr.out.Send(midi.Start())
 	if err != nil {
-		return fmt.Errorf("could not send midi start %w", err)
+		return fault.Wrap(err, fmsg.With("cannot send midi start"))
 	}
 	return nil
 }
@@ -79,7 +80,7 @@ func (tmtr Transmitter) Start() error {
 func (tmtr Transmitter) Stop() error {
 	err := tmtr.out.Send(midi.Stop())
 	if err != nil {
-		return fmt.Errorf("could not send midi stop %w", err)
+		return fault.Wrap(err, fmsg.With("cannot send midi stop"))
 	}
 	return nil
 }
@@ -87,7 +88,7 @@ func (tmtr Transmitter) Stop() error {
 func (tmtr Transmitter) Pulse() error {
 	err := tmtr.out.Send(midi.TimingClock())
 	if err != nil {
-		return fmt.Errorf("could not send midi timing clock msg %w", err)
+		return fault.Wrap(err, fmsg.With("cannot send midi clock"))
 	}
 	return nil
 }
@@ -95,7 +96,7 @@ func (tmtr Transmitter) Pulse() error {
 func (tmtr Transmitter) ActiveSense() error {
 	err := tmtr.out.Send(midi.Activesense())
 	if err != nil {
-		return fmt.Errorf("could not send midi active sense msg %w", err)
+		return fault.Wrap(err, fmsg.With("cannot send midi active sense"))
 	}
 	return nil
 }
@@ -105,17 +106,17 @@ const TRANSMITTER_NAME string = "seq-transmitter"
 func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, program *tea.Program) error {
 	driver, err := rtmididrv.New()
 	if err != nil {
-		return fmt.Errorf("could not get midi driver: %w", err)
+		return fault.Wrap(err, fmsg.With("midi driver error"))
 	}
 	out, err := driver.OpenVirtualOut(TRANSMITTER_NAME)
 	if err != nil {
-		return fmt.Errorf("could not open virtual out: %w", err)
-	}
-	err = out.Send(midi.Activesense())
-	if err != nil {
-		return fmt.Errorf("could not send active sense: %w", err)
+		return fault.Wrap(err, fmsg.With("could not open virtual out"))
 	}
 	transmitter := Transmitter{out}
+	err = transmitter.ActiveSense()
+	if err != nil {
+		return fault.Wrap(err)
+	}
 
 	tickChannel := make(chan Timing)
 	activeSenseChannel := make(chan bool)
@@ -167,7 +168,7 @@ func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, prog
 				if timing.started {
 					err := transmitter.Pulse()
 					if err != nil {
-						wrappedErr := fmt.Errorf("pulse timer interrupted %w", err)
+						wrappedErr := fault.Wrap(err)
 						program.Send(errorMsg{wrappedErr})
 					}
 					timing.pulseCount++
@@ -180,7 +181,7 @@ func (timing *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, prog
 				if !timing.started {
 					err := transmitter.ActiveSense()
 					if err != nil {
-						wrappedErr := fmt.Errorf("active sense interrupted %w", err)
+						wrappedErr := fault.Wrap(err, fmsg.With("activesense interrupted"))
 						program.Send(errorMsg{wrappedErr})
 					}
 				}
@@ -198,11 +199,11 @@ type ListenFn func(msg []byte, milliseconds int32)
 func (timing *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) error {
 	transmitPort, err := midi.FindInPort(TRANSMITTER_NAME)
 	if err != nil {
-		return fmt.Errorf("could not find transmitter port %w", err)
+		return fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
 	}
 	err = transmitPort.Open()
 	if err != nil {
-		return fmt.Errorf("could not open transmitter connection %w", err)
+		return fault.Wrap(err, fmsg.WithDesc("cannot open transmitport", "Could not open a transmitter.  Start a seq program with the --transmit flag before starting a receiver"))
 	}
 	go func() {
 		for {
@@ -241,7 +242,7 @@ func (timing *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel ch
 					stopFn()
 					err := transmitPort.Close()
 					if err != nil {
-						wrappedErr := fmt.Errorf("transmit port not closed: %w", err)
+						wrappedErr := fault.Wrap(err, fmsg.With("transmit port not closed"))
 						program.Send(errorMsg{wrappedErr})
 					}
 					timer.Stop()
