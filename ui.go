@@ -2882,7 +2882,7 @@ func (m model) CyclesEditView() string {
 	case SELECT_START_CYCLES:
 		startCyclesInput = themes.SelectedStyle.Render(strconv.Itoa(int(startCycles)))
 	}
-	buf.WriteString(themes.AltArtStyle.Render("    ⟳ Amount "))
+	buf.WriteString(themes.AltArtStyle.Render(" ⟳ Amount "))
 	buf.WriteString(cyclesInput)
 	buf.WriteString(themes.AltArtStyle.Render("    ⟳ Start "))
 	buf.WriteString(startCyclesInput)
@@ -2903,7 +2903,7 @@ func (m model) BeatsEditView() string {
 	case SELECT_START_BEATS:
 		startBeatsInput = themes.SelectedStyle.Render(strconv.Itoa(int(startBeats)))
 	}
-	buf.WriteString(themes.AltArtStyle.Render("    Beats "))
+	buf.WriteString(themes.AltArtStyle.Render(" Beats "))
 	buf.WriteString(beatsInput)
 	buf.WriteString(themes.AltArtStyle.Render("  Start Beat "))
 	buf.WriteString(startBeatsInput)
@@ -2955,7 +2955,7 @@ func (m model) TempoEditView() string {
 		division = themes.SelectedStyle.Render(strconv.Itoa(m.definition.subdivisions))
 	}
 	var buf strings.Builder
-	buf.WriteString(themes.AltArtStyle.Render("    Tempo "))
+	buf.WriteString(themes.AltArtStyle.Render(" Tempo "))
 	buf.WriteString(tempo)
 	buf.WriteString(themes.AltArtStyle.Render("  Subdivisions "))
 	buf.WriteString(division)
@@ -3311,18 +3311,19 @@ func (m model) TriggerSeqView() string {
 	var buf strings.Builder
 	var mode string
 
+	buf.WriteString(m.WriteView())
 	if m.patternMode == PATTERN_ACCENT {
 		mode = " Accent "
-		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf(" %s\n", themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_GATE {
 		mode = " Gate "
-		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf(" %s\n", themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_WAIT {
 		mode = " Wait "
-		buf.WriteString(fmt.Sprintf("    %s\n", themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf(" %s\n", themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_RATCHET {
 		mode = " Ratchet "
-		buf.WriteString(fmt.Sprintf("    %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetEditView())
 	} else if m.selectionIndicator == SELECT_TEMPO || m.selectionIndicator == SELECT_TEMPO_SUBDIVISION {
@@ -3346,12 +3347,10 @@ func (m model) TriggerSeqView() string {
 	} else if m.playing != PLAY_STOPPED {
 		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
 	} else if len(*m.definition.parts) > 1 {
-		buf.WriteString(m.WriteView())
 		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
 		buf.WriteString(themes.AppDescriptorStyle.Render(fmt.Sprintf("- %s", m.CurrentPart().GetName())))
 		buf.WriteString("\n")
 	} else {
-		buf.WriteString(m.WriteView())
 		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
 		buf.WriteString(themes.AppDescriptorStyle.Render("- A sequencer for your cli"))
 		buf.WriteString("\n")
@@ -3374,7 +3373,7 @@ func (m model) TriggerSeqView() string {
 
 func (m model) RenamePartView() string {
 	var buf strings.Builder
-	buf.WriteString("   Rename Part: ")
+	buf.WriteString(" Rename Part: ")
 	buf.WriteString(m.textInput.View())
 	buf.WriteString("\n")
 	return buf.String()
@@ -3382,7 +3381,7 @@ func (m model) RenamePartView() string {
 
 func (m model) FileNameView() string {
 	var buf strings.Builder
-	buf.WriteString("   File Name: ")
+	buf.WriteString(" File Name: ")
 	buf.WriteString(m.textInput.View())
 	buf.WriteString("\n")
 	return buf.String()
@@ -3390,7 +3389,7 @@ func (m model) FileNameView() string {
 
 func (m model) ChoosePartView() string {
 	var buf strings.Builder
-	buf.WriteString("   Choose Part: ")
+	buf.WriteString(" Choose Part: ")
 	var name string
 	if m.partSelectorIndex < 0 {
 		name = "New Part"
@@ -3404,7 +3403,7 @@ func (m model) ChoosePartView() string {
 
 func (m model) ConfirmNewSequenceView() string {
 	var buf strings.Builder
-	buf.WriteString("   New Sequence: ")
+	buf.WriteString(" New Sequence: ")
 	buf.WriteString(themes.SelectedStyle.Render("Confirm"))
 	buf.WriteString("\n")
 	return buf.String()
@@ -3412,7 +3411,7 @@ func (m model) ConfirmNewSequenceView() string {
 
 func (m model) ConfirmQuitView() string {
 	var buf strings.Builder
-	buf.WriteString("   Quit: ")
+	buf.WriteString(" Quit: ")
 	buf.WriteString(themes.SelectedStyle.Render("Confirm"))
 	buf.WriteString("\n")
 	return buf.String()
@@ -3423,7 +3422,7 @@ func (m model) RatchetEditView() string {
 
 	var buf strings.Builder
 	var ratchetsBuf strings.Builder
-	buf.WriteString("   Ratchets ")
+	buf.WriteString(" Ratchets ")
 	for i := range uint8(8) {
 		var backgroundColor lipgloss.Color
 		if i <= currentNote.Ratchets.Length {
