@@ -1300,7 +1300,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.ratchetCursor = 0
 			}
 		case mappings.BeatsInputSwitch:
-			states := []Selection{SELECT_NOTHING, SELECT_BEATS, SELECT_CYCLES, SELECT_START_BEATS, SELECT_START_CYCLES}
+			states := []Selection{SELECT_NOTHING, SELECT_BEATS, SELECT_START_BEATS, SELECT_CYCLES, SELECT_START_CYCLES}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.ArrangementInputSwitch:
 			states := []Selection{SELECT_NOTHING, SELECT_ARRANGEMENT_EDITOR}
@@ -2855,36 +2855,47 @@ func (m model) OverlayKeys() []overlayKey {
 }
 
 func (m model) PartView() string {
-	var buf strings.Builder
-	beats := m.CurrentPart().Beats
-	cycles := m.CurrentSongSection().Cycles
-	startBeats := m.CurrentSongSection().StartBeat
-	startCycles := m.CurrentSongSection().StartCycles
+	return ""
+}
 
-	beatsInput := themes.NumberStyle.Render(strconv.Itoa(int(beats)))
+func (m model) CyclesEditView() string {
+	var buf strings.Builder
+	cycles := m.CurrentSongSection().Cycles
+	startCycles := m.CurrentSongSection().StartCycles
 	cyclesInput := themes.NumberStyle.Render(strconv.Itoa(int(cycles)))
-	startBeatsInput := themes.NumberStyle.Render(strconv.Itoa(int(startBeats)))
 	startCyclesInput := themes.NumberStyle.Render(strconv.Itoa(int(startCycles)))
 	switch m.selectionIndicator {
-	case SELECT_BEATS:
-		beatsInput = themes.SelectedStyle.Render(strconv.Itoa(int(beats)))
 	case SELECT_CYCLES:
 		cyclesInput = themes.SelectedStyle.Render(strconv.Itoa(int(cycles)))
-	case SELECT_START_BEATS:
-		startBeatsInput = themes.SelectedStyle.Render(strconv.Itoa(int(startBeats)))
 	case SELECT_START_CYCLES:
 		startCyclesInput = themes.SelectedStyle.Render(strconv.Itoa(int(startCycles)))
 	}
-	buf.WriteString("             \n")
-	buf.WriteString("             \n")
-	buf.WriteString("     BEATS   \n")
-	buf.WriteString(fmt.Sprintf("      %3s    \n", beatsInput))
-	buf.WriteString("    ⟳ Amount   \n")
-	buf.WriteString(fmt.Sprintf("      %s      \n", cyclesInput))
-	buf.WriteString("  START BEAT\n")
-	buf.WriteString(fmt.Sprintf("      %s      \n", startBeatsInput))
-	buf.WriteString("  ⟳ Start\n")
-	buf.WriteString(fmt.Sprintf("      %s      \n", startCyclesInput))
+	buf.WriteString(themes.AltArtStyle.Render("    ⟳ Amount "))
+	buf.WriteString(cyclesInput)
+	buf.WriteString(themes.AltArtStyle.Render("    ⟳ Start "))
+	buf.WriteString(startCyclesInput)
+	buf.WriteString("\n")
+	return buf.String()
+}
+
+func (m model) BeatsEditView() string {
+	var buf strings.Builder
+	beats := m.CurrentPart().Beats
+	startBeats := m.CurrentSongSection().StartBeat
+
+	beatsInput := themes.NumberStyle.Render(strconv.Itoa(int(beats)))
+	startBeatsInput := themes.NumberStyle.Render(strconv.Itoa(int(startBeats)))
+	switch m.selectionIndicator {
+	case SELECT_BEATS:
+		beatsInput = themes.SelectedStyle.Render(strconv.Itoa(int(beats)))
+	case SELECT_START_BEATS:
+		startBeatsInput = themes.SelectedStyle.Render(strconv.Itoa(int(startBeats)))
+	}
+	buf.WriteString(themes.AltArtStyle.Render("    Beats "))
+	buf.WriteString(beatsInput)
+	buf.WriteString(themes.AltArtStyle.Render("  Start Beat "))
+	buf.WriteString(startBeatsInput)
+	buf.WriteString("\n")
 	return buf.String()
 }
 
@@ -3071,15 +3082,7 @@ func (m model) View() string {
 		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
 	}
 
-	var leftSideView string
-	if slices.Contains([]Selection{SELECT_BEATS, SELECT_CYCLES, SELECT_START_BEATS, SELECT_START_CYCLES}, m.selectionIndicator) {
-		leftSideView = m.PartView()
-	} else {
-		// leftSideView = m.TempoView()
-		// leftSideView = m.LeftSideView()
-		leftSideView = " "
-	}
-
+	leftSideView := " "
 	seqView := m.TriggerSeqView()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "", seqView, "  ", sideView))
 	if m.currentError != nil {
@@ -3312,6 +3315,10 @@ func (m model) TriggerSeqView() string {
 		buf.WriteString(m.RatchetEditView())
 	} else if m.selectionIndicator == SELECT_TEMPO || m.selectionIndicator == SELECT_TEMPO_SUBDIVISION {
 		buf.WriteString(m.TempoEditView())
+	} else if slices.Contains([]Selection{SELECT_BEATS, SELECT_START_BEATS}, m.selectionIndicator) {
+		buf.WriteString(m.BeatsEditView())
+	} else if slices.Contains([]Selection{SELECT_CYCLES, SELECT_START_CYCLES}, m.selectionIndicator) {
+		buf.WriteString(m.CyclesEditView())
 	} else if m.selectionIndicator == SELECT_PART {
 		buf.WriteString(m.ChoosePartView())
 	} else if m.selectionIndicator == SELECT_CHANGE_PART {
