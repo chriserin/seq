@@ -21,7 +21,6 @@ func (m Model) View() string {
 		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("⟳ Amount"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
 		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("⟳ Keep"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
 	)
-
 	buf.WriteString(header)
 	buf.WriteString("\n")
 

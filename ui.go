@@ -2921,6 +2921,25 @@ func (m model) TempoView() string {
 	return buf.String()
 }
 
+func (m model) TempoEditView() string {
+	var tempo, division string
+	tempo = themes.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
+	division = themes.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
+	switch m.selectionIndicator {
+	case SELECT_TEMPO:
+		tempo = themes.SelectedStyle.Render(strconv.Itoa(m.definition.tempo))
+	case SELECT_TEMPO_SUBDIVISION:
+		division = themes.SelectedStyle.Render(strconv.Itoa(m.definition.subdivisions))
+	}
+	var buf strings.Builder
+	buf.WriteString(themes.AltArtStyle.Render("    Tempo "))
+	buf.WriteString(tempo)
+	buf.WriteString(themes.AltArtStyle.Render("  Subdivisions "))
+	buf.WriteString(division)
+	buf.WriteString("\n")
+	return buf.String()
+}
+
 func (m model) LeftSideView() string {
 	var tempo, division string
 	tempo = themes.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
@@ -3057,14 +3076,19 @@ func (m model) View() string {
 		leftSideView = m.PartView()
 	} else {
 		// leftSideView = m.TempoView()
-		leftSideView = m.LeftSideView()
+		// leftSideView = m.LeftSideView()
+		leftSideView = " "
 	}
 
 	seqView := m.TriggerSeqView()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "", seqView, "  ", sideView))
 	if m.currentError != nil {
 		buf.WriteString("\n")
-		style := lipgloss.NewStyle().Width(80)
+		style := lipgloss.NewStyle().Width(50)
+		style = style.Border(lipgloss.NormalBorder())
+		style = style.Padding(1)
+		style = style.BorderForeground(lipgloss.Color("#880000"))
+		style = style.MarginLeft(2)
 		var errorBuf strings.Builder
 		errorBuf.WriteString("ERROR: ")
 		issue := fmsg.GetIssue(m.currentError)
@@ -3075,10 +3099,12 @@ func (m model) View() string {
 			errorBuf.WriteString(chain[0].Message)
 		}
 		buf.WriteString(style.Render(errorBuf.String()))
+	} else {
+		buf.WriteString("\n")
 	}
 	if m.showArrangementView {
 		buf.WriteString("\n")
-		buf.WriteString(m.arrangement.View())
+		buf.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, "  ", m.arrangement.View()))
 	}
 	return buf.String()
 }
@@ -3284,6 +3310,8 @@ func (m model) TriggerSeqView() string {
 		buf.WriteString(fmt.Sprintf("    %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
 	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
 		buf.WriteString(m.RatchetEditView())
+	} else if m.selectionIndicator == SELECT_TEMPO || m.selectionIndicator == SELECT_TEMPO_SUBDIVISION {
+		buf.WriteString(m.TempoEditView())
 	} else if m.selectionIndicator == SELECT_PART {
 		buf.WriteString(m.ChoosePartView())
 	} else if m.selectionIndicator == SELECT_CHANGE_PART {
@@ -3322,7 +3350,6 @@ func (m model) TriggerSeqView() string {
 	}
 
 	buf.WriteString(m.CurrentOverlayView())
-	buf.WriteString("\n")
 	return buf.String()
 }
 
