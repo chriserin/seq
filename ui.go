@@ -290,6 +290,7 @@ func (m *model) UnsetActiveChord() {
 func (m *model) SetCurrentError(err error) {
 	m.currentError = err
 	m.selectionIndicator = SELECT_ERROR
+	m.LogError(err)
 }
 
 func (m *model) ResetCurrentOverlay() {
@@ -1021,11 +1022,15 @@ func (m *model) LogString(message string) {
 
 func (m *model) LogError(err error) {
 	if m.logFileAvailable {
-		_, writeErr := m.logFile.WriteString(err.Error() + "\n")
+		m.LogString("ERROR --------------------- \n")
+
+		_, writeErr := fmt.Fprintf(m.logFile, "%+v", err)
 		if writeErr != nil {
 			m.logFileAvailable = false
 			panic("could not write to log file")
 		}
+
+		m.LogString("\n")
 	}
 }
 
@@ -1128,7 +1133,6 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case errorMsg:
-		m.LogError(msg.error)
 		m.SetCurrentError(msg.error)
 	case panicMsg:
 		m.SetCurrentError(errors.New(msg.message))
