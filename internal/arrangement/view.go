@@ -197,8 +197,7 @@ func (p Part) GetName() string {
 
 func (ac ArrCursor) PlayStateView(cycles int) string {
 	var buf strings.Builder
-	buf.WriteString("    ▶ ")
-	buf.WriteString("")
+	buf.WriteString(" ▶ ")
 	for i, arr := range ac {
 		if i == 0 {
 			if arr.playingIterations == math.MaxInt64 {
