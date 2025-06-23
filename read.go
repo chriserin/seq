@@ -230,6 +230,8 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 					if msgType, err := strconv.ParseUint(value, 10, 8); err == nil {
 						lineDef.MsgType = grid.MessageType(msgType)
 					}
+				case "Name":
+					lineDef.Name = value
 				}
 			}
 

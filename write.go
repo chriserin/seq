@@ -84,8 +84,8 @@ func writeLineDefinitions(w io.Writer, lines []grid.LineDefinition) error {
 
 	fmt.Fprintln(w, "------------------------- LINES -------------------------")
 	for i, line := range lines {
-		fmt.Fprintf(w, "Line %d: Channel=%d, Note=%d, MessageType=%d\n",
-			i, line.Channel, line.Note, line.MsgType)
+		fmt.Fprintf(w, "Line %d: Channel=%d, Note=%d, MessageType=%d, Name=%s\n",
+			i, line.Channel, line.Note, line.MsgType, line.Name)
 	}
 	fmt.Fprintln(w, "")
 
