@@ -287,6 +287,11 @@ func (m *model) UnsetActiveChord() {
 	m.activeChord = overlays.OverlayChord{}
 }
 
+func (m *model) SetCurrentError(err error) {
+	m.currentError = err
+	m.selectionIndicator = SELECT_ERROR
+}
+
 func (m *model) ResetCurrentOverlay() {
 	if m.playing != PLAY_STOPPED && m.playEditing {
 		return
@@ -358,6 +363,7 @@ const (
 	SELECT_ARRANGEMENT_EDITOR
 	SELECT_RENAME_PART
 	SELECT_FILE_NAME
+	SELECT_ERROR
 )
 
 type PatternMode uint8
@@ -1123,9 +1129,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case errorMsg:
 		m.LogError(msg.error)
-		m.currentError = msg.error
+		m.SetCurrentError(msg.error)
 	case panicMsg:
-		m.currentError = errors.New(msg.message)
+		m.SetCurrentError(errors.New(msg.message))
 		m.LogString(fmt.Sprintf(" ------ Panic Message ------- \n%s\n", msg.message))
 		m.LogString(fmt.Sprintf(" ------ Stacktrace ---------- \n%s\n", msg.stacktrace))
 	case tea.KeyMsg:
@@ -1211,7 +1217,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				var err error
 				m.definition, err = LoadFile(m.filename, m.definition.template)
 				if err != nil {
-					m.currentError = fault.Wrap(err, fmsg.WithDesc("could not reload file", fmt.Sprintf("Could not reload file %s", m.filename)))
+					m.SetCurrentError(fault.Wrap(err, fmsg.WithDesc("could not reload file", fmt.Sprintf("Could not reload file %s", m.filename))))
 				}
 				m.ResetCurrentOverlay()
 			}
@@ -1489,6 +1495,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.Solo:
 			m.playState = Solo(m.playState, m.cursorPos.Line)
 			m.hasSolo = m.HasSolo()
+		case mappings.Enter:
+			// NOTE: Do nothing, we've reacted to Enter at the beginning of Update
 		default:
 			m = m.UpdateDefinition(mappingsCommand)
 		}
@@ -1505,7 +1513,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		if m.playing == PLAY_STOPPED {
 			m.playing = PLAY_RECEIVER
 		} else {
-			m.currentError = errors.New("cannot start when already started")
+			m.SetCurrentError(errors.New("cannot start when already started"))
 		}
 		m.Start()
 	case uiStopMsg:
@@ -1531,7 +1539,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			cmds := make([]tea.Cmd, 0, len(pattern)+1)
 			err := m.PlayBeat(msg.interval, pattern, &cmds)
 			if err != nil {
-				m.currentError = fault.Wrap(err, fmsg.With("error when playing beat"))
+				m.SetCurrentError(fault.Wrap(err, fmsg.With("error when playing beat")))
 			}
 			if len(cmds) > 0 {
 				return m, tea.Batch(
@@ -1546,11 +1554,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				onMessage, offMessage := NoteMessages(msg.line, m.definition.accents.Data[msg.AccentIndex].Value, shortGateLength, m.definition.accents.Target, 0)
 				err := m.ProcessNoteMsg(onMessage)
 				if err != nil {
-					m.currentError = fault.Wrap(err, fmsg.With("cannot turn on ratchet note"))
+					m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot turn on ratchet note")))
 				}
 				err = m.ProcessNoteMsg(offMessage)
 				if err != nil {
-					m.currentError = fault.Wrap(err, fmsg.With("cannot turn off ratchet note"))
+					m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot turn off ratchet note")))
 				}
 			}
 			if msg.iterations+1 < (msg.Ratchets.Length + 1) {
@@ -1661,7 +1669,7 @@ func (m *model) Start() {
 	if !m.midiConnection.IsReady() {
 		err := m.midiConnection.ConnectAndOpen()
 		if err != nil {
-			m.currentError = fault.Wrap(err, fmsg.With("cannot open midi connection"))
+			m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot open midi connection")))
 			m.playing = PLAY_STOPPED
 			return
 		}
@@ -1688,7 +1696,7 @@ func (m *model) Start() {
 	cmds := make([]tea.Cmd, 0, len(pattern))
 	err := m.PlayBeat(tickInterval, pattern, &cmds)
 	if err != nil {
-		m.currentError = fault.Wrap(err, fmsg.With("cannot play first beat"))
+		m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot play first beat")))
 	}
 	if m.playing == PLAY_STANDARD {
 		m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
@@ -1707,7 +1715,7 @@ func (m *model) Stop() {
 	notes := notereg.Clear()
 	sendFn, err := m.midiConnection.AcquireSendFunc()
 	if err != nil {
-		m.currentError = fault.Wrap(err)
+		m.SetCurrentError(fault.Wrap(err))
 	}
 	for _, n := range notes {
 		switch n := n.(type) {
@@ -2179,7 +2187,7 @@ func (m model) UndoableGridNotes() Undoable {
 func (m *model) Save() {
 	err := Write(m, m.filename)
 	if err != nil {
-		m.currentError = fault.Wrap(err, fmsg.With("cannot write file"))
+		m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot write file")))
 	}
 	m.needsWrite = m.undoStack.id
 }
@@ -3085,7 +3093,7 @@ func (m model) View() string {
 	leftSideView := " "
 	seqView := m.TriggerSeqView()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "", seqView, "  ", sideView))
-	if m.currentError != nil {
+	if m.currentError != nil && m.selectionIndicator == SELECT_ERROR {
 		buf.WriteString("\n")
 		style := lipgloss.NewStyle().Width(50)
 		style = style.Border(lipgloss.NormalBorder())
