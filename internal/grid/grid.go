@@ -159,6 +159,7 @@ type LineDefinition struct {
 	Channel uint8
 	Note    uint8
 	MsgType MessageType
+	Name    string
 }
 
 func (l *LineDefinition) IncrementChannel() {

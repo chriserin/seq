@@ -3094,7 +3094,7 @@ func (m model) View() string {
 		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
 	}
 
-	leftSideView := " "
+	leftSideView := "  "
 	seqView := m.TriggerSeqView()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "", seqView, "  ", sideView))
 	if m.currentError != nil && m.selectionIndicator == SELECT_ERROR {
@@ -3500,7 +3500,9 @@ func (m model) LineIndicator(lineNumber uint8) string {
 	}
 
 	var lineName string
-	if m.definition.templateUIStyle == "blackwhite" {
+	if m.definition.lines[lineNumber].Name != "" {
+		lineName = themes.LineNumberStyle.Render(m.definition.lines[lineNumber].Name)
+	} else if m.definition.templateUIStyle == "blackwhite" {
 		notename := NoteName(m.definition.lines[lineNumber].Note)
 		if slices.Contains(blackNotes, m.definition.lines[lineNumber].Note%12) {
 			lineName = themes.BlackKeyStyle.Render(notename[0:4])

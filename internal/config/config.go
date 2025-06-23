@@ -300,7 +300,7 @@ func addTemplate(L *lua.State) int {
 				L.GetTable(2)
 				if L.IsTable(3) {
 					ld := grid.LineDefinition{}
-					for i := range 3 {
+					for i := range 4 {
 						L.PushInteger(int64(i + 1))
 						L.GetTable(3)
 						switch i + 1 {
@@ -318,6 +318,9 @@ func addTemplate(L *lua.State) int {
 						case 3:
 							note := L.ToNumber(4)
 							ld.Note = uint8(note)
+						case 4:
+							name := L.ToString(4)
+							ld.Name = name
 						}
 						L.Pop(1)
 					}
