@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/chriserin/seq/internal/seqmidi"
 	"github.com/spf13/cobra"
 	midi "gitlab.com/gomidi/midi/v2"
 )
@@ -30,7 +31,7 @@ func main() {
 				}
 			}()
 
-			midiConnection := InitMidiConnection()
+			midiConnection := seqmidi.InitMidiConnection()
 			defer midiConnection.Close()
 			midiLoopMode := MLM_STAND_ALONE
 			if transmitter {

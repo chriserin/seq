@@ -27,6 +27,7 @@ import (
 	"github.com/chriserin/seq/internal/notereg"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/overlays"
+	"github.com/chriserin/seq/internal/seqmidi"
 	themes "github.com/chriserin/seq/internal/themes"
 	"github.com/chriserin/seq/internal/theory"
 	midi "gitlab.com/gomidi/midi/v2"
@@ -251,7 +252,7 @@ type model struct {
 	cursorPos             gridKey
 	visualAnchorCursor    gridKey
 	visualMode            bool
-	midiConnection        MidiConnection
+	midiConnection        seqmidi.MidiConnection
 	logFile               *os.File
 	logFileAvailable      bool
 	playing               PlayMode
@@ -628,7 +629,7 @@ func GateLength(gateIndex uint8, beatInterval time.Duration) time.Duration {
 	return delay
 }
 
-func PlayMessage(delay time.Duration, message midi.Message, sendFn SendFunc, errChan chan error) {
+func PlayMessage(delay time.Duration, message midi.Message, sendFn seqmidi.SendFunc, errChan chan error) {
 	time.AfterFunc(delay, func() {
 		err := sendFn(message)
 		if err != nil {
@@ -637,7 +638,7 @@ func PlayMessage(delay time.Duration, message midi.Message, sendFn SendFunc, err
 	})
 }
 
-func PlayOffMessage(nm noteMsg, sendFn SendFunc, errChan chan error) {
+func PlayOffMessage(nm noteMsg, sendFn seqmidi.SendFunc, errChan chan error) {
 	time.AfterFunc(nm.delay, func() {
 		if notereg.RemoveId(nm) {
 			err := sendFn(nm.GetOffMidi())
@@ -931,7 +932,7 @@ func LoadFile(filename string, template string) (Definition, error) {
 	return definition, fileErr
 }
 
-func InitModel(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) model {
+func InitModel(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) model {
 	logFile, logFileErr := tea.LogToFile("debug.log", "debug")
 
 	newCursor := cursor.New()
@@ -1029,7 +1030,7 @@ func (m *model) LogFromBeatTime() {
 	}
 }
 
-func RunProgram(filename string, midiConnection MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) *tea.Program {
+func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) *tea.Program {
 	config.ProcessConfig("./config/init.lua")
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
@@ -1207,7 +1208,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				var err error
 				m.definition, err = LoadFile(m.filename, m.definition.template)
 				if err != nil {
-					m.currentError = err
+					m.currentError = fault.Wrap(err, fmsg.WithDesc("could not reload file", fmt.Sprintf("Could not reload file %s", m.filename)))
 				}
 				m.ResetCurrentOverlay()
 			}
@@ -1654,10 +1655,12 @@ func (m *model) PrevSection() {
 }
 
 func (m *model) Start() {
-	if !m.midiConnection.IsOpen() {
+	if !m.midiConnection.IsReady() {
 		err := m.midiConnection.ConnectAndOpen()
 		if err != nil {
 			m.currentError = fault.Wrap(err, fmsg.With("cannot open midi connection"))
+			m.playing = PLAY_STOPPED
+			return
 		}
 	}
 
@@ -1699,7 +1702,10 @@ func (m *model) Stop() {
 	m.ResetCurrentOverlay()
 
 	notes := notereg.Clear()
-	sendFn := m.midiConnection.AcquireSendFunc()
+	sendFn, err := m.midiConnection.AcquireSendFunc()
+	if err != nil {
+		m.currentError = fault.Wrap(err)
+	}
 	for _, n := range notes {
 		switch n := n.(type) {
 		case noteMsg:
@@ -1713,6 +1719,7 @@ func (m *model) StartStop() {
 	if m.playing == PLAY_STOPPED {
 		m.playing = PLAY_STANDARD
 		if m.midiLoopMode == MLM_RECEIVER {
+			// NOTE: When instance is receiver, allow it to play alone and lock out transmitter messages
 			m.lockReceiverChannel <- true
 		}
 		m.Start()
@@ -1720,6 +1727,7 @@ func (m *model) StartStop() {
 		if m.playing == PLAY_STANDARD {
 			m.programChannel <- stopMsg{}
 			if m.midiLoopMode == MLM_RECEIVER {
+				// NOTE: Allow transmitter messages
 				m.unlockReceiverChannel <- true
 			}
 		}
@@ -1730,7 +1738,10 @@ func (m *model) StartStop() {
 
 func (m model) ProcessNoteMsg(msg Delayable) error {
 	// TODO: We don't need the redirection, we know what each type of note is when this function is called
-	sendFn := m.midiConnection.AcquireSendFunc()
+	sendFn, err := m.midiConnection.AcquireSendFunc()
+	if err != nil {
+		return fault.Wrap(err, fmsg.With("could not acquire send func"))
+	}
 	switch msg := msg.(type) {
 	case noteMsg:
 		switch msg.midiType {
