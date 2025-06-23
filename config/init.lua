@@ -21,6 +21,36 @@ seq.addtemplate({
 	},
 })
 
+seq.addtemplate({
+	name = "VMNA",
+	maxgatelength = 1,
+	uistyle = "plain",
+	lines = {
+		{ Channel, MessageType, C1 },
+		{ Channel, MessageType, 48 },
+		{ Channel, MessageType, 41 },
+		{ Channel, MessageType, 58 },
+		{ Channel, MessageType, 40 },
+		{ Channel, MessageType, 49 },
+		{ Channel, MessageType, 51 },
+		{ Channel, MessageType, 42 },
+		{ Channel, MessageType, 44 },
+		{ Channel, MessageType, 39 },
+	},
+})
+
+seq.addtemplate({
+	name = "PPHT",
+	maxgatelength = 1,
+	uistyle = "plain",
+	lines = {
+		{ 1, MessageType, C1 },
+		{ 1, MessageType, C1 + 4 },
+		{ 1, MessageType, C1 + 7 },
+		{ 1, "CC", 1 },
+	},
+})
+
 local pianoLines = {}
 
 local index = 1
