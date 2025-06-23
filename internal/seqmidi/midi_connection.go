@@ -8,7 +8,7 @@ import (
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
 
-	_ "gitlab.com/gomidi/midi/v2/drivers/rtmididrv"
+	rtmididrv "gitlab.com/gomidi/midi/v2/drivers/rtmididrv"
 )
 
 type MidiConnection struct {
@@ -18,8 +18,23 @@ type MidiConnection struct {
 
 type SendFunc func(msg midi.Message) error
 
-func InitMidiConnection() MidiConnection {
-	return MidiConnection{connected: false}
+var OUTPUT_NAME string = "seq-cli-out"
+
+func InitMidiConnection(createOut bool) (MidiConnection, error) {
+	if createOut {
+		driver, err := rtmididrv.New()
+		if err != nil {
+			return MidiConnection{}, fault.Wrap(err, fmsg.With("midi driver error"))
+		}
+		out, err := driver.OpenVirtualOut(OUTPUT_NAME)
+		if err != nil {
+			return MidiConnection{}, fault.Wrap(err, fmsg.With("cannot open virtual out"))
+		}
+
+		return MidiConnection{connected: true, outport: out}, nil
+	} else {
+		return MidiConnection{connected: false}, nil
+	}
 }
 
 func (mc MidiConnection) HasConnection() bool {
@@ -55,7 +70,10 @@ func (mc *MidiConnection) ConnectAndOpen() error {
 func (mc *MidiConnection) Close() {
 	if mc.connected {
 		if mc.outport.IsOpen() {
-			mc.Close()
+			err := mc.outport.Close()
+			if err != nil {
+				panic("Could not close connection")
+			}
 		}
 	}
 }

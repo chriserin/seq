@@ -15,6 +15,7 @@ var gridTemplate string
 var instrument string
 var transmitter bool
 var receiver bool
+var output bool
 var theme string
 
 func main() {
@@ -31,7 +32,12 @@ func main() {
 				}
 			}()
 
-			midiConnection := seqmidi.InitMidiConnection()
+			var err error
+			midiConnection, err := seqmidi.InitMidiConnection(output)
+			if err != nil {
+				fmt.Println("Midi Failure", err)
+				return
+			}
 			defer midiConnection.Close()
 			midiLoopMode := MLM_STAND_ALONE
 			if transmitter {
@@ -44,7 +50,6 @@ func main() {
 				filename = args[0]
 			}
 			p := RunProgram(filename, midiConnection, gridTemplate, instrument, midiLoopMode, theme)
-			var err error
 			_, err = p.Run()
 			if err != nil {
 				log.Fatal("Program Failure")
@@ -79,6 +84,7 @@ func main() {
 	rootCmd.Flags().StringVar(&instrument, "instrument", "Standard", "Choose an instrument for CC integration (default: Standard)")
 	rootCmd.Flags().BoolVar(&transmitter, "transmitter", false, "Seq will run in transmitter mode")
 	rootCmd.Flags().BoolVar(&receiver, "receiver", false, "Seq will run in receiver mode")
+	rootCmd.Flags().BoolVar(&output, "output", false, "Seq will create an output to send midi")
 	rootCmd.Flags().StringVar(&theme, "theme", "miles", "Choose an theme for the sequencer visual representation")
 
 	err := rootCmd.Execute()
