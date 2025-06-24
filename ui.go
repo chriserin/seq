@@ -230,7 +230,7 @@ func NoteMessages(l grid.LineDefinition, accentValue uint8, gateLength time.Dura
 }
 
 func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) controlChangeMsg {
-	ccValue := uint8((float32(note.AccentIndex) / float32(len(accents))) * float32(config.FindCC(l.Note, instrument).UpperLimit))
+	ccValue := uint8((float32((len(accents))-int(note.AccentIndex)) / float32(len(accents)-1)) * float32(config.FindCC(l.Note, instrument).UpperLimit))
 	if config.FindCC(l.Note, instrument).UpperLimit == 1 && note.AccentIndex > 4 {
 		ccValue = uint8(1)
 	}

@@ -86,6 +86,7 @@ seq.addinstrument({
 		{ 29, 120, "NOISE LEVEL" },
 		{ 30, 1, "OSC B SAW ON/OFF" },
 		{ 31, 120, "RESONANCE" },
+		{ 32, 9, "Prophet Bank Select" },
 		{ 35, 2, "FILTER KEYBOARD TRACK OFF/HALF/FULL" },
 		{ 41, 1, "FILTER REV SELECT" },
 		{ 46, 120, "LFO FREQUENCY" },
