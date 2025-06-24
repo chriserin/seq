@@ -1,6 +1,7 @@
 package seqmidi
 
 import (
+	"slices"
 	"sync"
 
 	"github.com/Southclaws/fault"
@@ -41,8 +42,8 @@ func (mc MidiConnection) HasConnection() bool {
 	return mc.connected
 }
 
-func (mc *MidiConnection) Connect() error {
-	outport, err := midi.OutPort(0)
+func (mc *MidiConnection) Connect(portnumber int) error {
+	outport, err := midi.OutPort(portnumber)
 	if err != nil {
 		return fault.Wrap(err, fmsg.WithDesc("midi outport not available", "There are no midi out ports available."))
 	}
@@ -52,7 +53,7 @@ func (mc *MidiConnection) Connect() error {
 
 func (mc *MidiConnection) ConnectAndOpen() error {
 	if !mc.connected {
-		err := mc.Connect()
+		err := mc.Connect(0)
 		if err != nil {
 			return fault.Wrap(err)
 		}
@@ -101,4 +102,35 @@ func (mc MidiConnection) AcquireSendFunc() (SendFunc, error) {
 		error := sendFn(msg)
 		return error
 	}, nil
+}
+
+var dawOutports = []string{"Logic Pro Virtual In"}
+
+func SendRecordMessage() error {
+	outports := midi.GetOutPorts()
+	var selectedOutport drivers.Out
+	for _, outport := range outports {
+		if slices.Contains(dawOutports, outport.String()) {
+			selectedOutport = outport
+		}
+	}
+
+	if selectedOutport == nil {
+		return fault.New("could not find daw outport", fmsg.WithDesc("could not find daw outport", "Could not find a daw outport, please ensure the DAW record destination is open"))
+	}
+
+	err := selectedOutport.Open()
+	if err != nil {
+		return fault.Wrap(err, fmsg.With("cannot open midi port"))
+	}
+	// NOTE: The record message must be configured in Logic.
+	// Logic Pro -> Control Surfaces -> Controller Assignments...
+	// Create a new zone (seq), a new Mode (commands), a new control
+	// Within the new control press "Learn" and then in seq use the PlayRecord mapping (`:<Space>`).
+	// Then Chose `Class: Key Command` `Command: Global Commands` and then `Record` in the unlabeled parameter list
+	err = selectedOutport.Send(midi.ControlChange(16, 127, 127))
+	if err != nil {
+		return fault.Wrap(err, fmsg.With("could not send record message"))
+	}
+	return nil
 }

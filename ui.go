@@ -1288,6 +1288,17 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 			m.StartStop()
 			m.SetPlayCycles(m.currentOverlay.Key.GetMinimumKeyCycle())
+		case mappings.PlayRecord:
+			if m.playing == PLAY_STOPPED {
+				err := seqmidi.SendRecordMessage()
+				if err != nil {
+					m.SetCurrentError(err)
+				} else {
+					m.StartStop()
+				}
+			} else {
+				m.StartStop()
+			}
 		case mappings.OverlayInputSwitch:
 			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
