@@ -153,6 +153,7 @@ type MessageType uint8
 const (
 	MESSAGE_TYPE_NOTE MessageType = iota
 	MESSAGE_TYPE_CC
+	MESSAGE_TYPE_PROGRAM_CHANGE
 )
 
 type LineDefinition struct {
@@ -187,7 +188,7 @@ func (l *LineDefinition) DecrementNote() {
 }
 
 func (l *LineDefinition) IncrementMessageType() {
-	l.MsgType = (l.MsgType + 1) % 2
+	l.MsgType = (l.MsgType + 1) % 3
 }
 
 func (l *LineDefinition) DecrementMessageType() {

@@ -314,6 +314,8 @@ func addTemplate(L *lua.State) int {
 								ld.MsgType = grid.MESSAGE_TYPE_NOTE
 							case "CC":
 								ld.MsgType = grid.MESSAGE_TYPE_CC
+							case "PC":
+								ld.MsgType = grid.MESSAGE_TYPE_CC
 							}
 						case 3:
 							note := L.ToNumber(4)

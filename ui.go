@@ -174,6 +174,20 @@ func (n noteMsg) Delay() time.Duration {
 	return n.delay
 }
 
+type programChangeMsg struct {
+	channel uint8
+	pcValue uint8
+	delay   time.Duration
+}
+
+func (pcm programChangeMsg) Delay() time.Duration {
+	return pcm.delay
+}
+
+func (pcm controlChangeMsg) MidiMessage() midi.Message {
+	return midi.ControlChange(pcm.channel, pcm.control, pcm.ccValue)
+}
+
 type controlChangeMsg struct {
 	channel uint8
 	control uint8
@@ -181,8 +195,8 @@ type controlChangeMsg struct {
 	delay   time.Duration
 }
 
-func (ccm controlChangeMsg) MidiMessage() midi.Message {
-	return midi.ControlChange(ccm.channel, ccm.control, ccm.ccValue)
+func (pcm programChangeMsg) MidiMessage() midi.Message {
+	return midi.ProgramChange(pcm.channel, pcm.pcValue)
 }
 
 func (ccm controlChangeMsg) Delay() time.Duration {
@@ -236,6 +250,10 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 	}
 
 	return controlChangeMsg{l.Channel - 1, l.Note, ccValue, delay}
+}
+
+func PCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) programChangeMsg {
+	return programChangeMsg{l.Channel - 1, l.Note - 1, delay}
 }
 
 type model struct {
@@ -596,6 +614,12 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *
 			case grid.MESSAGE_TYPE_CC:
 				ccMessage := CCMessage(line, note, accents.Data, delay, true, m.definition.instrument)
 				err := m.ProcessNoteMsg(ccMessage)
+				if err != nil {
+					return fault.Wrap(err, fmsg.With("cannot process cc msg"))
+				}
+			case grid.MESSAGE_TYPE_PROGRAM_CHANGE:
+				pcMessage := PCMessage(line, note, accents.Data, delay, true, m.definition.instrument)
+				err := m.ProcessNoteMsg(pcMessage)
 				if err != nil {
 					return fault.Wrap(err, fmsg.With("cannot process cc msg"))
 				}
@@ -1784,6 +1808,8 @@ func (m model) ProcessNoteMsg(msg Delayable) error {
 			PlayOffMessage(msg, sendFn, m.errChan)
 		}
 	case controlChangeMsg:
+		PlayMessage(msg.delay, msg.MidiMessage(), sendFn, m.errChan)
+	case programChangeMsg:
 		PlayMessage(msg.delay, msg.MidiMessage(), sendFn, m.errChan)
 	}
 	return nil
@@ -3204,6 +3230,8 @@ func (m model) SetupView() string {
 			messageType = "NOTE"
 		case grid.MESSAGE_TYPE_CC:
 			messageType = "CC"
+		case grid.MESSAGE_TYPE_PROGRAM_CHANGE:
+			messageType = "Program Change"
 		}
 
 		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE {
