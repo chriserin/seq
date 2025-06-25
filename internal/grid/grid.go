@@ -15,6 +15,7 @@ const (
 	ACTION_RESET
 	ACTION_LINE_BOUNCE
 	ACTION_LINE_DELAY
+	ACTION_SPECIFIC_VALUE
 )
 
 type SequencerType uint8
@@ -192,5 +193,5 @@ func (l *LineDefinition) IncrementMessageType() {
 }
 
 func (l *LineDefinition) DecrementMessageType() {
-	l.MsgType = (l.MsgType - 1) % 2
+	l.MsgType = (l.MsgType - 1) % 3
 }

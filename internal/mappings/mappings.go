@@ -99,6 +99,7 @@ const (
 	ActionAddReset
 	ActionAddLineBounce
 	ActionAddLineDelay
+	ActionAddSpecificValue
 	SelectKeyLine
 	PressDownOverlay
 	NumberPattern
@@ -200,6 +201,7 @@ var mappings = registry{
 	k("e"):      TogglePlayEdit,
 	k("f"):      TriggerAdd,
 	k("g", "r"): ReloadFile,
+	k("g", "v"): ActionAddSpecificValue,
 	k("h"):      CursorLeft,
 	k("j"):      CursorDown,
 	k("k"):      CursorUp,

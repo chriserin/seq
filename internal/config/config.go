@@ -46,6 +46,7 @@ var Lineactions = map[grid.Action]lineaction{
 	grid.ACTION_RESET:          {'⇚', "#fcf6b1"},
 	grid.ACTION_LINE_BOUNCE:    {'↨', "#fcf6b1"},
 	grid.ACTION_LINE_DELAY:     {'ℤ', "#cc4bc2"},
+	grid.ACTION_SPECIFIC_VALUE: {'V', "#cc4bc2"},
 }
 
 type ratchetDiacritical string

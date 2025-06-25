@@ -229,6 +229,7 @@ func (nm noteMsg) OffMessage() midi.Message {
 func NoteMessages(l grid.LineDefinition, accentValue uint8, gateLength time.Duration, accentTarget accentTarget, delay time.Duration) (noteMsg, noteMsg) {
 	var noteValue uint8
 	var velocityValue uint8
+
 	switch accentTarget {
 	case ACCENT_TARGET_NOTE:
 		noteValue = l.Note + accentValue
@@ -244,16 +245,24 @@ func NoteMessages(l grid.LineDefinition, accentValue uint8, gateLength time.Dura
 }
 
 func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) controlChangeMsg {
-	ccValue := uint8((float32((len(accents))-int(note.AccentIndex)) / float32(len(accents)-1)) * float32(config.FindCC(l.Note, instrument).UpperLimit))
-	if config.FindCC(l.Note, instrument).UpperLimit == 1 && note.AccentIndex > 4 {
-		ccValue = uint8(1)
-	}
+	if note.Action == grid.ACTION_SPECIFIC_VALUE {
+		return controlChangeMsg{l.Channel - 1, l.Note, note.AccentIndex, delay}
+	} else {
+		ccValue := uint8((float32((len(accents))-int(note.AccentIndex)) / float32(len(accents)-1)) * float32(config.FindCC(l.Note, instrument).UpperLimit))
+		if config.FindCC(l.Note, instrument).UpperLimit == 1 && note.AccentIndex > 4 {
+			ccValue = uint8(1)
+		}
 
-	return controlChangeMsg{l.Channel - 1, l.Note, ccValue, delay}
+		return controlChangeMsg{l.Channel - 1, l.Note, ccValue, delay}
+	}
 }
 
 func PCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) programChangeMsg {
-	return programChangeMsg{l.Channel - 1, l.Note - 1, delay}
+	if note.Action == grid.ACTION_SPECIFIC_VALUE {
+		return programChangeMsg{l.Channel - 1, note.AccentIndex, delay}
+	} else {
+		return programChangeMsg{l.Channel - 1, l.Note - 1, delay}
+	}
 }
 
 type model struct {
@@ -744,14 +753,14 @@ func (m *model) RatchetModify(modifier int8) {
 }
 
 func (m *model) EnsureRatchetCursorVisisble() {
-	currentNote := m.CurrentNote()
+	currentNote, _ := m.CurrentNote()
 	if m.ratchetCursor > currentNote.Ratchets.Length {
 		m.ratchetCursor = m.ratchetCursor - 1
 	}
 }
 
 func (m *model) IncreaseSpan() {
-	currentNote := m.CurrentNote()
+	currentNote, _ := m.CurrentNote()
 	if currentNote != zeronote && currentNote.Action == grid.ACTION_NOTHING {
 		span := currentNote.Ratchets.Span
 		if span < 8 {
@@ -762,7 +771,7 @@ func (m *model) IncreaseSpan() {
 }
 
 func (m *model) DecreaseSpan() {
-	currentNote := m.CurrentNote()
+	currentNote, _ := m.CurrentNote()
 	if currentNote != zeronote && currentNote.Action == grid.ACTION_NOTHING {
 		span := currentNote.Ratchets.Span
 		if span > 0 {
@@ -870,7 +879,7 @@ func (m *model) DecreasePartSelector() {
 }
 
 func (m *model) ToggleRatchetMute() {
-	currentNote := m.CurrentNote()
+	currentNote, _ := m.CurrentNote()
 	currentNote.Ratchets.Toggle(m.ratchetCursor)
 	m.currentOverlay.SetNote(m.cursorPos, currentNote)
 }
@@ -1274,7 +1283,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		case mappings.CursorRight:
 			if m.selectionIndicator == SELECT_RATCHETS {
-				currentNote := m.CurrentNote()
+				currentNote, _ := m.CurrentNote()
 				if m.ratchetCursor < currentNote.Ratchets.Length {
 					m.ratchetCursor++
 				}
@@ -1338,7 +1347,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			states := []Selection{SELECT_NOTHING, SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.RatchetInputSwitch:
-			currentNote := m.CurrentNote()
+			currentNote, _ := m.CurrentNote()
 			if currentNote.AccentIndex > 0 {
 				states := []Selection{SELECT_NOTHING, SELECT_RATCHETS, SELECT_RATCHET_SPAN}
 				m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
@@ -1410,6 +1419,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.IncreasePartSelector()
 			case SELECT_CHANGE_PART:
 				m.IncreasePartSelector()
+			default:
+				note, exists := m.CurrentNote()
+				if exists && note.Action == grid.ACTION_SPECIFIC_VALUE {
+					m.IncrementSpecificValue(note)
+				}
 			}
 		case mappings.Decrease:
 			switch m.selectionIndicator {
@@ -1449,6 +1463,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.DecreasePartSelector()
 			case SELECT_CHANGE_PART:
 				m.DecreasePartSelector()
+			default:
+				note, exists := m.CurrentNote()
+				if exists && note.Action == grid.ACTION_SPECIFIC_VALUE {
+					m.DecrementSpecificValue(note)
+				}
 			}
 		case mappings.ToggleGateMode:
 			m.SetPatternMode(PATTERN_GATE)
@@ -1882,6 +1901,10 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.AddAction(grid.ACTION_LINE_BOUNCE)
 	case mappings.ActionAddLineDelay:
 		m.AddAction(grid.ACTION_LINE_DELAY)
+	case mappings.ActionAddSpecificValue:
+		if m.definition.lines[m.cursorPos.Line].MsgType != grid.MESSAGE_TYPE_NOTE {
+			m.AddAction(grid.ACTION_SPECIFIC_VALUE)
+		}
 	case mappings.SelectKeyLine:
 		m.definition.keyline = m.cursorPos.Line
 	case mappings.PressDownOverlay:
@@ -2259,9 +2282,9 @@ func (m model) CurrentSongSection() arrangement.SongSection {
 	panic("Cursor should always be at end node")
 }
 
-func (m model) CurrentNote() note {
-	note, _ := m.currentOverlay.GetNote(m.cursorPos)
-	return note
+func (m model) CurrentNote() (note, bool) {
+	note, exists := m.currentOverlay.GetNote(m.cursorPos)
+	return note, exists
 }
 
 func (m *model) NextOverlay(direction int) {
@@ -2819,6 +2842,21 @@ func (m *model) incrementWait(every uint8, modifier int8) {
 	m.Every(every, everyFn)
 }
 
+func (m *model) IncrementSpecificValue(note grid.Note) {
+	note.AccentIndex = note.AccentIndex + 1
+	if note.AccentIndex < 128 {
+
+		m.currentOverlay.SetNote(m.cursorPos, note)
+	}
+}
+
+func (m *model) DecrementSpecificValue(note grid.Note) {
+	if note.AccentIndex > 0 {
+		note.AccentIndex = note.AccentIndex - 1
+		m.currentOverlay.SetNote(m.cursorPos, note)
+	}
+}
+
 func (m *model) AccentModify(modifier int8) {
 	modifyFunc := func(key gridKey, currentNote note) {
 		m.currentOverlay.SetNote(key, currentNote.IncrementAccent(modifier, uint8(len(config.Accents))))
@@ -2996,6 +3034,16 @@ func (m model) TempoEditView() string {
 	buf.WriteString(tempo)
 	buf.WriteString(themes.AltArtStyle.Render("  Subdivisions "))
 	buf.WriteString(division)
+	buf.WriteString("\n")
+	return buf.String()
+}
+
+func (m model) SpecificValueEditView(note grid.Note) string {
+	var specificValue string
+	specificValue = themes.SelectedStyle.Render(fmt.Sprintf("%d", note.AccentIndex))
+	var buf strings.Builder
+	buf.WriteString(themes.AltArtStyle.Render(" Specific Value "))
+	buf.WriteString(specificValue)
 	buf.WriteString("\n")
 	return buf.String()
 }
@@ -3350,6 +3398,9 @@ func (m model) TriggerSeqView() string {
 	var buf strings.Builder
 	var mode string
 
+	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
+	currentNote, exists := visualCombinedPattern[m.cursorPos]
+
 	buf.WriteString(m.WriteView())
 	if m.patternMode == PATTERN_ACCENT {
 		mode = " Accent "
@@ -3383,6 +3434,8 @@ func (m model) TriggerSeqView() string {
 		buf.WriteString(m.ConfirmNewSequenceView())
 	} else if m.selectionIndicator == SELECT_CONFIRM_QUIT {
 		buf.WriteString(m.ConfirmQuitView())
+	} else if exists && currentNote.Note.Action == grid.ACTION_SPECIFIC_VALUE {
+		buf.WriteString(m.SpecificValueEditView(currentNote.Note))
 	} else if m.playing != PLAY_STOPPED {
 		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
 	} else if len(*m.definition.parts) > 1 {
@@ -3401,7 +3454,6 @@ func (m model) TriggerSeqView() string {
 	buf.WriteString(themes.SeqBorderStyle.Render(fmt.Sprintf("┌%s", topLine)))
 	buf.WriteString("\n")
 
-	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
 		buf.WriteString(lineView(i, m, visualCombinedPattern))
 	}
@@ -3457,7 +3509,7 @@ func (m model) ConfirmQuitView() string {
 }
 
 func (m model) RatchetEditView() string {
-	currentNote := m.CurrentNote()
+	currentNote, _ := m.CurrentNote()
 
 	var buf strings.Builder
 	var ratchetsBuf strings.Builder
