@@ -3005,8 +3005,7 @@ func (m model) TempoEditView() string {
 }
 
 func (m model) SpecificValueEditView(note grid.Note) string {
-	var specificValue string
-	specificValue = themes.SelectedStyle.Render(fmt.Sprintf("%d", note.AccentIndex))
+	var specificValue = themes.SelectedStyle.Render(fmt.Sprintf("%d", note.AccentIndex))
 	var buf strings.Builder
 	buf.WriteString(themes.AltArtStyle.Render(" Specific Value "))
 	buf.WriteString(specificValue)
