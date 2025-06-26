@@ -588,15 +588,32 @@ type lineNote struct {
 	line grid.LineDefinition
 }
 
-func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *[]tea.Cmd) error {
+func (m model) ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition) {
+	for i := range note.Ratchets.Length + 1 {
+		if note.Ratchets.HitAt(i) {
+			shortGateLength := 20 * time.Millisecond
+			ratchetInterval := time.Duration(i) * note.Ratchets.Interval(beatInterval)
+			onMessage, offMessage := NoteMessages(line, m.definition.accents.Data[note.AccentIndex].Value, shortGateLength, m.definition.accents.Target, ratchetInterval)
+			err := m.ProcessNoteMsg(onMessage)
+			if err != nil {
+				m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot turn on ratchet note")))
+			}
+			err = m.ProcessNoteMsg(offMessage)
+			if err != nil {
+				m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot turn off ratchet note")))
+			}
+		}
+	}
+}
+
+func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) error {
 
 	lines := m.definition.lines
-	ratchetNotes := make([]lineNote, 0, len(lines))
 
 	for gridKey, note := range pattern {
 		line := lines[gridKey.Line]
 		if note.Ratchets.Length > 0 {
-			ratchetNotes = append(ratchetNotes, lineNote{note, line})
+			m.ProcessRatchets(note, beatInterval, line)
 		} else if note != zeronote {
 			accents := m.definition.accents
 
@@ -634,12 +651,6 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, cmds *
 				}
 			}
 		}
-	}
-
-	for _, ratchetNote := range ratchetNotes {
-		*cmds = append(*cmds, func() tea.Msg {
-			return ratchetMsg{ratchetNote, 0, beatInterval}
-		})
 	}
 
 	return nil
@@ -1594,15 +1605,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.CurrentBeatGridKeys(&gridKeys)
 			pattern := make(grid.Pattern)
 			playingOverlay.CurrentBeatOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles(), gridKeys)
-			cmds := make([]tea.Cmd, 0, len(pattern)+1)
-			err := m.PlayBeat(msg.interval, pattern, &cmds)
+			err := m.PlayBeat(msg.interval, pattern)
 			if err != nil {
 				m.SetCurrentError(fault.Wrap(err, fmsg.With("error when playing beat")))
-			}
-			if len(cmds) > 0 {
-				return m, tea.Batch(
-					cmds...,
-				)
 			}
 		}
 	case ratchetMsg:
@@ -1751,8 +1756,7 @@ func (m *model) Start() {
 	tickInterval := m.TickInterval()
 
 	pattern := m.CombinedBeatPattern(playingOverlay)
-	cmds := make([]tea.Cmd, 0, len(pattern))
-	err := m.PlayBeat(tickInterval, pattern, &cmds)
+	err := m.PlayBeat(tickInterval, pattern)
 	if err != nil {
 		m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot play first beat")))
 	}
