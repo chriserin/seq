@@ -48,49 +48,6 @@ type transitiveKeyMap struct {
 	ChangePart             key.Binding
 }
 
-var noteWiseKeys = []mappings.Command{
-	mappings.TriggerAdd,
-	mappings.TriggerRemove,
-	mappings.AccentIncrease,
-	mappings.AccentDecrease,
-	mappings.GateIncrease,
-	mappings.GateDecrease,
-	mappings.WaitIncrease,
-	mappings.WaitDecrease,
-	mappings.OverlayTriggerRemove,
-	mappings.RatchetIncrease,
-	mappings.RatchetDecrease,
-	mappings.ActionAddLineReset,
-	mappings.ActionAddLineReverse,
-	mappings.ActionAddSkipBeat,
-	mappings.ActionAddReset,
-	mappings.ActionAddLineBounce,
-	mappings.ActionAddLineDelay,
-}
-
-var lineWiseKeys = []mappings.Command{
-	mappings.ClearLine,
-	mappings.NumberPattern,
-	mappings.RotateRight,
-	mappings.RotateLeft,
-}
-
-var overlayWiseKeys = []mappings.Command{
-	mappings.ClearSeq,
-}
-
-func IsNoteWiseKey(mapCmd mappings.Command) bool {
-	return slices.Contains(noteWiseKeys, mapCmd)
-}
-
-func IsLineWiseKey(mapCmd mappings.Command) bool {
-	return slices.Contains(lineWiseKeys, mapCmd)
-}
-
-func IsOverlayWiseKey(mapCmd mappings.Command) bool {
-	return slices.Contains(overlayWiseKeys, mapCmd)
-}
-
 func Key(help string, keyboardKey ...string) key.Binding {
 	return key.NewBinding(key.WithKeys(keyboardKey...), key.WithHelp(keyboardKey[0], help))
 }
