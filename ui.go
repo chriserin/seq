@@ -119,12 +119,12 @@ type Delayable interface {
 }
 
 type noteMsg struct {
-	id        int
-	midiType  midi.Type
 	channel   uint8
 	noteValue uint8
 	velocity  uint8
+	midiType  midi.Type
 	delay     time.Duration
+	id        int
 }
 
 func (n noteMsg) Delay() time.Duration {
@@ -197,8 +197,10 @@ func NoteMessages(l grid.LineDefinition, accentValue uint8, gateLength time.Dura
 	}
 
 	id := rand.Int()
-	return noteMsg{id, midi.NoteOnMsg, l.Channel - 1, noteValue, velocityValue, delay},
-		noteMsg{id, midi.NoteOffMsg, l.Channel - 1, noteValue, 0, delay + gateLength}
+	onMsg := noteMsg{id: id, midiType: midi.NoteOnMsg, channel: l.Channel - 1, noteValue: noteValue, velocity: velocityValue, delay: delay}
+	offMsg := noteMsg{id: id, midiType: midi.NoteOffMsg, channel: l.Channel - 1, noteValue: noteValue, velocity: 0, delay: delay + gateLength}
+
+	return onMsg, offMsg
 }
 
 func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) controlChangeMsg {
