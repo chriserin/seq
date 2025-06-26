@@ -309,13 +309,6 @@ const (
 	LOOP_OVERLAY
 )
 
-func (m model) SyncTempo() {
-	m.programChannel <- tempoMsg{
-		tempo:        m.definition.tempo,
-		subdivisions: m.definition.subdivisions,
-	}
-}
-
 type focus uint8
 
 const (
@@ -528,6 +521,13 @@ func (m model) TickInterval() time.Duration {
 	return time.Minute / time.Duration(m.definition.tempo*m.definition.subdivisions)
 }
 
+func (m model) SyncTempo() {
+	m.programChannel <- tempoMsg{
+		tempo:        m.definition.tempo,
+		subdivisions: m.definition.subdivisions,
+	}
+}
+
 func (m model) ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition) {
 	for i := range note.Ratchets.Length + 1 {
 		if note.Ratchets.HitAt(i) {
@@ -658,6 +658,48 @@ func (m *model) EnsureOverlayWithKey(key overlayKey) {
 		(*m.definition.parts)[partId].Overlays = newOverlay
 		m.currentOverlay = newOverlay.FindOverlay(key)
 	}
+}
+
+func InitBounds(cursorA, cursorB gridKey) grid.Bounds {
+	return grid.Bounds{
+		Top:    min(cursorA.Line, cursorB.Line),
+		Right:  max(cursorA.Beat, cursorB.Beat),
+		Bottom: max(cursorA.Line, cursorB.Line),
+		Left:   min(cursorA.Beat, cursorB.Beat),
+	}
+}
+
+func (m model) VisualSelectionBounds() grid.Bounds {
+	return InitBounds(m.cursorPos, m.visualAnchorCursor)
+}
+
+func (m model) PatternBounds() grid.Bounds {
+	return grid.Bounds{
+		Top:    0,
+		Right:  m.CurrentPart().Beats - 1,
+		Bottom: uint8(len(m.definition.lines)),
+		Left:   0,
+	}
+}
+
+func (m model) PasteBounds() grid.Bounds {
+	if m.visualMode {
+		return m.VisualSelectionBounds()
+	} else {
+		return m.PatternBounds()
+	}
+}
+
+func (m model) YankBounds() grid.Bounds {
+	if m.visualMode {
+		return m.VisualSelectionBounds()
+	} else {
+		return InitBounds(m.cursorPos, m.cursorPos)
+	}
+}
+
+func (m model) InVisualSelection(key gridKey) bool {
+	return m.VisualSelectionBounds().InBounds(key)
 }
 
 func (m model) VisualSelectedGridKeys() []gridKey {
@@ -894,7 +936,6 @@ func InitArrangement(parts []arrangement.Part) *arrangement.Arrangement {
 		Nodes:      make([]*arrangement.Arrangement, 0, len(parts)),
 	}
 
-	// Create end nodes for each part
 	for i := range parts {
 		section := arrangement.InitSongSection(i)
 
@@ -984,10 +1025,10 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 func InitTextInput() textinput.Model {
 	ti := textinput.New()
 	ti.Placeholder = "------"
-	ti.Focus()
 	ti.Prompt = ""
 	ti.CharLimit = 20
 	ti.Width = 20
+	ti.Focus()
 	return ti
 }
 
@@ -1046,7 +1087,7 @@ func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template
 		go func() {
 			program.Send(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
 			for {
-				// Eat the messages sent on the program channel so that we can quit and still send the stopMsg
+				// NOTE: Eat the messages sent on the program channel so that we can quit and still send the stopMsg
 				<-model.programChannel
 			}
 		}()
@@ -1083,7 +1124,8 @@ func (m model) IsPartOperation(msg tea.Msg) bool {
 	keys := transitiveKeys
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		return Is(msg, keys.ChangePart, keys.NewSectionAfter, keys.NewSectionBefore) || (Is(msg, keys.Increase, keys.Decrease) && (m.selectionIndicator == SELECT_PART || m.selectionIndicator == SELECT_CHANGE_PART))
+		return Is(msg, keys.ChangePart, keys.NewSectionAfter, keys.NewSectionBefore) ||
+			Is(msg, keys.Increase, keys.Decrease) && (m.selectionIndicator == SELECT_PART || m.selectionIndicator == SELECT_CHANGE_PART)
 	}
 	return false
 }
@@ -1598,8 +1640,8 @@ func (m *model) CursorLeft() {
 }
 
 func (m *model) SetSelectionIndicator(indicator Selection) {
-	m.selectionIndicator = indicator
 	m.patternMode = PATTERN_FILL
+	m.selectionIndicator = indicator
 }
 
 func (m *model) SetPatternMode(mode PatternMode) {
@@ -1607,21 +1649,21 @@ func (m *model) SetPatternMode(mode PatternMode) {
 	m.selectionIndicator = SELECT_NOTHING
 }
 
+func (m *model) Escape() {
+	m.patternMode = PATTERN_FILL
+	m.selectionIndicator = SELECT_NOTHING
+}
+
 func (m *model) NewSequence() {
+	m.filename = ""
 	m.cursorPos = GK(0, 0)
 	m.definition = InitDefinition(m.definition.template, m.definition.instrument)
 	m.arrangement = arrangement.InitModel(m.definition.arrangement, m.definition.parts)
 	m.currentOverlay = m.CurrentPart().Overlays
-	m.filename = ""
 }
 
 func (m model) NeedsWrite() bool {
 	return m.needsWrite != m.undoStack.id
-}
-
-func (m *model) Escape() {
-	m.selectionIndicator = SELECT_NOTHING
-	m.patternMode = PATTERN_FILL
 }
 
 func (m *model) NextTheme() {
@@ -1957,6 +1999,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.ConvertToNotes:
 		m.ConvertChordToNotes()
 	}
+
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
 		switch m.patternMode {
@@ -1972,6 +2015,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 			m.incrementWait(uint8(beatInterval), -1)
 		}
 	}
+
 	if IsShiftSymbol(mapping.LastValue) {
 		beatInterval := convertSymbolToInt(mapping.LastValue)
 		switch m.patternMode {
@@ -1987,6 +2031,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 			m.incrementWait(uint8(beatInterval), 1)
 		}
 	}
+
 	return m
 }
 
@@ -2024,7 +2069,6 @@ func (m *model) ChordChange(alteration uint32) {
 }
 
 func (m *model) RemoveChord() {
-
 	if m.activeChord.HasValue() {
 		m.currentOverlay.RemoveChord(m.activeChord)
 		m.UnsetActiveChord()
@@ -2147,39 +2191,6 @@ func (m model) UndoableNote() Undoable {
 func (m model) UndoableOverlay(overlayA, overlayB *overlays.Overlay) Undoable {
 	diff := overlays.DiffOverlays(overlayA, overlayB)
 	return UndoOverlayDiff{m.currentOverlay.Key, m.cursorPos, m.arrangement.Cursor, diff}
-}
-
-func (m model) UndoableLine() Undoable {
-
-	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
-	if overlay == nil {
-		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.arrangement.Cursor}
-	}
-	beats := m.CurrentPart().Beats
-	notesToUndo := make([]GridNote, 0, beats)
-	for i := range beats {
-		key := GK(m.cursorPos.Line, i)
-		currentNote, hasNote := overlay.Notes[key]
-		if hasNote {
-			notesToUndo = append(notesToUndo, GridNote{key, currentNote})
-		}
-	}
-	if len(notesToUndo) == 0 {
-		return UndoLineToNothing{m.currentOverlay.Key, m.cursorPos, m.cursorPos.Line, m.arrangement.Cursor}
-	}
-	return UndoLineGridNotes{m.currentOverlay.Key, m.cursorPos, m.cursorPos.Line, notesToUndo, m.arrangement.Cursor}
-}
-
-func (m model) UndoableGridNotes() Undoable {
-	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
-	if overlay == nil {
-		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.arrangement.Cursor}
-	}
-	notesToUndo := make([]GridNote, 0, m.CurrentPart().Beats)
-	for key, note := range overlay.Notes {
-		notesToUndo = append(notesToUndo, GridNote{key, note})
-	}
-	return UndoGridNotes{m.currentOverlay.Key, notesToUndo, m.arrangement.Cursor}
 }
 
 func (m *model) Save() {
@@ -2869,15 +2880,7 @@ func (m *model) RemoveNote(gridKey gridKey) {
 	}
 }
 
-func (m model) OverlayKeys() []overlayKey {
-	keys := make([]overlayKey, 0, 10)
-	m.CurrentPart().Overlays.CollectKeys(&keys)
-	return keys
-}
-
-func (m model) PartView() string {
-	return ""
-}
+// ----------------------------- View Layer ----------------------------------------
 
 func (m model) CyclesEditView() string {
 	var buf strings.Builder
@@ -2920,39 +2923,6 @@ func (m model) BeatsEditView() string {
 	return buf.String()
 }
 
-func (m model) TempoView() string {
-	var buf strings.Builder
-	var tempo, division string
-	tempo = themes.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
-	division = themes.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
-	switch m.selectionIndicator {
-	case SELECT_TEMPO:
-		tempo = themes.SelectedStyle.Render(strconv.Itoa(m.definition.tempo))
-	case SELECT_TEMPO_SUBDIVISION:
-		division = themes.SelectedStyle.Render(strconv.Itoa(m.definition.subdivisions))
-	}
-	heart := themes.ArtStyle.Render("♡")
-	if m.hasUIFocus {
-		buf.WriteString(fmt.Sprintf("       %s\n", heart))
-	} else {
-		buf.WriteString("             \n")
-	}
-	buf.WriteString(themes.ArtStyle.Render("   ♡♡♡☆ ☆♡♡♡ ") + "\n")
-	buf.WriteString(themes.ArtStyle.Render("  ♡    ◊    ♡") + "\n")
-	buf.WriteString(themes.ArtStyle.Render("  ♡  TEMPO  ♡") + "\n")
-	buf.WriteString(fmt.Sprintf("  %s   %s   %s\n", heart, tempo, heart))
-	buf.WriteString(themes.ArtStyle.Render("   ♡ BEATS ♡") + "\n")
-	buf.WriteString(fmt.Sprintf("    %s  %s  %s  \n", heart, division, heart))
-	buf.WriteString(themes.ArtStyle.Render("     ♡   ♡   ") + "\n")
-	buf.WriteString(themes.ArtStyle.Render("      ♡ ♡    ") + "\n")
-	if m.midiLoopMode == MLM_RECEIVER && !m.connected {
-		buf.WriteString(themes.ArtStyle.Render("       ╳     ") + "\n")
-	} else {
-		buf.WriteString(themes.ArtStyle.Render("       †     ") + "\n")
-	}
-	return buf.String()
-}
-
 func (m model) TempoEditView() string {
 	var tempo, division string
 	tempo = themes.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
@@ -2981,97 +2951,6 @@ func (m model) SpecificValueEditView(note grid.Note) string {
 	return buf.String()
 }
 
-func (m model) LeftSideView() string {
-	var tempo, division string
-	tempo = themes.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
-	division = themes.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
-	switch m.selectionIndicator {
-	case SELECT_TEMPO:
-		tempo = themes.SelectedStyle.Render(strconv.Itoa(m.definition.tempo))
-	case SELECT_TEMPO_SUBDIVISION:
-		division = themes.SelectedStyle.Render(strconv.Itoa(m.definition.subdivisions))
-	}
-	var connected string
-	if m.midiLoopMode == MLM_RECEIVER && !m.connected {
-		connected = themes.ArtStyle.Render(themes.Unconnected)
-	} else {
-		connected = themes.ArtStyle.Render(themes.Connected)
-	}
-	var focus string
-	if m.hasUIFocus {
-		focus = themes.ArtStyle.Render(themes.Focused)
-	} else {
-		focus = themes.ArtStyle.Render(themes.Unfocused)
-	}
-
-	var buf strings.Builder
-	leftSideTemplate := `
-
-  TEMPO       ▌
-  TTT         ▌
-              ▌
-  BEATS       ▌
-  BB           ▌
-              ▌
-              ▌
-              ▌
-
-	`
-	lines := strings.Split(leftSideTemplate, "\n")
-	borderStyle := themes.SeqBorderStyle
-	for _, line := range lines {
-		switch {
-
-		case strings.Contains(line, "beats"):
-			parts := strings.Split(line, "beats")
-			buf.WriteString(borderStyle.Render(parts[0]))
-			buf.WriteString(themes.AltArtStyle.Render("beats"))
-			buf.WriteString(borderStyle.Render(parts[1]))
-		case strings.Contains(line, "BEATS"):
-			parts := strings.Split(line, "BEATS")
-			buf.WriteString(borderStyle.Render(parts[0]))
-			buf.WriteString(themes.AltArtStyle.Render("BEATS"))
-			buf.WriteString(borderStyle.Render(parts[1]))
-		case strings.Contains(line, "tempo"):
-			parts := strings.Split(line, "tempo")
-			buf.WriteString(borderStyle.Render(parts[0]))
-			buf.WriteString(themes.AltArtStyle.Render("tempo"))
-			buf.WriteString(borderStyle.Render(parts[1]))
-		case strings.Contains(line, "TEMPO"):
-			parts := strings.Split(line, "TEMPO")
-			buf.WriteString(borderStyle.Render(parts[0]))
-			buf.WriteString(themes.AltArtStyle.Render("TEMPO"))
-			buf.WriteString(borderStyle.Render(parts[1]))
-		case strings.Contains(line, "TTT"):
-			parts := strings.Split(line, "TTT")
-			buf.WriteString(borderStyle.Render(parts[0]))
-			buf.WriteString(tempo)
-			buf.WriteString(borderStyle.Render(parts[1]))
-		case strings.Contains(line, "BB"):
-			parts := strings.Split(line, "BB")
-			buf.WriteString(borderStyle.Render(parts[0]))
-			buf.WriteString(division)
-			buf.WriteString(borderStyle.Render(parts[1]))
-		case strings.Contains(line, "FF"):
-			parts := strings.Split(line, "FF")
-			buf.WriteString(borderStyle.Render(parts[0]))
-			buf.WriteString(focus)
-			buf.WriteString(borderStyle.Render(parts[1]))
-		case strings.Contains(line, "CC"):
-			parts := strings.Split(line, "CC")
-			buf.WriteString(borderStyle.Render(parts[0]))
-			buf.WriteString(connected)
-			if len(parts) > 1 {
-				buf.WriteString(borderStyle.Render(parts[1]))
-			}
-		default:
-			buf.WriteString(borderStyle.Render(line))
-		}
-		buf.WriteString("\n")
-	}
-	return buf.String()
-}
-
 func (m model) WriteView() string {
 	if m.NeedsWrite() {
 		return " [+]"
@@ -3097,9 +2976,8 @@ func (m model) View() string {
 	if m.patternMode == PATTERN_ACCENT || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
 	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && m.CurrentPart().Overlays.IsFresh() && len(*m.definition.parts) == 1 && m.CurrentPartId() == 0) ||
-		m.selectionIndicator == SELECT_SETUP_VALUE ||
-		m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE ||
-		m.selectionIndicator == SELECT_SETUP_CHANNEL {
+		slices.Contains([]Selection{SELECT_SETUP_VALUE, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_CHANNEL}, m.selectionIndicator) {
+		// NOTE: We want to show the setupView on the very initial screen, before any sequencing has begun OR a setup value is selected
 		sideView = m.SetupView()
 	} else {
 		sideView = m.OverlaysView()
@@ -3628,57 +3506,16 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 	return buf.String()
 }
 
-func InitBounds(cursorA, cursorB gridKey) grid.Bounds {
-	return grid.Bounds{
-		Top:    min(cursorA.Line, cursorB.Line),
-		Right:  max(cursorA.Beat, cursorB.Beat),
-		Bottom: max(cursorA.Line, cursorB.Line),
-		Left:   min(cursorA.Beat, cursorB.Beat),
-	}
-}
-
-func (m model) VisualSelectionBounds() grid.Bounds {
-	return InitBounds(m.cursorPos, m.visualAnchorCursor)
-}
-
-func (m model) PatternBounds() grid.Bounds {
-	return grid.Bounds{
-		Top:    0,
-		Right:  m.CurrentPart().Beats - 1,
-		Bottom: uint8(len(m.definition.lines)),
-		Left:   0,
-	}
-}
-
-func (m model) PasteBounds() grid.Bounds {
-	if m.visualMode {
-		return m.VisualSelectionBounds()
-	} else {
-		return m.PatternBounds()
-	}
-}
-
-func (m model) YankBounds() grid.Bounds {
-	if m.visualMode {
-		return m.VisualSelectionBounds()
-	} else {
-		return InitBounds(m.cursorPos, m.cursorPos)
-	}
-}
-
-func (m model) InVisualSelection(key gridKey) bool {
-	return m.VisualSelectionBounds().InBounds(key)
-}
-
 func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
-
 	currentAction := currentNote.Action
 	var char string
 	var foregroundColor lipgloss.Color
 	var waitShape string
+
 	if currentNote.WaitIndex > 0 {
 		waitShape = "\u0320"
 	}
+
 	if currentAction == grid.ACTION_NOTHING && currentNote != zeronote {
 		currentAccentShape := themes.AccentIcons[currentNote.AccentIndex]
 		currentAccentColor := themes.AccentColors[currentNote.AccentIndex]

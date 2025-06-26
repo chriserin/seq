@@ -9,13 +9,15 @@ import (
 
 // OverlayDiff represents the differences between two overlays
 type OverlayDiff struct {
-	AddedNotes     grid.Pattern
-	RemovedNotes   grid.Pattern
-	ModifiedNotes  map[grid.GridKey]NoteDiff
+	// Notes
+	AddedNotes    grid.Pattern
+	RemovedNotes  grid.Pattern
+	ModifiedNotes map[grid.GridKey]NoteDiff
+	// Chords
 	AddedChords    []GridChord
 	RemovedChords  []GridChord
 	ModifiedChords map[*GridChord]ChordDiff
-	// Options differences
+	// Options
 	OptionsDiff OptionsDiff
 }
 
@@ -328,4 +330,3 @@ func DeepCopy(ol *Overlay) *Overlay {
 
 	return clone
 }
-
