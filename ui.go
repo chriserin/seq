@@ -137,12 +137,12 @@ type programChangeMsg struct {
 	delay   time.Duration
 }
 
-func (pcm programChangeMsg) Delay() time.Duration {
-	return pcm.delay
+func (pcm programChangeMsg) MidiMessage() midi.Message {
+	return midi.ProgramChange(pcm.channel, pcm.pcValue)
 }
 
-func (pcm controlChangeMsg) MidiMessage() midi.Message {
-	return midi.ControlChange(pcm.channel, pcm.control, pcm.ccValue)
+func (pcm programChangeMsg) Delay() time.Duration {
+	return pcm.delay
 }
 
 type controlChangeMsg struct {
@@ -152,8 +152,8 @@ type controlChangeMsg struct {
 	delay   time.Duration
 }
 
-func (pcm programChangeMsg) MidiMessage() midi.Message {
-	return midi.ProgramChange(pcm.channel, pcm.pcValue)
+func (pcm controlChangeMsg) MidiMessage() midi.Message {
+	return midi.ControlChange(pcm.channel, pcm.control, pcm.ccValue)
 }
 
 func (ccm controlChangeMsg) Delay() time.Duration {
