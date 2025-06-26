@@ -67,7 +67,7 @@ var transitiveKeys = transitiveKeyMap{
 	ChangePart:             Key("Change Part", "ctrl+c"),
 }
 
-type groupPlayState uint
+type groupPlayState uint8
 
 const (
 	PLAY_STATE_PLAY groupPlayState = iota
@@ -78,12 +78,12 @@ const (
 type linestate struct {
 	index               uint8
 	currentBeat         uint8
-	direction           int8
-	resetDirection      int8
 	resetLocation       uint8
 	resetActionLocation uint8
 	resetAction         action
 	groupPlayState      groupPlayState
+	direction           int8
+	resetDirection      int8
 }
 
 func (ls linestate) IsMuted() bool {
@@ -849,7 +849,16 @@ func InitLineStates(lines int, previousPlayState []linestate, startBeat uint8) [
 }
 
 func InitLineState(previousGroupPlayState groupPlayState, index uint8, startBeat uint8) linestate {
-	return linestate{index, startBeat, 1, 1, 0, 0, 0, previousGroupPlayState}
+	return linestate{
+		index:               index,
+		currentBeat:         startBeat,
+		direction:           1,
+		resetDirection:      1,
+		resetLocation:       0,
+		resetActionLocation: 0,
+		resetAction:         0,
+		groupPlayState:      previousGroupPlayState,
+	}
 }
 
 func InitDefinition(template string, instrument string) Definition {
