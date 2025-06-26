@@ -565,27 +565,8 @@ func BeatTick(beatInterval time.Duration) tea.Cmd {
 	)
 }
 
-type ratchetMsg struct {
-	lineNote
-	iterations   uint8
-	beatInterval time.Duration
-}
-
-func RatchetTick(ratchet lineNote, times uint8, beatInterval time.Duration) tea.Cmd {
-	ratchetInterval := ratchet.Ratchets.Interval(beatInterval)
-	return tea.Tick(
-		ratchetInterval,
-		func(t time.Time) tea.Msg { return ratchetMsg{ratchet, times, beatInterval} },
-	)
-}
-
 func (m model) TickInterval() time.Duration {
 	return time.Minute / time.Duration(m.definition.tempo*m.definition.subdivisions)
-}
-
-type lineNote struct {
-	note
-	line grid.LineDefinition
 }
 
 func (m model) ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition) {
@@ -1608,25 +1589,6 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			err := m.PlayBeat(msg.interval, pattern)
 			if err != nil {
 				m.SetCurrentError(fault.Wrap(err, fmsg.With("error when playing beat")))
-			}
-		}
-	case ratchetMsg:
-		if m.playing != PLAY_STOPPED && msg.iterations < (msg.Ratchets.Length+1) {
-			if msg.Ratchets.HitAt(msg.iterations) {
-				shortGateLength := 20 * time.Millisecond
-				onMessage, offMessage := NoteMessages(msg.line, m.definition.accents.Data[msg.AccentIndex].Value, shortGateLength, m.definition.accents.Target, 0)
-				err := m.ProcessNoteMsg(onMessage)
-				if err != nil {
-					m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot turn on ratchet note")))
-				}
-				err = m.ProcessNoteMsg(offMessage)
-				if err != nil {
-					m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot turn off ratchet note")))
-				}
-			}
-			if msg.iterations+1 < (msg.Ratchets.Length + 1) {
-				ratchetTickCmd := RatchetTick(msg.lineNote, msg.iterations+1, msg.beatInterval)
-				return m, ratchetTickCmd
 			}
 		}
 	case arrangement.GiveBackFocus:
