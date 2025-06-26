@@ -225,46 +225,46 @@ func PCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 type model struct {
-	theme                 string
-	filename              string
-	textInput             textinput.Model
-	partSelectorIndex     int
 	sectionSideIndicator  bool
-	midiLoopMode          MidiLoopMode
-	loopMode              LoopMode
 	hasUIFocus            bool
 	connected             bool
-	help                  help.Model
-	cursor                cursor.Model
-	overlayKeyEdit        overlaykey.Model
-	arrangement           arrangement.Model
+	visualMode            bool
+	logFileAvailable      bool
+	playEditing           bool
+	hasSolo               bool
+	showArrangementView   bool
+	ratchetCursor         uint8
+	focus                 focus
+	playing               PlayMode
+	loopMode              LoopMode
+	selectionIndicator    Selection
+	patternMode           PatternMode
+	midiLoopMode          MidiLoopMode
 	cursorPos             gridKey
 	visualAnchorCursor    gridKey
-	visualMode            bool
-	midiConnection        seqmidi.MidiConnection
-	logFile               *os.File
-	logFileAvailable      bool
-	playing               PlayMode
-	beatTime              time.Time
-	playEditing           bool
+	partSelectorIndex     int
+	needsWrite            int
 	playState             []linestate
-	hasSolo               bool
-	selectionIndicator    Selection
-	focus                 focus
-	showArrangementView   bool
-	patternMode           PatternMode
-	ratchetCursor         uint8
 	currentOverlay        *overlays.Overlay
+	logFile               *os.File
 	undoStack             UndoStack
 	redoStack             UndoStack
 	yankBuffer            Buffer
-	needsWrite            int
+	beatTime              time.Time
 	programChannel        chan midiEventLoopMsg
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
 	errChan               chan error
-	activeChord           overlays.OverlayChord
 	currentError          error
+	theme                 string
+	filename              string
+	help                  help.Model
+	cursor                cursor.Model
+	overlayKeyEdit        overlaykey.Model
+	arrangement           arrangement.Model
+	textInput             textinput.Model
+	midiConnection        seqmidi.MidiConnection
+	activeChord           overlays.OverlayChord
 	// save everything below here
 	definition Definition
 }
@@ -293,7 +293,7 @@ func (m *model) ResetCurrentOverlay() {
 	}
 }
 
-type PlayMode int
+type PlayMode uint8
 
 const (
 	PLAY_STOPPED PlayMode = iota
@@ -301,7 +301,7 @@ const (
 	PLAY_RECEIVER
 )
 
-type LoopMode uint
+type LoopMode uint8
 
 const (
 	LOOP_SONG LoopMode = iota
@@ -316,7 +316,7 @@ func (m model) SyncTempo() {
 	}
 }
 
-type focus int
+type focus uint8
 
 const (
 	FOCUS_GRID focus = iota
