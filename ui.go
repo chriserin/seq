@@ -2176,9 +2176,12 @@ func (m model) UpdateDefinition(mapping mappings.Mapping) model {
 	m = m.UpdateDefinitionKeys(mapping)
 	undoable := m.UndoableOverlay(m.currentOverlay, deepCopy)
 	redoable := m.UndoableOverlay(deepCopy, m.currentOverlay)
-	m.PushUndoables(undoable, redoable)
 
-	m.ResetRedo()
+	if !undoable.overlayDiff.IsEmpty() {
+		m.PushUndoables(undoable, redoable)
+		m.ResetRedo()
+	}
+
 	return m
 }
 
@@ -2195,7 +2198,7 @@ func (m model) UndoableNote() Undoable {
 	}
 }
 
-func (m model) UndoableOverlay(overlayA, overlayB *overlays.Overlay) Undoable {
+func (m model) UndoableOverlay(overlayA, overlayB *overlays.Overlay) UndoOverlayDiff {
 	diff := overlays.DiffOverlays(overlayA, overlayB)
 	return UndoOverlayDiff{m.currentOverlay.Key, m.cursorPos, m.arrangement.Cursor, diff}
 }

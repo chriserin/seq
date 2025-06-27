@@ -21,6 +21,17 @@ type OverlayDiff struct {
 	OptionsDiff OptionsDiff
 }
 
+func (od OverlayDiff) IsEmpty() bool {
+	return (len(od.AddedNotes)+
+		len(od.RemovedNotes)+
+		len(od.ModifiedNotes)+
+		len(od.AddedChords)+
+		len(od.RemovedChords)+
+		len(od.ModifiedChords)) == 0 &&
+		!od.OptionsDiff.PressDownChanged &&
+		!od.OptionsDiff.PressUpChanged
+}
+
 // NoteDiff represents the difference between two notes
 type NoteDiff struct {
 	OldNote grid.Note
