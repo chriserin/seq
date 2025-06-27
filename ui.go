@@ -783,6 +783,20 @@ func (m *model) DecreaseAccentTarget() {
 	m.definition.accents.Target = (m.definition.accents.Target + 1) % 2
 }
 
+func (m *model) IncreaseTempo(amount int) {
+	if m.definition.tempo < 300 {
+		m.definition.tempo += amount
+		m.SyncTempo()
+	}
+}
+
+func (m *model) DecreaseTempo(amount int) {
+	if m.definition.tempo > 30 {
+		m.definition.tempo -= amount
+		m.SyncTempo()
+	}
+}
+
 func (m *model) IncreaseAccentStart() {
 	m.definition.accents.Start = m.definition.accents.Start + 1
 	m.definition.accents.ReCalc()
@@ -1379,10 +1393,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.Increase:
 			switch m.selectionIndicator {
 			case SELECT_TEMPO:
-				if m.definition.tempo < 300 {
-					m.definition.tempo++
-				}
-				m.SyncTempo()
+				m.IncreaseTempo(1)
 			case SELECT_TEMPO_SUBDIVISION:
 				if m.definition.subdivisions < 8 {
 					m.definition.subdivisions++
@@ -1420,15 +1431,14 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				note, exists := m.CurrentNote()
 				if exists && note.Action == grid.ACTION_SPECIFIC_VALUE {
 					m.IncrementSpecificValue(note)
+				} else {
+					m.IncreaseTempo(5)
 				}
 			}
 		case mappings.Decrease:
 			switch m.selectionIndicator {
 			case SELECT_TEMPO:
-				if m.definition.tempo > 30 {
-					m.definition.tempo--
-				}
-				m.SyncTempo()
+				m.DecreaseTempo(1)
 			case SELECT_TEMPO_SUBDIVISION:
 				if m.definition.subdivisions > 1 {
 					m.definition.subdivisions--
@@ -1464,6 +1474,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				note, exists := m.CurrentNote()
 				if exists && note.Action == grid.ACTION_SPECIFIC_VALUE {
 					m.DecrementSpecificValue(note)
+				} else {
+					m.DecreaseTempo(5)
 				}
 			}
 		case mappings.ToggleGateMode:
