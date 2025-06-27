@@ -3225,13 +3225,13 @@ func (m model) TriggerSeqView() string {
 	buf.WriteString(m.WriteView())
 	if m.patternMode == PATTERN_ACCENT {
 		mode = " Accent "
-		buf.WriteString(fmt.Sprintf(" %s\n", themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_GATE {
 		mode = " Gate "
-		buf.WriteString(fmt.Sprintf(" %s\n", themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_WAIT {
 		mode = " Wait "
-		buf.WriteString(fmt.Sprintf(" %s\n", themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
 	} else if m.patternMode == PATTERN_RATCHET {
 		mode = " Ratchet "
 		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
