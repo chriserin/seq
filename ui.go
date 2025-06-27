@@ -510,13 +510,6 @@ type errorMsg struct {
 	error error
 }
 
-func BeatTick(beatInterval time.Duration) tea.Cmd {
-	return tea.Tick(
-		beatInterval,
-		func(t time.Time) tea.Msg { return beatMsg{beatInterval} },
-	)
-}
-
 func (m model) TickInterval() time.Duration {
 	return time.Minute / time.Duration(m.definition.tempo*m.definition.subdivisions)
 }
