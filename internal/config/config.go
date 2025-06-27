@@ -118,19 +118,19 @@ var StandardCCs = []ControlChange{
 	{19, 127, "General Purpose Controller 4"},
 }
 
-func FindCC(value uint8, instrumentName string) ControlChange {
+func FindCC(value uint8, instrumentName string) (ControlChange, bool) {
 	instrument := GetInstrument(instrumentName)
 	for _, cc := range instrument.CCs {
 		if cc.Value == value {
-			return cc
+			return cc, true
 		}
 	}
 	for _, cc := range StandardCCs {
 		if cc.Value == value {
-			return cc
+			return cc, true
 		}
 	}
-	return StandardCCs[0]
+	return ControlChange{}, false
 }
 
 type Template struct {

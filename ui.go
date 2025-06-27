@@ -207,8 +207,9 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 	if note.Action == grid.ACTION_SPECIFIC_VALUE {
 		return controlChangeMsg{l.Channel - 1, l.Note, note.AccentIndex, delay}
 	} else {
-		ccValue := uint8((float32((len(accents))-int(note.AccentIndex)) / float32(len(accents)-1)) * float32(config.FindCC(l.Note, instrument).UpperLimit))
-		if config.FindCC(l.Note, instrument).UpperLimit == 1 && note.AccentIndex > 4 {
+		cc, _ := config.FindCC(l.Note, instrument)
+		ccValue := uint8((float32((len(accents))-int(note.AccentIndex)) / float32(len(accents)-1)) * float32(cc.UpperLimit))
+		if cc.UpperLimit == 1 && note.AccentIndex > 4 {
 			ccValue = uint8(1)
 		}
 
@@ -744,6 +745,28 @@ func (m *model) EnsureRatchetCursorVisisble() {
 	currentNote, _ := m.CurrentNote()
 	if m.ratchetCursor > currentNote.Ratchets.Length {
 		m.ratchetCursor = m.ratchetCursor - 1
+	}
+}
+
+func (m *model) IncrementCC() {
+	note := m.definition.lines[m.cursorPos.Line].Note
+	for i := note + 1; i <= 127; i++ {
+		_, exists := config.FindCC(i, m.definition.instrument)
+		if exists {
+			m.definition.lines[m.cursorPos.Line].Note = i
+			return
+		}
+	}
+}
+
+func (m *model) DecrementCC() {
+	note := m.definition.lines[m.cursorPos.Line].Note
+	for i := note - 1; i != 255; i-- {
+		_, exists := config.FindCC(i, m.definition.instrument)
+		if exists {
+			m.definition.lines[m.cursorPos.Line].Note = i
+			return
+		}
 	}
 }
 
@@ -1404,7 +1427,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			case SELECT_SETUP_MESSAGE_TYPE:
 				m.definition.lines[m.cursorPos.Line].IncrementMessageType()
 			case SELECT_SETUP_VALUE:
-				m.definition.lines[m.cursorPos.Line].IncrementNote()
+				switch m.definition.lines[m.cursorPos.Line].MsgType {
+				case grid.MESSAGE_TYPE_NOTE:
+					m.definition.lines[m.cursorPos.Line].IncrementNote()
+				case grid.MESSAGE_TYPE_CC:
+					m.IncrementCC()
+				}
 			case SELECT_RATCHET_SPAN:
 				m.IncreaseSpan()
 			case SELECT_ACCENT_DIFF:
@@ -1449,7 +1477,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			case SELECT_SETUP_MESSAGE_TYPE:
 				m.definition.lines[m.cursorPos.Line].DecrementMessageType()
 			case SELECT_SETUP_VALUE:
-				m.definition.lines[m.cursorPos.Line].DecrementNote()
+				switch m.definition.lines[m.cursorPos.Line].MsgType {
+				case grid.MESSAGE_TYPE_NOTE:
+					m.definition.lines[m.cursorPos.Line].DecrementNote()
+				case grid.MESSAGE_TYPE_CC:
+					m.DecrementCC()
+				}
 			case SELECT_RATCHET_SPAN:
 				m.DecreaseSpan()
 			case SELECT_ACCENT_DIFF:
@@ -3130,7 +3163,8 @@ func LineValueName(ld grid.LineDefinition, instrument string) string {
 	case grid.MESSAGE_TYPE_NOTE:
 		return NoteName(ld.Note)
 	case grid.MESSAGE_TYPE_CC:
-		return config.FindCC(ld.Note, instrument).Name
+		cc, _ := config.FindCC(ld.Note, instrument)
+		return cc.Name
 	}
 	return ""
 }
