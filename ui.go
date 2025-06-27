@@ -522,10 +522,12 @@ func (m model) TickInterval() time.Duration {
 }
 
 func (m model) SyncTempo() {
-	m.programChannel <- tempoMsg{
-		tempo:        m.definition.tempo,
-		subdivisions: m.definition.subdivisions,
-	}
+	go func() {
+		m.programChannel <- tempoMsg{
+			tempo:        m.definition.tempo,
+			subdivisions: m.definition.subdivisions,
+		}
+	}()
 }
 
 func (m model) ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition) {
