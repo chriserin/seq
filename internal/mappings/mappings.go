@@ -1,3 +1,7 @@
+// Package mappings provides keyboard input handling and command mapping functionality
+// for the sequencer application. It manages key combinations, processes user input,
+// and maps keyboard shortcuts to sequencer commands based on the current mode
+// (trigger, polyphony, pattern mode, chord mode, etc.).
 package mappings
 
 import (
@@ -303,13 +307,13 @@ func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType, patternMode bool) Ma
 
 	command, exists := mappings[ToMappingKey(Keycombo)]
 	switch seqtype {
-	case grid.SEQTYPE_TRIGGER:
+	case grid.SeqtypeTrigger:
 		triggerCommand, triggerExists := patternModeMappings[ToMappingKey(Keycombo)]
 		if triggerExists {
 			command = triggerCommand
 			exists = triggerExists
 		}
-	case grid.SEQTYPE_POLYPHONY:
+	case grid.SeqtypePolyphony:
 		var chordCommand Command
 		var chordExists bool
 

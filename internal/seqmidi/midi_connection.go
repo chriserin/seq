@@ -1,3 +1,7 @@
+// Package seqmidi provides MIDI connection management and message sending
+// functionality for the sequencer. It handles virtual and physical MIDI
+// port connections, thread-safe message transmission, and DAW integration
+// features including record triggering for external recording systems.
 package seqmidi
 
 import (
@@ -19,7 +23,7 @@ type MidiConnection struct {
 
 type SendFunc func(msg midi.Message) error
 
-var OUTPUT_NAME string = "seq-cli-out"
+var OutputName string = "seq-cli-out"
 
 func InitMidiConnection(createOut bool) (MidiConnection, error) {
 	if createOut {
@@ -27,7 +31,7 @@ func InitMidiConnection(createOut bool) (MidiConnection, error) {
 		if err != nil {
 			return MidiConnection{}, fault.Wrap(err, fmsg.With("midi driver error"))
 		}
-		out, err := driver.OpenVirtualOut(OUTPUT_NAME)
+		out, err := driver.OpenVirtualOut(OutputName)
 		if err != nil {
 			return MidiConnection{}, fault.Wrap(err, fmsg.With("cannot open virtual out"))
 		}

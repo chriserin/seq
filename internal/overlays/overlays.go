@@ -1,3 +1,8 @@
+// Package overlays provides layered pattern management for the sequencer.
+// It implements a hierarchical overlay system where multiple pattern layers
+// can be stacked and combined based on timing cycles, enabling complex
+// arrangements with pattern variations, chord progressions, and dynamic
+// pattern switching during playback.
 package overlays
 
 import (
@@ -6,9 +11,6 @@ import (
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/overlaykey"
 )
-
-// type gridKey = int
-// type note = int
 
 type Key = overlaykey.OverlayPeriodicity
 
@@ -137,7 +139,7 @@ func (ol Overlay) CombineActionPattern(pattern *grid.Pattern, keyCycles int) {
 	var addFunc = func(overlayPattern grid.Pattern, key Key) bool {
 		for gridKey, note := range overlayPattern {
 			_, hasNote := (*pattern)[gridKey]
-			if !hasNote && (note.Action != grid.ACTION_NOTHING || note == zeronote) {
+			if !hasNote && (note.Action != grid.ActionNothing || note == zeronote) {
 				(*pattern)[gridKey] = note
 			}
 		}

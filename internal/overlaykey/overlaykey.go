@@ -1,3 +1,7 @@
+// Package overlaykey provides functionality for managing overlay periodicity patterns
+// in the sequencer. It defines timing patterns with shift, interval, width, and
+// start cycle parameters that determine when overlay events should trigger during
+// sequence playback, enabling complex arrangement variations.
 package overlaykey
 
 import "fmt"

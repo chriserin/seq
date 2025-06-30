@@ -1,3 +1,7 @@
+// Package grid provides the core data structures and functionality for the sequencer's
+// pattern grid system. It defines notes, patterns, ratchets, line definitions, and
+// various actions that can be performed on sequencer steps. The grid represents
+// the fundamental building blocks for creating and manipulating musical sequences.
 package grid
 
 import (
@@ -8,21 +12,21 @@ import (
 type Action uint8
 
 const (
-	ACTION_NOTHING Action = iota
-	ACTION_LINE_RESET
-	ACTION_LINE_REVERSE
-	ACTION_LINE_SKIP_BEAT
-	ACTION_RESET
-	ACTION_LINE_BOUNCE
-	ACTION_LINE_DELAY
-	ACTION_SPECIFIC_VALUE
+	ActionNothing Action = iota
+	ActionLineReset
+	ActionLineReverse
+	ActionLineSkipBeat
+	ActionReset
+	ActionLineBounce
+	ActionLineDelay
+	ActionSpecificValue
 )
 
 type SequencerType uint8
 
 const (
-	SEQTYPE_TRIGGER SequencerType = iota
-	SEQTYPE_POLYPHONY
+	SeqtypeTrigger SequencerType = iota
+	SeqtypePolyphony
 )
 
 type GridKey struct {
@@ -51,7 +55,7 @@ type Note struct {
 }
 
 func InitNote() Note {
-	return Note{5, InitRatchet(), ACTION_NOTHING, 0, 0}
+	return Note{5, InitRatchet(), ActionNothing, 0, 0}
 }
 
 func InitActionNote(act Action) Note {
@@ -89,7 +93,7 @@ func (n Note) IncrementRatchet(modifier int8) Note {
 	// TODO: remove hardcoded ratchets length
 	var ratchetsLength int8 = 8
 	newRatchet := int8(currentRatchet) + modifier
-	if n.AccentIndex > 0 && n.Action == ACTION_NOTHING && newRatchet < ratchetsLength && int8(currentRatchet)+modifier >= 0 {
+	if n.AccentIndex > 0 && n.Action == ActionNothing && newRatchet < ratchetsLength && int8(currentRatchet)+modifier >= 0 {
 		n.Ratchets.Length = uint8(int8(currentRatchet) + modifier)
 		n.Ratchets.SetRatchet(true, n.Ratchets.Length)
 	}
@@ -113,7 +117,7 @@ func InitRatchet() Ratchet {
 
 func boolsToUint8(bools [8]bool) uint8 {
 	var result uint8
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		if bools[i] {
 			result = result | (1 << i)
 		}
@@ -152,9 +156,9 @@ func (r Ratchet) HitAt(index uint8) bool {
 type MessageType uint8
 
 const (
-	MESSAGE_TYPE_NOTE MessageType = iota
-	MESSAGE_TYPE_CC
-	MESSAGE_TYPE_PROGRAM_CHANGE
+	MessageTypeNote MessageType = iota
+	MessageTypeCc
+	MessageTypeProgramChange
 )
 
 type LineDefinition struct {

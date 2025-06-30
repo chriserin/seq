@@ -1,3 +1,7 @@
+// Package config provides configuration management for the sequencer application.
+// It handles loading and processing Lua configuration files that define templates,
+// instruments, and various sequencer settings including accents, control changes,
+// gate lengths, and line actions.
 package config
 
 import (
@@ -39,14 +43,14 @@ type lineaction struct {
 }
 
 var Lineactions = map[grid.Action]lineaction{
-	grid.ACTION_NOTHING:        {' ', "#000000"},
-	grid.ACTION_LINE_RESET:     {'↔', "#cf142b"},
-	grid.ACTION_LINE_REVERSE:   {'←', "#f8730e"},
-	grid.ACTION_LINE_SKIP_BEAT: {'⇒', "#a9e5bb"},
-	grid.ACTION_RESET:          {'⇚', "#fcf6b1"},
-	grid.ACTION_LINE_BOUNCE:    {'↨', "#fcf6b1"},
-	grid.ACTION_LINE_DELAY:     {'ℤ', "#cc4bc2"},
-	grid.ACTION_SPECIFIC_VALUE: {'V', "#cc4bc2"},
+	grid.ActionNothing:       {' ', "#000000"},
+	grid.ActionLineReset:     {'↔', "#cf142b"},
+	grid.ActionLineReverse:   {'←', "#f8730e"},
+	grid.ActionLineSkipBeat:  {'⇒', "#a9e5bb"},
+	grid.ActionReset:         {'⇚', "#fcf6b1"},
+	grid.ActionLineBounce:    {'↨', "#fcf6b1"},
+	grid.ActionLineDelay:     {'ℤ', "#cc4bc2"},
+	grid.ActionSpecificValue: {'V', "#cc4bc2"},
 }
 
 type ratchetDiacritical string
@@ -151,9 +155,9 @@ func InitTemplate(
 	var seqType grid.SequencerType
 	switch sequencerType {
 	case "trigger":
-		seqType = grid.SEQTYPE_TRIGGER
+		seqType = grid.SeqtypeTrigger
 	case "polyphony":
-		seqType = grid.SEQTYPE_POLYPHONY
+		seqType = grid.SeqtypePolyphony
 	}
 	return Template{Name: name, UIStyle: uIStyle, MaxGateLength: maxGateLength, SequencerType: seqType}
 }
@@ -312,11 +316,11 @@ func addTemplate(L *lua.State) int {
 							messageType := L.ToString(4)
 							switch messageType {
 							case "NOTE":
-								ld.MsgType = grid.MESSAGE_TYPE_NOTE
+								ld.MsgType = grid.MessageTypeNote
 							case "CC":
-								ld.MsgType = grid.MESSAGE_TYPE_CC
+								ld.MsgType = grid.MessageTypeCc
 							case "PC":
-								ld.MsgType = grid.MESSAGE_TYPE_CC
+								ld.MsgType = grid.MessageTypeCc
 							}
 						case 3:
 							note := L.ToNumber(4)

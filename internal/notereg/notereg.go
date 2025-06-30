@@ -1,3 +1,7 @@
+// Package notereg provides a thread-safe registry for tracking active MIDI notes.
+// It manages note-on/off states by channel and note number to prevent duplicate
+// note events and ensure proper note cleanup. This is essential for polyphonic
+// sequencing where multiple notes may be active simultaneously.
 package notereg
 
 import (

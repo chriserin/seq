@@ -1,3 +1,8 @@
+// Package theory provides music theory functionality for the sequencer.
+// It implements chord construction, interval calculations, inversions, and
+// musical pattern recognition using bit manipulation for efficient chord
+// representation and manipulation. Supports various chord types, voicings,
+// and harmonic analysis for polyphonic sequencing.
 package theory
 
 import (

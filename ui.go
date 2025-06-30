@@ -204,7 +204,7 @@ func NoteMessages(l grid.LineDefinition, accentValue uint8, gateLength time.Dura
 }
 
 func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) controlChangeMsg {
-	if note.Action == grid.ACTION_SPECIFIC_VALUE {
+	if note.Action == grid.ActionSpecificValue {
 		return controlChangeMsg{l.Channel - 1, l.Note, note.AccentIndex, delay}
 	} else {
 		cc, _ := config.FindCC(l.Note, instrument)
@@ -218,7 +218,7 @@ func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 func PCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) programChangeMsg {
-	if note.Action == grid.ACTION_SPECIFIC_VALUE {
+	if note.Action == grid.ActionSpecificValue {
 		return programChangeMsg{l.Channel - 1, note.AccentIndex, delay}
 	} else {
 		return programChangeMsg{l.Channel - 1, l.Note - 1, delay}
@@ -557,7 +557,7 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) error 
 			gateLength := GateLength(note.GateIndex, beatInterval)
 
 			switch line.MsgType {
-			case grid.MESSAGE_TYPE_NOTE:
+			case grid.MessageTypeNote:
 				onMessage, offMessage := NoteMessages(
 					line,
 					m.definition.accents.Data[note.AccentIndex].Value,
@@ -573,13 +573,13 @@ func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) error 
 				if err != nil {
 					return fault.Wrap(err, fmsg.With("cannot process note off msg"))
 				}
-			case grid.MESSAGE_TYPE_CC:
+			case grid.MessageTypeCc:
 				ccMessage := CCMessage(line, note, accents.Data, delay, true, m.definition.instrument)
 				err := m.ProcessNoteMsg(ccMessage)
 				if err != nil {
 					return fault.Wrap(err, fmsg.With("cannot process cc msg"))
 				}
-			case grid.MESSAGE_TYPE_PROGRAM_CHANGE:
+			case grid.MessageTypeProgramChange:
 				pcMessage := PCMessage(line, note, accents.Data, delay, true, m.definition.instrument)
 				err := m.ProcessNoteMsg(pcMessage)
 				if err != nil {
@@ -772,7 +772,7 @@ func (m *model) DecrementCC() {
 
 func (m *model) IncreaseSpan() {
 	currentNote, _ := m.CurrentNote()
-	if currentNote != zeronote && currentNote.Action == grid.ACTION_NOTHING {
+	if currentNote != zeronote && currentNote.Action == grid.ActionNothing {
 		span := currentNote.Ratchets.Span
 		if span < 8 {
 			currentNote.Ratchets.Span = span + 1
@@ -783,7 +783,7 @@ func (m *model) IncreaseSpan() {
 
 func (m *model) DecreaseSpan() {
 	currentNote, _ := m.CurrentNote()
-	if currentNote != zeronote && currentNote.Action == grid.ACTION_NOTHING {
+	if currentNote != zeronote && currentNote.Action == grid.ActionNothing {
 		span := currentNote.Ratchets.Span
 		if span > 0 {
 			currentNote.Ratchets.Span = span - 1
@@ -1428,9 +1428,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.definition.lines[m.cursorPos.Line].IncrementMessageType()
 			case SelectSetupValue:
 				switch m.definition.lines[m.cursorPos.Line].MsgType {
-				case grid.MESSAGE_TYPE_NOTE:
+				case grid.MessageTypeNote:
 					m.definition.lines[m.cursorPos.Line].IncrementNote()
-				case grid.MESSAGE_TYPE_CC:
+				case grid.MessageTypeCc:
 					m.IncrementCC()
 				}
 			case SelectRatchetSpan:
@@ -1457,7 +1457,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.IncreasePartSelector()
 			default:
 				note, exists := m.CurrentNote()
-				if exists && note.Action == grid.ACTION_SPECIFIC_VALUE {
+				if exists && note.Action == grid.ActionSpecificValue {
 					m.IncrementSpecificValue(note)
 				} else {
 					m.IncreaseTempo(5)
@@ -1478,9 +1478,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.definition.lines[m.cursorPos.Line].DecrementMessageType()
 			case SelectSetupValue:
 				switch m.definition.lines[m.cursorPos.Line].MsgType {
-				case grid.MESSAGE_TYPE_NOTE:
+				case grid.MessageTypeNote:
 					m.definition.lines[m.cursorPos.Line].DecrementNote()
-				case grid.MESSAGE_TYPE_CC:
+				case grid.MessageTypeCc:
 					m.DecrementCC()
 				}
 			case SelectRatchetSpan:
@@ -1505,7 +1505,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.DecreasePartSelector()
 			default:
 				note, exists := m.CurrentNote()
-				if exists && note.Action == grid.ACTION_SPECIFIC_VALUE {
+				if exists && note.Action == grid.ActionSpecificValue {
 					m.DecrementSpecificValue(note)
 				} else {
 					m.DecreaseTempo(5)
@@ -1520,10 +1520,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.ToggleRatchetMode:
 			m.SetPatternMode(PatternRatchet)
 		case mappings.ToggleChordMode:
-			if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
-				m.definition.templateSequencerType = grid.SEQTYPE_TRIGGER
+			if m.definition.templateSequencerType == grid.SeqtypePolyphony {
+				m.definition.templateSequencerType = grid.SeqtypeTrigger
 			} else {
-				m.definition.templateSequencerType = grid.SEQTYPE_POLYPHONY
+				m.definition.templateSequencerType = grid.SeqtypePolyphony
 			}
 		case mappings.PrevOverlay:
 			m.NextOverlay(-1)
@@ -1906,20 +1906,20 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.RatchetModify(-1)
 		m.EnsureRatchetCursorVisible()
 	case mappings.ActionAddLineReset:
-		m.AddAction(grid.ACTION_LINE_RESET)
+		m.AddAction(grid.ActionLineReset)
 	case mappings.ActionAddLineReverse:
-		m.AddAction(grid.ACTION_LINE_REVERSE)
+		m.AddAction(grid.ActionLineReverse)
 	case mappings.ActionAddSkipBeat:
-		m.AddAction(grid.ACTION_LINE_SKIP_BEAT)
+		m.AddAction(grid.ActionLineSkipBeat)
 	case mappings.ActionAddReset:
-		m.AddAction(grid.ACTION_RESET)
+		m.AddAction(grid.ActionReset)
 	case mappings.ActionAddLineBounce:
-		m.AddAction(grid.ACTION_LINE_BOUNCE)
+		m.AddAction(grid.ActionLineBounce)
 	case mappings.ActionAddLineDelay:
-		m.AddAction(grid.ACTION_LINE_DELAY)
+		m.AddAction(grid.ActionLineDelay)
 	case mappings.ActionAddSpecificValue:
-		if m.definition.lines[m.cursorPos.Line].MsgType != grid.MESSAGE_TYPE_NOTE {
-			m.AddAction(grid.ACTION_SPECIFIC_VALUE)
+		if m.definition.lines[m.cursorPos.Line].MsgType != grid.MessageTypeNote {
+			m.AddAction(grid.ActionSpecificValue)
 		}
 	case mappings.SelectKeyLine:
 		m.definition.keyline = m.cursorPos.Line
@@ -1929,36 +1929,36 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.ClearOverlay()
 	case mappings.RotateRight:
 		switch m.definition.templateSequencerType {
-		case grid.SEQTYPE_TRIGGER:
+		case grid.SeqtypeTrigger:
 			m.RotateRight()
-		case grid.SEQTYPE_POLYPHONY:
+		case grid.SeqtypePolyphony:
 			m.EnsureChord()
 			m.MoveChordRight()
 			m.CursorRight()
 		}
 	case mappings.RotateLeft:
 		switch m.definition.templateSequencerType {
-		case grid.SEQTYPE_TRIGGER:
+		case grid.SeqtypeTrigger:
 			m.RotateLeft()
-		case grid.SEQTYPE_POLYPHONY:
+		case grid.SeqtypePolyphony:
 			m.EnsureChord()
 			m.MoveChordLeft()
 			m.CursorLeft()
 		}
 	case mappings.RotateUp:
 		switch m.definition.templateSequencerType {
-		case grid.SEQTYPE_TRIGGER:
+		case grid.SeqtypeTrigger:
 			m.RotateUp()
-		case grid.SEQTYPE_POLYPHONY:
+		case grid.SeqtypePolyphony:
 			m.EnsureChord()
 			m.MoveChordUp()
 			m.CursorUp()
 		}
 	case mappings.RotateDown:
 		switch m.definition.templateSequencerType {
-		case grid.SEQTYPE_TRIGGER:
+		case grid.SeqtypeTrigger:
 			m.RotateDown()
-		case grid.SEQTYPE_POLYPHONY:
+		case grid.SeqtypePolyphony:
 			m.EnsureChord()
 			m.MoveChordDown()
 			m.CursorDown()
@@ -2086,7 +2086,7 @@ func (m *model) EnsureChord() {
 }
 
 func (m model) CurrentChord() overlays.OverlayChord {
-	if m.definition.templateSequencerType == grid.SEQTYPE_TRIGGER {
+	if m.definition.templateSequencerType == grid.SeqtypeTrigger {
 		return overlays.OverlayChord{}
 	}
 	overlayChord, exists := m.currentOverlay.FindChord(m.cursorPos)
@@ -2627,24 +2627,24 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 	}
 
 	switch combinedPattern[GK(uint8(lineIndex), uint8(advancedBeat))].Action {
-	case grid.ACTION_NOTHING:
+	case grid.ActionNothing:
 		return true
-	case grid.ACTION_LINE_RESET:
+	case grid.ActionLineReset:
 		m.playState[lineIndex].currentBeat = 0
-	case grid.ACTION_LINE_REVERSE:
+	case grid.ActionLineReverse:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-2, 0))
 		m.playState[lineIndex].direction = -1
 		m.playState[lineIndex].resetLocation = uint8(max(advancedBeat-1, 0))
 		m.playState[lineIndex].resetActionLocation = uint8(advancedBeat)
-		m.playState[lineIndex].resetAction = grid.ACTION_LINE_REVERSE
-	case grid.ACTION_LINE_BOUNCE:
+		m.playState[lineIndex].resetAction = grid.ActionLineReverse
+	case grid.ActionLineBounce:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
 		m.playState[lineIndex].direction = -1
-	case grid.ACTION_LINE_SKIP_BEAT:
+	case grid.ActionLineSkipBeat:
 		m.advancePlayState(combinedPattern, lineIndex)
-	case grid.ACTION_LINE_DELAY:
+	case grid.ActionLineDelay:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
-	case grid.ACTION_RESET:
+	case grid.ActionReset:
 		for i := range m.playState {
 			m.playState[i].currentBeat = 0
 			m.playState[i].direction = 1
@@ -2731,7 +2731,7 @@ func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.Overla
 }
 
 func (m *model) Every(every uint8, everyFn func(gridKey)) {
-	if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
+	if m.definition.templateSequencerType == grid.SeqtypePolyphony {
 		bounds := m.PasteBounds()
 		combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 		keys := slices.Collect(maps.Keys(combinedOverlay))
@@ -3026,7 +3026,7 @@ func (m model) View() string {
 		sideView = m.OverlaysView()
 
 		var chordView string
-		if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
+		if m.definition.templateSequencerType == grid.SeqtypePolyphony {
 			currentChord := m.CurrentChord()
 			chordView = m.ChordView(currentChord.GridChord)
 		}
@@ -3128,11 +3128,11 @@ func (m model) SetupView() string {
 
 		var messageType string
 		switch line.MsgType {
-		case grid.MESSAGE_TYPE_NOTE:
+		case grid.MessageTypeNote:
 			messageType = "NOTE"
-		case grid.MESSAGE_TYPE_CC:
+		case grid.MessageTypeCc:
 			messageType = "CC"
-		case grid.MESSAGE_TYPE_PROGRAM_CHANGE:
+		case grid.MessageTypeProgramChange:
 			messageType = "Program Change"
 		}
 
@@ -3160,9 +3160,9 @@ func NoteName(note uint8) string {
 
 func LineValueName(ld grid.LineDefinition, instrument string) string {
 	switch ld.MsgType {
-	case grid.MESSAGE_TYPE_NOTE:
+	case grid.MessageTypeNote:
 		return NoteName(ld.Note)
-	case grid.MESSAGE_TYPE_CC:
+	case grid.MessageTypeCc:
 		cc, _ := config.FindCC(ld.Note, instrument)
 		return cc.Name
 	}
@@ -3289,7 +3289,7 @@ func (m model) TriggerSeqView() string {
 		buf.WriteString(m.ConfirmNewSequenceView())
 	} else if m.selectionIndicator == SelectConfirmQuit {
 		buf.WriteString(m.ConfirmQuitView())
-	} else if exists && currentNote.Note.Action == grid.ACTION_SPECIFIC_VALUE {
+	} else if exists && currentNote.Note.Action == grid.ActionSpecificValue {
 		buf.WriteString(m.SpecificValueEditView(currentNote.Note))
 	} else if m.playing != PlayStopped {
 		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
@@ -3560,7 +3560,7 @@ func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 		waitShape = "\u0320"
 	}
 
-	if currentAction == grid.ACTION_NOTHING && currentNote != zeronote {
+	if currentAction == grid.ActionNothing && currentNote != zeronote {
 		currentAccentShape := themes.AccentIcons[currentNote.AccentIndex]
 		currentAccentColor := themes.AccentColors[currentNote.AccentIndex]
 		char = string(currentAccentShape) +

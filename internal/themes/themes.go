@@ -1,3 +1,7 @@
+// Package themes provides visual theming and styling functionality for the
+// sequencer application. It manages color schemes, visual styles, accent colors,
+// and UI art elements, offering multiple built-in themes and the ability to
+// switch between them for customizing the application's appearance.
 package themes
 
 import (
@@ -78,13 +82,13 @@ var defaultTheme = Theme{
 		'❄',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#000000",
-		grid.ACTION_LINE_RESET:     "#cf142b",
-		grid.ACTION_LINE_REVERSE:   "#f8730e",
-		grid.ACTION_LINE_SKIP_BEAT: "#a9e5bb",
-		grid.ACTION_RESET:          "#fcf6b1",
-		grid.ACTION_LINE_BOUNCE:    "#fcf6b1",
-		grid.ACTION_LINE_DELAY:     "#cc4bc2",
+		grid.ActionNothing:      "#000000",
+		grid.ActionLineReset:    "#cf142b",
+		grid.ActionLineReverse:  "#f8730e",
+		grid.ActionLineSkipBeat: "#a9e5bb",
+		grid.ActionReset:        "#fcf6b1",
+		grid.ActionLineBounce:   "#fcf6b1",
+		grid.ActionLineDelay:    "#cc4bc2",
 	},
 	art: defaultArt,
 }
@@ -144,13 +148,13 @@ var seafoamTheme = Theme{
 		'❄',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#0a2622",
-		grid.ACTION_LINE_RESET:     "#f76c5e",
-		grid.ACTION_LINE_REVERSE:   "#f39c6b",
-		grid.ACTION_LINE_SKIP_BEAT: "#90e0c9",
-		grid.ACTION_RESET:          "#c5d86d",
-		grid.ACTION_LINE_BOUNCE:    "#c5d86d",
-		grid.ACTION_LINE_DELAY:     "#a682ff",
+		grid.ActionNothing:      "#0a2622",
+		grid.ActionLineReset:    "#f76c5e",
+		grid.ActionLineReverse:  "#f39c6b",
+		grid.ActionLineSkipBeat: "#90e0c9",
+		grid.ActionReset:        "#c5d86d",
+		grid.ActionLineBounce:   "#c5d86d",
+		grid.ActionLineDelay:    "#a682ff",
 	},
 	art: seafoamArt,
 }
@@ -210,13 +214,13 @@ var dynamiteTheme = Theme{
 		'❄',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#1c0404",
-		grid.ACTION_LINE_RESET:     "#f44336",
-		grid.ACTION_LINE_REVERSE:   "#ff914d",
-		grid.ACTION_LINE_SKIP_BEAT: "#ffa000",
-		grid.ACTION_RESET:          "#ffeb3b",
-		grid.ACTION_LINE_BOUNCE:    "#ffd700",
-		grid.ACTION_LINE_DELAY:     "#e91e63",
+		grid.ActionNothing:      "#1c0404",
+		grid.ActionLineReset:    "#f44336",
+		grid.ActionLineReverse:  "#ff914d",
+		grid.ActionLineSkipBeat: "#ffa000",
+		grid.ActionReset:        "#ffeb3b",
+		grid.ActionLineBounce:   "#ffd700",
+		grid.ActionLineDelay:    "#e91e63",
 	},
 	art: dynamiteArt,
 }
@@ -276,13 +280,13 @@ var springtimeTheme = Theme{
 		'✻',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#3c4f2f",
-		grid.ACTION_LINE_RESET:     "#fc6c85",
-		grid.ACTION_LINE_REVERSE:   "#ffdb58",
-		grid.ACTION_LINE_SKIP_BEAT: "#7dcfb6",
-		grid.ACTION_RESET:          "#c3f584",
-		grid.ACTION_LINE_BOUNCE:    "#9ed36a",
-		grid.ACTION_LINE_DELAY:     "#ff9eb3",
+		grid.ActionNothing:      "#3c4f2f",
+		grid.ActionLineReset:    "#fc6c85",
+		grid.ActionLineReverse:  "#ffdb58",
+		grid.ActionLineSkipBeat: "#7dcfb6",
+		grid.ActionReset:        "#c3f584",
+		grid.ActionLineBounce:   "#9ed36a",
+		grid.ActionLineDelay:    "#ff9eb3",
 	},
 	art: springtimeArt,
 }
@@ -342,13 +346,13 @@ var orangegroveTheme = Theme{
 		'⊚',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#1a1410",
-		grid.ACTION_LINE_RESET:     "#f45d48",
-		grid.ACTION_LINE_REVERSE:   "#ff8c42",
-		grid.ACTION_LINE_SKIP_BEAT: "#ffb347",
-		grid.ACTION_RESET:          "#f8c537",
-		grid.ACTION_LINE_BOUNCE:    "#ffcb69",
-		grid.ACTION_LINE_DELAY:     "#c05746",
+		grid.ActionNothing:      "#1a1410",
+		grid.ActionLineReset:    "#f45d48",
+		grid.ActionLineReverse:  "#ff8c42",
+		grid.ActionLineSkipBeat: "#ffb347",
+		grid.ActionReset:        "#f8c537",
+		grid.ActionLineBounce:   "#ffcb69",
+		grid.ActionLineDelay:    "#c05746",
 	},
 	art: orangegroveArt,
 }
@@ -408,13 +412,13 @@ var cyberpunkTheme = Theme{
 		'☣',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#070215",
-		grid.ACTION_LINE_RESET:     "#ff003c",
-		grid.ACTION_LINE_REVERSE:   "#f706cf",
-		grid.ACTION_LINE_SKIP_BEAT: "#00f0ff",
-		grid.ACTION_RESET:          "#00ff9f",
-		grid.ACTION_LINE_BOUNCE:    "#c100fd",
-		grid.ACTION_LINE_DELAY:     "#ff00ff",
+		grid.ActionNothing:      "#070215",
+		grid.ActionLineReset:    "#ff003c",
+		grid.ActionLineReverse:  "#f706cf",
+		grid.ActionLineSkipBeat: "#00f0ff",
+		grid.ActionReset:        "#00ff9f",
+		grid.ActionLineBounce:   "#c100fd",
+		grid.ActionLineDelay:    "#ff00ff",
 	},
 	art: cyberpunkArt,
 }
@@ -474,13 +478,13 @@ var brainiacTheme = Theme{
 		'∞',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#002b33",
-		grid.ACTION_LINE_RESET:     "#4fb99f",
-		grid.ACTION_LINE_REVERSE:   "#07889b",
-		grid.ACTION_LINE_SKIP_BEAT: "#1b98a2",
-		grid.ACTION_RESET:          "#66b3ba",
-		grid.ACTION_LINE_BOUNCE:    "#8bd7d2",
-		grid.ACTION_LINE_DELAY:     "#c4dfe6",
+		grid.ActionNothing:      "#002b33",
+		grid.ActionLineReset:    "#4fb99f",
+		grid.ActionLineReverse:  "#07889b",
+		grid.ActionLineSkipBeat: "#1b98a2",
+		grid.ActionReset:        "#66b3ba",
+		grid.ActionLineBounce:   "#8bd7d2",
+		grid.ActionLineDelay:    "#c4dfe6",
 	},
 	art: brainiacArt,
 }
@@ -540,13 +544,13 @@ var spaceodysseyTheme = Theme{
 		'⊛',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#020210",
-		grid.ACTION_LINE_RESET:     "#c050c0",
-		grid.ACTION_LINE_REVERSE:   "#9090e0",
-		grid.ACTION_LINE_SKIP_BEAT: "#8080c0",
-		grid.ACTION_RESET:          "#c0c0f0",
-		grid.ACTION_LINE_BOUNCE:    "#a0a0ff",
-		grid.ACTION_LINE_DELAY:     "#f0c0c0",
+		grid.ActionNothing:      "#020210",
+		grid.ActionLineReset:    "#c050c0",
+		grid.ActionLineReverse:  "#9090e0",
+		grid.ActionLineSkipBeat: "#8080c0",
+		grid.ActionReset:        "#c0c0f0",
+		grid.ActionLineBounce:   "#a0a0ff",
+		grid.ActionLineDelay:    "#f0c0c0",
 	},
 	art: spaceodysseyArt,
 }
@@ -606,13 +610,13 @@ var nineteenfiftyeightTheme = Theme{
 		'◠',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#1a1610",
-		grid.ACTION_LINE_RESET:     "#c94a35",
-		grid.ACTION_LINE_REVERSE:   "#d09554",
-		grid.ACTION_LINE_SKIP_BEAT: "#4587be",
-		grid.ACTION_RESET:          "#b1b85a",
-		grid.ACTION_LINE_BOUNCE:    "#8ba353",
-		grid.ACTION_LINE_DELAY:     "#6b5744",
+		grid.ActionNothing:      "#1a1610",
+		grid.ActionLineReset:    "#c94a35",
+		grid.ActionLineReverse:  "#d09554",
+		grid.ActionLineSkipBeat: "#4587be",
+		grid.ActionReset:        "#b1b85a",
+		grid.ActionLineBounce:   "#8ba353",
+		grid.ActionLineDelay:    "#6b5744",
 	},
 	art: nineteenfiftyeightArt,
 }
@@ -672,13 +676,13 @@ var appleiiplusTheme = Theme{
 		'☐',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#000000",
-		grid.ACTION_LINE_RESET:     "#cc3333",
-		grid.ACTION_LINE_REVERSE:   "#cc9933",
-		grid.ACTION_LINE_SKIP_BEAT: "#3333cc",
-		grid.ACTION_RESET:          "#66ff66",
-		grid.ACTION_LINE_BOUNCE:    "#33cc33",
-		grid.ACTION_LINE_DELAY:     "#9933cc",
+		grid.ActionNothing:      "#000000",
+		grid.ActionLineReset:    "#cc3333",
+		grid.ActionLineReverse:  "#cc9933",
+		grid.ActionLineSkipBeat: "#3333cc",
+		grid.ActionReset:        "#66ff66",
+		grid.ActionLineBounce:   "#33cc33",
+		grid.ActionLineDelay:    "#9933cc",
 	},
 	art: appleiiplusArt,
 }
@@ -738,13 +742,13 @@ var matrixTheme = Theme{
 		'π',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#000000",
-		grid.ACTION_LINE_RESET:     "#008800",
-		grid.ACTION_LINE_REVERSE:   "#00aa00",
-		grid.ACTION_LINE_SKIP_BEAT: "#55ff55",
-		grid.ACTION_RESET:          "#00ff00",
-		grid.ACTION_LINE_BOUNCE:    "#88ff88",
-		grid.ACTION_LINE_DELAY:     "#00cc00",
+		grid.ActionNothing:      "#000000",
+		grid.ActionLineReset:    "#008800",
+		grid.ActionLineReverse:  "#00aa00",
+		grid.ActionLineSkipBeat: "#55ff55",
+		grid.ActionReset:        "#00ff00",
+		grid.ActionLineBounce:   "#88ff88",
+		grid.ActionLineDelay:    "#00cc00",
 	},
 	art: matrixArt,
 }
@@ -804,13 +808,13 @@ var herbieTheme = Theme{
 		'●',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#0c0c0c",
-		grid.ACTION_LINE_RESET:     "#e84a5f",
-		grid.ACTION_LINE_REVERSE:   "#feae5a",
-		grid.ACTION_LINE_SKIP_BEAT: "#55b9f3",
-		grid.ACTION_RESET:          "#ffe01b",
-		grid.ACTION_LINE_BOUNCE:    "#f9a03f",
-		grid.ACTION_LINE_DELAY:     "#4c7f9e",
+		grid.ActionNothing:      "#0c0c0c",
+		grid.ActionLineReset:    "#e84a5f",
+		grid.ActionLineReverse:  "#feae5a",
+		grid.ActionLineSkipBeat: "#55b9f3",
+		grid.ActionReset:        "#ffe01b",
+		grid.ActionLineBounce:   "#f9a03f",
+		grid.ActionLineDelay:    "#4c7f9e",
 	},
 	art: herbieArt,
 }
@@ -870,13 +874,13 @@ var milesTheme = Theme{
 		'▪',
 	},
 	lineActionColors: map[grid.Action]string{
-		grid.ACTION_NOTHING:        "#000e1a",
-		grid.ACTION_LINE_RESET:     "#e74c3c",
-		grid.ACTION_LINE_REVERSE:   "#f39c12",
-		grid.ACTION_LINE_SKIP_BEAT: "#3498db",
-		grid.ACTION_RESET:          "#2ecc71",
-		grid.ACTION_LINE_BOUNCE:    "#1abc9c",
-		grid.ACTION_LINE_DELAY:     "#8e44ad",
+		grid.ActionNothing:      "#000e1a",
+		grid.ActionLineReset:    "#e74c3c",
+		grid.ActionLineReverse:  "#f39c12",
+		grid.ActionLineSkipBeat: "#3498db",
+		grid.ActionReset:        "#2ecc71",
+		grid.ActionLineBounce:   "#1abc9c",
+		grid.ActionLineDelay:    "#8e44ad",
 	},
 	art: milesArt,
 }
@@ -906,13 +910,13 @@ var AccentIcons = []rune{
 }
 
 var ActionColors = map[grid.Action]string{
-	grid.ACTION_NOTHING:        "#000000",
-	grid.ACTION_LINE_RESET:     "#cf142b",
-	grid.ACTION_LINE_REVERSE:   "#f8730e",
-	grid.ACTION_LINE_SKIP_BEAT: "#a9e5bb",
-	grid.ACTION_RESET:          "#fcf6b1",
-	grid.ACTION_LINE_BOUNCE:    "#fcf6b1",
-	grid.ACTION_LINE_DELAY:     "#cc4bc2",
+	grid.ActionNothing:      "#000000",
+	grid.ActionLineReset:    "#cf142b",
+	grid.ActionLineReverse:  "#f8730e",
+	grid.ActionLineSkipBeat: "#a9e5bb",
+	grid.ActionReset:        "#fcf6b1",
+	grid.ActionLineBounce:   "#fcf6b1",
+	grid.ActionLineDelay:    "#cc4bc2",
 }
 
 var LeftSideTemplate, Connected, Unconnected, Focused, Unfocused string
@@ -1151,7 +1155,7 @@ func SetAccentIcons(accentIcons []rune) {
 
 func SetActionColors(actionColors map[grid.Action]string) {
 	for k := range actionColors {
-		if k == grid.ACTION_NOTHING {
+		if k == grid.ActionNothing {
 			continue
 		}
 		ActionColors[k] = actionColors[k]

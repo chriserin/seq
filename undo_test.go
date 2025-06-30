@@ -133,7 +133,7 @@ func TestUndoGridNote(t *testing.T) {
 		// Setup overlay and key
 		ok := overlaykey.InitOverlayKey(1, 1)
 		gk := GK(0, 0)
-		testNote := note{Action: grid.ACTION_NOTHING}
+		testNote := note{Action: grid.ActionNothing}
 
 		// Create undoable with a grid note
 		undoable := UndoGridNote{
@@ -212,15 +212,15 @@ func TestUndoBounds(t *testing.T) {
 		bounds := InitBounds(GK(1, 0), GK(2, 2))
 
 		// Add some existing notes in the bounds to be removed
-		m.currentOverlay.SetNote(GK(1, 0), note{Action: grid.ACTION_NOTHING})
-		m.currentOverlay.SetNote(GK(1, 1), note{Action: grid.ACTION_NOTHING})
-		m.currentOverlay.SetNote(GK(2, 0), note{Action: grid.ACTION_NOTHING})
+		m.currentOverlay.SetNote(GK(1, 0), note{Action: grid.ActionNothing})
+		m.currentOverlay.SetNote(GK(1, 1), note{Action: grid.ActionNothing})
+		m.currentOverlay.SetNote(GK(2, 0), note{Action: grid.ActionNothing})
 
 		// Create test grid notes to restore
 		gk1 := GK(1, 0)
 		gk2 := GK(2, 1)
-		note1 := note{Action: grid.ACTION_NOTHING}
-		note2 := note{Action: grid.ACTION_NOTHING}
+		note1 := note{Action: grid.ActionNothing}
+		note2 := note{Action: grid.ActionNothing}
 		gridNotes := []GridNote{
 			{gridKey: gk1, note: note1},
 			{gridKey: gk2, note: note2},
@@ -263,8 +263,8 @@ func TestUndoGridNotes(t *testing.T) {
 		// Create test grid notes
 		gk1 := GK(1, 1)
 		gk2 := GK(2, 2)
-		note1 := note{Action: grid.ACTION_NOTHING}
-		note2 := note{Action: grid.ACTION_NOTHING}
+		note1 := note{Action: grid.ActionNothing}
+		note2 := note{Action: grid.ActionNothing}
 		gridNotes := []GridNote{
 			{gridKey: gk1, note: note1},
 			{gridKey: gk2, note: note2},
@@ -296,7 +296,7 @@ func TestUndoToNothing(t *testing.T) {
 		// Setup overlay and add a note to be removed
 		ok := overlaykey.InitOverlayKey(1, 1)
 		gk := GK(1, 1)
-		m.currentOverlay.SetNote(gk, note{Action: grid.ACTION_NOTHING})
+		m.currentOverlay.SetNote(gk, note{Action: grid.ActionNothing})
 
 		// Create undoable
 		undoable := UndoToNothing{
@@ -325,9 +325,9 @@ func TestUndoLineToNothing(t *testing.T) {
 		ok := overlaykey.InitOverlayKey(1, 1)
 		line := uint8(2)
 
-		m.currentOverlay.SetNote(GK(line, 0), note{Action: grid.ACTION_NOTHING})
-		m.currentOverlay.SetNote(GK(line, 1), note{Action: grid.ACTION_NOTHING})
-		m.currentOverlay.SetNote(GK(line, 2), note{Action: grid.ACTION_NOTHING})
+		m.currentOverlay.SetNote(GK(line, 0), note{Action: grid.ActionNothing})
+		m.currentOverlay.SetNote(GK(line, 1), note{Action: grid.ActionNothing})
+		m.currentOverlay.SetNote(GK(line, 2), note{Action: grid.ActionNothing})
 
 		// Create undoable
 		undoable := UndoLineToNothing{
