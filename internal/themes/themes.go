@@ -5,8 +5,6 @@
 package themes
 
 import (
-	"strings"
-
 	"github.com/charmbracelet/lipgloss"
 	"github.com/chriserin/seq/internal/grid"
 )
@@ -16,22 +14,11 @@ type Theme struct {
 	accentColors     []string
 	accentIcons      []rune
 	lineActionColors map[grid.Action]string
-	art              Art
-}
-
-type Art struct {
-	leftSideTemplate     string
-	focusedIndicator     string
-	unfocusedIndicator   string
-	connectedIndicator   string
-	unconnectedIndicator string
 }
 
 var defaultColors = map[string]string{
 	"AppTitleColor":                "#fafafa",
 	"AppDescriptorColor":           "#fafafa",
-	"LineNumberColor":              "#fafafa",
-	"RightSideTitleColor":          "#fafafa",
 	"AltSeqBackgroundColor":        "#2c2c2c",
 	"SeqBackgroundColor":           "#000000",
 	"SeqCursorColor":               "#444444",
@@ -42,18 +29,14 @@ var defaultColors = map[string]string{
 	"NumberColor":                  "#fcbd15",
 	"Black":                        "#000000",
 	"White":                        "#ffffff",
-	"ArtColor":                     "#ed3902",
-	"AltArtColor":                  "#1e89ef",
 	"ActiveRatchetColor":           "#abfaa9",
 	"MutedRatchetColor":            "#f34213",
 	"CurrentPlayingColor":          "#abfaa9",
 	"ActivePlayingColor":           "#f34213",
 	"ArrangementHeaderColor":       "FAFAFA",
-	"ArrangementTitleColor":        "FAFAFA",
 	"ArrangementGroupColor":        "#F25D94",
 	"ArrangementIndentColor":       "#4b4261",
 	"ArrangementSelectedLineColor": "#3b4261",
-	"SeqBorderLineColor":           "#fafafa",
 	"PatternModeColor":             "#ed3902",
 }
 
@@ -90,14 +73,11 @@ var defaultTheme = Theme{
 		grid.ActionLineBounce:   "#fcf6b1",
 		grid.ActionLineDelay:    "#cc4bc2",
 	},
-	art: defaultArt,
 }
 
 var seafoamColors = map[string]string{
 	"AppTitleColor":                "#a6d0c7",
 	"AppDescriptorColor":           "#cce7e0",
-	"LineNumberColor":              "#a6d0c7",
-	"RightSideTitleColor":          "#8abdb2",
 	"AltSeqBackgroundColor":        "#013112",
 	"SeqBackgroundColor":           "#0a2622",
 	"SeqCursorColor":               "#3d8a7d",
@@ -108,18 +88,14 @@ var seafoamColors = map[string]string{
 	"NumberColor":                  "#c5d86d",
 	"Black":                        "#0a2622",
 	"White":                        "#e6f2ef",
-	"ArtColor":                     "#f76c5e",
-	"AltArtColor":                  "#2ec4b6",
 	"ActiveRatchetColor":           "#90e0c9",
 	"MutedRatchetColor":            "#f76c5e",
 	"CurrentPlayingColor":          "#90e0c9",
 	"ActivePlayingColor":           "#f76c5e",
 	"ArrangementHeaderColor":       "#e6f2ef",
-	"ArrangementTitleColor":        "#e6f2ef",
 	"ArrangementGroupColor":        "#f76c5e",
 	"ArrangementIndentColor":       "#4d7a68",
 	"ArrangementSelectedLineColor": "#2c5d54",
-	"SeqBorderLineColor":           "#e6f2ef",
 	"PatternModeColor":             "#f39c6b",
 }
 
@@ -156,14 +132,11 @@ var seafoamTheme = Theme{
 		grid.ActionLineBounce:   "#c5d86d",
 		grid.ActionLineDelay:    "#a682ff",
 	},
-	art: seafoamArt,
 }
 
 var dynamiteColors = map[string]string{
 	"AppTitleColor":                "#ee4242",
 	"AppDescriptorColor":           "#ffe6d1",
-	"LineNumberColor":              "#ffcbad",
-	"RightSideTitleColor":          "#ffb38f",
 	"AltSeqBackgroundColor":        "#3d0d0d",
 	"SeqBackgroundColor":           "#1c0404",
 	"SeqCursorColor":               "#7a1414",
@@ -174,18 +147,14 @@ var dynamiteColors = map[string]string{
 	"NumberColor":                  "#ff914d",
 	"Black":                        "#1c0404",
 	"White":                        "#fff8f0",
-	"ArtColor":                     "#f44336",
-	"AltArtColor":                  "#00e5ff",
 	"ActiveRatchetColor":           "#ffeb3b",
 	"MutedRatchetColor":            "#f44336",
 	"CurrentPlayingColor":          "#ffeb3b",
 	"ActivePlayingColor":           "#f44336",
 	"ArrangementHeaderColor":       "#fff8f0",
-	"ArrangementTitleColor":        "#fff8f0",
 	"ArrangementGroupColor":        "#e91e63",
 	"ArrangementIndentColor":       "#740505",
 	"ArrangementSelectedLineColor": "#580f0f",
-	"SeqBorderLineColor":           "#fff8f0",
 	"PatternModeColor":             "#ff914d",
 }
 
@@ -222,14 +191,11 @@ var dynamiteTheme = Theme{
 		grid.ActionLineBounce:   "#ffd700",
 		grid.ActionLineDelay:    "#e91e63",
 	},
-	art: dynamiteArt,
 }
 
 var springtimeColors = map[string]string{
 	"AppTitleColor":                "#ffdb58",
 	"AppDescriptorColor":           "#ff9eb3",
-	"LineNumberColor":              "#617852",
-	"RightSideTitleColor":          "#769164",
 	"AltSeqBackgroundColor":        "#154018",
 	"SeqBackgroundColor":           "#090d05",
 	"SeqCursorColor":               "#27735e",
@@ -240,18 +206,14 @@ var springtimeColors = map[string]string{
 	"NumberColor":                  "#ff9eb3",
 	"Black":                        "#070215",
 	"White":                        "#f9fdf5",
-	"ArtColor":                     "#fc6c85",
-	"AltArtColor":                  "#7dcfb6",
 	"ActiveRatchetColor":           "#c3f584",
 	"MutedRatchetColor":            "#fc6c85",
 	"CurrentPlayingColor":          "#c3f584",
 	"ActivePlayingColor":           "#fc6c85",
 	"ArrangementHeaderColor":       "#f9fdf5",
-	"ArrangementTitleColor":        "#f9fdf5",
 	"ArrangementGroupColor":        "#ff9eb3",
 	"ArrangementIndentColor":       "#a6d173",
 	"ArrangementSelectedLineColor": "#d6e9c6",
-	"SeqBorderLineColor":           "#3c4f2f",
 	"PatternModeColor":             "#ffdb58",
 }
 
@@ -288,14 +250,11 @@ var springtimeTheme = Theme{
 		grid.ActionLineBounce:   "#9ed36a",
 		grid.ActionLineDelay:    "#ff9eb3",
 	},
-	art: springtimeArt,
 }
 
 var orangegroveColors = map[string]string{
 	"AppTitleColor":                "#fff4e6",
 	"AppDescriptorColor":           "#ffe8cc",
-	"LineNumberColor":              "#ffdbb3",
-	"RightSideTitleColor":          "#ffc999",
 	"AltSeqBackgroundColor":        "#3a2e1e",
 	"SeqBackgroundColor":           "#1a1410",
 	"SeqCursorColor":               "#6a5433",
@@ -306,18 +265,14 @@ var orangegroveColors = map[string]string{
 	"NumberColor":                  "#ffcb69",
 	"Black":                        "#1a1410",
 	"White":                        "#fff4e6",
-	"ArtColor":                     "#f45d48",
-	"AltArtColor":                  "#00c8ff",
 	"ActiveRatchetColor":           "#f8c537",
 	"MutedRatchetColor":            "#f45d48",
 	"CurrentPlayingColor":          "#f8c537",
 	"ActivePlayingColor":           "#f45d48",
 	"ArrangementHeaderColor":       "#fff4e6",
-	"ArrangementTitleColor":        "#fff4e6",
 	"ArrangementGroupColor":        "#f45d48",
 	"ArrangementIndentColor":       "#8c6d46",
 	"ArrangementSelectedLineColor": "#4f3f29",
-	"SeqBorderLineColor":           "#fff4e6",
 	"PatternModeColor":             "#ff8c42",
 }
 
@@ -354,14 +309,11 @@ var orangegroveTheme = Theme{
 		grid.ActionLineBounce:   "#ffcb69",
 		grid.ActionLineDelay:    "#c05746",
 	},
-	art: orangegroveArt,
 }
 
 var cyberpunkColors = map[string]string{
 	"AppTitleColor":                "#4da55a",
 	"AppDescriptorColor":           "#c0f0f0",
-	"LineNumberColor":              "#a0e0e0",
-	"RightSideTitleColor":          "#80c0c0",
 	"AltSeqBackgroundColor":        "#300330",
 	"SeqBackgroundColor":           "#070215",
 	"SeqCursorColor":               "#2d555a",
@@ -372,18 +324,14 @@ var cyberpunkColors = map[string]string{
 	"NumberColor":                  "#ff00ff",
 	"Black":                        "#070215",
 	"White":                        "#edfdfd",
-	"ArtColor":                     "#ff003c",
-	"AltArtColor":                  "#00ff9f",
 	"ActiveRatchetColor":           "#00ff9f",
 	"MutedRatchetColor":            "#ff003c",
 	"CurrentPlayingColor":          "#00ff9f",
 	"ActivePlayingColor":           "#ff003c",
 	"ArrangementHeaderColor":       "#edfdfd",
-	"ArrangementTitleColor":        "#edfdfd",
 	"ArrangementGroupColor":        "#ff00ff",
 	"ArrangementIndentColor":       "#3e1f6d",
 	"ArrangementSelectedLineColor": "#1a0933",
-	"SeqBorderLineColor":           "#edfdfd",
 	"PatternModeColor":             "#ff00ff",
 }
 
@@ -420,14 +368,11 @@ var cyberpunkTheme = Theme{
 		grid.ActionLineBounce:   "#c100fd",
 		grid.ActionLineDelay:    "#ff00ff",
 	},
-	art: cyberpunkArt,
 }
 
 var brainiacColors = map[string]string{
 	"AppTitleColor":                "#4fb99f",
 	"AppDescriptorColor":           "#c4dfe6",
-	"LineNumberColor":              "#a0c7d3",
-	"RightSideTitleColor":          "#7cafbf",
 	"AltSeqBackgroundColor":        "#142233",
 	"SeqBackgroundColor":           "#002b00",
 	"SeqCursorColor":               "#006b82",
@@ -438,18 +383,14 @@ var brainiacColors = map[string]string{
 	"NumberColor":                  "#c4dfe6",
 	"Black":                        "#002b00",
 	"White":                        "#e8f1f2",
-	"ArtColor":                     "#4fb99f",
-	"AltArtColor":                  "#f8b24b",
 	"ActiveRatchetColor":           "#66b3ba",
 	"MutedRatchetColor":            "#4fb99f",
 	"CurrentPlayingColor":          "#66b3ba",
 	"ActivePlayingColor":           "#4fb99f",
 	"ArrangementHeaderColor":       "#e8f1f2",
-	"ArrangementTitleColor":        "#e8f1f2",
 	"ArrangementGroupColor":        "#66b3ba",
 	"ArrangementIndentColor":       "#007888",
 	"ArrangementSelectedLineColor": "#004d5d",
-	"SeqBorderLineColor":           "#e8f1f2",
 	"PatternModeColor":             "#4fb99f",
 }
 
@@ -486,14 +427,11 @@ var brainiacTheme = Theme{
 		grid.ActionLineBounce:   "#8bd7d2",
 		grid.ActionLineDelay:    "#c4dfe6",
 	},
-	art: brainiacArt,
 }
 
 var spaceodysseyColors = map[string]string{
 	"AppTitleColor":                "#d070f0",
 	"AppDescriptorColor":           "#c0c0f0",
-	"LineNumberColor":              "#a0a0d6",
-	"RightSideTitleColor":          "#8080c0",
 	"AltSeqBackgroundColor":        "#14142a",
 	"SeqBackgroundColor":           "#020210",
 	"SeqCursorColor":               "#2a6655",
@@ -504,18 +442,14 @@ var spaceodysseyColors = map[string]string{
 	"NumberColor":                  "#f0c0c0",
 	"Black":                        "#020210",
 	"White":                        "#e6e6ff",
-	"ArtColor":                     "#c050c0",
-	"AltArtColor":                  "#ffcf00",
 	"ActiveRatchetColor":           "#c0c0f0",
 	"MutedRatchetColor":            "#c050c0",
 	"CurrentPlayingColor":          "#c0c0f0",
 	"ActivePlayingColor":           "#c050c0",
 	"ArrangementHeaderColor":       "#e6e6ff",
-	"ArrangementTitleColor":        "#e6e6ff",
 	"ArrangementGroupColor":        "#c050c0",
 	"ArrangementIndentColor":       "#40406f",
 	"ArrangementSelectedLineColor": "#191936",
-	"SeqBorderLineColor":           "#e6e6ff",
 	"PatternModeColor":             "#9090e0",
 }
 
@@ -552,14 +486,11 @@ var spaceodysseyTheme = Theme{
 		grid.ActionLineBounce:   "#a0a0ff",
 		grid.ActionLineDelay:    "#f0c0c0",
 	},
-	art: spaceodysseyArt,
 }
 
 var nineteenfiftyeightColors = map[string]string{
 	"AppTitleColor":                "#ecdfce",
 	"AppDescriptorColor":           "#d9c8af",
-	"LineNumberColor":              "#b2a58c",
-	"RightSideTitleColor":          "#a18f74",
 	"AltSeqBackgroundColor":        "#2e2418",
 	"SeqBackgroundColor":           "#1a1610",
 	"SeqCursorColor":               "#5a4a3c",
@@ -570,18 +501,14 @@ var nineteenfiftyeightColors = map[string]string{
 	"NumberColor":                  "#d09554",
 	"Black":                        "#1a1610",
 	"White":                        "#ecdfce",
-	"ArtColor":                     "#c94a35",
-	"AltArtColor":                  "#4587be",
 	"ActiveRatchetColor":           "#b1b85a",
 	"MutedRatchetColor":            "#c94a35",
 	"CurrentPlayingColor":          "#b1b85a",
 	"ActivePlayingColor":           "#c94a35",
 	"ArrangementHeaderColor":       "#ecdfce",
-	"ArrangementTitleColor":        "#ecdfce",
 	"ArrangementGroupColor":        "#c94a35",
 	"ArrangementIndentColor":       "#6b5744",
 	"ArrangementSelectedLineColor": "#2e2418",
-	"SeqBorderLineColor":           "#ecdfce",
 	"PatternModeColor":             "#d09554",
 }
 
@@ -618,14 +545,11 @@ var nineteenfiftyeightTheme = Theme{
 		grid.ActionLineBounce:   "#8ba353",
 		grid.ActionLineDelay:    "#6b5744",
 	},
-	art: nineteenfiftyeightArt,
 }
 
 var appleiiplusColors = map[string]string{
 	"AppTitleColor":                "#33ff33",
 	"AppDescriptorColor":           "#33dd33",
-	"LineNumberColor":              "#33cc33",
-	"RightSideTitleColor":          "#33bb33",
 	"AltSeqBackgroundColor":        "#002200",
 	"SeqBackgroundColor":           "#000000",
 	"SeqCursorColor":               "#007700",
@@ -636,18 +560,14 @@ var appleiiplusColors = map[string]string{
 	"NumberColor":                  "#cc9933",
 	"Black":                        "#000000",
 	"White":                        "#33ff33",
-	"ArtColor":                     "#9933cc",
-	"AltArtColor":                  "#cc3333",
 	"ActiveRatchetColor":           "#66ff66",
 	"MutedRatchetColor":            "#cc3333",
 	"CurrentPlayingColor":          "#66ff66",
 	"ActivePlayingColor":           "#cc3333",
 	"ArrangementHeaderColor":       "#33ff33",
-	"ArrangementTitleColor":        "#33ff33",
 	"ArrangementGroupColor":        "#cc3333",
 	"ArrangementIndentColor":       "#007700",
 	"ArrangementSelectedLineColor": "#003300",
-	"SeqBorderLineColor":           "#33ff33",
 	"PatternModeColor":             "#cc9933",
 }
 
@@ -684,14 +604,11 @@ var appleiiplusTheme = Theme{
 		grid.ActionLineBounce:   "#33cc33",
 		grid.ActionLineDelay:    "#9933cc",
 	},
-	art: appleiiplusArt,
 }
 
 var matrixColors = map[string]string{
 	"AppTitleColor":                "#00ff00",
 	"AppDescriptorColor":           "#00ee00",
-	"LineNumberColor":              "#00dd00",
-	"RightSideTitleColor":          "#00cc00",
 	"AltSeqBackgroundColor":        "#002200",
 	"SeqBackgroundColor":           "#000000",
 	"SeqCursorColor":               "#00aa00",
@@ -702,18 +619,14 @@ var matrixColors = map[string]string{
 	"NumberColor":                  "#88ff88",
 	"Black":                        "#000000",
 	"White":                        "#00ff00",
-	"ArtColor":                     "#55ff55",
-	"AltArtColor":                  "#ffffff",
 	"ActiveRatchetColor":           "#00ff00",
 	"MutedRatchetColor":            "#008800",
 	"CurrentPlayingColor":          "#00ff00",
 	"ActivePlayingColor":           "#008800",
 	"ArrangementHeaderColor":       "#00ff00",
-	"ArrangementTitleColor":        "#00ff00",
 	"ArrangementGroupColor":        "#55ff55",
 	"ArrangementIndentColor":       "#004400",
 	"ArrangementSelectedLineColor": "#003300",
-	"SeqBorderLineColor":           "#00ff00",
 	"PatternModeColor":             "#88ff88",
 }
 
@@ -750,14 +663,11 @@ var matrixTheme = Theme{
 		grid.ActionLineBounce:   "#88ff88",
 		grid.ActionLineDelay:    "#00cc00",
 	},
-	art: matrixArt,
 }
 
 var herbieColors = map[string]string{
 	"AppTitleColor":                "#ffe01b",
 	"AppDescriptorColor":           "#ffd000",
-	"LineNumberColor":              "#ffc000",
-	"RightSideTitleColor":          "#ffb000",
 	"AltSeqBackgroundColor":        "#1c1c1c",
 	"SeqBackgroundColor":           "#0c0c0c",
 	"SeqCursorColor":               "#3c3c3c",
@@ -768,18 +678,14 @@ var herbieColors = map[string]string{
 	"NumberColor":                  "#ffe01b",
 	"Black":                        "#0c0c0c",
 	"White":                        "#ffe01b",
-	"ArtColor":                     "#e84a5f",
-	"AltArtColor":                  "#1b95e0",
 	"ActiveRatchetColor":           "#1b95e0",
 	"MutedRatchetColor":            "#e84a5f",
 	"CurrentPlayingColor":          "#1b95e0",
 	"ActivePlayingColor":           "#e84a5f",
 	"ArrangementHeaderColor":       "#ffe01b",
-	"ArrangementTitleColor":        "#ffe01b",
 	"ArrangementGroupColor":        "#e84a5f",
 	"ArrangementIndentColor":       "#3c3c3c",
 	"ArrangementSelectedLineColor": "#1c1c1c",
-	"SeqBorderLineColor":           "#ffe01b",
 	"PatternModeColor":             "#e84a5f",
 }
 
@@ -816,14 +722,11 @@ var herbieTheme = Theme{
 		grid.ActionLineBounce:   "#f9a03f",
 		grid.ActionLineDelay:    "#4c7f9e",
 	},
-	art: herbieArt,
 }
 
 var milesColors = map[string]string{
 	"AppTitleColor":                "#3498db",
 	"AppDescriptorColor":           "#2980b9",
-	"LineNumberColor":              "#1f6aa7",
-	"RightSideTitleColor":          "#155a91",
 	"AltSeqBackgroundColor":        "#0c2233",
 	"SeqBackgroundColor":           "#000e1a",
 	"SeqCursorColor":               "#1f4662",
@@ -834,18 +737,14 @@ var milesColors = map[string]string{
 	"NumberColor":                  "#f39c12",
 	"Black":                        "#000e1a",
 	"White":                        "#ecf0f1",
-	"ArtColor":                     "#e74c3c",
-	"AltArtColor":                  "#2ecc71",
 	"ActiveRatchetColor":           "#2ecc71",
 	"MutedRatchetColor":            "#e74c3c",
 	"CurrentPlayingColor":          "#2ecc71",
 	"ActivePlayingColor":           "#e74c3c",
 	"ArrangementHeaderColor":       "#ecf0f1",
-	"ArrangementTitleColor":        "#ecf0f1",
 	"ArrangementGroupColor":        "#e74c3c",
 	"ArrangementIndentColor":       "#17313d",
 	"ArrangementSelectedLineColor": "#0c2233",
-	"SeqBorderLineColor":           "#3498db",
 	"PatternModeColor":             "#8e44ad",
 }
 
@@ -882,7 +781,6 @@ var milesTheme = Theme{
 		grid.ActionLineBounce:   "#1abc9c",
 		grid.ActionLineDelay:    "#8e44ad",
 	},
-	art: milesArt,
 }
 
 var AccentColors = []string{
@@ -919,33 +817,25 @@ var ActionColors = map[grid.Action]string{
 	grid.ActionLineDelay:    "#cc4bc2",
 }
 
-var LeftSideTemplate, Connected, Unconnected, Focused, Unfocused string
-
 // Colors
 var AppTitleColor,
 	AppDescriptorColor,
-	LineNumberColor,
-	RightSideTitleColor,
 	AltSeqBackgroundColor,
 	SeqBackgroundColor,
 	SeqCursorColor,
 	SeqVisualColor,
 	SeqOverlayColor,
 	SeqMiddleOverlayColor,
-	SeqBorderLineColor,
 	PatternModeColor,
 	SelectedAttributeColor,
 	NumberColor,
 	Black,
 	White,
-	ArtColor,
-	AltArtColor,
 	ActiveRatchetColor,
 	MutedRatchetColor,
 	CurrentPlayingColor,
 	ActivePlayingColor,
 	ArrangementHeaderColor,
-	ArrangementTitleColor,
 	ArrangementGroupColor,
 	ArrangementIndentColor,
 	ArrangementSelectedLineColor lipgloss.Color
@@ -955,7 +845,6 @@ var AppTitleStyle,
 	AppDescriptorStyle,
 	ActiveStyle,
 	MutedStyle,
-	ArtStyle,
 	AltArtStyle,
 	LineCursorStyle,
 	SelectedStyle,
@@ -967,7 +856,6 @@ var AppTitleStyle,
 	GroupStyle,
 	IndentStyle,
 	NodeRowStyle,
-	SectionNameStyle,
 	SeqBorderStyle lipgloss.Style
 
 // Symbols
@@ -1030,7 +918,6 @@ func ApplyTheme(theme Theme) {
 	SetAccentColors(theme.accentColors)
 	SetAccentIcons(theme.accentIcons)
 	SetActionColors(theme.lineActionColors)
-	SetArt(theme.art)
 }
 
 func SetColors(newColors map[string]string) {
@@ -1041,10 +928,6 @@ func SetColors(newColors map[string]string) {
 			AppTitleColor = newColor
 		case "AppDescriptorColor":
 			AppDescriptorColor = newColor
-		case "LineNumberColor":
-			LineNumberColor = newColor
-		case "RightSideTitleColor":
-			RightSideTitleColor = newColor
 		case "AltSeqBackgroundColor":
 			AltSeqBackgroundColor = newColor
 		case "SeqBackgroundColor":
@@ -1065,10 +948,6 @@ func SetColors(newColors map[string]string) {
 			Black = newColor
 		case "White":
 			White = newColor
-		case "ArtColor":
-			ArtColor = newColor
-		case "AltArtColor":
-			AltArtColor = newColor
 		case "ActiveRatchetColor":
 			ActiveRatchetColor = newColor
 		case "MutedRatchetColor":
@@ -1079,16 +958,12 @@ func SetColors(newColors map[string]string) {
 			ActivePlayingColor = newColor
 		case "ArrangementHeaderColor":
 			ArrangementHeaderColor = newColor
-		case "ArrangementTitleColor":
-			ArrangementTitleColor = newColor
 		case "ArrangementGroupColor":
 			ArrangementGroupColor = newColor
 		case "ArrangementIndentColor":
 			ArrangementIndentColor = newColor
 		case "ArrangementSelectedLineColor":
 			ArrangementSelectedLineColor = newColor
-		case "SeqBorderLineColor":
-			SeqBorderLineColor = newColor
 		case "PatternModeColor":
 			PatternModeColor = newColor
 		}
@@ -1105,7 +980,6 @@ func EvaluateStyles() {
 
 	ActiveStyle = lipgloss.NewStyle().Foreground(ActiveRatchetColor)
 	MutedStyle = lipgloss.NewStyle().Foreground(MutedRatchetColor)
-	ArtStyle = lipgloss.NewStyle().Foreground(ArtColor)
 	AltArtStyle = lipgloss.NewStyle().Foreground(Darken(AppTitleColor, 20.0))
 	LineCursorStyle = lipgloss.NewStyle().Foreground(Black).Background(Lighten(AltSeqBackgroundColor, 150.0))
 	SelectedStyle = lipgloss.NewStyle().Background(SelectedAttributeColor).Foreground(Black)
@@ -1126,9 +1000,6 @@ func EvaluateStyles() {
 	NodeRowStyle = lipgloss.NewStyle().
 		PaddingLeft(1).
 		MarginBottom(0)
-
-	SectionNameStyle = lipgloss.NewStyle().
-		Foreground(ArrangementHeaderColor)
 
 	SeqBorderStyle = lipgloss.NewStyle().Foreground(Lighten(AltSeqBackgroundColor, 100.0))
 	AppTitleStyle = lipgloss.NewStyle().Bold(true).Foreground(AppTitleColor)
@@ -1160,16 +1031,4 @@ func SetActionColors(actionColors map[grid.Action]string) {
 		}
 		ActionColors[k] = actionColors[k]
 	}
-}
-
-func SetArt(art Art) {
-	if strings.Contains(art.leftSideTemplate, "TTT") {
-		LeftSideTemplate = art.leftSideTemplate
-	} else {
-		LeftSideTemplate = defaultTheme.art.leftSideTemplate
-	}
-	Connected = art.connectedIndicator
-	Unconnected = art.unconnectedIndicator
-	Focused = art.focusedIndicator
-	Unfocused = art.unfocusedIndicator
 }
