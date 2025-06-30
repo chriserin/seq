@@ -39,11 +39,11 @@ func main() {
 				return
 			}
 			defer midiConnection.Close()
-			midiLoopMode := MLM_STAND_ALONE
+			midiLoopMode := MlmStandAlone
 			if transmitter {
-				midiLoopMode = MLM_TRANSMITTER
+				midiLoopMode = MlmTransmitter
 			} else if receiver {
-				midiLoopMode = MLM_RECEIVER
+				midiLoopMode = MlmReceiver
 			}
 			var filename string
 			if len(args) > 0 {

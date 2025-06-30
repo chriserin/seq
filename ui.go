@@ -70,9 +70,9 @@ var transitiveKeys = transitiveKeyMap{
 type groupPlayState uint8
 
 const (
-	PLAY_STATE_PLAY groupPlayState = iota
-	PLAY_STATE_MUTE
-	PLAY_STATE_SOLO
+	PlayStatePlay groupPlayState = iota
+	PlayStateMute
+	PlayStateSolo
 )
 
 type linestate struct {
@@ -87,11 +87,11 @@ type linestate struct {
 }
 
 func (ls linestate) IsMuted() bool {
-	return ls.groupPlayState == PLAY_STATE_MUTE
+	return ls.groupPlayState == PlayStateMute
 }
 
 func (ls linestate) IsSolo() bool {
-	return ls.groupPlayState == PLAY_STATE_SOLO
+	return ls.groupPlayState == PlayStateSolo
 }
 
 func (ls linestate) GridKey() grid.GridKey {
@@ -127,8 +127,8 @@ type noteMsg struct {
 	id        int
 }
 
-func (n noteMsg) Delay() time.Duration {
-	return n.delay
+func (nm noteMsg) Delay() time.Duration {
+	return nm.delay
 }
 
 type programChangeMsg struct {
@@ -152,8 +152,8 @@ type controlChangeMsg struct {
 	delay   time.Duration
 }
 
-func (pcm controlChangeMsg) MidiMessage() midi.Message {
-	return midi.ControlChange(pcm.channel, pcm.control, pcm.ccValue)
+func (ccm controlChangeMsg) MidiMessage() midi.Message {
+	return midi.ControlChange(ccm.channel, ccm.control, ccm.ccValue)
 }
 
 func (ccm controlChangeMsg) Delay() time.Duration {
@@ -167,7 +167,7 @@ func (nm noteMsg) GetKey() notereg.NoteRegKey {
 	}
 }
 
-func (nm noteMsg) GetId() int {
+func (nm noteMsg) GetID() int {
 	return nm.id
 }
 
@@ -188,10 +188,10 @@ func NoteMessages(l grid.LineDefinition, accentValue uint8, gateLength time.Dura
 	var velocityValue uint8
 
 	switch accentTarget {
-	case ACCENT_TARGET_NOTE:
+	case AccentTargetNote:
 		noteValue = l.Note + accentValue
 		velocityValue = 96
-	case ACCENT_TARGET_VELOCITY:
+	case AccentTargetVelocity:
 		noteValue = l.Note
 		velocityValue = accentValue
 	}
@@ -276,19 +276,19 @@ func (m *model) UnsetActiveChord() {
 
 func (m *model) SetCurrentError(err error) {
 	m.currentError = err
-	m.selectionIndicator = SELECT_ERROR
+	m.selectionIndicator = SelectError
 	m.LogError(err)
 }
 
 func (m *model) ResetCurrentOverlay() {
-	if m.playing != PLAY_STOPPED && m.playEditing {
+	if m.playing != PlayStopped && m.playEditing {
 		return
 	}
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
 	if currentNode != nil && currentNode.IsEndNode() {
-		partId := currentNode.Section.Part
-		if len(*m.definition.parts) > partId {
-			m.currentOverlay = (*m.definition.parts)[partId].Overlays
+		partID := currentNode.Section.Part
+		if len(*m.definition.parts) > partID {
+			m.currentOverlay = (*m.definition.parts)[partID].Overlays
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 		}
 	}
@@ -297,64 +297,64 @@ func (m *model) ResetCurrentOverlay() {
 type PlayMode uint8
 
 const (
-	PLAY_STOPPED PlayMode = iota
-	PLAY_STANDARD
-	PLAY_RECEIVER
+	PlayStopped PlayMode = iota
+	PlayStandard
+	PlayReceiver
 )
 
 type LoopMode uint8
 
 const (
-	LOOP_SONG LoopMode = iota
-	LOOP_PART
-	LOOP_OVERLAY
+	LoopSong LoopMode = iota
+	LoopPart
+	LoopOverlay
 )
 
 type focus uint8
 
 const (
-	FOCUS_GRID focus = iota
-	FOCUS_OVERLAY_KEY
-	FOCUS_ARRANGEMENT_EDITOR
+	FocusGrid focus = iota
+	FocusOverlayKey
+	FocusArrangementEditor
 )
 
 type Selection uint8
 
 const (
-	SELECT_NOTHING Selection = iota
-	SELECT_TEMPO
-	SELECT_TEMPO_SUBDIVISION
-	SELECT_OVERLAY
-	SELECT_SETUP_CHANNEL
-	SELECT_SETUP_MESSAGE_TYPE
-	SELECT_SETUP_VALUE
-	SELECT_RATCHETS
-	SELECT_RATCHET_SPAN
-	SELECT_ACCENT_DIFF
-	SELECT_ACCENT_TARGET
-	SELECT_ACCENT_START
-	SELECT_BEATS
-	SELECT_CYCLES
-	SELECT_START_BEATS
-	SELECT_START_CYCLES
-	SELECT_PART
-	SELECT_CHANGE_PART
-	SELECT_CONFIRM_NEW
-	SELECT_CONFIRM_QUIT
-	SELECT_ARRANGEMENT_EDITOR
-	SELECT_RENAME_PART
-	SELECT_FILE_NAME
-	SELECT_ERROR
+	SelectNothing Selection = iota
+	SelectTempo
+	SelectTempoSubdivision
+	SelectOverlay
+	SelectSetupChannel
+	SelectSetupMessageType
+	SelectSetupValue
+	SelectRatchets
+	SelectRatchetSpan
+	SelectAccentDiff
+	SelectAccentTarget
+	SelectAccentStart
+	SelectBeats
+	SelectCycles
+	SelectStartBeats
+	SelectStartCycles
+	SelectPart
+	SelectChangePart
+	SelectConfirmNew
+	SelectConfirmQuit
+	SelectArrangementEditor
+	SelectRenamePart
+	SelectFileName
+	SelectError
 )
 
 type PatternMode uint8
 
 const (
-	PATTERN_FILL PatternMode = iota
-	PATTERN_ACCENT
-	PATTERN_GATE
-	PATTERN_WAIT
-	PATTERN_RATCHET
+	PatternFill PatternMode = iota
+	PatternAccent
+	PatternGate
+	PatternWait
+	PatternRatchet
 )
 
 type GridNote struct {
@@ -487,8 +487,8 @@ type patternAccents struct {
 type accentTarget uint8
 
 const (
-	ACCENT_TARGET_NOTE accentTarget = iota
-	ACCENT_TARGET_VELOCITY
+	AccentTargetNote accentTarget = iota
+	AccentTargetVelocity
 )
 
 func (pa *patternAccents) ReCalc() {
@@ -630,7 +630,7 @@ func PlayMessage(delay time.Duration, message midi.Message, sendFn seqmidi.SendF
 
 func PlayOffMessage(nm noteMsg, sendFn seqmidi.SendFunc, errChan chan error) {
 	time.AfterFunc(nm.delay, func() {
-		if notereg.RemoveId(nm) {
+		if notereg.RemoveID(nm) {
 			err := sendFn(nm.GetOffMidi())
 			if err != nil {
 				errChan <- fault.Wrap(err, fmsg.With("cannot send off message"))
@@ -648,10 +648,10 @@ func (m model) FindOverlay(key overlayKey) *overlays.Overlay {
 }
 
 func (m *model) EnsureOverlayWithKey(key overlayKey) {
-	partId := m.CurrentPartId()
+	partID := m.CurrentPartID()
 	if m.FindOverlay(key) == nil {
 		var newOverlay = m.CurrentPart().Overlays.Add(key)
-		(*m.definition.parts)[partId].Overlays = newOverlay
+		(*m.definition.parts)[partID].Overlays = newOverlay
 		m.currentOverlay = newOverlay.FindOverlay(key)
 	}
 }
@@ -741,7 +741,7 @@ func (m *model) RatchetModify(modifier int8) {
 	m.Modify(modifyFunc)
 }
 
-func (m *model) EnsureRatchetCursorVisisble() {
+func (m *model) EnsureRatchetCursorVisible() {
 	currentNote, _ := m.CurrentNote()
 	if m.ratchetCursor > currentNote.Ratchets.Length {
 		m.ratchetCursor = m.ratchetCursor - 1
@@ -833,14 +833,14 @@ func (m *model) DecreaseAccentStart() {
 func (m *model) IncreaseBeats() {
 	newBeats := m.CurrentPart().Beats + 1
 	if newBeats < 128 {
-		(*m.definition.parts)[m.CurrentPartId()].Beats = newBeats
+		(*m.definition.parts)[m.CurrentPartID()].Beats = newBeats
 	}
 }
 
 func (m *model) DecreaseBeats() {
 	newBeats := int(m.CurrentPart().Beats) - 1
 	if newBeats >= 0 {
-		(*m.definition.parts)[m.CurrentPartId()].Beats = uint8(newBeats)
+		(*m.definition.parts)[m.CurrentPartID()].Beats = uint8(newBeats)
 	}
 }
 
@@ -913,7 +913,7 @@ func InitLineStates(lines int, previousPlayState []linestate, startBeat uint8) [
 	linestates := make([]linestate, 0, lines)
 
 	for i := range uint8(lines) {
-		var previousGroupPlayState = PLAY_STATE_PLAY
+		var previousGroupPlayState = PlayStatePlay
 		if len(previousPlayState) > int(i) {
 			previousState := previousPlayState[i]
 			previousGroupPlayState = previousState.groupPlayState
@@ -954,7 +954,7 @@ func InitDefinition(template string, instrument string) Definition {
 		keyline:               0,
 		subdivisions:          2,
 		lines:                 newLines,
-		accents:               patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: ACCENT_TARGET_VELOCITY},
+		accents:               patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: AccentTargetVelocity},
 		template:              template,
 		instrument:            instrument,
 		templateUIStyle:       gridTemplate.UIStyle,
@@ -1157,7 +1157,7 @@ func (m model) IsPartOperation(msg tea.Msg) bool {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return Is(msg, keys.ChangePart, keys.NewSectionAfter, keys.NewSectionBefore) ||
-			Is(msg, keys.Increase, keys.Decrease) && (m.selectionIndicator == SELECT_PART || m.selectionIndicator == SELECT_CHANGE_PART)
+			Is(msg, keys.Increase, keys.Decrease) && (m.selectionIndicator == SelectPart || m.selectionIndicator == SelectChangePart)
 	}
 	return false
 }
@@ -1208,44 +1208,44 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	case tea.KeyMsg:
 		if Is(msg, keys.Enter) {
 			switch m.selectionIndicator {
-			case SELECT_RENAME_PART:
+			case SelectRenamePart:
 				m.RenamePart(m.textInput.Value())
 				m.textInput.Reset()
-				m.selectionIndicator = SELECT_NOTHING
+				m.selectionIndicator = SelectNothing
 				return m, nil
-			case SELECT_FILE_NAME:
+			case SelectFileName:
 				if m.textInput.Value() != "" {
 					m.filename = fmt.Sprintf("%s.seq", m.textInput.Value())
 					m.textInput.Reset()
-					m.selectionIndicator = SELECT_NOTHING
+					m.selectionIndicator = SelectNothing
 					m.Save()
 					return m, nil
 				} else {
-					m.selectionIndicator = SELECT_NOTHING
+					m.selectionIndicator = SelectNothing
 					return m, nil
 				}
-			case SELECT_PART:
-				_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator, IsPlaying: m.playing != PLAY_STOPPED})
+			case SelectPart:
+				_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator, IsPlaying: m.playing != PlayStopped})
 				m.currentOverlay = m.CurrentPart().Overlays
-				if m.focus == FOCUS_ARRANGEMENT_EDITOR {
-					m.selectionIndicator = SELECT_ARRANGEMENT_EDITOR
+				if m.focus == FocusArrangementEditor {
+					m.selectionIndicator = SelectArrangementEditor
 				} else {
-					m.selectionIndicator = SELECT_NOTHING
+					m.selectionIndicator = SelectNothing
 				}
 				return m, cmd
-			case SELECT_CHANGE_PART:
+			case SelectChangePart:
 				_, cmd := m.arrangement.Update(arrangement.ChangePart{Index: m.partSelectorIndex})
 				m.currentOverlay = m.CurrentPart().Overlays
-				if m.focus == FOCUS_ARRANGEMENT_EDITOR {
-					m.selectionIndicator = SELECT_ARRANGEMENT_EDITOR
+				if m.focus == FocusArrangementEditor {
+					m.selectionIndicator = SelectArrangementEditor
 				} else {
-					m.selectionIndicator = SELECT_NOTHING
+					m.selectionIndicator = SelectNothing
 				}
 				return m, cmd
-			case SELECT_CONFIRM_NEW:
+			case SelectConfirmNew:
 				m.NewSequence()
-				m.selectionIndicator = SELECT_NOTHING
-			case SELECT_CONFIRM_QUIT:
+				m.selectionIndicator = SelectNothing
+			case SelectConfirmQuit:
 				m.programChannel <- quitMsg{}
 				err := m.logFile.Close()
 				if err != nil {
@@ -1258,30 +1258,30 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		}
 		if Is(msg, keys.Quit) {
-			m.SetSelectionIndicator(SELECT_CONFIRM_QUIT)
+			m.SetSelectionIndicator(SelectConfirmQuit)
 		}
-		if m.selectionIndicator == SELECT_RENAME_PART || m.selectionIndicator == SELECT_FILE_NAME {
+		if m.selectionIndicator == SelectRenamePart || m.selectionIndicator == SelectFileName {
 			if msg.String() == "esc" {
 				m.textInput.Reset()
-				m.selectionIndicator = SELECT_NOTHING
+				m.selectionIndicator = SelectNothing
 				return m, nil
 			}
 			tiModel, cmd := m.textInput.Update(msg)
 			m.textInput = tiModel
 			return m, cmd
 		}
-		if m.focus == FOCUS_OVERLAY_KEY {
+		if m.focus == FocusOverlayKey {
 			okModel, cmd := m.overlayKeyEdit.Update(msg)
 			m.overlayKeyEdit = okModel
 			return m, cmd
 		}
-		if m.focus == FOCUS_ARRANGEMENT_EDITOR && !m.IsPartOperation(msg) && !m.IsPlayOperation(msg) && !m.IsArrangementViewOperation(msg) {
+		if m.focus == FocusArrangementEditor && !m.IsPartOperation(msg) && !m.IsPlayOperation(msg) && !m.IsArrangementViewOperation(msg) {
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
 			m.ResetCurrentOverlay()
 			return m, cmd
 		}
-		mappingsCommand := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PATTERN_FILL)
+		mappingsCommand := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PatternFill)
 		switch mappingsCommand.Command {
 		case mappings.ReloadFile:
 			if m.filename != "" {
@@ -1295,17 +1295,17 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.HoldingKeys:
 			return m, nil
 		case mappings.CursorDown:
-			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
+			if slices.Contains([]Selection{SelectNothing, SelectSetupChannel, SelectSetupMessageType, SelectSetupValue}, m.selectionIndicator) {
 				m.CursorDown()
 				m.UnsetActiveChord()
 			}
 		case mappings.CursorUp:
-			if slices.Contains([]Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}, m.selectionIndicator) {
+			if slices.Contains([]Selection{SelectNothing, SelectSetupChannel, SelectSetupMessageType, SelectSetupValue}, m.selectionIndicator) {
 				m.CursorUp()
 				m.UnsetActiveChord()
 			}
 		case mappings.CursorLeft:
-			if m.selectionIndicator == SELECT_RATCHETS {
+			if m.selectionIndicator == SelectRatchets {
 				if m.ratchetCursor > 0 {
 					m.ratchetCursor--
 				}
@@ -1316,7 +1316,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.UnsetActiveChord()
 			}
 		case mappings.CursorRight:
-			if m.selectionIndicator == SELECT_RATCHETS {
+			if m.selectionIndicator == SelectRatchets {
 				currentNote, _ := m.CurrentNote()
 				if m.ratchetCursor < currentNote.Ratchets.Length {
 					m.ratchetCursor++
@@ -1334,29 +1334,29 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.Escape:
 			m.Escape()
 		case mappings.PlayStop:
-			if m.playing == PLAY_STOPPED {
-				m.loopMode = LOOP_SONG
+			if m.playing == PlayStopped {
+				m.loopMode = LoopSong
 			}
 			m.StartStop()
 		case mappings.PlayPart:
-			if m.playing == PLAY_STOPPED {
-				m.loopMode = LOOP_PART
+			if m.playing == PlayStopped {
+				m.loopMode = LoopPart
 			}
 			m.StartStop()
 		case mappings.PlayLoop:
-			if m.playing == PLAY_STOPPED {
-				m.loopMode = LOOP_SONG
+			if m.playing == PlayStopped {
+				m.loopMode = LoopSong
 			}
 			m.arrangement.Root.SetInfinite()
 			m.StartStop()
 		case mappings.PlayOverlayLoop:
-			if m.playing == PLAY_STOPPED {
-				m.loopMode = LOOP_OVERLAY
+			if m.playing == PlayStopped {
+				m.loopMode = LoopOverlay
 			}
 			m.StartStop()
 			m.SetPlayCycles(m.currentOverlay.Key.GetMinimumKeyCycle())
 		case mappings.PlayRecord:
-			if m.playing == PLAY_STOPPED {
+			if m.playing == PlayStopped {
 				err := seqmidi.SendRecordMessage()
 				if err != nil {
 					m.SetCurrentError(err)
@@ -1367,34 +1367,34 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.StartStop()
 			}
 		case mappings.OverlayInputSwitch:
-			states := []Selection{SELECT_NOTHING, SELECT_OVERLAY}
+			states := []Selection{SelectNothing, SelectOverlay}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
-			m.focus = FOCUS_OVERLAY_KEY
-			m.overlayKeyEdit.Focus(m.selectionIndicator == SELECT_OVERLAY)
+			m.focus = FocusOverlayKey
+			m.overlayKeyEdit.Focus(m.selectionIndicator == SelectOverlay)
 		case mappings.TempoInputSwitch:
-			states := []Selection{SELECT_NOTHING, SELECT_TEMPO, SELECT_TEMPO_SUBDIVISION}
+			states := []Selection{SelectNothing, SelectTempo, SelectTempoSubdivision}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.SetupInputSwitch:
-			states := []Selection{SELECT_NOTHING, SELECT_SETUP_CHANNEL, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_VALUE}
+			states := []Selection{SelectNothing, SelectSetupChannel, SelectSetupMessageType, SelectSetupValue}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.AccentInputSwitch:
-			states := []Selection{SELECT_NOTHING, SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
+			states := []Selection{SelectNothing, SelectAccentDiff, SelectAccentTarget, SelectAccentStart}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.RatchetInputSwitch:
 			currentNote, _ := m.CurrentNote()
 			if currentNote.AccentIndex > 0 {
-				states := []Selection{SELECT_NOTHING, SELECT_RATCHETS, SELECT_RATCHET_SPAN}
+				states := []Selection{SelectNothing, SelectRatchets, SelectRatchetSpan}
 				m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 				m.ratchetCursor = 0
 			}
 		case mappings.BeatsInputSwitch:
-			states := []Selection{SELECT_NOTHING, SELECT_BEATS, SELECT_START_BEATS, SELECT_CYCLES, SELECT_START_CYCLES}
+			states := []Selection{SelectNothing, SelectBeats, SelectStartBeats, SelectCycles, SelectStartCycles}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.ArrangementInputSwitch:
-			states := []Selection{SELECT_NOTHING, SELECT_ARRANGEMENT_EDITOR}
+			states := []Selection{SelectNothing, SelectArrangementEditor}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
-			if m.selectionIndicator == SELECT_ARRANGEMENT_EDITOR {
-				m.focus = FOCUS_ARRANGEMENT_EDITOR
+			if m.selectionIndicator == SelectArrangementEditor {
+				m.focus = FocusArrangementEditor
 				m.arrangement.Focus = true
 			} else {
 				model, cmd := m.arrangement.Update(tea.KeyMsg{Type: tea.KeyEsc})
@@ -1404,8 +1404,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.ToggleArrangementView:
 			m.showArrangementView = !m.showArrangementView
 			if m.showArrangementView {
-				m.SetSelectionIndicator(SELECT_ARRANGEMENT_EDITOR)
-				m.focus = FOCUS_ARRANGEMENT_EDITOR
+				m.SetSelectionIndicator(SelectArrangementEditor)
+				m.focus = FocusArrangementEditor
 				m.arrangement.Focus = true
 			} else {
 				m.Escape()
@@ -1415,45 +1415,45 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		case mappings.Increase:
 			switch m.selectionIndicator {
-			case SELECT_TEMPO:
+			case SelectTempo:
 				m.IncreaseTempo(1)
-			case SELECT_TEMPO_SUBDIVISION:
+			case SelectTempoSubdivision:
 				if m.definition.subdivisions < 8 {
 					m.definition.subdivisions++
 				}
 				m.SyncTempo()
-			case SELECT_SETUP_CHANNEL:
+			case SelectSetupChannel:
 				m.definition.lines[m.cursorPos.Line].IncrementChannel()
-			case SELECT_SETUP_MESSAGE_TYPE:
+			case SelectSetupMessageType:
 				m.definition.lines[m.cursorPos.Line].IncrementMessageType()
-			case SELECT_SETUP_VALUE:
+			case SelectSetupValue:
 				switch m.definition.lines[m.cursorPos.Line].MsgType {
 				case grid.MESSAGE_TYPE_NOTE:
 					m.definition.lines[m.cursorPos.Line].IncrementNote()
 				case grid.MESSAGE_TYPE_CC:
 					m.IncrementCC()
 				}
-			case SELECT_RATCHET_SPAN:
+			case SelectRatchetSpan:
 				m.IncreaseSpan()
-			case SELECT_ACCENT_DIFF:
+			case SelectAccentDiff:
 				m.IncreaseAccent()
-			case SELECT_ACCENT_TARGET:
+			case SelectAccentTarget:
 				// Only two options right now, so increase and decrease would do the
 				// same thing
 				m.DecreaseAccentTarget()
-			case SELECT_ACCENT_START:
+			case SelectAccentStart:
 				m.IncreaseAccentStart()
-			case SELECT_BEATS:
+			case SelectBeats:
 				m.IncreaseBeats()
-			case SELECT_CYCLES:
+			case SelectCycles:
 				m.IncreaseCycles()
-			case SELECT_START_BEATS:
+			case SelectStartBeats:
 				m.IncreaseStartBeats()
-			case SELECT_START_CYCLES:
+			case SelectStartCycles:
 				m.IncreaseStartCycles()
-			case SELECT_PART:
+			case SelectPart:
 				m.IncreasePartSelector()
-			case SELECT_CHANGE_PART:
+			case SelectChangePart:
 				m.IncreasePartSelector()
 			default:
 				note, exists := m.CurrentNote()
@@ -1465,43 +1465,43 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		case mappings.Decrease:
 			switch m.selectionIndicator {
-			case SELECT_TEMPO:
+			case SelectTempo:
 				m.DecreaseTempo(1)
-			case SELECT_TEMPO_SUBDIVISION:
+			case SelectTempoSubdivision:
 				if m.definition.subdivisions > 1 {
 					m.definition.subdivisions--
 				}
 				m.SyncTempo()
-			case SELECT_SETUP_CHANNEL:
+			case SelectSetupChannel:
 				m.definition.lines[m.cursorPos.Line].DecrementChannel()
-			case SELECT_SETUP_MESSAGE_TYPE:
+			case SelectSetupMessageType:
 				m.definition.lines[m.cursorPos.Line].DecrementMessageType()
-			case SELECT_SETUP_VALUE:
+			case SelectSetupValue:
 				switch m.definition.lines[m.cursorPos.Line].MsgType {
 				case grid.MESSAGE_TYPE_NOTE:
 					m.definition.lines[m.cursorPos.Line].DecrementNote()
 				case grid.MESSAGE_TYPE_CC:
 					m.DecrementCC()
 				}
-			case SELECT_RATCHET_SPAN:
+			case SelectRatchetSpan:
 				m.DecreaseSpan()
-			case SELECT_ACCENT_DIFF:
+			case SelectAccentDiff:
 				m.DecreaseAccent()
-			case SELECT_ACCENT_TARGET:
+			case SelectAccentTarget:
 				m.DecreaseAccentTarget()
-			case SELECT_ACCENT_START:
+			case SelectAccentStart:
 				m.DecreaseAccentStart()
-			case SELECT_BEATS:
+			case SelectBeats:
 				m.DecreaseBeats()
-			case SELECT_CYCLES:
+			case SelectCycles:
 				m.DecreaseCycles()
-			case SELECT_START_BEATS:
+			case SelectStartBeats:
 				m.DecreaseStartBeats()
-			case SELECT_START_CYCLES:
+			case SelectStartCycles:
 				m.DecreaseStartCycles()
-			case SELECT_PART:
+			case SelectPart:
 				m.DecreasePartSelector()
-			case SELECT_CHANGE_PART:
+			case SelectChangePart:
 				m.DecreasePartSelector()
 			default:
 				note, exists := m.CurrentNote()
@@ -1512,13 +1512,13 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				}
 			}
 		case mappings.ToggleGateMode:
-			m.SetPatternMode(PATTERN_GATE)
+			m.SetPatternMode(PatternGate)
 		case mappings.ToggleWaitMode:
-			m.SetPatternMode(PATTERN_WAIT)
+			m.SetPatternMode(PatternWait)
 		case mappings.ToggleAccentMode:
-			m.SetPatternMode(PATTERN_ACCENT)
+			m.SetPatternMode(PatternAccent)
 		case mappings.ToggleRatchetMode:
-			m.SetPatternMode(PATTERN_RATCHET)
+			m.SetPatternMode(PatternRatchet)
 		case mappings.ToggleChordMode:
 			if m.definition.templateSequencerType == grid.SEQTYPE_POLYPHONY {
 				m.definition.templateSequencerType = grid.SEQTYPE_TRIGGER
@@ -1533,7 +1533,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 		case mappings.Save:
 			if m.filename == "" {
-				m.selectionIndicator = SELECT_FILE_NAME
+				m.selectionIndicator = SelectFileName
 			} else {
 				m.Save()
 			}
@@ -1548,7 +1548,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.PushUndo(undoStack)
 			}
 		case mappings.New:
-			m.selectionIndicator = SELECT_CONFIRM_NEW
+			m.selectionIndicator = SelectConfirmNew
 		case mappings.ToggleVisualMode:
 			m.visualAnchorCursor = m.cursorPos
 			m.visualMode = !m.visualMode
@@ -1561,18 +1561,18 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 					Channel: lastline.Channel,
 					Note:    lastline.Note + 1,
 				})
-				if m.playing != PLAY_STOPPED {
-					m.playState = append(m.playState, InitLineState(PLAY_STATE_PLAY, uint8(len(m.definition.lines)-1), 0))
+				if m.playing != PlayStopped {
+					m.playState = append(m.playState, InitLineState(PlayStatePlay, uint8(len(m.definition.lines)-1), 0))
 				}
 			}
 		case mappings.NewSectionAfter:
-			m.SetSelectionIndicator(SELECT_PART)
+			m.SetSelectionIndicator(SelectPart)
 			m.sectionSideIndicator = true
 		case mappings.NewSectionBefore:
-			m.SetSelectionIndicator(SELECT_PART)
+			m.SetSelectionIndicator(SelectPart)
 			m.sectionSideIndicator = false
 		case mappings.ChangePart:
-			m.SetSelectionIndicator(SELECT_CHANGE_PART)
+			m.SetSelectionIndicator(SelectChangePart)
 		case mappings.NextTheme:
 			m.NextTheme()
 		case mappings.PrevTheme:
@@ -1606,18 +1606,18 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.hasUIFocus = false
 	case overlaykey.UpdatedOverlayKey:
 		if !msg.HasFocus {
-			m.focus = FOCUS_GRID
-			m.selectionIndicator = SELECT_NOTHING
+			m.focus = FocusGrid
+			m.selectionIndicator = SelectNothing
 		}
 	case uiStartMsg:
-		if m.playing == PLAY_STOPPED {
-			m.playing = PLAY_RECEIVER
+		if m.playing == PlayStopped {
+			m.playing = PlayReceiver
 		} else {
 			m.SetCurrentError(errors.New("cannot start when already started"))
 		}
 		m.Start()
 	case uiStopMsg:
-		m.playing = PLAY_STOPPED
+		m.playing = PlayStopped
 		m.Stop()
 	case uiConnectedMsg:
 		m.connected = true
@@ -1626,11 +1626,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	case beatMsg:
 		m.beatTime = time.Now()
 		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
-		if m.playing != PLAY_STOPPED {
+		if m.playing != PlayStopped {
 			m.advanceCurrentBeat(playingOverlay)
 			m.advanceKeyCycle()
 		}
-		if m.playing != PLAY_STOPPED {
+		if m.playing != PlayStopped {
 			playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
 			gridKeys := make([]grid.GridKey, 0, len(m.playState))
 			m.CurrentBeatGridKeys(&gridKeys)
@@ -1642,10 +1642,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		}
 	case arrangement.GiveBackFocus:
-		m.selectionIndicator = SELECT_NOTHING
-		m.focus = FOCUS_GRID
+		m.selectionIndicator = SelectNothing
+		m.focus = FocusGrid
 	case arrangement.RenamePart:
-		m.selectionIndicator = SELECT_RENAME_PART
+		m.selectionIndicator = SelectRenamePart
 	case arrangement.ArrUndo:
 		m.PushArrUndo(msg)
 	}
@@ -1680,18 +1680,18 @@ func (m *model) CursorLeft() {
 }
 
 func (m *model) SetSelectionIndicator(indicator Selection) {
-	m.patternMode = PATTERN_FILL
+	m.patternMode = PatternFill
 	m.selectionIndicator = indicator
 }
 
 func (m *model) SetPatternMode(mode PatternMode) {
 	m.patternMode = mode
-	m.selectionIndicator = SELECT_NOTHING
+	m.selectionIndicator = SelectNothing
 }
 
 func (m *model) Escape() {
-	m.patternMode = PATTERN_FILL
-	m.selectionIndicator = SELECT_NOTHING
+	m.patternMode = PatternFill
+	m.selectionIndicator = SelectNothing
 }
 
 func (m *model) NewSequence() {
@@ -1745,17 +1745,17 @@ func (m *model) Start() {
 		err := m.midiConnection.ConnectAndOpen()
 		if err != nil {
 			m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot open midi connection")))
-			m.playing = PLAY_STOPPED
+			m.playing = PlayStopped
 			return
 		}
 	}
 
 	switch m.loopMode {
-	case LOOP_SONG:
+	case LoopSong:
 		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement}
 		m.arrangement.Cursor.MoveNext()
 		m.arrangement.Cursor.ResetIterations()
-	case LOOP_PART:
+	case LoopPart:
 		m.arrangement.SetCurrentNodeInfinite()
 	}
 
@@ -1772,13 +1772,13 @@ func (m *model) Start() {
 	if err != nil {
 		m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot play first beat")))
 	}
-	if m.playing == PLAY_STANDARD {
+	if m.playing == PlayStandard {
 		m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 	}
 }
 
 func (m *model) Stop() {
-	if m.loopMode == LOOP_PART {
+	if m.loopMode == LoopPart {
 		m.arrangement.ResetDepth()
 	}
 	m.arrangement.Root.ResetCycles()
@@ -1801,22 +1801,22 @@ func (m *model) Stop() {
 
 func (m *model) StartStop() {
 	m.playEditing = false
-	if m.playing == PLAY_STOPPED {
-		m.playing = PLAY_STANDARD
-		if m.midiLoopMode == MLM_RECEIVER {
+	if m.playing == PlayStopped {
+		m.playing = PlayStandard
+		if m.midiLoopMode == MlmReceiver {
 			// NOTE: When instance is receiver, allow it to play alone and lock out transmitter messages
 			m.lockReceiverChannel <- true
 		}
 		m.Start()
 	} else {
-		if m.playing == PLAY_STANDARD {
+		if m.playing == PlayStandard {
 			m.programChannel <- stopMsg{}
-			if m.midiLoopMode == MLM_RECEIVER {
+			if m.midiLoopMode == MlmReceiver {
 				// NOTE: Allow transmitter messages
 				m.unlockReceiverChannel <- true
 			}
 		}
-		m.playing = PLAY_STOPPED
+		m.playing = PlayStopped
 		m.Stop()
 	}
 }
@@ -1854,7 +1854,7 @@ func AdvanceSelectionState(states []Selection, currentSelection Selection) Selec
 	index := slices.Index(states, currentSelection)
 	var resultSelection Selection
 	if index < 0 {
-		indexNothing := slices.Index(states, SELECT_NOTHING)
+		indexNothing := slices.Index(states, SelectNothing)
 		resultSelection = states[uint8(indexNothing+1)%uint8(len(states))]
 	} else {
 		resultSelection = states[uint8(index+1)%uint8(len(states))]
@@ -1904,7 +1904,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.RatchetModify(1)
 	case mappings.RatchetDecrease:
 		m.RatchetModify(-1)
-		m.EnsureRatchetCursorVisisble()
+		m.EnsureRatchetCursorVisible()
 	case mappings.ActionAddLineReset:
 		m.AddAction(grid.ACTION_LINE_RESET)
 	case mappings.ActionAddLineReverse:
@@ -2043,15 +2043,15 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	if mapping.LastValue >= "1" && mapping.LastValue <= "9" {
 		beatInterval, _ := strconv.ParseInt(mapping.LastValue, 0, 8)
 		switch m.patternMode {
-		case PATTERN_FILL:
+		case PatternFill:
 			m.fill(uint8(beatInterval))
-		case PATTERN_ACCENT:
+		case PatternAccent:
 			m.incrementAccent(uint8(beatInterval), -1)
-		case PATTERN_GATE:
+		case PatternGate:
 			m.incrementGate(uint8(beatInterval), -1)
-		case PATTERN_RATCHET:
+		case PatternRatchet:
 			m.incrementRatchet(uint8(beatInterval), -1)
-		case PATTERN_WAIT:
+		case PatternWait:
 			m.incrementWait(uint8(beatInterval), -1)
 		}
 	}
@@ -2059,15 +2059,15 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	if IsShiftSymbol(mapping.LastValue) {
 		beatInterval := convertSymbolToInt(mapping.LastValue)
 		switch m.patternMode {
-		case PATTERN_FILL:
+		case PatternFill:
 			m.fill(uint8(beatInterval))
-		case PATTERN_ACCENT:
+		case PatternAccent:
 			m.incrementAccent(uint8(beatInterval), 1)
-		case PATTERN_GATE:
+		case PatternGate:
 			m.incrementGate(uint8(beatInterval), 1)
-		case PATTERN_RATCHET:
+		case PatternRatchet:
 			m.incrementRatchet(uint8(beatInterval), 1)
-		case PATTERN_WAIT:
+		case PatternWait:
 			m.incrementWait(uint8(beatInterval), 1)
 		}
 	}
@@ -2200,7 +2200,7 @@ func (m model) UpdateDefinition(mapping mappings.Mapping) model {
 
 	deepCopy := overlays.DeepCopy(m.currentOverlay)
 	m.EnsureOverlay()
-	if m.playing != PLAY_STOPPED && !m.playEditing {
+	if m.playing != PlayStopped && !m.playEditing {
 		m.playEditing = true
 		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
 		m.currentOverlay = playingOverlay
@@ -2246,17 +2246,17 @@ func (m *model) Save() {
 
 func (m model) CurrentPart() arrangement.Part {
 	section := m.CurrentSongSection()
-	partId := section.Part
-	return (*m.definition.parts)[partId]
+	partID := section.Part
+	return (*m.definition.parts)[partID]
 }
 
 func (m model) RenamePart(value string) {
 	section := m.CurrentSongSection()
-	partId := section.Part
-	(*m.definition.parts)[partId].Name = value
+	partID := section.Part
+	(*m.definition.parts)[partID].Name = value
 }
 
-func (m model) CurrentPartId() int {
+func (m model) CurrentPartID() int {
 	section := m.CurrentSongSection()
 	return section.Part
 }
@@ -2295,7 +2295,7 @@ func (m *model) ClearOverlayLine() {
 }
 
 func (m *model) ClearOverlay() {
-	(*m.definition.parts)[m.CurrentPartId()].Overlays.Remove(m.currentOverlay.Key)
+	(*m.definition.parts)[m.CurrentPartID()].Overlays.Remove(m.currentOverlay.Key)
 }
 
 type MoveFunc func()
@@ -2474,31 +2474,31 @@ func (m *model) MoveChordDown() {
 
 func Mute(playState []linestate, line uint8) []linestate {
 	switch playState[line].groupPlayState {
-	case PLAY_STATE_PLAY:
-		playState[line].groupPlayState = PLAY_STATE_MUTE
-	case PLAY_STATE_MUTE:
-		playState[line].groupPlayState = PLAY_STATE_PLAY
-	case PLAY_STATE_SOLO:
-		playState[line].groupPlayState = PLAY_STATE_MUTE
+	case PlayStatePlay:
+		playState[line].groupPlayState = PlayStateMute
+	case PlayStateMute:
+		playState[line].groupPlayState = PlayStatePlay
+	case PlayStateSolo:
+		playState[line].groupPlayState = PlayStateMute
 	}
 	return playState
 }
 
 func Solo(playState []linestate, line uint8) []linestate {
 	switch playState[line].groupPlayState {
-	case PLAY_STATE_PLAY:
-		playState[line].groupPlayState = PLAY_STATE_SOLO
-	case PLAY_STATE_MUTE:
-		playState[line].groupPlayState = PLAY_STATE_SOLO
-	case PLAY_STATE_SOLO:
-		playState[line].groupPlayState = PLAY_STATE_PLAY
+	case PlayStatePlay:
+		playState[line].groupPlayState = PlayStateSolo
+	case PlayStateMute:
+		playState[line].groupPlayState = PlayStateSolo
+	case PlayStateSolo:
+		playState[line].groupPlayState = PlayStatePlay
 	}
 	return playState
 }
 
 func (m model) HasSolo() bool {
 	for _, state := range m.playState {
-		if state.groupPlayState == PLAY_STATE_SOLO {
+		if state.groupPlayState == PlayStateSolo {
 			return true
 		}
 	}
@@ -2658,7 +2658,7 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 }
 
 func (m *model) advanceKeyCycle() {
-	if m.playState[m.definition.keyline].currentBeat == 0 && m.loopMode != LOOP_OVERLAY {
+	if m.playState[m.definition.keyline].currentBeat == 0 && m.loopMode != LoopOverlay {
 		m.IncrementPlayCycles()
 		songSection := m.CurrentSongSection()
 
@@ -2722,7 +2722,7 @@ func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 
 func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.OverlayPattern {
 	pattern := make(overlays.OverlayPattern)
-	if m.playing != PLAY_STOPPED && !m.playEditing {
+	if m.playing != PlayStopped && !m.playEditing {
 		m.CurrentPart().Overlays.CombineOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles())
 	} else {
 		overlay.CombineOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle())
@@ -2932,9 +2932,9 @@ func (m model) CyclesEditView() string {
 	cyclesInput := themes.NumberStyle.Render(strconv.Itoa(int(cycles)))
 	startCyclesInput := themes.NumberStyle.Render(strconv.Itoa(int(startCycles)))
 	switch m.selectionIndicator {
-	case SELECT_CYCLES:
+	case SelectCycles:
 		cyclesInput = themes.SelectedStyle.Render(strconv.Itoa(int(cycles)))
-	case SELECT_START_CYCLES:
+	case SelectStartCycles:
 		startCyclesInput = themes.SelectedStyle.Render(strconv.Itoa(int(startCycles)))
 	}
 	buf.WriteString(themes.AltArtStyle.Render(" ⟳ Amount "))
@@ -2953,9 +2953,9 @@ func (m model) BeatsEditView() string {
 	beatsInput := themes.NumberStyle.Render(strconv.Itoa(int(beats)))
 	startBeatsInput := themes.NumberStyle.Render(strconv.Itoa(int(startBeats)))
 	switch m.selectionIndicator {
-	case SELECT_BEATS:
+	case SelectBeats:
 		beatsInput = themes.SelectedStyle.Render(strconv.Itoa(int(beats)))
-	case SELECT_START_BEATS:
+	case SelectStartBeats:
 		startBeatsInput = themes.SelectedStyle.Render(strconv.Itoa(int(startBeats)))
 	}
 	buf.WriteString(themes.AltArtStyle.Render(" Beats "))
@@ -2971,9 +2971,9 @@ func (m model) TempoEditView() string {
 	tempo = themes.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
 	division = themes.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
 	switch m.selectionIndicator {
-	case SELECT_TEMPO:
+	case SelectTempo:
 		tempo = themes.SelectedStyle.Render(strconv.Itoa(m.definition.tempo))
-	case SELECT_TEMPO_SUBDIVISION:
+	case SelectTempoSubdivision:
 		division = themes.SelectedStyle.Render(strconv.Itoa(m.definition.subdivisions))
 	}
 	var buf strings.Builder
@@ -3003,12 +3003,12 @@ func (m model) WriteView() string {
 }
 
 func (m model) IsAccentSelector() bool {
-	states := []Selection{SELECT_ACCENT_DIFF, SELECT_ACCENT_TARGET, SELECT_ACCENT_START}
+	states := []Selection{SelectAccentDiff, SelectAccentTarget, SelectAccentStart}
 	return slices.Contains(states, m.selectionIndicator)
 }
 
 func (m model) IsRatchetSelector() bool {
-	states := []Selection{SELECT_RATCHETS, SELECT_RATCHET_SPAN}
+	states := []Selection{SelectRatchets, SelectRatchetSpan}
 	return slices.Contains(states, m.selectionIndicator)
 }
 
@@ -3016,10 +3016,10 @@ func (m model) View() string {
 	var buf strings.Builder
 	var sideView string
 
-	if m.patternMode == PATTERN_ACCENT || m.IsAccentSelector() {
+	if m.patternMode == PatternAccent || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
-	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && m.CurrentPart().Overlays.IsFresh() && len(*m.definition.parts) == 1 && m.CurrentPartId() == 0) ||
-		slices.Contains([]Selection{SELECT_SETUP_VALUE, SELECT_SETUP_MESSAGE_TYPE, SELECT_SETUP_CHANNEL}, m.selectionIndicator) {
+	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && m.CurrentPart().Overlays.IsFresh() && len(*m.definition.parts) == 1 && m.CurrentPartID() == 0) ||
+		slices.Contains([]Selection{SelectSetupValue, SelectSetupMessageType, SelectSetupChannel}, m.selectionIndicator) {
 		// NOTE: We want to show the setupView on the very initial screen, before any sequencing has begun OR a setup value is selected
 		sideView = m.SetupView()
 	} else {
@@ -3036,7 +3036,7 @@ func (m model) View() string {
 	leftSideView := "  "
 	seqView := m.TriggerSeqView()
 	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "", seqView, "  ", sideView))
-	if m.currentError != nil && m.selectionIndicator == SELECT_ERROR {
+	if m.currentError != nil && m.selectionIndicator == SelectError {
 		buf.WriteString("\n")
 		style := lipgloss.NewStyle().Width(50)
 		style = style.Border(lipgloss.NormalBorder())
@@ -3071,20 +3071,20 @@ func (m model) AccentKeyView() string {
 
 	var accentTarget string
 	switch m.definition.accents.Target {
-	case ACCENT_TARGET_NOTE:
+	case AccentTargetNote:
 		accentTarget = "N"
-	case ACCENT_TARGET_VELOCITY:
+	case AccentTargetVelocity:
 		accentTarget = "V"
 	}
 
-	if m.selectionIndicator == SELECT_ACCENT_DIFF {
+	if m.selectionIndicator == SelectAccentDiff {
 		accentDiffString = themes.SelectedStyle.Render(fmt.Sprintf("%2d", accentDiff))
 	} else {
 		accentDiffString = themes.NumberStyle.Render(fmt.Sprintf("%2d", accentDiff))
 	}
 
 	var accentTargetString string
-	if m.selectionIndicator == SELECT_ACCENT_TARGET {
+	if m.selectionIndicator == SelectAccentTarget {
 		accentTargetString = themes.SelectedStyle.Render(fmt.Sprintf(" %s", accentTarget))
 	} else {
 		accentTargetString = themes.NumberStyle.Render(fmt.Sprintf(" %s", accentTarget))
@@ -3096,7 +3096,7 @@ func (m model) AccentKeyView() string {
 	buf.WriteString("\n")
 
 	var accentStartString string
-	if m.selectionIndicator == SELECT_ACCENT_START {
+	if m.selectionIndicator == SelectAccentStart {
 		accentStartString = themes.SelectedStyle.Render(fmt.Sprintf("%2d", accentStart))
 	} else {
 		accentStartString = themes.NumberStyle.Render(fmt.Sprintf("%2d", accentStart))
@@ -3120,7 +3120,7 @@ func (m model) SetupView() string {
 	for i, line := range m.definition.lines {
 
 		buf.WriteString("CH ")
-		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_CHANNEL {
+		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SelectSetupChannel {
 			buf.WriteString(themes.SelectedStyle.Render(fmt.Sprintf("%2d", line.Channel)))
 		} else {
 			buf.WriteString(themes.NumberStyle.Render(fmt.Sprintf("%2d", line.Channel)))
@@ -3136,7 +3136,7 @@ func (m model) SetupView() string {
 			messageType = "Program Change"
 		}
 
-		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_MESSAGE_TYPE {
+		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SelectSetupMessageType {
 			messageType = fmt.Sprintf(" %s ", themes.SelectedStyle.Render(messageType))
 		} else {
 			messageType = fmt.Sprintf(" %s ", messageType)
@@ -3144,7 +3144,7 @@ func (m model) SetupView() string {
 
 		buf.WriteString(messageType)
 
-		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SELECT_SETUP_VALUE {
+		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SelectSetupValue {
 			buf.WriteString(themes.SelectedStyle.Render(strconv.Itoa(int(line.Note))))
 		} else {
 			buf.WriteString(themes.NumberStyle.Render(strconv.Itoa(int(line.Note))))
@@ -3214,11 +3214,11 @@ func (m model) OverlaysView() string {
 	for currentOverlay := m.CurrentPart().Overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
 		var playing = ""
-		if m.playing != PLAY_STOPPED && playingOverlayKeys[0] == currentOverlay.Key {
+		if m.playing != PlayStopped && playingOverlayKeys[0] == currentOverlay.Key {
 			playing = themes.OverlayCurrentlyPlayingSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""
-		} else if m.playing != PLAY_STOPPED && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
+		} else if m.playing != PlayStopped && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
 			playing = themes.ActiveSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""
@@ -3237,7 +3237,7 @@ func (m model) OverlaysView() string {
 		overlayLine := fmt.Sprintf("%s%2s%2s", overlaykey.View(currentOverlay.Key), stackModifier, editing)
 
 		buf.WriteString(playingSpacer)
-		if m.playing != PLAY_STOPPED && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
+		if m.playing != PlayStopped && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
 			buf.WriteString(playingStyle.Render(overlayLine))
 		} else {
 			buf.WriteString(notPlayingStyle.Render(overlayLine))
@@ -3257,41 +3257,41 @@ func (m model) TriggerSeqView() string {
 	currentNote, exists := visualCombinedPattern[m.cursorPos]
 
 	buf.WriteString(m.WriteView())
-	if m.patternMode == PATTERN_ACCENT {
+	if m.patternMode == PatternAccent {
 		mode = " Accent "
 		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
-	} else if m.patternMode == PATTERN_GATE {
+	} else if m.patternMode == PatternGate {
 		mode = " Gate "
 		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
-	} else if m.patternMode == PATTERN_WAIT {
+	} else if m.patternMode == PatternWait {
 		mode = " Wait "
 		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
-	} else if m.patternMode == PATTERN_RATCHET {
+	} else if m.patternMode == PatternRatchet {
 		mode = " Ratchet "
 		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
-	} else if m.selectionIndicator == SELECT_RATCHETS || m.selectionIndicator == SELECT_RATCHET_SPAN {
+	} else if m.selectionIndicator == SelectRatchets || m.selectionIndicator == SelectRatchetSpan {
 		buf.WriteString(m.RatchetEditView())
-	} else if m.selectionIndicator == SELECT_TEMPO || m.selectionIndicator == SELECT_TEMPO_SUBDIVISION {
+	} else if m.selectionIndicator == SelectTempo || m.selectionIndicator == SelectTempoSubdivision {
 		buf.WriteString(m.TempoEditView())
-	} else if slices.Contains([]Selection{SELECT_BEATS, SELECT_START_BEATS}, m.selectionIndicator) {
+	} else if slices.Contains([]Selection{SelectBeats, SelectStartBeats}, m.selectionIndicator) {
 		buf.WriteString(m.BeatsEditView())
-	} else if slices.Contains([]Selection{SELECT_CYCLES, SELECT_START_CYCLES}, m.selectionIndicator) {
+	} else if slices.Contains([]Selection{SelectCycles, SelectStartCycles}, m.selectionIndicator) {
 		buf.WriteString(m.CyclesEditView())
-	} else if m.selectionIndicator == SELECT_PART {
+	} else if m.selectionIndicator == SelectPart {
 		buf.WriteString(m.ChoosePartView())
-	} else if m.selectionIndicator == SELECT_CHANGE_PART {
+	} else if m.selectionIndicator == SelectChangePart {
 		buf.WriteString(m.ChoosePartView())
-	} else if m.selectionIndicator == SELECT_RENAME_PART {
+	} else if m.selectionIndicator == SelectRenamePart {
 		buf.WriteString(m.RenamePartView())
-	} else if m.selectionIndicator == SELECT_FILE_NAME {
+	} else if m.selectionIndicator == SelectFileName {
 		buf.WriteString(m.FileNameView())
-	} else if m.selectionIndicator == SELECT_CONFIRM_NEW {
+	} else if m.selectionIndicator == SelectConfirmNew {
 		buf.WriteString(m.ConfirmNewSequenceView())
-	} else if m.selectionIndicator == SELECT_CONFIRM_QUIT {
+	} else if m.selectionIndicator == SelectConfirmQuit {
 		buf.WriteString(m.ConfirmQuitView())
 	} else if exists && currentNote.Note.Action == grid.ACTION_SPECIFIC_VALUE {
 		buf.WriteString(m.SpecificValueEditView(currentNote.Note))
-	} else if m.playing != PLAY_STOPPED {
+	} else if m.playing != PlayStopped {
 		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
 	} else if len(*m.definition.parts) > 1 {
 		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
@@ -3372,7 +3372,7 @@ func (m model) RatchetEditView() string {
 	for i := range uint8(8) {
 		var backgroundColor lipgloss.Color
 		if i <= currentNote.Ratchets.Length {
-			if m.ratchetCursor == i && m.selectionIndicator == SELECT_RATCHETS {
+			if m.ratchetCursor == i && m.selectionIndicator == SelectRatchets {
 				backgroundColor = themes.SelectedAttributeColor
 			}
 			if currentNote.Ratchets.HitAt(i) {
@@ -3387,7 +3387,7 @@ func (m model) RatchetEditView() string {
 		}
 	}
 	buf.WriteString(fmt.Sprintf("%*s", 32, ratchetsBuf.String()))
-	if m.selectionIndicator == SELECT_RATCHET_SPAN {
+	if m.selectionIndicator == SelectRatchetSpan {
 		buf.WriteString(fmt.Sprintf(" Span %s ", themes.SelectedStyle.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
 	} else {
 		buf.WriteString(fmt.Sprintf(" Span %s ", themes.NumberStyle.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
@@ -3403,7 +3403,7 @@ func (m model) ViewOverlay() string {
 
 func (m model) CurrentOverlayView() string {
 	var matchedKey overlayKey
-	if m.playing != PLAY_STOPPED {
+	if m.playing != PlayStopped {
 		matchedKey = m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles()).Key
 	} else {
 		matchedKey = overlaykey.ROOT
@@ -3438,10 +3438,10 @@ func (m model) LineIndicator(lineNumber uint8) string {
 	if lineNumber == m.cursorPos.Line {
 		indicator = themes.LineCursorStyle.Render("┤")
 	}
-	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PLAY_STATE_MUTE {
+	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PlayStateMute {
 		indicator = "M"
 	}
-	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PLAY_STATE_SOLO {
+	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PlayStateSolo {
 		indicator = "S"
 	}
 
@@ -3495,7 +3495,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
 
 		var backgroundSeqColor lipgloss.Color
-		if m.playing != PLAY_STOPPED && m.playState[lineNumber].currentBeat == i {
+		if m.playing != PlayStopped && m.playState[lineNumber].currentBeat == i {
 			backgroundSeqColor = themes.SeqCursorColor
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
 			backgroundSeqColor = themes.SeqVisualColor

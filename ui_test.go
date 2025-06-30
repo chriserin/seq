@@ -56,20 +56,20 @@ func TestUpdateArrangementFocus(t *testing.T) {
 			definition:     def,
 			programChannel: make(chan midiEventLoopMsg),
 			playState:      InitLineStates(1, []linestate{}, 0),
-			focus:          FOCUS_GRID, // Start with grid focus
+			focus:          FocusGrid, // Start with grid focus
 		}
 
 		initialNodeCount := m.arrangement.Root.CountEndNodes()
 		updatedModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlF})
 		modelPtr := updatedModel.(model)
 
-		assert.Equal(t, FOCUS_ARRANGEMENT_EDITOR, modelPtr.focus, "Model should have arrangement editor focus")
+		assert.Equal(t, FocusArrangementEditor, modelPtr.focus, "Model should have arrangement editor focus")
 		assert.True(t, modelPtr.arrangement.Focus, "Arrangement model should have focus flag set to true")
 
 		updatedModel, _ = updatedModel.Update(tea.KeyMsg{Type: tea.KeyCtrlCloseBracket})
 		modelPtr = updatedModel.(model)
 
-		assert.Equal(t, FOCUS_ARRANGEMENT_EDITOR, modelPtr.focus, "Model should have arrangement editor focus")
+		assert.Equal(t, FocusArrangementEditor, modelPtr.focus, "Model should have arrangement editor focus")
 		assert.True(t, modelPtr.arrangement.Focus, "Arrangement model should have focus flag set to true")
 
 		updatedModelAfterPart, _ := updatedModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -78,31 +78,31 @@ func TestUpdateArrangementFocus(t *testing.T) {
 		finalNodeCount := finalModel.arrangement.Root.CountEndNodes()
 		assert.Greater(t, finalNodeCount, initialNodeCount, "Arrangement should have more end nodes after part creation")
 
-		assert.Equal(t, FOCUS_ARRANGEMENT_EDITOR, finalModel.focus, "Model should still have arrangement editor focus")
+		assert.Equal(t, FocusArrangementEditor, finalModel.focus, "Model should still have arrangement editor focus")
 		assert.True(t, finalModel.arrangement.Focus, "Arrangement model should still have focus flag set to true")
-		assert.Equal(t, SELECT_ARRANGEMENT_EDITOR, finalModel.selectionIndicator, "Selection indicator should be reset to nothing")
+		assert.Equal(t, SelectArrangementEditor, finalModel.selectionIndicator, "Selection indicator should be reset to nothing")
 	})
 }
 
 func TestSolo(t *testing.T) {
 	t.Run("First Solo", func(t *testing.T) {
 		playStates := []linestate{
-			{groupPlayState: PLAY_STATE_PLAY},
-			{groupPlayState: PLAY_STATE_PLAY},
+			{groupPlayState: PlayStatePlay},
+			{groupPlayState: PlayStatePlay},
 		}
 		newPlayStates := Solo(playStates, 0)
-		assert.Equal(t, newPlayStates[0].groupPlayState, PLAY_STATE_SOLO)
-		assert.Equal(t, newPlayStates[1].groupPlayState, PLAY_STATE_PLAY)
+		assert.Equal(t, newPlayStates[0].groupPlayState, PlayStateSolo)
+		assert.Equal(t, newPlayStates[1].groupPlayState, PlayStatePlay)
 	})
 
 	t.Run("First UnSolo", func(t *testing.T) {
 		playStates := []linestate{
-			{groupPlayState: PLAY_STATE_SOLO},
-			{groupPlayState: PLAY_STATE_PLAY},
+			{groupPlayState: PlayStateSolo},
+			{groupPlayState: PlayStatePlay},
 		}
 		newPlayStates := Solo(playStates, 0)
-		assert.Equal(t, newPlayStates[0].groupPlayState, PLAY_STATE_PLAY)
-		assert.Equal(t, newPlayStates[1].groupPlayState, PLAY_STATE_PLAY)
+		assert.Equal(t, newPlayStates[0].groupPlayState, PlayStatePlay)
+		assert.Equal(t, newPlayStates[1].groupPlayState, PlayStatePlay)
 	})
 }
 
@@ -125,9 +125,9 @@ func TestAdvanceKeyCycles(t *testing.T) {
 		go func() {
 			<-m.programChannel
 		}()
-		m.playing = PLAY_STANDARD
+		m.playing = PlayStandard
 		m.arrangement.Cursor.ResetIterations()
-		for m.playing != PLAY_STOPPED {
+		for m.playing != PlayStopped {
 			m.advanceKeyCycle()
 			counter++
 		}
@@ -154,9 +154,9 @@ func TestAdvanceKeyCycles(t *testing.T) {
 		go func() {
 			<-m.programChannel
 		}()
-		m.playing = PLAY_STANDARD
+		m.playing = PlayStandard
 		m.arrangement.Cursor.ResetIterations()
-		for m.playing != PLAY_STOPPED {
+		for m.playing != PlayStopped {
 			m.advanceKeyCycle()
 			counter++
 		}
@@ -184,9 +184,9 @@ func TestAdvanceKeyCycles(t *testing.T) {
 		go func() {
 			<-m.programChannel
 		}()
-		m.playing = PLAY_STANDARD
+		m.playing = PlayStandard
 		m.arrangement.Cursor.ResetIterations()
-		for m.playing != PLAY_STOPPED {
+		for m.playing != PlayStopped {
 			m.advanceKeyCycle()
 			counter++
 		}
@@ -240,9 +240,9 @@ func TestAdvanceKeyCycles(t *testing.T) {
 		go func() {
 			<-m.programChannel
 		}()
-		m.playing = PLAY_STANDARD
+		m.playing = PlayStandard
 		m.arrangement.Cursor.ResetIterations()
-		for m.playing != PLAY_STOPPED {
+		for m.playing != PlayStopped {
 			m.advanceKeyCycle()
 			counter++
 		}
@@ -294,9 +294,9 @@ func TestAdvanceKeyCycles(t *testing.T) {
 		go func() {
 			<-m.programChannel
 		}()
-		m.playing = PLAY_STANDARD
+		m.playing = PlayStandard
 		m.arrangement.Cursor.ResetIterations()
-		for m.playing != PLAY_STOPPED {
+		for m.playing != PlayStopped {
 			m.advanceKeyCycle()
 			counter++
 			if counter > 3 {

@@ -101,9 +101,9 @@ func writeAccents(w io.Writer, accents patternAccents) error {
 	// Convert accentTarget to string for better readability
 	targetStr := "UNKNOWN"
 	switch accents.Target {
-	case ACCENT_TARGET_NOTE:
+	case AccentTargetNote:
 		targetStr = "NOTE"
-	case ACCENT_TARGET_VELOCITY:
+	case AccentTargetVelocity:
 		targetStr = "VELOCITY"
 	}
 	fmt.Fprintf(w, "Target: %s\n", targetStr)

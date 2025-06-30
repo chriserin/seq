@@ -30,7 +30,7 @@ func TestWriteAdditionalProperties(t *testing.T) {
 		accents := patternAccents{
 			Diff:   5,
 			Start:  10,
-			Target: ACCENT_TARGET_VELOCITY,
+			Target: AccentTargetVelocity,
 			Data: []config.Accent{
 				{Value: 100},
 				{Value: 80},

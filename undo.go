@@ -32,7 +32,7 @@ type UndoBeats struct {
 
 func (ub UndoBeats) ApplyUndo(m *model) Location {
 	m.arrangement.Cursor = ub.ArrCursor
-	partId := m.CurrentPartId()
+	partId := m.CurrentPartID()
 	(*m.definition.parts)[partId].Beats = ub.beats
 	return Location{ApplyLocation: false}
 }
@@ -167,7 +167,7 @@ type UndoNewOverlay struct {
 
 func (uno UndoNewOverlay) ApplyUndo(m *model) Location {
 	m.arrangement.Cursor = uno.ArrCursor
-	currentPartId := m.CurrentPartId()
+	currentPartId := m.CurrentPartID()
 	newOverlay := m.CurrentPart().Overlays.Remove(uno.overlayKey)
 	(*m.definition.parts)[currentPartId].Overlays = newOverlay
 	return Location{uno.overlayKey, uno.cursorPosition, true}

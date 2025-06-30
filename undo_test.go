@@ -371,7 +371,7 @@ func TestUndoNewOverlay(t *testing.T) {
 			Below: previousTopOverlay,
 		}
 
-		(*m.definition.parts)[m.CurrentPartId()].Overlays = newTopOverlay
+		(*m.definition.parts)[m.CurrentPartID()].Overlays = newTopOverlay
 		// Create undoable
 		undoable := UndoNewOverlay{
 			overlayKey:     ok,

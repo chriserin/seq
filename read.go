@@ -38,7 +38,7 @@ func Read(filename string) (Definition, error) {
 		accents: patternAccents{
 			Diff:   10,
 			Start:  64,
-			Target: ACCENT_TARGET_VELOCITY,
+			Target: AccentTargetVelocity,
 			Data:   []config.Accent{},
 		},
 	}
@@ -258,9 +258,9 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 			case "Target":
 				switch value {
 				case "NOTE":
-					definition.accents.Target = ACCENT_TARGET_NOTE
+					definition.accents.Target = AccentTargetNote
 				case "VELOCITY":
-					definition.accents.Target = ACCENT_TARGET_VELOCITY
+					definition.accents.Target = AccentTargetVelocity
 				}
 			}
 
