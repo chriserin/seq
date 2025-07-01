@@ -197,5 +197,9 @@ func (l *LineDefinition) IncrementMessageType() {
 }
 
 func (l *LineDefinition) DecrementMessageType() {
-	l.MsgType = (l.MsgType - 1) % 3
+	if l.MsgType == 0 {
+		l.MsgType = 2
+	} else {
+		l.MsgType--
+	}
 }

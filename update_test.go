@@ -295,6 +295,78 @@ func TestSetupInputSwitchWithIncrease(t *testing.T) {
 	}
 }
 
+func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
+	tests := []struct {
+		name                string
+		commands            []mappings.Command
+		initialMessageType  grid.MessageType
+		expectedMessageType grid.MessageType
+		description         string
+	}{
+		{
+			name:                "Message Type Increase from Note to CC",
+			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
+			initialMessageType:  grid.MessageTypeNote,
+			expectedMessageType: grid.MessageTypeCc,
+			description:         "Two setup input switches should select message type and increase should increment it",
+		},
+		{
+			name:                "Message Type Increase from CC to Program Change",
+			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
+			initialMessageType:  grid.MessageTypeCc,
+			expectedMessageType: grid.MessageTypeProgramChange,
+			description:         "Two setup input switches should select message type and increase should increment it",
+		},
+		{
+			name:                "Message Type Increase from Program Change to Note (wraparound)",
+			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
+			initialMessageType:  grid.MessageTypeProgramChange,
+			expectedMessageType: grid.MessageTypeNote,
+			description:         "Two setup input switches should select message type and increase should wrap to Note",
+		},
+		{
+			name:                "Message Type Decrease from Note to Program Change (wraparound)",
+			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			initialMessageType:  grid.MessageTypeNote,
+			expectedMessageType: grid.MessageTypeProgramChange,
+			description:         "Two setup input switches should select message type and increase should increment it",
+		},
+		{
+			name:                "Message Type Decrease from CC to Note",
+			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			initialMessageType:  grid.MessageTypeCc,
+			expectedMessageType: grid.MessageTypeNote,
+			description:         "Two setup input switches should select message type and increase should increment it",
+		},
+		{
+			name:                "Message Type Decrease from Program Change to CC",
+			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			initialMessageType:  grid.MessageTypeProgramChange,
+			expectedMessageType: grid.MessageTypeCc,
+			description:         "Two setup input switches should select message type and increase should wrap to Note",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					m.definition.lines[m.cursorPos.Line].MsgType = tt.initialMessageType
+					return *m
+				},
+			)
+
+			assert.Equal(t, tt.initialMessageType, m.definition.lines[m.cursorPos.Line].MsgType, "Initial message type should match")
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+
+			m = processCommands(tt.commands, m)
+
+			assert.Equal(t, SelectSetupMessageType, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.cursorPos.Line].MsgType, tt.description+" - message type value")
+		})
+	}
+}
+
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
