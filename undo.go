@@ -23,7 +23,7 @@ type UndoStack struct {
 	id   int
 }
 
-var NIL_STACK = UndoStack{}
+var NilStack = UndoStack{}
 
 type UndoBeats struct {
 	beats     uint8
@@ -32,8 +32,8 @@ type UndoBeats struct {
 
 func (ub UndoBeats) ApplyUndo(m *model) Location {
 	m.arrangement.Cursor = ub.ArrCursor
-	partId := m.CurrentPartID()
-	(*m.definition.parts)[partId].Beats = ub.beats
+	partID := m.CurrentPartID()
+	(*m.definition.parts)[partID].Beats = ub.beats
 	return Location{ApplyLocation: false}
 }
 
@@ -167,9 +167,9 @@ type UndoNewOverlay struct {
 
 func (uno UndoNewOverlay) ApplyUndo(m *model) Location {
 	m.arrangement.Cursor = uno.ArrCursor
-	currentPartId := m.CurrentPartID()
+	currentPartID := m.CurrentPartID()
 	newOverlay := m.CurrentPart().Overlays.Remove(uno.overlayKey)
-	(*m.definition.parts)[currentPartId].Overlays = newOverlay
+	(*m.definition.parts)[currentPartID].Overlays = newOverlay
 	return Location{uno.overlayKey, uno.cursorPosition, true}
 }
 
