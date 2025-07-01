@@ -103,59 +103,6 @@ func TestUpdateCursorMovements(t *testing.T) {
 	}
 }
 
-func TestSubdivisionChanges(t *testing.T) {
-	tests := []struct {
-		name                 string
-		commands             []mappings.Command
-		initialSubdivisions  int
-		expectedSubdivisions int
-		description          string
-	}{
-		{
-			name:                 "Increase Subdivisions",
-			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Increase},
-			initialSubdivisions:  2,
-			expectedSubdivisions: 3,
-			description:          "Subdivisions should increase by 1",
-		},
-		{
-			name:                 "Increase Subdivisions At Boundary",
-			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Increase},
-			initialSubdivisions:  8,
-			expectedSubdivisions: 8,
-			description:          "Subdivisions should be at maximum",
-		},
-		{
-			name:                 "Decrease Subdivisions",
-			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Decrease},
-			initialSubdivisions:  3,
-			expectedSubdivisions: 2,
-			description:          "Subdivisions should decrease by 1",
-		},
-		{
-			name:                 "Decrease Subdivisions At Boundary",
-			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Decrease},
-			initialSubdivisions:  1,
-			expectedSubdivisions: 1,
-			description:          "Subdivisions should be at minimum",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
-				func(m *model) model {
-					m.definition.subdivisions = tt.initialSubdivisions
-					return *m
-				},
-			)
-			assert.Equal(t, tt.initialSubdivisions, m.definition.subdivisions, tt.description)
-			m = processCommands(tt.commands, m)
-			assert.Equal(t, tt.expectedSubdivisions, m.definition.subdivisions, tt.description)
-		})
-	}
-}
-
 func TestTempoChanges(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -233,6 +180,59 @@ func TestTempoChanges(t *testing.T) {
 			assert.Equal(t, tt.initialTempo, m.definition.tempo, tt.description)
 			m = processCommands(tt.commands, m)
 			assert.Equal(t, tt.expectedTempo, m.definition.tempo, tt.description)
+		})
+	}
+}
+
+func TestSubdivisionChanges(t *testing.T) {
+	tests := []struct {
+		name                 string
+		commands             []mappings.Command
+		initialSubdivisions  int
+		expectedSubdivisions int
+		description          string
+	}{
+		{
+			name:                 "Increase Subdivisions",
+			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Increase},
+			initialSubdivisions:  2,
+			expectedSubdivisions: 3,
+			description:          "Subdivisions should increase by 1",
+		},
+		{
+			name:                 "Increase Subdivisions At Boundary",
+			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Increase},
+			initialSubdivisions:  8,
+			expectedSubdivisions: 8,
+			description:          "Subdivisions should be at maximum",
+		},
+		{
+			name:                 "Decrease Subdivisions",
+			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Decrease},
+			initialSubdivisions:  3,
+			expectedSubdivisions: 2,
+			description:          "Subdivisions should decrease by 1",
+		},
+		{
+			name:                 "Decrease Subdivisions At Boundary",
+			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Decrease},
+			initialSubdivisions:  1,
+			expectedSubdivisions: 1,
+			description:          "Subdivisions should be at minimum",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					m.definition.subdivisions = tt.initialSubdivisions
+					return *m
+				},
+			)
+			assert.Equal(t, tt.initialSubdivisions, m.definition.subdivisions, tt.description)
+			m = processCommands(tt.commands, m)
+			assert.Equal(t, tt.expectedSubdivisions, m.definition.subdivisions, tt.description)
 		})
 	}
 }
