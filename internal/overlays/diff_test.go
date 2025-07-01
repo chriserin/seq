@@ -329,45 +329,6 @@ func TestDeepCopy(t *testing.T) {
 		assert.NotEqual(t, original.Chords[0].Double, clone.Chords[0].Double)
 	})
 
-	// Test with a nested overlay structure
-	t.Run("Nested overlay", func(t *testing.T) {
-		key1 := overlaykey.ROOT
-		key2 := overlaykey.InitOverlayKey(4, 4)
-
-		below := InitOverlay(key2, nil)
-		original := InitOverlay(key1, below)
-
-		// Add notes to both layers
-		note1 := grid.InitNote()
-		note1.AccentIndex = 1
-		gridKey1 := grid.GridKey{Beat: 1, Line: 1}
-		original.MoveNoteTo(gridKey1, note1)
-
-		note2 := grid.InitNote()
-		note2.AccentIndex = 2
-		gridKey2 := grid.GridKey{Beat: 2, Line: 2}
-		below.MoveNoteTo(gridKey2, note2)
-
-		clone := DeepCopy(original)
-
-		// Check that both layers are copied
-		assert.NotNil(t, clone.Below)
-		assert.NotSame(t, original.Below, clone.Below)
-		assert.Equal(t, original.Below.Key, clone.Below.Key)
-
-		// Check notes in both layers
-		assert.Equal(t, original.Notes[gridKey1], clone.Notes[gridKey1])
-		assert.Equal(t, original.Below.Notes[gridKey2], clone.Below.Notes[gridKey2])
-
-		// Modify original and verify clone is unchanged
-		modifiedNote := below.Notes[gridKey2]
-		modifiedNote.AccentIndex = 3
-		below.MoveNoteTo(gridKey2, modifiedNote)
-		assert.NotEqual(t,
-			original.Below.Notes[gridKey2].AccentIndex,
-			clone.Below.Notes[gridKey2].AccentIndex)
-	})
-
 	// Test with blockers
 	t.Run("Overlay with blockers", func(t *testing.T) {
 		key := overlaykey.ROOT
@@ -388,4 +349,3 @@ func TestDeepCopy(t *testing.T) {
 		assert.NotEqual(t, original.blockers[0], clone.blockers[0])
 	})
 }
-

@@ -2,6 +2,7 @@ package overlays
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/theory"
@@ -316,9 +317,7 @@ func DeepCopy(ol *Overlay) *Overlay {
 	}
 
 	// Deep copy the Notes map
-	for key, note := range ol.Notes {
-		clone.Notes[key] = note
-	}
+	maps.Copy(clone.Notes, ol.Notes)
 
 	// Deep copy the Chords slice
 	for _, chord := range ol.Chords {
