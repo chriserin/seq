@@ -807,15 +807,27 @@ func (m *model) DecreaseAccentTarget() {
 }
 
 func (m *model) IncreaseTempo(amount int) {
-	if m.definition.tempo < 300 {
-		m.definition.tempo += amount
+	newAmount := m.definition.tempo + amount
+	if newAmount <= 300 {
+		m.definition.tempo = newAmount
+		m.SyncTempo()
+	} else if m.definition.tempo == 300 {
+		// do nothing if already at 300
+	} else if newAmount > 300 {
+		m.definition.tempo = 300
 		m.SyncTempo()
 	}
 }
 
 func (m *model) DecreaseTempo(amount int) {
-	if m.definition.tempo > 30 {
-		m.definition.tempo -= amount
+	newAmount := m.definition.tempo - amount
+	if newAmount > 30 {
+		m.definition.tempo = newAmount
+		m.SyncTempo()
+	} else if m.definition.tempo == 30 {
+		// do nothing if already at 30
+	} else if newAmount < 30 {
+		m.definition.tempo = 30
 		m.SyncTempo()
 	}
 }
