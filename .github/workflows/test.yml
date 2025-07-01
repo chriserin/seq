@@ -17,8 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install ALSA dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - name: Install ALSA and Lua dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev liblua5.4-dev
 
       - name: Set up Go
         uses: actions/setup-go@v5
