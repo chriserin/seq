@@ -192,6 +192,22 @@ func GetTemplate(name string) (Template, bool) {
 	return Template{}, false
 }
 
+func GetDefaultTemplate() Template {
+	defaultTemplate := InitTemplate("DEFAULT", "plain", 1, "trigger")
+	initNote := uint8(60)
+	defaultTemplate.Lines = []grid.LineDefinition{
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
+	}
+	return defaultTemplate
+}
+
 type Instrument struct {
 	Name string
 	CCs  []ControlChange

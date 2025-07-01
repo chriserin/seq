@@ -940,7 +940,7 @@ func InitLineState(previousGroupPlayState groupPlayState, index uint8, startBeat
 func InitDefinition(template string, instrument string) Definition {
 	gridTemplate, exists := config.GetTemplate(template)
 	if !exists {
-		gridTemplate, _ = config.GetTemplate("Drums")
+		gridTemplate = config.GetDefaultTemplate()
 	}
 	config.LongGates = gridTemplate.GetGateLengths()
 	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
@@ -1282,6 +1282,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			return m, cmd
 		}
 		mappingsCommand := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PatternFill)
+
 		switch mappingsCommand.Command {
 		case mappings.ReloadFile:
 			if m.filename != "" {
