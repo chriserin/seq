@@ -1,4 +1,5 @@
 [![Tests](https://github.com/chriserin/seq/actions/workflows/test.yml/badge.svg)](https://github.com/chriserin/seq/actions/workflows/test.yml)
+
 # SEQ
 
 A midi sequencer for your cli

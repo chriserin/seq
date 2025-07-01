@@ -53,7 +53,7 @@ const (
 	SetupInputSwitch
 	AccentInputSwitch
 	RatchetInputSwitch
-	BeatsInputSwitch
+	SubdivisionsInputSwitch
 	ArrangementInputSwitch
 	ToggleArrangementView
 	Increase
@@ -145,6 +145,24 @@ const (
 type mappingKey [3]string
 type registry map[mappingKey]Command
 
+// KeysForCommand Function that gets keys for mappings by looking at the looping through the registry and returning the keys for the given command
+// If the command is not found, it returns an empty string slice.
+// This is used to get the keys for a given command in the mappings.
+func KeysForCommand(command Command) []string {
+	var keys []string
+	for key, cmd := range mappings {
+		if cmd == command {
+			for _, k := range key {
+				if k != "" {
+					keys = append(keys, k)
+				}
+			}
+			break
+		}
+	}
+	return keys
+}
+
 var mappings = registry{
 	k(" "):      PlayStop,
 	k("'", " "): PlayOverlayLoop,
@@ -181,7 +199,7 @@ var mappings = registry{
 	k("ctrl+@"): PlayPart,
 	k("ctrl+]"): NewSectionAfter,
 	k("ctrl+a"): ToggleAccentMode,
-	k("ctrl+b"): BeatsInputSwitch,
+	k("ctrl+b"): SubdivisionsInputSwitch,
 	k("ctrl+c"): ChangePart,
 	k("ctrl+e"): AccentInputSwitch,
 	k("ctrl+f"): ToggleArrangementView,
