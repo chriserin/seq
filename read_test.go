@@ -291,7 +291,7 @@ func TestReadWrite(t *testing.T) {
 
 func TestReadFileWithChords(t *testing.T) {
 	// Test reading the checkchord.seq file which contains chord definitions
-	readDef, err := Read("checkchord.seq")
+	readDef, err := Read("testdata/checkchord.seq")
 	assert.NoError(t, err)
 	assert.NotNil(t, readDef)
 
