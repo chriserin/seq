@@ -237,6 +237,75 @@ func TestSubdivisionChanges(t *testing.T) {
 	}
 }
 
+func TestSetupInputSwitchWithIncrease(t *testing.T) {
+	tests := []struct {
+		name                 string
+		commands             []mappings.Command
+		initialSetupChannel  uint8
+		expectedSetupChannel uint8
+		description          string
+	}{
+		{
+			name:                 "Setup Channel Increase",
+			commands:             []mappings.Command{mappings.SetupInputSwitch, mappings.Increase},
+			initialSetupChannel:  0,
+			expectedSetupChannel: 1,
+			description:          "Setup input switch should select channel and increase should increment it",
+		},
+		{
+			name:                 "Setup Channel Decrease",
+			commands:             []mappings.Command{mappings.SetupInputSwitch, mappings.Decrease},
+			initialSetupChannel:  5,
+			expectedSetupChannel: 4,
+			description:          "Setup input switch should select channel and decrease should decrement it",
+		},
+		{
+			name:                 "Setup Channel Increase At Upper Boundary",
+			commands:             []mappings.Command{mappings.SetupInputSwitch, mappings.Increase},
+			initialSetupChannel:  16,
+			expectedSetupChannel: 16,
+			description:          "Setup input switch should select channel and increase should not go above 16",
+		},
+		{
+			name:                 "Setup Channel Decrease At Lower Boundary",
+			commands:             []mappings.Command{mappings.SetupInputSwitch, mappings.Decrease},
+			initialSetupChannel:  1,
+			expectedSetupChannel: 1,
+			description:          "Setup input switch should select channel and decrease should not go below 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					m.definition.lines[m.cursorPos.Line].Channel = tt.initialSetupChannel
+					return *m
+				},
+			)
+
+			assert.Equal(t, tt.initialSetupChannel, m.definition.lines[m.cursorPos.Line].Channel, "Initial setup channel should match")
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+
+			m = processCommands(tt.commands, m)
+
+			assert.Equal(t, SelectSetupChannel, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, tt.expectedSetupChannel, m.definition.lines[m.cursorPos.Line].Channel, tt.description+" - channel value")
+		})
+	}
+}
+
+func createTestModel(modelFns ...modelFunc) model {
+
+	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
+
+	for _, fn := range modelFns {
+		m = fn(&m)
+	}
+
+	return m
+}
+
 func processCommands(commands []mappings.Command, m model) model {
 	for _, command := range commands {
 		m = processCommand(command, m)
@@ -272,15 +341,4 @@ func WithCurosrPos(pos grid.GridKey) modelFunc {
 		m.cursorPos = pos
 		return *m
 	}
-}
-
-func createTestModel(modelFns ...modelFunc) model {
-
-	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
-
-	for _, fn := range modelFns {
-		m = fn(&m)
-	}
-
-	return m
 }
