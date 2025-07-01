@@ -367,7 +367,7 @@ func (m *model) PushArrUndo(arrundo arrangement.ArrUndo) {
 }
 
 func (m *model) PushUndoables(undo Undoable, redo Undoable) {
-	if m.undoStack == NIL_STACK {
+	if m.undoStack == NilStack {
 		m.undoStack = UndoStack{
 			undo: undo,
 			redo: redo,
@@ -387,7 +387,7 @@ func (m *model) PushUndoables(undo Undoable, redo Undoable) {
 }
 
 func (m *model) PushUndo(undo UndoStack) {
-	if m.undoStack == NIL_STACK {
+	if m.undoStack == NilStack {
 		undo.next = nil
 		m.undoStack = undo
 	} else {
@@ -398,7 +398,7 @@ func (m *model) PushUndo(undo UndoStack) {
 }
 
 func (m *model) PushRedo(redo UndoStack) {
-	if m.redoStack == NIL_STACK {
+	if m.redoStack == NilStack {
 		redo.next = nil
 		m.redoStack = redo
 	} else {
@@ -409,32 +409,32 @@ func (m *model) PushRedo(redo UndoStack) {
 }
 
 func (m *model) ResetRedo() {
-	m.redoStack = NIL_STACK
+	m.redoStack = NilStack
 }
 
 func (m *model) PopUndo() UndoStack {
 	firstout := m.undoStack
-	if firstout != NIL_STACK && firstout.next != nil {
+	if firstout != NilStack && firstout.next != nil {
 		m.undoStack = *m.undoStack.next
 	} else {
-		m.undoStack = NIL_STACK
+		m.undoStack = NilStack
 	}
 	return firstout
 }
 
 func (m *model) PopRedo() UndoStack {
 	firstout := m.redoStack
-	if firstout != NIL_STACK && firstout.next != nil {
+	if firstout != NilStack && firstout.next != nil {
 		m.redoStack = *m.redoStack.next
 	} else {
-		m.redoStack = NIL_STACK
+		m.redoStack = NilStack
 	}
 	return firstout
 }
 
 func (m *model) Undo() UndoStack {
 	undoStack := m.PopUndo()
-	if undoStack != NIL_STACK {
+	if undoStack != NilStack {
 		location := undoStack.undo.ApplyUndo(m)
 		if location.ApplyLocation {
 			m.cursorPos = location.GridKey
@@ -452,7 +452,7 @@ func (m *model) Undo() UndoStack {
 
 func (m *model) Redo() UndoStack {
 	undoStack := m.PopRedo()
-	if undoStack != NIL_STACK {
+	if undoStack != NilStack {
 		location := undoStack.redo.ApplyUndo(m)
 		if location.ApplyLocation {
 			m.cursorPos = location.GridKey
@@ -1539,12 +1539,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		case mappings.Undo:
 			undoStack := m.Undo()
-			if undoStack != NIL_STACK {
+			if undoStack != NilStack {
 				m.PushRedo(undoStack)
 			}
 		case mappings.Redo:
 			undoStack := m.Redo()
-			if undoStack != NIL_STACK {
+			if undoStack != NilStack {
 				m.PushUndo(undoStack)
 			}
 		case mappings.New:

@@ -26,8 +26,8 @@ func setupTestModel() *model {
 		definition:     def,
 		programChannel: make(chan midiEventLoopMsg),
 		playState:      InitLineStates(1, []linestate{}, 0),
-		undoStack:      NIL_STACK,
-		redoStack:      NIL_STACK,
+		undoStack:      NilStack,
+		redoStack:      NilStack,
 		arrangement:    arrangement.InitModel(def.arrangement, def.parts),
 	}
 
@@ -55,7 +55,7 @@ func TestUndoStack(t *testing.T) {
 		m.PushUndoables(undo, redo)
 
 		// Verify stack structure
-		assert.NotEqual(t, NIL_STACK, m.undoStack)
+		assert.NotEqual(t, NilStack, m.undoStack)
 		assert.Equal(t, undo, m.undoStack.undo)
 		assert.Equal(t, redo, m.undoStack.redo)
 		assert.Nil(t, m.undoStack.next)
@@ -74,7 +74,7 @@ func TestUndoStack(t *testing.T) {
 		m.PushUndoables(undo2, redo2)
 
 		// Verify stack structure
-		assert.NotEqual(t, NIL_STACK, m.undoStack)
+		assert.NotEqual(t, NilStack, m.undoStack)
 		assert.Equal(t, undo2, m.undoStack.undo)
 		assert.Equal(t, redo2, m.undoStack.redo)
 		assert.NotNil(t, m.undoStack.next)
