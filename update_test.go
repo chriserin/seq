@@ -96,7 +96,7 @@ func TestUpdateCursorMovements(t *testing.T) {
 			m := createTestModel(
 				WithCurosrPos(tt.initialPos),
 			)
-			m = processCommand(tt.command, m)
+			m, _ = processCommand(tt.command, m)
 			assert.Equal(t, tt.expectedPos.Line, m.cursorPos.Line, tt.description+" - line position")
 			assert.Equal(t, tt.expectedPos.Beat, m.cursorPos.Beat, tt.description+" - beat position")
 		})
@@ -178,7 +178,7 @@ func TestTempoChanges(t *testing.T) {
 				},
 			)
 			assert.Equal(t, tt.initialTempo, m.definition.tempo, tt.description)
-			m = processCommands(tt.commands, m)
+			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, tt.expectedTempo, m.definition.tempo, tt.description)
 		})
 	}
@@ -231,7 +231,7 @@ func TestSubdivisionChanges(t *testing.T) {
 				},
 			)
 			assert.Equal(t, tt.initialSubdivisions, m.definition.subdivisions, tt.description)
-			m = processCommands(tt.commands, m)
+			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, tt.expectedSubdivisions, m.definition.subdivisions, tt.description)
 		})
 	}
@@ -287,7 +287,7 @@ func TestSetupInputSwitchWithIncrease(t *testing.T) {
 			assert.Equal(t, tt.initialSetupChannel, m.definition.lines[m.cursorPos.Line].Channel, "Initial setup channel should match")
 			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
-			m = processCommands(tt.commands, m)
+			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, SelectSetupChannel, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedSetupChannel, m.definition.lines[m.cursorPos.Line].Channel, tt.description+" - channel value")
@@ -359,10 +359,64 @@ func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 			assert.Equal(t, tt.initialMessageType, m.definition.lines[m.cursorPos.Line].MsgType, "Initial message type should match")
 			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
-			m = processCommands(tt.commands, m)
+			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, SelectSetupMessageType, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.cursorPos.Line].MsgType, tt.description+" - message type value")
+		})
+	}
+}
+
+func TestOverlayInputSwitch(t *testing.T) {
+	tests := []struct {
+		name              string
+		commands          []mappings.Command
+		expectedSelection Selection
+		expectedFocus     focus
+		description       string
+	}{
+		{
+			name:              "Single OverlayInputSwitch",
+			commands:          []mappings.Command{mappings.OverlayInputSwitch},
+			expectedSelection: SelectOverlay,
+			expectedFocus:     FocusOverlayKey,
+			description:       "First overlay input switch should select overlay and set focus to overlay key",
+		},
+		{
+			name:              "Double OverlayInputSwitch",
+			commands:          []mappings.Command{mappings.OverlayInputSwitch, mappings.OverlayInputSwitch},
+			expectedSelection: SelectNothing,
+			expectedFocus:     FocusGrid,
+			description:       "Second overlay input switch should cycle back to nothing but keep overlay key focus",
+		},
+		{
+			name:              "Escape Overlay Input state",
+			commands:          []mappings.Command{mappings.OverlayInputSwitch, mappings.Escape},
+			expectedSelection: SelectNothing,
+			expectedFocus:     FocusGrid,
+			description:       "Escape should set focus and selection back to an initial state",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cmd tea.Cmd
+			m := createTestModel()
+
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, FocusGrid, m.focus, "Initial focus should be grid")
+
+			m, cmd = processCommands(tt.commands, m)
+			if cmd != nil {
+				updateModel, _ := m.Update(cmd())
+				switch um := updateModel.(type) {
+				case model:
+					m = um
+				}
+			}
+
+			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, tt.expectedFocus, m.focus, tt.description+" - focus state")
 		})
 	}
 }
@@ -378,23 +432,26 @@ func createTestModel(modelFns ...modelFunc) model {
 	return m
 }
 
-func processCommands(commands []mappings.Command, m model) model {
+func processCommands(commands []mappings.Command, m model) (model, tea.Cmd) {
+	var cmd tea.Cmd
 	for _, command := range commands {
-		m = processCommand(command, m)
+		m, cmd = processCommand(command, m)
 	}
-	return m
+	return m, cmd
 }
 
-func processCommand(command mappings.Command, m model) model {
+func processCommand(command mappings.Command, m model) (model, tea.Cmd) {
 	keyMsgs := getKeyMsgs(command)
+	var cmd tea.Cmd
 	for _, keyMsg := range keyMsgs {
-		updateModel, _ := m.Update(keyMsg)
+		var updateModel tea.Model
+		updateModel, cmd = m.Update(keyMsg)
 		switch um := updateModel.(type) {
 		case model:
 			m = um
 		}
 	}
-	return m
+	return m, cmd
 }
 
 func getKeyMsgs(command mappings.Command) []tea.KeyMsg {

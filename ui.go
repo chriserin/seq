@@ -312,6 +312,10 @@ const (
 
 type focus uint8
 
+// NOTE: Focus is necessary because the selection can be focused for a part operation
+// at the same time the arrangement editor is focused.  `FocusOverlayKey` could be switched
+// out for a selection indicator, but the pattern is to focus components that have their
+// own key event responses.
 const (
 	FocusGrid focus = iota
 	FocusOverlayKey
@@ -1380,10 +1384,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.StartStop()
 			}
 		case mappings.OverlayInputSwitch:
-			states := []Selection{SelectNothing, SelectOverlay}
-			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
+			// NOTE: This component handles getting into the overlay key edit mode
+			// the overlaykey component handles getting out of it
+			m.SetSelectionIndicator(SelectOverlay)
 			m.focus = FocusOverlayKey
-			m.overlayKeyEdit.Focus(m.selectionIndicator == SelectOverlay)
+			m.overlayKeyEdit.Focus(true)
 		case mappings.TempoInputSwitch:
 			states := []Selection{SelectNothing, SelectTempo, SelectTempoSubdivision}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))

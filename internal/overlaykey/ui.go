@@ -29,7 +29,7 @@ var keys = keymap{
 	RemoveStart:   Key("Remove Start", "s"),
 	Increase:      Key("Increase", "+"),
 	Decrease:      Key("Decrease", "-"),
-	Escape:        Key("Escape", "esc", "enter"),
+	Escape:        Key("Escape", "esc", "enter", "ctrl+o"),
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -43,7 +43,7 @@ type Model struct {
 }
 
 func InitModel() Model {
-	return Model{ROOT, FOCUS_NOTHING, false}
+	return Model{ROOT, FocusNothing, false}
 }
 
 func (m *Model) SetOverlayKey(op OverlayPeriodicity) {
@@ -56,20 +56,20 @@ func (m Model) GetKey() OverlayPeriodicity {
 
 func (m *Model) Focus(shouldFocus bool) {
 	if shouldFocus {
-		m.focus = FOCUS_SHIFT
+		m.focus = FocusShift
 	} else {
-		m.focus = FOCUS_NOTHING
+		m.focus = FocusNothing
 	}
 }
 
 type focus int
 
 const (
-	FOCUS_NOTHING focus = iota
-	FOCUS_SHIFT
-	FOCUS_WIDTH
-	FOCUS_INTERVAL
-	FOCUS_START
+	FocusNothing focus = iota
+	FocusShift
+	FocusWidth
+	FocusInterval
+	FocusStart
 )
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -81,58 +81,58 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			newDigit, _ := strconv.Atoi(numberString)
 			m.ApplyDigit(newDigit)
 			m.firstDigitApplied = true
-			if m.focus == FOCUS_START && m.overlayKey.StartCycle == 0 {
-				m.focus = FOCUS_SHIFT
+			if m.focus == FocusStart && m.overlayKey.StartCycle == 0 {
+				m.focus = FocusShift
 			}
-			if m.focus == FOCUS_WIDTH && m.overlayKey.Width == 0 {
-				m.focus = FOCUS_SHIFT
+			if m.focus == FocusWidth && m.overlayKey.Width == 0 {
+				m.focus = FocusShift
 			}
 		case key.Matches(msg, keys.Escape):
-			m.focus = FOCUS_NOTHING
+			m.focus = FocusNothing
 			m.firstDigitApplied = false
 			return m, Updated(m.overlayKey, false)
 		case key.Matches(msg, keys.FocusWidth):
-			m.focus = FOCUS_WIDTH
+			m.focus = FocusWidth
 			if m.overlayKey.Width == 0 {
 				m.overlayKey.Width = 1
 			}
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.FocusInterval):
-			m.focus = FOCUS_INTERVAL
+			m.focus = FocusInterval
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.FocusShift):
-			m.focus = FOCUS_SHIFT
+			m.focus = FocusShift
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.FocusStart):
-			m.focus = FOCUS_START
+			m.focus = FocusStart
 			if m.overlayKey.StartCycle == 0 {
 				m.overlayKey.StartCycle = 1
 			}
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.RemoveStart):
-			m.focus = FOCUS_SHIFT
+			m.focus = FocusShift
 			m.overlayKey.StartCycle = 0
 			m.firstDigitApplied = false
 		case key.Matches(msg, keys.Increase):
 			switch m.focus {
-			case FOCUS_SHIFT:
+			case FocusShift:
 				m.overlayKey.IncrementShift()
-			case FOCUS_INTERVAL:
+			case FocusInterval:
 				m.overlayKey.IncrementInterval()
-			case FOCUS_WIDTH:
+			case FocusWidth:
 				m.overlayKey.IncrementWidth()
-			case FOCUS_START:
+			case FocusStart:
 				m.overlayKey.IncrementStartCycle()
 			}
 		case key.Matches(msg, keys.Decrease):
 			switch m.focus {
-			case FOCUS_SHIFT:
+			case FocusShift:
 				m.overlayKey.DecrementShift()
-			case FOCUS_INTERVAL:
+			case FocusInterval:
 				m.overlayKey.DecrementInterval()
-			case FOCUS_WIDTH:
+			case FocusWidth:
 				m.overlayKey.DecrementWidth()
-			case FOCUS_START:
+			case FocusStart:
 				m.overlayKey.DecrementStartCycle()
 			}
 		}
@@ -142,19 +142,19 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m *Model) ApplyDigit(newDigit int) {
 	switch m.focus {
-	case FOCUS_SHIFT:
+	case FocusShift:
 		m.overlayKey.Shift = m.UnshiftDigit(m.overlayKey.Shift, newDigit)
 		if m.overlayKey.Shift == 0 {
 			m.overlayKey.Shift = 1
 		}
-	case FOCUS_INTERVAL:
+	case FocusInterval:
 		m.overlayKey.Interval = m.UnshiftDigit(m.overlayKey.Interval, newDigit)
 		if m.overlayKey.Interval == 0 {
 			m.overlayKey.Interval = 1
 		}
-	case FOCUS_WIDTH:
+	case FocusWidth:
 		m.overlayKey.Width = m.UnshiftDigit(m.overlayKey.Width, newDigit)
-	case FOCUS_START:
+	case FocusStart:
 		m.overlayKey.StartCycle = m.UnshiftDigit(m.overlayKey.StartCycle, newDigit)
 	}
 }
@@ -214,13 +214,13 @@ func (m Model) ViewOverlay() string {
 	start = NumberColor(m.overlayKey.StartCycle)
 
 	switch m.focus {
-	case FOCUS_SHIFT:
+	case FocusShift:
 		shift = SelectedColor(m.overlayKey.Shift)
-	case FOCUS_WIDTH:
+	case FocusWidth:
 		width = SelectedColor(m.overlayKey.Width)
-	case FOCUS_INTERVAL:
+	case FocusInterval:
 		interval = SelectedColor(m.overlayKey.Interval)
-	case FOCUS_START:
+	case FocusStart:
 		start = SelectedColor(m.overlayKey.StartCycle)
 	}
 
