@@ -870,6 +870,64 @@ func TestRatchetInputValues(t *testing.T) {
 	}
 }
 
+func TestBeatInputSwitchIncrease(t *testing.T) {
+	tests := []struct {
+		name         string
+		commands     []mappings.Command
+		initialBeats uint8
+		expectedBeats uint8
+		description  string
+	}{
+		{
+			name:         "Beat Input Switch with Increase",
+			commands:     []mappings.Command{mappings.BeatInputSwitch, mappings.Increase},
+			initialBeats: 16,
+			expectedBeats: 17,
+			description:  "Beat input switch should select beats and increase should increment it",
+		},
+		{
+			name:         "Beat Input Switch with Decrease",
+			commands:     []mappings.Command{mappings.BeatInputSwitch, mappings.Decrease},
+			initialBeats: 16,
+			expectedBeats: 15,
+			description:  "Beat input switch should select beats and decrease should decrement it",
+		},
+		{
+			name:         "Beat Input Switch with Increase At Upper Boundary",
+			commands:     []mappings.Command{mappings.BeatInputSwitch, mappings.Increase},
+			initialBeats: 127,
+			expectedBeats: 127,
+			description:  "Beat input switch should select beats and increase should not go above 127",
+		},
+		{
+			name:         "Beat Input Switch with Decrease At Lower Boundary",
+			commands:     []mappings.Command{mappings.BeatInputSwitch, mappings.Decrease},
+			initialBeats: 0,
+			expectedBeats: 0,
+			description:  "Beat input switch should select beats and decrease should not go below 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					(*m.definition.parts)[m.CurrentPartID()].Beats = tt.initialBeats
+					return *m
+				},
+			)
+
+			assert.Equal(t, tt.initialBeats, m.CurrentPart().Beats, "Initial beats should match")
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, SelectBeats, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, tt.expectedBeats, m.CurrentPart().Beats, tt.description+" - beats value")
+		})
+	}
+}
+
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
