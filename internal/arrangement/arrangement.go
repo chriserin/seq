@@ -813,7 +813,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				// For end nodes, modify section properties
 				switch m.oldCursor.attribute {
 				case SECTION_START_BEAT:
-					currentNode.Section.IncreaseStartBeats()
+					currentNode.Section.IncreaseStartBeats(int((*m.parts)[currentNode.Section.Part].Beats))
 				case SECTION_START_CYCLE:
 					currentNode.Section.IncreaseStartCycles()
 				case SECTION_CYCLES:
@@ -919,7 +919,7 @@ func (ss *SongSection) IncrementPlayCycles() {
 }
 
 func (ss *SongSection) SetPlayCycles(keyCycles int) {
-	ss.playCycles = keyCycles
+	ss.playCycles++
 }
 
 func (ss *SongSection) IsDone() bool {
@@ -938,9 +938,9 @@ func InitSongSection(part int) SongSection {
 	}
 }
 
-func (ss *SongSection) IncreaseStartBeats() {
+func (ss *SongSection) IncreaseStartBeats(partBeats int) {
 	newStartBeats := ss.StartBeat + 1
-	if newStartBeats < 128 {
+	if newStartBeats < partBeats {
 		ss.StartBeat = newStartBeats
 	}
 }

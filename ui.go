@@ -874,7 +874,8 @@ func (m *model) DecreaseBeats() {
 
 func (m *model) IncreaseStartBeats() {
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	currentNode.Section.IncreaseStartBeats()
+	partBeats := m.CurrentPart().Beats
+	currentNode.Section.IncreaseStartBeats(int(partBeats))
 }
 
 func (m *model) DecreaseStartBeats() {

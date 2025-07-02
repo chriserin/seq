@@ -872,39 +872,39 @@ func TestRatchetInputValues(t *testing.T) {
 
 func TestBeatInputSwitchIncrease(t *testing.T) {
 	tests := []struct {
-		name         string
-		commands     []mappings.Command
-		initialBeats uint8
+		name          string
+		commands      []mappings.Command
+		initialBeats  uint8
 		expectedBeats uint8
-		description  string
+		description   string
 	}{
 		{
-			name:         "Beat Input Switch with Increase",
-			commands:     []mappings.Command{mappings.BeatInputSwitch, mappings.Increase},
-			initialBeats: 16,
+			name:          "Beat Input Switch with Increase",
+			commands:      []mappings.Command{mappings.BeatInputSwitch, mappings.Increase},
+			initialBeats:  16,
 			expectedBeats: 17,
-			description:  "Beat input switch should select beats and increase should increment it",
+			description:   "Beat input switch should select beats and increase should increment it",
 		},
 		{
-			name:         "Beat Input Switch with Decrease",
-			commands:     []mappings.Command{mappings.BeatInputSwitch, mappings.Decrease},
-			initialBeats: 16,
+			name:          "Beat Input Switch with Decrease",
+			commands:      []mappings.Command{mappings.BeatInputSwitch, mappings.Decrease},
+			initialBeats:  16,
 			expectedBeats: 15,
-			description:  "Beat input switch should select beats and decrease should decrement it",
+			description:   "Beat input switch should select beats and decrease should decrement it",
 		},
 		{
-			name:         "Beat Input Switch with Increase At Upper Boundary",
-			commands:     []mappings.Command{mappings.BeatInputSwitch, mappings.Increase},
-			initialBeats: 127,
+			name:          "Beat Input Switch with Increase At Upper Boundary",
+			commands:      []mappings.Command{mappings.BeatInputSwitch, mappings.Increase},
+			initialBeats:  127,
 			expectedBeats: 127,
-			description:  "Beat input switch should select beats and increase should not go above 127",
+			description:   "Beat input switch should select beats and increase should not go above 127",
 		},
 		{
-			name:         "Beat Input Switch with Decrease At Lower Boundary",
-			commands:     []mappings.Command{mappings.BeatInputSwitch, mappings.Decrease},
-			initialBeats: 0,
+			name:          "Beat Input Switch with Decrease At Lower Boundary",
+			commands:      []mappings.Command{mappings.BeatInputSwitch, mappings.Decrease},
+			initialBeats:  0,
 			expectedBeats: 0,
-			description:  "Beat input switch should select beats and decrease should not go below 0",
+			description:   "Beat input switch should select beats and decrease should not go below 0",
 		},
 	}
 
@@ -924,6 +924,125 @@ func TestBeatInputSwitchIncrease(t *testing.T) {
 
 			assert.Equal(t, SelectBeats, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedBeats, m.CurrentPart().Beats, tt.description+" - beats value")
+		})
+	}
+}
+
+func TestBeatInputSwitchCyclesIncrease(t *testing.T) {
+	tests := []struct {
+		name           string
+		commands       []mappings.Command
+		initialCycles  int
+		expectedCycles int
+		description    string
+	}{
+		{
+			name:           "Beat Input Switch Cycles with Increase",
+			commands:       []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			initialCycles:  4,
+			expectedCycles: 5,
+			description:    "Three beat input switches should select cycles and increase should increment it",
+		},
+		{
+			name:           "Beat Input Switch Cycles with Decrease",
+			commands:       []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			initialCycles:  4,
+			expectedCycles: 3,
+			description:    "Three beat input switches should select cycles and decrease should decrement it",
+		},
+		{
+			name:           "Beat Input Switch Cycles with Increase At Upper Boundary",
+			commands:       []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			initialCycles:  127,
+			expectedCycles: 127,
+			description:    "Three beat input switches should select cycles and increase should not go above 127",
+		},
+		{
+			name:           "Beat Input Switch Cycles with Decrease At Lower Boundary",
+			commands:       []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			initialCycles:  0,
+			expectedCycles: 0,
+			description:    "Three beat input switches should select cycles and decrease should not go below 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					currentNode := m.arrangement.Cursor.GetCurrentNode()
+					currentNode.Section.Cycles = tt.initialCycles
+					return *m
+				},
+			)
+
+			assert.Equal(t, tt.initialCycles, m.CurrentSongSection().Cycles, "Initial cycles should match")
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, SelectCycles, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, tt.expectedCycles, m.CurrentSongSection().Cycles, tt.description+" - cycles value")
+		})
+	}
+}
+
+func TestBeatInputSwitchStartBeatsIncrease(t *testing.T) {
+	tests := []struct {
+		name               string
+		commands           []mappings.Command
+		initialStartBeats  int
+		expectedStartBeats int
+		description        string
+	}{
+		{
+			name:               "Beat Input Switch StartBeats with Increase",
+			commands:           []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			initialStartBeats:  8,
+			expectedStartBeats: 9,
+			description:        "Two beat input switches should select start beats and increase should increment it",
+		},
+		{
+			name:               "Beat Input Switch StartBeats with Decrease",
+			commands:           []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			initialStartBeats:  8,
+			expectedStartBeats: 7,
+			description:        "Two beat input switches should select start beats and decrease should decrement it",
+		},
+		{
+			name:     "Beat Input Switch StartBeats with Increase At Upper Boundary",
+			commands: []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			// NOTE: The upper boundary for start beats is the number of beats in a part
+			initialStartBeats:  31,
+			expectedStartBeats: 31,
+			description:        "Two beat input switches should select start beats and increase should not go above 127",
+		},
+		{
+			name:               "Beat Input Switch StartBeats with Decrease At Lower Boundary",
+			commands:           []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			initialStartBeats:  0,
+			expectedStartBeats: 0,
+			description:        "Two beat input switches should select start beats and decrease should not go below 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					currentNode := m.arrangement.Cursor.GetCurrentNode()
+					currentNode.Section.StartBeat = tt.initialStartBeats
+					return *m
+				},
+			)
+
+			assert.Equal(t, tt.initialStartBeats, m.CurrentSongSection().StartBeat, "Initial start beats should match")
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, SelectStartBeats, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, tt.expectedStartBeats, m.CurrentSongSection().StartBeat, tt.description+" - start beats value")
 		})
 	}
 }
