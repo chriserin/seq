@@ -702,6 +702,174 @@ func TestOverlayInputSwitch(t *testing.T) {
 	}
 }
 
+func TestRatchetInputSwitch(t *testing.T) {
+	tests := []struct {
+		name              string
+		commands          []mappings.Command
+		expectedSelection Selection
+		description       string
+	}{
+		{
+			name:              "RatchetInputSwitch when cursor note no note",
+			commands:          []mappings.Command{mappings.RatchetInputSwitch},
+			expectedSelection: SelectNothing,
+			description:       "First ratchet input switch does nothing if not on a note",
+		},
+		{
+			name:              "RatchetInputSwitch when cursor on note",
+			commands:          []mappings.Command{mappings.TriggerAdd, mappings.RatchetInputSwitch},
+			expectedSelection: SelectRatchets,
+			description:       "First ratchet input switch should select ratchet",
+		},
+		{
+			name:              "Second RatchetInputSwitch when cursor on note",
+			commands:          []mappings.Command{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
+			expectedSelection: SelectRatchetSpan,
+			description:       "Second ratchet input switch should select ratchet span",
+		},
+		{
+			name:              "Third RatchetInputSwitch",
+			commands:          []mappings.Command{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
+			expectedSelection: SelectNothing,
+			description:       "Second ratchet input switch should select ratchet span",
+		},
+		{
+			name:              "Escape Ratchet Input",
+			commands:          []mappings.Command{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.Escape},
+			expectedSelection: SelectNothing,
+			description:       "Second ratchet input switch should select ratchet span",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description)
+		})
+	}
+}
+
+func TestRatchetInputValues(t *testing.T) {
+	tests := []struct {
+		name            string
+		commands        []mappings.Command
+		expectedRatchet grid.Ratchet
+		description     string
+	}{
+		{
+			name: "RatchetInputSwitch with Mute Ratchet",
+			commands: []mappings.Command{
+				mappings.TriggerAdd,
+				mappings.RatchetInputSwitch,
+				mappings.Mute,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   0,
+				Length: 0,
+			},
+			description: "Should select ratchet input and mute should set all values to 0",
+		},
+		{
+			name: "RatchetInputSwitch with Mute Ratchet and Remute",
+			commands: []mappings.Command{
+				mappings.TriggerAdd,
+				mappings.RatchetInputSwitch,
+				mappings.Mute,
+				mappings.Mute,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   1,
+				Length: 0,
+			},
+			description: "",
+		},
+		{
+			name: "RatchetInputSwitch with Span Increase",
+			commands: []mappings.Command{
+				mappings.TriggerAdd,
+				mappings.RatchetInputSwitch,
+				mappings.RatchetInputSwitch,
+				mappings.Increase,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   1,
+				Hits:   1,
+				Length: 0,
+			},
+			description: "",
+		},
+		{
+			name: "RatchetInputSwitch with Span Increase/Decrease",
+			commands: []mappings.Command{
+				mappings.TriggerAdd,
+				mappings.RatchetInputSwitch,
+				mappings.RatchetInputSwitch,
+				mappings.Increase,
+				mappings.Decrease,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   1,
+				Length: 0,
+			},
+			description: "",
+		},
+		{
+			name: "RatchetInputSwitch with Mute Second Hit",
+			commands: []mappings.Command{
+				mappings.TriggerAdd,
+				mappings.RatchetIncrease,
+				mappings.RatchetInputSwitch,
+				mappings.CursorRight,
+				mappings.Mute,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   1,
+				Length: 1,
+			},
+			description: "",
+		},
+		{
+			name: "RatchetInputSwitch with Mute First Hit after moving cursor",
+			commands: []mappings.Command{
+				mappings.TriggerAdd,
+				mappings.RatchetIncrease,
+				mappings.RatchetInputSwitch,
+				mappings.CursorRight,
+				mappings.CursorLeft,
+				mappings.Mute,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   2, // This is a bit mask so 0b10 = 2
+				Length: 1,
+			},
+			description: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+			currentNote, exists := m.CurrentNote()
+			currentRatchet := currentNote.Ratchets
+			assert.True(t, exists, tt.description+" - current note should exist")
+			assert.Equal(t, tt.expectedRatchet.Span, currentRatchet.Span, tt.description+" - ratchet span")
+			assert.Equal(t, tt.expectedRatchet.Hits, currentRatchet.Hits, tt.description+" - ratchet hits")
+			assert.Equal(t, tt.expectedRatchet.Length, currentRatchet.Length, tt.description+" - ratchet length")
+		})
+	}
+}
+
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
