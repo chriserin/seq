@@ -53,7 +53,7 @@ const (
 	SetupInputSwitch
 	AccentInputSwitch
 	RatchetInputSwitch
-	SubdivisionsInputSwitch
+	BeatInputSwitch
 	ArrangementInputSwitch
 	ToggleArrangementView
 	Increase
@@ -199,7 +199,7 @@ var mappings = registry{
 	k("ctrl+@"): PlayPart,
 	k("ctrl+]"): NewSectionAfter,
 	k("ctrl+a"): ToggleAccentMode,
-	k("ctrl+b"): SubdivisionsInputSwitch,
+	k("ctrl+b"): BeatInputSwitch,
 	k("ctrl+c"): ChangePart,
 	k("ctrl+e"): AccentInputSwitch,
 	k("ctrl+f"): ToggleArrangementView,

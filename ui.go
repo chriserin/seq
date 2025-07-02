@@ -1422,7 +1422,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 				m.ratchetCursor = 0
 			}
-		case mappings.SubdivisionsInputSwitch:
+		case mappings.BeatInputSwitch:
 			states := []Selection{SelectNothing, SelectBeats, SelectStartBeats, SelectCycles, SelectStartCycles}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.ArrangementInputSwitch:
