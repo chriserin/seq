@@ -181,13 +181,13 @@ func (l *LineDefinition) DecrementChannel() {
 }
 
 func (l *LineDefinition) IncrementNote() {
-	if l.Note < 128 {
+	if l.Note < 127 {
 		l.Note++
 	}
 }
 
 func (l *LineDefinition) DecrementNote() {
-	if l.Note > 1 {
+	if l.Note > 0 {
 		l.Note--
 	}
 }

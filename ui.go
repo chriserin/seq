@@ -3182,7 +3182,7 @@ func (m model) SetupView() string {
 }
 
 func NoteName(note uint8) string {
-	return fmt.Sprintf("%s%d", strings.ReplaceAll(midi.Note(note).Name(), "b", "♭"), midi.Note(note).Octave()-2)
+	return fmt.Sprintf("%s%d", strings.ReplaceAll(midi.Note(note).Name(), "b", "♭"), int(midi.Note(note).Octave())-2)
 }
 
 func LineValueName(ld grid.LineDefinition, instrument string) string {

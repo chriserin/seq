@@ -402,6 +402,67 @@ func TestSetupInputSwitchMessageTypeBackToGrid(t *testing.T) {
 	}
 }
 
+func TestSetupNoteChange(t *testing.T) {
+	tests := []struct {
+		name         string
+		commands     []mappings.Command
+		initialNote  uint8
+		expectedNote uint8
+		description  string
+	}{
+		{
+			name:         "Note Increase",
+			commands:     []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
+			initialNote:  60,
+			expectedNote: 61,
+			description:  "Note should increase by 1",
+		},
+		{
+			name:         "Note Decrease",
+			commands:     []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			initialNote:  60,
+			expectedNote: 59,
+			description:  "Note should decrease by 1",
+		},
+		{
+			name:         "Note Increase At Boundary",
+			commands:     []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
+			initialNote:  127,
+			expectedNote: 127,
+			description:  "Note should not increase beyond 127",
+		},
+		{
+			name:         "Note Decrease at Boundary",
+			commands:     []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			initialNote:  0,
+			expectedNote: 0,
+			description:  "Note should not decrease below 0",
+		},
+		{
+			name:         "Note Decrease right above Boundary",
+			commands:     []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			initialNote:  1,
+			expectedNote: 0,
+			description:  "Note should not decrease below 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					m.definition.lines[m.cursorPos.Line].Note = tt.initialNote
+					return *m
+				},
+			)
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, tt.expectedNote, m.definition.lines[m.cursorPos.Line].Note, tt.description)
+		})
+	}
+}
+
 func TestOverlayInputSwitch(t *testing.T) {
 	tests := []struct {
 		name              string
