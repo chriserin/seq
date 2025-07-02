@@ -463,6 +463,60 @@ func TestSetupNoteChange(t *testing.T) {
 	}
 }
 
+func TestSetupCCChange(t *testing.T) {
+	tests := []struct {
+		name        string
+		commands    []mappings.Command
+		initialCc   uint8
+		expectedCc  uint8
+		description string
+	}{
+		{
+			name:        "Should increase CC",
+			commands:    []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Increase},
+			initialCc:   0,
+			expectedCc:  1,
+			description: "Select CC and increment it",
+		},
+		{
+			name:        "Should decrease CC",
+			commands:    []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Decrease},
+			initialCc:   1,
+			expectedCc:  0,
+			description: "Select CC and decrement it",
+		},
+		{
+			name:        "Should skip unused CC on increase",
+			commands:    []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Increase},
+			initialCc:   2,
+			expectedCc:  4,
+			description: "Should skip over unused CCs on increase",
+		},
+		{
+			name:        "Should skip unused CC on decrease",
+			commands:    []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Decrease},
+			initialCc:   4,
+			expectedCc:  2,
+			description: "Should skip over unused CCs on decrease",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					m.definition.lines[m.cursorPos.Line].Note = tt.initialCc
+					return *m
+				},
+			)
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, tt.expectedCc, m.definition.lines[m.cursorPos.Line].Note, tt.description)
+		})
+	}
+}
+
 func TestOverlayInputSwitch(t *testing.T) {
 	tests := []struct {
 		name              string
