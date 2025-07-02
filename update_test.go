@@ -367,6 +367,41 @@ func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 	}
 }
 
+func TestSetupInputSwitchMessageTypeBackToGrid(t *testing.T) {
+	tests := []struct {
+		name                string
+		commands            []mappings.Command
+		expectedMessageType grid.MessageType
+		description         string
+	}{
+		{
+			name:                "Message Type Increase from Note to Program Change and back to Grid",
+			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.Increase, mappings.SetupInputSwitch},
+			expectedMessageType: grid.MessageTypeProgramChange,
+			description:         "Two setup input switches should select message type and increase should increment it",
+		},
+		{
+			name:                "Message Type Increase from Note to Cc and back to Grid",
+			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.SetupInputSwitch},
+			expectedMessageType: grid.MessageTypeCc,
+			description:         "Two setup input switches should select message type and increase should increment it",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Should select back to nothing")
+			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.cursorPos.Line].MsgType, tt.description+" - message type value")
+		})
+	}
+}
+
 func TestOverlayInputSwitch(t *testing.T) {
 	tests := []struct {
 		name              string

@@ -1393,7 +1393,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			states := []Selection{SelectNothing, SelectTempo, SelectTempoSubdivision}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.SetupInputSwitch:
-			states := []Selection{SelectNothing, SelectSetupChannel, SelectSetupMessageType, SelectSetupValue}
+			var states []Selection
+			if m.definition.lines[m.cursorPos.Line].MsgType == grid.MessageTypeProgramChange {
+				states = []Selection{SelectNothing, SelectSetupChannel, SelectSetupMessageType}
+			} else {
+				states = []Selection{SelectNothing, SelectSetupChannel, SelectSetupMessageType, SelectSetupValue}
+			}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.AccentInputSwitch:
 			states := []Selection{SelectNothing, SelectAccentDiff, SelectAccentTarget, SelectAccentStart}
@@ -3162,10 +3167,14 @@ func (m model) SetupView() string {
 
 		buf.WriteString(messageType)
 
-		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SelectSetupValue {
-			buf.WriteString(themes.SelectedStyle.Render(strconv.Itoa(int(line.Note))))
+		if line.MsgType == grid.MessageTypeProgramChange {
+			buf.WriteString("")
 		} else {
-			buf.WriteString(themes.NumberStyle.Render(strconv.Itoa(int(line.Note))))
+			if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SelectSetupValue {
+				buf.WriteString(themes.SelectedStyle.Render(strconv.Itoa(int(line.Note))))
+			} else {
+				buf.WriteString(themes.NumberStyle.Render(strconv.Itoa(int(line.Note))))
+			}
 		}
 		buf.WriteString(fmt.Sprintf(" %s\n", LineValueName(line, m.definition.instrument)))
 	}
