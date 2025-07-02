@@ -796,12 +796,20 @@ func (m *model) DecreaseSpan() {
 	}
 }
 
-func (m *model) IncreaseAccent() {
+func (m *model) IncreaseAccentDiff() {
 	m.definition.accents.Diff = m.definition.accents.Diff + 1
 	m.definition.accents.ReCalc()
+
+	// NOTE: uint8 values cannot be less than 0, so instead we check
+	// if the value wrapped around to a value greater than 127
+	// and set it back to the original value if so
+	if m.definition.accents.Data[len(m.definition.accents.Data)-1].Value > 127 {
+		m.definition.accents.Diff -= 1
+		m.definition.accents.ReCalc()
+	}
 }
 
-func (m *model) DecreaseAccent() {
+func (m *model) DecreaseAccentDiff() {
 	m.definition.accents.Diff = m.definition.accents.Diff - 1
 	m.definition.accents.ReCalc()
 }
@@ -837,13 +845,17 @@ func (m *model) DecreaseTempo(amount int) {
 }
 
 func (m *model) IncreaseAccentStart() {
-	m.definition.accents.Start = m.definition.accents.Start + 1
-	m.definition.accents.ReCalc()
+	if m.definition.accents.Start < 127 {
+		m.definition.accents.Start = m.definition.accents.Start + 1
+		m.definition.accents.ReCalc()
+	}
 }
 
 func (m *model) DecreaseAccentStart() {
-	m.definition.accents.Start = m.definition.accents.Start - 1
-	m.definition.accents.ReCalc()
+	if m.definition.accents.Data[len(m.definition.accents.Data)-1].Value > 0 {
+		m.definition.accents.Start = m.definition.accents.Start - 1
+		m.definition.accents.ReCalc()
+	}
 }
 
 func (m *model) IncreaseBeats() {
@@ -1459,7 +1471,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			case SelectRatchetSpan:
 				m.IncreaseSpan()
 			case SelectAccentDiff:
-				m.IncreaseAccent()
+				m.IncreaseAccentDiff()
 			case SelectAccentTarget:
 				// Only two options right now, so increase and decrease would do the
 				// same thing
@@ -1509,7 +1521,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			case SelectRatchetSpan:
 				m.DecreaseSpan()
 			case SelectAccentDiff:
-				m.DecreaseAccent()
+				m.DecreaseAccentDiff()
 			case SelectAccentTarget:
 				m.DecreaseAccentTarget()
 			case SelectAccentStart:
