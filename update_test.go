@@ -106,63 +106,63 @@ func TestUpdateCursorMovements(t *testing.T) {
 func TestTempoChanges(t *testing.T) {
 	tests := []struct {
 		name          string
-		commands      []mappings.Command
+		commands      []any
 		initialTempo  int
 		expectedTempo int
 		description   string
 	}{
 		{
 			name:          "Increase Tempo",
-			commands:      []mappings.Command{mappings.TempoInputSwitch, mappings.Increase},
+			commands:      []any{mappings.TempoInputSwitch, mappings.Increase},
 			initialTempo:  120,
 			expectedTempo: 121,
 			description:   "Tempo should increase by 1",
 		},
 		{
 			name:          "Increase Tempo At Boundary",
-			commands:      []mappings.Command{mappings.TempoInputSwitch, mappings.Increase},
+			commands:      []any{mappings.TempoInputSwitch, mappings.Increase},
 			initialTempo:  300,
 			expectedTempo: 300,
 			description:   "Tempo should increase by 1",
 		},
 		{
 			name:          "Decrease Tempo",
-			commands:      []mappings.Command{mappings.TempoInputSwitch, mappings.Decrease},
+			commands:      []any{mappings.TempoInputSwitch, mappings.Decrease},
 			initialTempo:  130,
 			expectedTempo: 129,
 			description:   "Tempo should decrease by 1",
 		},
 		{
 			name:          "Decrease Tempo At Boundary",
-			commands:      []mappings.Command{mappings.TempoInputSwitch, mappings.Decrease},
+			commands:      []any{mappings.TempoInputSwitch, mappings.Decrease},
 			initialTempo:  30,
 			expectedTempo: 30,
 			description:   "Tempo should decrease by 1",
 		},
 		{
 			name:          "Increase Tempo by 5",
-			commands:      []mappings.Command{mappings.Increase},
+			commands:      []any{mappings.Increase},
 			initialTempo:  120,
 			expectedTempo: 125,
 			description:   "Tempo should increase by 5",
 		},
 		{
 			name:          "Increase Tempo by 5 at Boundary",
-			commands:      []mappings.Command{mappings.Increase},
+			commands:      []any{mappings.Increase},
 			initialTempo:  297,
 			expectedTempo: 300,
 			description:   "Tempo should increase by 5",
 		},
 		{
 			name:          "Decrease Tempo by 5",
-			commands:      []mappings.Command{mappings.Decrease},
+			commands:      []any{mappings.Decrease},
 			initialTempo:  130,
 			expectedTempo: 125,
 			description:   "Tempo should decrease by 5",
 		},
 		{
 			name:          "Decrease Tempo by 5 at Boundary",
-			commands:      []mappings.Command{mappings.Decrease},
+			commands:      []any{mappings.Decrease},
 			initialTempo:  32,
 			expectedTempo: 30,
 			description:   "Tempo should decrease by 5",
@@ -187,35 +187,35 @@ func TestTempoChanges(t *testing.T) {
 func TestSubdivisionChanges(t *testing.T) {
 	tests := []struct {
 		name                 string
-		commands             []mappings.Command
+		commands             []any
 		initialSubdivisions  int
 		expectedSubdivisions int
 		description          string
 	}{
 		{
 			name:                 "Increase Subdivisions",
-			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Increase},
+			commands:             []any{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Increase},
 			initialSubdivisions:  2,
 			expectedSubdivisions: 3,
 			description:          "Subdivisions should increase by 1",
 		},
 		{
 			name:                 "Increase Subdivisions At Boundary",
-			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Increase},
+			commands:             []any{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Increase},
 			initialSubdivisions:  8,
 			expectedSubdivisions: 8,
 			description:          "Subdivisions should be at maximum",
 		},
 		{
 			name:                 "Decrease Subdivisions",
-			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Decrease},
+			commands:             []any{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Decrease},
 			initialSubdivisions:  3,
 			expectedSubdivisions: 2,
 			description:          "Subdivisions should decrease by 1",
 		},
 		{
 			name:                 "Decrease Subdivisions At Boundary",
-			commands:             []mappings.Command{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Decrease},
+			commands:             []any{mappings.TempoInputSwitch, mappings.TempoInputSwitch, mappings.Decrease},
 			initialSubdivisions:  1,
 			expectedSubdivisions: 1,
 			description:          "Subdivisions should be at minimum",
@@ -240,35 +240,35 @@ func TestSubdivisionChanges(t *testing.T) {
 func TestSetupInputSwitchWithIncrease(t *testing.T) {
 	tests := []struct {
 		name                 string
-		commands             []mappings.Command
+		commands             []any
 		initialSetupChannel  uint8
 		expectedSetupChannel uint8
 		description          string
 	}{
 		{
 			name:                 "Setup Channel Increase",
-			commands:             []mappings.Command{mappings.SetupInputSwitch, mappings.Increase},
+			commands:             []any{mappings.SetupInputSwitch, mappings.Increase},
 			initialSetupChannel:  0,
 			expectedSetupChannel: 1,
 			description:          "Setup input switch should select channel and increase should increment it",
 		},
 		{
 			name:                 "Setup Channel Decrease",
-			commands:             []mappings.Command{mappings.SetupInputSwitch, mappings.Decrease},
+			commands:             []any{mappings.SetupInputSwitch, mappings.Decrease},
 			initialSetupChannel:  5,
 			expectedSetupChannel: 4,
 			description:          "Setup input switch should select channel and decrease should decrement it",
 		},
 		{
 			name:                 "Setup Channel Increase At Upper Boundary",
-			commands:             []mappings.Command{mappings.SetupInputSwitch, mappings.Increase},
+			commands:             []any{mappings.SetupInputSwitch, mappings.Increase},
 			initialSetupChannel:  16,
 			expectedSetupChannel: 16,
 			description:          "Setup input switch should select channel and increase should not go above 16",
 		},
 		{
 			name:                 "Setup Channel Decrease At Lower Boundary",
-			commands:             []mappings.Command{mappings.SetupInputSwitch, mappings.Decrease},
+			commands:             []any{mappings.SetupInputSwitch, mappings.Decrease},
 			initialSetupChannel:  1,
 			expectedSetupChannel: 1,
 			description:          "Setup input switch should select channel and decrease should not go below 1",
@@ -298,49 +298,49 @@ func TestSetupInputSwitchWithIncrease(t *testing.T) {
 func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 	tests := []struct {
 		name                string
-		commands            []mappings.Command
+		commands            []any
 		initialMessageType  grid.MessageType
 		expectedMessageType grid.MessageType
 		description         string
 	}{
 		{
 			name:                "Message Type Increase from Note to CC",
-			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
+			commands:            []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
 			initialMessageType:  grid.MessageTypeNote,
 			expectedMessageType: grid.MessageTypeCc,
 			description:         "Two setup input switches should select message type and increase should increment it",
 		},
 		{
 			name:                "Message Type Increase from CC to Program Change",
-			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
+			commands:            []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
 			initialMessageType:  grid.MessageTypeCc,
 			expectedMessageType: grid.MessageTypeProgramChange,
 			description:         "Two setup input switches should select message type and increase should increment it",
 		},
 		{
 			name:                "Message Type Increase from Program Change to Note (wraparound)",
-			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
+			commands:            []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
 			initialMessageType:  grid.MessageTypeProgramChange,
 			expectedMessageType: grid.MessageTypeNote,
 			description:         "Two setup input switches should select message type and increase should wrap to Note",
 		},
 		{
 			name:                "Message Type Decrease from Note to Program Change (wraparound)",
-			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			commands:            []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
 			initialMessageType:  grid.MessageTypeNote,
 			expectedMessageType: grid.MessageTypeProgramChange,
 			description:         "Two setup input switches should select message type and increase should increment it",
 		},
 		{
 			name:                "Message Type Decrease from CC to Note",
-			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			commands:            []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
 			initialMessageType:  grid.MessageTypeCc,
 			expectedMessageType: grid.MessageTypeNote,
 			description:         "Two setup input switches should select message type and increase should increment it",
 		},
 		{
 			name:                "Message Type Decrease from Program Change to CC",
-			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			commands:            []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
 			initialMessageType:  grid.MessageTypeProgramChange,
 			expectedMessageType: grid.MessageTypeCc,
 			description:         "Two setup input switches should select message type and increase should wrap to Note",
@@ -370,19 +370,19 @@ func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 func TestSetupInputSwitchMessageTypeBackToGrid(t *testing.T) {
 	tests := []struct {
 		name                string
-		commands            []mappings.Command
+		commands            []any
 		expectedMessageType grid.MessageType
 		description         string
 	}{
 		{
 			name:                "Message Type Increase from Note to Program Change and back to Grid",
-			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.Increase, mappings.SetupInputSwitch},
+			commands:            []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.Increase, mappings.SetupInputSwitch},
 			expectedMessageType: grid.MessageTypeProgramChange,
 			description:         "Two setup input switches should select message type and increase should increment it",
 		},
 		{
 			name:                "Message Type Increase from Note to Cc and back to Grid",
-			commands:            []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.SetupInputSwitch},
+			commands:            []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.SetupInputSwitch},
 			expectedMessageType: grid.MessageTypeCc,
 			description:         "Two setup input switches should select message type and increase should increment it",
 		},
@@ -405,42 +405,42 @@ func TestSetupInputSwitchMessageTypeBackToGrid(t *testing.T) {
 func TestSetupNoteChange(t *testing.T) {
 	tests := []struct {
 		name         string
-		commands     []mappings.Command
+		commands     []any
 		initialNote  uint8
 		expectedNote uint8
 		description  string
 	}{
 		{
 			name:         "Note Increase",
-			commands:     []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
+			commands:     []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
 			initialNote:  60,
 			expectedNote: 61,
 			description:  "Note should increase by 1",
 		},
 		{
 			name:         "Note Decrease",
-			commands:     []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			commands:     []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
 			initialNote:  60,
 			expectedNote: 59,
 			description:  "Note should decrease by 1",
 		},
 		{
 			name:         "Note Increase At Boundary",
-			commands:     []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
+			commands:     []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase},
 			initialNote:  127,
 			expectedNote: 127,
 			description:  "Note should not increase beyond 127",
 		},
 		{
 			name:         "Note Decrease at Boundary",
-			commands:     []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			commands:     []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
 			initialNote:  0,
 			expectedNote: 0,
 			description:  "Note should not decrease below 0",
 		},
 		{
 			name:         "Note Decrease right above Boundary",
-			commands:     []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
+			commands:     []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Decrease},
 			initialNote:  1,
 			expectedNote: 0,
 			description:  "Note should not decrease below 0",
@@ -466,21 +466,21 @@ func TestSetupNoteChange(t *testing.T) {
 func TestAccentInputSwitchDiffAndData(t *testing.T) {
 	tests := []struct {
 		name                 string
-		commands             []mappings.Command
+		commands             []any
 		expectedAccentDiff   uint8
 		expectedAccentValues []uint8
 		description          string
 	}{
 		{
 			name:                 "Accent Input Switch with Increase",
-			commands:             []mappings.Command{mappings.AccentInputSwitch, mappings.Increase},
+			commands:             []any{mappings.AccentInputSwitch, mappings.Increase},
 			expectedAccentDiff:   16,
 			expectedAccentValues: []uint8{0, 120, 104, 88, 72, 56, 40, 24, 8},
 			description:          "Should select accent input and increase should set accent values",
 		},
 		{
 			name:                 "Accent Input Switch with Decrease",
-			commands:             []mappings.Command{mappings.AccentInputSwitch, mappings.Decrease},
+			commands:             []any{mappings.AccentInputSwitch, mappings.Decrease},
 			expectedAccentDiff:   14,
 			expectedAccentValues: []uint8{0, 120, 106, 92, 78, 64, 50, 36, 22},
 			description:          "Should select accent input and decrease should set accent values",
@@ -504,25 +504,25 @@ func TestAccentInputSwitchDiffAndData(t *testing.T) {
 func TestAccentInputSwitchTarget(t *testing.T) {
 	tests := []struct {
 		name                 string
-		commands             []mappings.Command
+		commands             []any
 		expectedAccentTarget accentTarget
 		description          string
 	}{
 		{
 			name:                 "Accent Input Switch with Increase on Target",
-			commands:             []mappings.Command{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Increase},
+			commands:             []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Increase},
 			expectedAccentTarget: AccentTargetNote,
 			description:          "Should select accent input and increase should set accent target to Note",
 		},
 		{
 			name:                 "Accent Input Switch with Decrease on Target",
-			commands:             []mappings.Command{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Decrease},
+			commands:             []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Decrease},
 			expectedAccentTarget: AccentTargetNote,
 			description:          "Should select accent input and decrease should set accent target to Note",
 		},
 		{
 			name:                 "Accent Input Switch with Decrease on Target Wraparound",
-			commands:             []mappings.Command{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Decrease, mappings.Decrease},
+			commands:             []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Decrease, mappings.Decrease},
 			expectedAccentTarget: AccentTargetVelocity,
 			description:          "Should select accent input and decrease should set accent target to Velocity",
 		},
@@ -542,35 +542,35 @@ func TestAccentInputSwitchTarget(t *testing.T) {
 func TestAccentInputSwitchStartValue(t *testing.T) {
 	tests := []struct {
 		name                string
-		commands            []mappings.Command
+		commands            []any
 		initialAccentStart  uint8
 		expectedAccentStart uint8
 		description         string
 	}{
 		{
 			name:                "Accent Input Switch with Increase on Start Value",
-			commands:            []mappings.Command{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Increase},
+			commands:            []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Increase},
 			initialAccentStart:  120,
 			expectedAccentStart: 121,
 			description:         "Should select accent input and increase should set accent start value to 0",
 		},
 		{
 			name:                "Accent Input Switch with Decrease on Start Value",
-			commands:            []mappings.Command{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Decrease},
+			commands:            []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Decrease},
 			initialAccentStart:  120,
 			expectedAccentStart: 119,
 			description:         "Should select accent input and decrease should set accent start value to 127",
 		},
 		{
 			name:                "Accent Input Switch with Increase on Start Value at Boundary",
-			commands:            []mappings.Command{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Increase},
+			commands:            []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Increase},
 			initialAccentStart:  127,
 			expectedAccentStart: 127,
 			description:         "Should select accent input and increase should not go above 127",
 		},
 		{
 			name:                "Accent Input Switch with Decrease on Start Value at Boundary",
-			commands:            []mappings.Command{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Decrease},
+			commands:            []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Decrease},
 			initialAccentStart:  105,
 			expectedAccentStart: 105,
 			description:         "Should select accent input and decrease should not go below 0",
@@ -597,35 +597,35 @@ func TestAccentInputSwitchStartValue(t *testing.T) {
 func TestSetupCCChange(t *testing.T) {
 	tests := []struct {
 		name        string
-		commands    []mappings.Command
+		commands    []any
 		initialCc   uint8
 		expectedCc  uint8
 		description string
 	}{
 		{
 			name:        "Should increase CC",
-			commands:    []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Increase},
+			commands:    []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Increase},
 			initialCc:   0,
 			expectedCc:  1,
 			description: "Select CC and increment it",
 		},
 		{
 			name:        "Should decrease CC",
-			commands:    []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Decrease},
+			commands:    []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Decrease},
 			initialCc:   1,
 			expectedCc:  0,
 			description: "Select CC and decrement it",
 		},
 		{
 			name:        "Should skip unused CC on increase",
-			commands:    []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Increase},
+			commands:    []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Increase},
 			initialCc:   2,
 			expectedCc:  4,
 			description: "Should skip over unused CCs on increase",
 		},
 		{
 			name:        "Should skip unused CC on decrease",
-			commands:    []mappings.Command{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Decrease},
+			commands:    []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.SetupInputSwitch, mappings.Decrease},
 			initialCc:   4,
 			expectedCc:  2,
 			description: "Should skip over unused CCs on decrease",
@@ -651,28 +651,28 @@ func TestSetupCCChange(t *testing.T) {
 func TestOverlayInputSwitch(t *testing.T) {
 	tests := []struct {
 		name              string
-		commands          []mappings.Command
+		commands          []any
 		expectedSelection Selection
 		expectedFocus     focus
 		description       string
 	}{
 		{
 			name:              "Single OverlayInputSwitch",
-			commands:          []mappings.Command{mappings.OverlayInputSwitch},
+			commands:          []any{mappings.OverlayInputSwitch},
 			expectedSelection: SelectNothing,
 			expectedFocus:     FocusOverlayKey,
 			description:       "First overlay input switch should select overlay and set focus to overlay key",
 		},
 		{
 			name:              "Double OverlayInputSwitch",
-			commands:          []mappings.Command{mappings.OverlayInputSwitch, mappings.OverlayInputSwitch},
+			commands:          []any{mappings.OverlayInputSwitch, mappings.OverlayInputSwitch},
 			expectedSelection: SelectNothing,
 			expectedFocus:     FocusGrid,
 			description:       "Second overlay input switch should cycle back to nothing but keep overlay key focus",
 		},
 		{
 			name:              "Escape Overlay Input state",
-			commands:          []mappings.Command{mappings.OverlayInputSwitch, mappings.Escape},
+			commands:          []any{mappings.OverlayInputSwitch, mappings.Escape},
 			expectedSelection: SelectNothing,
 			expectedFocus:     FocusGrid,
 			description:       "Escape should set focus and selection back to an initial state",
@@ -705,37 +705,37 @@ func TestOverlayInputSwitch(t *testing.T) {
 func TestRatchetInputSwitch(t *testing.T) {
 	tests := []struct {
 		name              string
-		commands          []mappings.Command
+		commands          []any
 		expectedSelection Selection
 		description       string
 	}{
 		{
 			name:              "RatchetInputSwitch when cursor note no note",
-			commands:          []mappings.Command{mappings.RatchetInputSwitch},
+			commands:          []any{mappings.RatchetInputSwitch},
 			expectedSelection: SelectNothing,
 			description:       "First ratchet input switch does nothing if not on a note",
 		},
 		{
 			name:              "RatchetInputSwitch when cursor on note",
-			commands:          []mappings.Command{mappings.TriggerAdd, mappings.RatchetInputSwitch},
+			commands:          []any{mappings.TriggerAdd, mappings.RatchetInputSwitch},
 			expectedSelection: SelectRatchets,
 			description:       "First ratchet input switch should select ratchet",
 		},
 		{
 			name:              "Second RatchetInputSwitch when cursor on note",
-			commands:          []mappings.Command{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
+			commands:          []any{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
 			expectedSelection: SelectRatchetSpan,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
 		{
 			name:              "Third RatchetInputSwitch",
-			commands:          []mappings.Command{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
+			commands:          []any{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
 			expectedSelection: SelectNothing,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
 		{
 			name:              "Escape Ratchet Input",
-			commands:          []mappings.Command{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.Escape},
+			commands:          []any{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.Escape},
 			expectedSelection: SelectNothing,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
@@ -757,13 +757,13 @@ func TestRatchetInputSwitch(t *testing.T) {
 func TestRatchetInputValues(t *testing.T) {
 	tests := []struct {
 		name            string
-		commands        []mappings.Command
+		commands        []any
 		expectedRatchet grid.Ratchet
 		description     string
 	}{
 		{
 			name: "RatchetInputSwitch with Mute Ratchet",
-			commands: []mappings.Command{
+			commands: []any{
 				mappings.TriggerAdd,
 				mappings.RatchetInputSwitch,
 				mappings.Mute,
@@ -777,7 +777,7 @@ func TestRatchetInputValues(t *testing.T) {
 		},
 		{
 			name: "RatchetInputSwitch with Mute Ratchet and Remute",
-			commands: []mappings.Command{
+			commands: []any{
 				mappings.TriggerAdd,
 				mappings.RatchetInputSwitch,
 				mappings.Mute,
@@ -792,7 +792,7 @@ func TestRatchetInputValues(t *testing.T) {
 		},
 		{
 			name: "RatchetInputSwitch with Span Increase",
-			commands: []mappings.Command{
+			commands: []any{
 				mappings.TriggerAdd,
 				mappings.RatchetInputSwitch,
 				mappings.RatchetInputSwitch,
@@ -807,7 +807,7 @@ func TestRatchetInputValues(t *testing.T) {
 		},
 		{
 			name: "RatchetInputSwitch with Span Increase/Decrease",
-			commands: []mappings.Command{
+			commands: []any{
 				mappings.TriggerAdd,
 				mappings.RatchetInputSwitch,
 				mappings.RatchetInputSwitch,
@@ -823,7 +823,7 @@ func TestRatchetInputValues(t *testing.T) {
 		},
 		{
 			name: "RatchetInputSwitch with Mute Second Hit",
-			commands: []mappings.Command{
+			commands: []any{
 				mappings.TriggerAdd,
 				mappings.RatchetIncrease,
 				mappings.RatchetInputSwitch,
@@ -839,7 +839,7 @@ func TestRatchetInputValues(t *testing.T) {
 		},
 		{
 			name: "RatchetInputSwitch with Mute First Hit after moving cursor",
-			commands: []mappings.Command{
+			commands: []any{
 				mappings.TriggerAdd,
 				mappings.RatchetIncrease,
 				mappings.RatchetInputSwitch,
@@ -873,35 +873,35 @@ func TestRatchetInputValues(t *testing.T) {
 func TestBeatInputSwitchIncrease(t *testing.T) {
 	tests := []struct {
 		name          string
-		commands      []mappings.Command
+		commands      []any
 		initialBeats  uint8
 		expectedBeats uint8
 		description   string
 	}{
 		{
 			name:          "Beat Input Switch with Increase",
-			commands:      []mappings.Command{mappings.BeatInputSwitch, mappings.Increase},
+			commands:      []any{mappings.BeatInputSwitch, mappings.Increase},
 			initialBeats:  16,
 			expectedBeats: 17,
 			description:   "Beat input switch should select beats and increase should increment it",
 		},
 		{
 			name:          "Beat Input Switch with Decrease",
-			commands:      []mappings.Command{mappings.BeatInputSwitch, mappings.Decrease},
+			commands:      []any{mappings.BeatInputSwitch, mappings.Decrease},
 			initialBeats:  16,
 			expectedBeats: 15,
 			description:   "Beat input switch should select beats and decrease should decrement it",
 		},
 		{
 			name:          "Beat Input Switch with Increase At Upper Boundary",
-			commands:      []mappings.Command{mappings.BeatInputSwitch, mappings.Increase},
+			commands:      []any{mappings.BeatInputSwitch, mappings.Increase},
 			initialBeats:  127,
 			expectedBeats: 127,
 			description:   "Beat input switch should select beats and increase should not go above 127",
 		},
 		{
 			name:          "Beat Input Switch with Decrease At Lower Boundary",
-			commands:      []mappings.Command{mappings.BeatInputSwitch, mappings.Decrease},
+			commands:      []any{mappings.BeatInputSwitch, mappings.Decrease},
 			initialBeats:  0,
 			expectedBeats: 0,
 			description:   "Beat input switch should select beats and decrease should not go below 0",
@@ -931,35 +931,35 @@ func TestBeatInputSwitchIncrease(t *testing.T) {
 func TestBeatInputSwitchCyclesIncrease(t *testing.T) {
 	tests := []struct {
 		name           string
-		commands       []mappings.Command
+		commands       []any
 		initialCycles  int
 		expectedCycles int
 		description    string
 	}{
 		{
 			name:           "Beat Input Switch Cycles with Increase",
-			commands:       []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			commands:       []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
 			initialCycles:  4,
 			expectedCycles: 5,
 			description:    "Three beat input switches should select cycles and increase should increment it",
 		},
 		{
 			name:           "Beat Input Switch Cycles with Decrease",
-			commands:       []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			commands:       []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
 			initialCycles:  4,
 			expectedCycles: 3,
 			description:    "Three beat input switches should select cycles and decrease should decrement it",
 		},
 		{
 			name:           "Beat Input Switch Cycles with Increase At Upper Boundary",
-			commands:       []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			commands:       []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
 			initialCycles:  127,
 			expectedCycles: 127,
 			description:    "Three beat input switches should select cycles and increase should not go above 127",
 		},
 		{
 			name:           "Beat Input Switch Cycles with Decrease At Lower Boundary",
-			commands:       []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			commands:       []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
 			initialCycles:  0,
 			expectedCycles: 0,
 			description:    "Three beat input switches should select cycles and decrease should not go below 0",
@@ -990,28 +990,28 @@ func TestBeatInputSwitchCyclesIncrease(t *testing.T) {
 func TestBeatInputSwitchStartBeatsIncrease(t *testing.T) {
 	tests := []struct {
 		name               string
-		commands           []mappings.Command
+		commands           []any
 		initialStartBeats  int
 		expectedStartBeats int
 		description        string
 	}{
 		{
 			name:               "Beat Input Switch StartBeats with Increase",
-			commands:           []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			commands:           []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
 			initialStartBeats:  8,
 			expectedStartBeats: 9,
 			description:        "Two beat input switches should select start beats and increase should increment it",
 		},
 		{
 			name:               "Beat Input Switch StartBeats with Decrease",
-			commands:           []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			commands:           []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
 			initialStartBeats:  8,
 			expectedStartBeats: 7,
 			description:        "Two beat input switches should select start beats and decrease should decrement it",
 		},
 		{
 			name:     "Beat Input Switch StartBeats with Increase At Upper Boundary",
-			commands: []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			commands: []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
 			// NOTE: The upper boundary for start beats is the number of beats in a part
 			initialStartBeats:  31,
 			expectedStartBeats: 31,
@@ -1019,7 +1019,7 @@ func TestBeatInputSwitchStartBeatsIncrease(t *testing.T) {
 		},
 		{
 			name:               "Beat Input Switch StartBeats with Decrease At Lower Boundary",
-			commands:           []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			commands:           []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
 			initialStartBeats:  0,
 			expectedStartBeats: 0,
 			description:        "Two beat input switches should select start beats and decrease should not go below 0",
@@ -1050,35 +1050,35 @@ func TestBeatInputSwitchStartBeatsIncrease(t *testing.T) {
 func TestBeatInputSwitchStartCyclesIncrease(t *testing.T) {
 	tests := []struct {
 		name                string
-		commands            []mappings.Command
+		commands            []any
 		initialStartCycles  int
 		expectedStartCycles int
 		description         string
 	}{
 		{
 			name:                "Beat Input Switch StartCycles with Increase",
-			commands:            []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			commands:            []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
 			initialStartCycles:  4,
 			expectedStartCycles: 5,
 			description:         "Two beat input switches should select start cycles and increase should increment it",
 		},
 		{
 			name:                "Beat Input Switch StartCycles with Decrease",
-			commands:            []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			commands:            []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
 			initialStartCycles:  4,
 			expectedStartCycles: 3,
 			description:         "Two beat input switches should select start cycles and decrease should decrement it",
 		},
 		{
 			name:                "Beat Input Switch StartCycles with Increase At Upper Boundary",
-			commands:            []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			commands:            []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
 			initialStartCycles:  127,
 			expectedStartCycles: 127,
 			description:         "Two beat input switches should select start cycles and increase should not go above 127",
 		},
 		{
 			name:                "Beat Input Switch StartCycles with Decrease At Lower Boundary",
-			commands:            []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			commands:            []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
 			initialStartCycles:  0,
 			expectedStartCycles: 0,
 			description:         "Two beat input switches should select start cycles and decrease should not go below 0",
@@ -1110,7 +1110,7 @@ func TestToggleArrangementViewSwitch(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		commands          []mappings.Command
+		commands          []any
 		expectedFocus     focus
 		expectedSelection Selection
 		expectedArrIsOpen bool
@@ -1118,7 +1118,7 @@ func TestToggleArrangementViewSwitch(t *testing.T) {
 	}{
 		{
 			name:              "Toggle Arrangement View",
-			commands:          []mappings.Command{mappings.ToggleArrangementView},
+			commands:          []any{mappings.ToggleArrangementView},
 			expectedFocus:     FocusArrangementEditor,
 			expectedSelection: SelectNothing,
 			expectedArrIsOpen: true,
@@ -1126,7 +1126,7 @@ func TestToggleArrangementViewSwitch(t *testing.T) {
 		},
 		{
 			name:              "Toggle Arrangement View Switch Back to Grid",
-			commands:          []mappings.Command{mappings.ToggleArrangementView, mappings.ToggleArrangementView},
+			commands:          []any{mappings.ToggleArrangementView, mappings.ToggleArrangementView},
 			expectedFocus:     FocusGrid,
 			expectedSelection: SelectNothing,
 			expectedArrIsOpen: false,
@@ -1134,7 +1134,7 @@ func TestToggleArrangementViewSwitch(t *testing.T) {
 		},
 		{
 			name:              "Toggle Arrangement View Switch to Grid keep Arrangement Open",
-			commands:          []mappings.Command{mappings.ToggleArrangementView, mappings.Escape},
+			commands:          []any{mappings.ToggleArrangementView, mappings.Escape},
 			expectedFocus:     FocusGrid,
 			expectedSelection: SelectNothing,
 			expectedArrIsOpen: true,
@@ -1162,6 +1162,61 @@ func TestToggleArrangementViewSwitch(t *testing.T) {
 	}
 }
 
+func TestPatternModeGateIncrease(t *testing.T) {
+	tests := []struct {
+		name         string
+		commands     []any
+		expectedGate uint8
+		description  string
+	}{
+		{
+			name: "Add note, switch to gate mode, increase gate by 1",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleGateMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+			},
+			expectedGate: 1,
+			description:  "Should add note, switch to gate mode, and increase gate by 1",
+		},
+		{
+			name: "Add note, switch to gate mode, move to right no change",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleGateMode,
+				mappings.CursorRight,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+				mappings.CursorLeft, // move back to the note
+			},
+			expectedGate: 0,
+			description:  "Should add note, switch to gate mode, and increase gate by 1",
+		},
+		{
+			name: "Add note, switch to gate mode, increase gate by 1, decrease gate by 1",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleGateMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+			},
+			expectedGate: 0,
+			description:  "Should add note, switch to gate mode, and decrease gate by 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist")
+			assert.Equal(t, tt.expectedGate, currentNote.GateIndex, tt.description+" - gate value")
+		})
+	}
+}
+
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
@@ -1173,10 +1228,15 @@ func createTestModel(modelFns ...modelFunc) model {
 	return m
 }
 
-func processCommands(commands []mappings.Command, m model) (model, tea.Cmd) {
+func processCommands(commands []any, m model) (model, tea.Cmd) {
 	var cmd tea.Cmd
 	for _, command := range commands {
-		m, cmd = processCommand(command, m)
+		switch c := command.(type) {
+		case mappings.Command:
+			m, cmd = processCommand(c, m)
+		case mappings.Mapping:
+			m, cmd = processMapping(c, m)
+		}
 	}
 	return m, cmd
 }
@@ -1186,6 +1246,21 @@ func processCommand(command mappings.Command, m model) (model, tea.Cmd) {
 	var cmd tea.Cmd
 	for _, keyMsg := range keyMsgs {
 		var updateModel tea.Model
+		updateModel, cmd = m.Update(keyMsg)
+		switch um := updateModel.(type) {
+		case model:
+			m = um
+		}
+	}
+	return m, cmd
+}
+
+func processMapping(mapping mappings.Mapping, m model) (model, tea.Cmd) {
+	var cmd tea.Cmd
+	var updateModel tea.Model
+	switch mapping.Command {
+	case mappings.NumberPattern:
+		keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(mapping.LastValue)}
 		updateModel, cmd = m.Update(keyMsg)
 		switch um := updateModel.(type) {
 		case model:
