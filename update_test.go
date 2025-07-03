@@ -1343,6 +1343,61 @@ func TestPatternModeRatchetIncrease(t *testing.T) {
 	}
 }
 
+func TestPatternModeWaitIncrease(t *testing.T) {
+	tests := []struct {
+		name         string
+		commands     []any
+		expectedWait uint8
+		description  string
+	}{
+		{
+			name: "Add note, switch to wait mode, increase wait by 1",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleWaitMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+			},
+			expectedWait: 1,
+			description:  "Should add note, switch to wait mode, and increase wait by 1",
+		},
+		{
+			name: "Add note, switch to wait mode, move to right no change",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleWaitMode,
+				mappings.CursorRight,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+				mappings.CursorLeft, // move back to the note
+			},
+			expectedWait: 0,
+			description:  "Should add note, switch to wait mode, move cursor right and wait should remain 0",
+		},
+		{
+			name: "Add note, switch to wait mode, increase wait by 1, decrease wait by 1",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleWaitMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+			},
+			expectedWait: 0,
+			description:  "Should add note, switch to wait mode, and decrease wait by 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist")
+			assert.Equal(t, tt.expectedWait, currentNote.WaitIndex, tt.description+" - wait value")
+		})
+	}
+}
+
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
