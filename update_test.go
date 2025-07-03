@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -2084,6 +2086,80 @@ func TestNextOverlay(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, tt.expectedOverlayKey, m.currentOverlay.Key, tt.description)
+		})
+	}
+}
+
+func TestSave(t *testing.T) {
+	tests := []struct {
+		name        string
+		command     mappings.Command
+		description string
+	}{
+		{
+			name:        "Save With Filename",
+			command:     mappings.Save,
+			description: "Should save file when filename is set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a temporary filename
+			tempDir := t.TempDir()
+			testFilename := filepath.Join(tempDir, "test_save.seq")
+
+			m := createTestModel(
+				func(m *model) model {
+					m.filename = testFilename
+					return *m
+				},
+			)
+
+			_, err := os.Stat(testFilename)
+			assert.True(t, os.IsNotExist(err), "File should not exist initially")
+
+			processCommand(tt.command, m)
+
+			_, err = os.Stat(testFilename)
+			assert.NoError(t, err, tt.description+" - file should be created")
+
+			fileInfo, err := os.Stat(testFilename)
+			assert.NoError(t, err, "Should be able to get file info")
+			assert.Greater(t, fileInfo.Size(), int64(0), "File should not be empty")
+		})
+	}
+}
+
+func TestNew(t *testing.T) {
+	tests := []struct {
+		name        string
+		commands    []any
+		description string
+	}{
+		{
+			name: "New Sequence Clears Notes",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.CursorRight,
+				mappings.New,
+				mappings.Enter,
+			},
+			description: "Should clear all notes when creating new sequence",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			note, exists := m.CurrentNote()
+			assert.False(t, exists, tt.description+" - note should not exist after new sequence")
+			assert.Equal(t, zeronote, note, tt.description+" - note should be zero note")
+
+			assert.Equal(t, grid.GridKey{Line: 0, Beat: 0}, m.cursorPos, "Cursor should be reset to origin")
 		})
 	}
 }
