@@ -1398,6 +1398,432 @@ func TestPatternModeWaitIncrease(t *testing.T) {
 	}
 }
 
+func TestAccentIncrease(t *testing.T) {
+	tests := []struct {
+		name           string
+		commands       []any
+		expectedAccent uint8
+		description    string
+	}{
+		{
+			name: "Add note and increase accent",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.AccentIncrease,
+			},
+			expectedAccent: 4,
+			description:    "Should add note and increase accent by 1 (index 5 -> 4)",
+		},
+		{
+			name: "Add note and increase accent twice",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.AccentIncrease,
+				mappings.AccentIncrease,
+			},
+			expectedAccent: 3,
+			description:    "Should add note and increase accent by 2 (index 5 -> 3)",
+		},
+		{
+			name: "Add note and increase accent at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.AccentIncrease,
+				mappings.AccentIncrease,
+				mappings.AccentIncrease,
+				mappings.AccentIncrease,
+				mappings.AccentIncrease,
+			},
+			expectedAccent: 1,
+			description:    "Should add note and increase accent to minimum index (1)",
+		},
+		{
+			name: "Add note and decrease accent",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.AccentDecrease,
+			},
+			expectedAccent: 6,
+			description:    "Should add note and decrease accent by 1 (index 5 -> 6)",
+		},
+		{
+			name: "Add note and decrease accent twice",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.AccentDecrease,
+				mappings.AccentDecrease,
+			},
+			expectedAccent: 7,
+			description:    "Should add note and decrease accent by 2 (index 5 -> 7)",
+		},
+		{
+			name: "Add note and decrease accent at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.AccentDecrease,
+				mappings.AccentDecrease,
+				mappings.AccentDecrease,
+				mappings.AccentDecrease,
+				mappings.AccentDecrease,
+			},
+			expectedAccent: 8,
+			description:    "Should add note and decrease accent to maximum index (8)",
+		},
+		{
+			name: "Add note, increase then decrease accent",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.AccentIncrease,
+				mappings.AccentDecrease,
+			},
+			expectedAccent: 5,
+			description:    "Should add note, increase then decrease accent (index 5 -> 4 -> 5)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist")
+			assert.Equal(t, tt.expectedAccent, currentNote.AccentIndex, tt.description+" - accent value")
+		})
+	}
+}
+
+func TestGateIncrease(t *testing.T) {
+	tests := []struct {
+		name         string
+		commands     []any
+		expectedGate uint8
+		description  string
+	}{
+		{
+			name: "Add note and increase gate",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.GateIncrease,
+			},
+			expectedGate: 1,
+			description:  "Should add note and increase gate by 1 (index 0 -> 1)",
+		},
+		{
+			name: "Add note and increase gate twice",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+			},
+			expectedGate: 2,
+			description:  "Should add note and increase gate by 2 (index 0 -> 2)",
+		},
+		{
+			name: "Add note and increase gate at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+			},
+			expectedGate: 7,
+			description:  "Should add note and increase gate to maximum index (8)",
+		},
+		{
+			name: "Add note and decrease gate",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+				mappings.GateDecrease,
+			},
+			expectedGate: 1,
+			description:  "Should add note and decrease gate by 1 (index 2 -> 1)",
+		},
+		{
+			name: "Add note and decrease gate twice",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+				mappings.GateIncrease,
+				mappings.GateDecrease,
+				mappings.GateDecrease,
+			},
+			expectedGate: 1,
+			description:  "Should add note and decrease gate by 2 (index 3 -> 1)",
+		},
+		{
+			name: "Add note and decrease gate at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.GateDecrease,
+			},
+			expectedGate: 0,
+			description:  "Should add note and decrease gate stays at minimum index (0)",
+		},
+		{
+			name: "Add note, increase then decrease gate",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.GateIncrease,
+				mappings.GateDecrease,
+			},
+			expectedGate: 0,
+			description:  "Should add note, increase then decrease gate (index 0 -> 1 -> 0)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist")
+			assert.Equal(t, tt.expectedGate, currentNote.GateIndex, tt.description+" - gate value")
+		})
+	}
+}
+
+func TestWaitIncrease(t *testing.T) {
+	tests := []struct {
+		name         string
+		commands     []any
+		expectedWait uint8
+		description  string
+	}{
+		{
+			name: "Add note and increase wait",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.WaitIncrease,
+			},
+			expectedWait: 1,
+			description:  "Should add note and increase wait by 1 (index 0 -> 1)",
+		},
+		{
+			name: "Add note and increase wait twice",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+			},
+			expectedWait: 2,
+			description:  "Should add note and increase wait by 2 (index 0 -> 2)",
+		},
+		{
+			name: "Add note and increase wait at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+			},
+			expectedWait: 7,
+			description:  "Should add note and increase wait to maximum index (8)",
+		},
+		{
+			name: "Add note and decrease wait",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+				mappings.WaitDecrease,
+			},
+			expectedWait: 1,
+			description:  "Should add note and decrease wait by 1 (index 2 -> 1)",
+		},
+		{
+			name: "Add note and decrease wait twice",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+				mappings.WaitIncrease,
+				mappings.WaitDecrease,
+				mappings.WaitDecrease,
+			},
+			expectedWait: 1,
+			description:  "Should add note and decrease wait by 2 (index 3 -> 1)",
+		},
+		{
+			name: "Add note and decrease wait at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.WaitDecrease,
+			},
+			expectedWait: 0,
+			description:  "Should add note and decrease wait stays at minimum index (0)",
+		},
+		{
+			name: "Add note, increase then decrease wait",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.WaitIncrease,
+				mappings.WaitDecrease,
+			},
+			expectedWait: 0,
+			description:  "Should add note, increase then decrease wait (index 0 -> 1 -> 0)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist")
+			assert.Equal(t, tt.expectedWait, currentNote.WaitIndex, tt.description+" - wait value")
+		})
+	}
+}
+
+func TestRatchetIncrease(t *testing.T) {
+	tests := []struct {
+		name            string
+		commands        []any
+		expectedRatchet grid.Ratchet
+		description     string
+	}{
+		{
+			name: "Add note and increase ratchet",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RatchetIncrease,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   3, // 0b11 = 3 (two hits)
+				Length: 1,
+			},
+			description: "Should add note and increase ratchet by 1 (1 -> 2 hits)",
+		},
+		{
+			name: "Add note and increase ratchet twice",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   7, // 0b111 = 7 (three hits)
+				Length: 2,
+			},
+			description: "Should add note and increase ratchet by 2 (1 -> 3 hits)",
+		},
+		{
+			name: "Add note and increase ratchet at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   255, // 0b11111111 = 255 (eight hits)
+				Length: 7,
+			},
+			description: "Should add note and increase ratchet to maximum (8 hits)",
+		},
+		{
+			name: "Add note and decrease ratchet",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+				mappings.RatchetDecrease,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   3, // 0b11 = 3 (two hits)
+				Length: 1,
+			},
+			description: "Should add note and decrease ratchet by 1 (3 -> 2 hits)",
+		},
+		{
+			name: "Add note and decrease ratchet twice",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+				mappings.RatchetIncrease,
+				mappings.RatchetDecrease,
+				mappings.RatchetDecrease,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   3, // 0b11 = 3 (two hits)
+				Length: 1,
+			},
+			description: "Should add note and decrease ratchet by 2 (4 -> 2 hits)",
+		},
+		{
+			name: "Add note and decrease ratchet at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RatchetDecrease,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   1, // 0b1 = 1 (one hit - minimum)
+				Length: 0,
+			},
+			description: "Should add note and decrease ratchet stays at minimum (1 hit)",
+		},
+		{
+			name: "Add note, increase then decrease ratchet",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RatchetIncrease,
+				mappings.RatchetDecrease,
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   1, // 0b1 = 1 (one hit - back to default)
+				Length: 0,
+			},
+			description: "Should add note, increase then decrease ratchet (1 -> 2 -> 1 hits)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist")
+			assert.Equal(t, tt.expectedRatchet.Span, currentNote.Ratchets.Span, tt.description+" - ratchet span")
+			assert.Equal(t, tt.expectedRatchet.Hits, currentNote.Ratchets.Hits, tt.description+" - ratchet hits")
+			assert.Equal(t, tt.expectedRatchet.Length, currentNote.Ratchets.Length, tt.description+" - ratchet length")
+		})
+	}
+}
+
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
