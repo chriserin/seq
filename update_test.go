@@ -1107,6 +1107,7 @@ func TestBeatInputSwitchStartCyclesIncrease(t *testing.T) {
 }
 
 func TestToggleArrangementViewSwitch(t *testing.T) {
+
 	tests := []struct {
 		name              string
 		commands          []mappings.Command

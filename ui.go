@@ -33,40 +33,8 @@ import (
 	midi "gitlab.com/gomidi/midi/v2"
 )
 
-type transitiveKeyMap struct {
-	Quit                   key.Binding
-	PlayStop               key.Binding
-	PlayPart               key.Binding
-	PlayLoop               key.Binding
-	ArrangementInputSwitch key.Binding
-	ToggleArrangementView  key.Binding
-	Increase               key.Binding
-	Decrease               key.Binding
-	Enter                  key.Binding
-	Escape                 key.Binding
-	NewSectionAfter        key.Binding
-	NewSectionBefore       key.Binding
-	ChangePart             key.Binding
-}
-
 func Key(help string, keyboardKey ...string) key.Binding {
 	return key.NewBinding(key.WithKeys(keyboardKey...), key.WithHelp(keyboardKey[0], help))
-}
-
-var transitiveKeys = transitiveKeyMap{
-	Quit:                   Key("Quit", "q"),
-	PlayStop:               Key("Play/Stop", " "),
-	PlayPart:               Key("PlayPart", "ctrl+@"),
-	PlayLoop:               Key("PlayLoop", "alt+ "),
-	Increase:               Key("Tempo Increase", "+", "="),
-	Decrease:               Key("Tempo Decrease", "-"),
-	Enter:                  Key("Enter", "enter"),
-	Escape:                 Key("Escape", "esc", "ctrl+c"),
-	ArrangementInputSwitch: Key("Arrangement Input Indicator", "ctrl+x"),
-	ToggleArrangementView:  Key("Arrangement Input Indicator", "ctrl+f"),
-	NewSectionAfter:        Key("New Part After", "ctrl+]"),
-	NewSectionBefore:       Key("New Part Before", "ctrl+p"),
-	ChangePart:             Key("Change Part", "ctrl+c"),
 }
 
 type groupPlayState uint8
@@ -1181,32 +1149,13 @@ func IsNot(msg tea.KeyMsg, k ...key.Binding) bool {
 	return !key.Matches(msg, k...)
 }
 
-func (m model) IsPartOperation(msg tea.Msg) bool {
-	keys := transitiveKeys
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		return Is(msg, keys.ChangePart, keys.NewSectionAfter, keys.NewSectionBefore) ||
-			Is(msg, keys.Increase, keys.Decrease) && (m.selectionIndicator == SelectPart || m.selectionIndicator == SelectChangePart)
-	}
-	return false
+func (m model) IsPartOperation(mapping mappings.Mapping) bool {
+	return slices.Contains([]mappings.Command{mappings.ChangePart, mappings.NewSectionAfter, mappings.NewSectionBefore}, mapping.Command) ||
+		slices.Contains([]mappings.Command{mappings.Decrease, mappings.Increase}, mapping.Command) && (m.selectionIndicator == SelectPart || m.selectionIndicator == SelectChangePart)
 }
 
-func (m model) IsPlayOperation(msg tea.Msg) bool {
-	keys := transitiveKeys
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		return Is(msg, keys.PlayLoop, keys.PlayStop, keys.PlayPart)
-	}
-	return false
-}
-
-func (m model) IsArrangementViewOperation(msg tea.Msg) bool {
-	keys := transitiveKeys
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		return Is(msg, keys.ToggleArrangementView, keys.ArrangementInputSwitch)
-	}
-	return false
+func (m model) IsPlayOperation(mapping mappings.Mapping) bool {
+	return slices.Contains([]mappings.Command{mappings.PlayLoop, mappings.PlayStop, mappings.PlayPart}, mapping.Command)
 }
 
 type panicMsg struct {
@@ -1225,7 +1174,6 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		}
 	}()
-	keys := transitiveKeys
 
 	switch msg := msg.(type) {
 	case errorMsg:
@@ -1235,7 +1183,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.LogString(fmt.Sprintf(" ------ Panic Message ------- \n%s\n", msg.message))
 		m.LogString(fmt.Sprintf(" ------ Stacktrace ---------- \n%s\n", msg.stacktrace))
 	case tea.KeyMsg:
-		if Is(msg, keys.Enter) {
+		mapping := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PatternFill)
+		switch mapping.Command {
+		case mappings.Enter:
 			switch m.selectionIndicator {
 			case SelectRenamePart:
 				m.RenamePart(m.textInput.Value())
@@ -1277,7 +1227,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			default:
 				m.Escape()
 			}
-		} else if Is(msg, keys.Escape) {
+		case mappings.Escape:
 			if m.selectionIndicator != SelectNothing {
 				m.textInput.Reset()
 				m.selectionIndicator = SelectNothing
@@ -1285,7 +1235,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		}
 
-		if Is(msg, keys.Quit) {
+		if mapping.Command == mappings.Quit {
 			m.SetSelectionIndicator(SelectConfirmQuit)
 		}
 
@@ -1301,16 +1251,14 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			return m, cmd
 		}
 
-		if m.focus == FocusArrangementEditor && !m.IsPartOperation(msg) && !m.IsPlayOperation(msg) && !m.IsArrangementViewOperation(msg) {
+		if m.focus == FocusArrangementEditor && !m.IsPartOperation(mapping) && !m.IsPlayOperation(mapping) && mapping.Command != mappings.ToggleArrangementView {
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
 			m.ResetCurrentOverlay()
 			return m, cmd
 		}
 
-		mappingsCommand := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PatternFill)
-
-		switch mappingsCommand.Command {
+		switch mapping.Command {
 		case mappings.ReloadFile:
 			if m.filename != "" {
 				var err error
@@ -1622,7 +1570,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.Enter:
 			// NOTE: Do nothing, we've reacted to Enter at the beginning of Update
 		default:
-			m = m.UpdateDefinition(mappingsCommand)
+			m = m.UpdateDefinition(mapping)
 		}
 	case tea.FocusMsg:
 		m.hasUIFocus = true

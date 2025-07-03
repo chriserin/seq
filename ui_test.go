@@ -32,7 +32,7 @@ func TestUpdateArrangementFocus(t *testing.T) {
 		}
 
 		initialNodeCount := m.arrangement.Root.CountEndNodes()
-		updatedModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlF})
+		updatedModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlA})
 		modelPtr := updatedModel.(model)
 
 		assert.Equal(t, FocusArrangementEditor, modelPtr.focus, "Model should have arrangement editor focus")
