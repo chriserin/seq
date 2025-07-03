@@ -276,7 +276,20 @@ func (ol Overlay) GetNote(gridKey grid.GridKey) (grid.Note, bool) {
 }
 
 func (ol *Overlay) MoveNoteTo(gridKey grid.GridKey, note grid.Note) {
-	(*ol).Notes[gridKey] = note
+	if ol.Below == nil {
+		if note != zeronote {
+			(*ol).Notes[gridKey] = note
+		} else {
+			delete((*ol).Notes, gridKey)
+		}
+	} else {
+		_, exists := ol.Below.GetNote(gridKey)
+		if exists || note != zeronote {
+			(*ol).Notes[gridKey] = note
+		} else {
+			delete((*ol).Notes, gridKey)
+		}
+	}
 }
 
 func (ol *Overlay) SetNote(gridKey grid.GridKey, note grid.Note) {

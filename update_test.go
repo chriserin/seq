@@ -1824,6 +1824,135 @@ func TestRatchetIncrease(t *testing.T) {
 	}
 }
 
+func TestRotate(t *testing.T) {
+	tests := []struct {
+		name        string
+		commands    []any
+		initialPos  grid.GridKey
+		expectedPos grid.GridKey
+		description string
+	}{
+		{
+			name: "Rotate down",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RotateDown,
+			},
+			initialPos:  grid.GridKey{Line: 2, Beat: 4},
+			expectedPos: grid.GridKey{Line: 3, Beat: 4},
+			description: "Should rotate pattern down by one line",
+		},
+		{
+			name: "Rotate down at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RotateDown,
+			},
+			initialPos:  grid.GridKey{Line: 7, Beat: 4},
+			expectedPos: grid.GridKey{Line: 0, Beat: 4},
+			description: "Should rotate pattern down wrapping to top",
+		},
+		{
+			name: "Rotate up",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RotateUp,
+			},
+			initialPos:  grid.GridKey{Line: 2, Beat: 4},
+			expectedPos: grid.GridKey{Line: 1, Beat: 4},
+			description: "Should rotate pattern up by one line",
+		},
+		{
+			name: "Rotate up at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RotateUp,
+			},
+			initialPos:  grid.GridKey{Line: 0, Beat: 4},
+			expectedPos: grid.GridKey{Line: 7, Beat: 4},
+			description: "Should rotate pattern up wrapping to bottom",
+		},
+		{
+			name: "Rotate right",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RotateRight,
+			},
+			initialPos:  grid.GridKey{Line: 2, Beat: 4},
+			expectedPos: grid.GridKey{Line: 2, Beat: 5},
+			description: "Should rotate pattern right by one beat",
+		},
+		{
+			name: "Rotate right at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.CursorLineStart,
+				mappings.RotateRight,
+			},
+			initialPos:  grid.GridKey{Line: 2, Beat: 31},
+			expectedPos: grid.GridKey{Line: 2, Beat: 0},
+			description: "Should rotate pattern right wrapping to start",
+		},
+		{
+			name: "Rotate left",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.CursorLeft,
+				mappings.RotateLeft,
+			},
+			initialPos:  grid.GridKey{Line: 2, Beat: 4},
+			expectedPos: grid.GridKey{Line: 2, Beat: 3},
+			description: "Should rotate pattern left by one beat",
+		},
+		{
+			name: "Rotate left at boundary",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RotateLeft,
+			},
+			initialPos:  grid.GridKey{Line: 2, Beat: 0},
+			expectedPos: grid.GridKey{Line: 2, Beat: 31},
+			description: "Should rotate pattern left wrapping to end",
+		},
+		{
+			name: "Multiple rotations",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.RotateDown,
+				mappings.CursorDown,
+				mappings.RotateRight,
+			},
+			initialPos:  grid.GridKey{Line: 1, Beat: 2},
+			expectedPos: grid.GridKey{Line: 2, Beat: 3},
+			description: "Should rotate pattern down and right",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				WithCurosrPos(tt.initialPos),
+			)
+
+			m, _ = processCommand(mappings.TriggerAdd, m)
+			initialNote, exists := m.currentOverlay.GetNote(tt.initialPos)
+			assert.True(t, exists, tt.description+" - note should exist at initial position")
+
+			rotateCommands := tt.commands[1:]
+			m, _ = processCommands(rotateCommands, m)
+
+			rotatedNote, exists := m.currentOverlay.GetNote(tt.expectedPos)
+			assert.True(t, exists, tt.description+" - note should exist at expected position")
+			assert.Equal(t, initialNote, rotatedNote, tt.description+" - note should be the same")
+
+			if tt.initialPos != tt.expectedPos {
+				_, stillExists := m.currentOverlay.GetNote(tt.initialPos)
+				assert.False(t, stillExists, tt.description+" - note should not exist at initial position")
+			}
+		})
+	}
+}
+
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
