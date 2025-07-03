@@ -1662,6 +1662,9 @@ func (m *model) SetPatternMode(mode PatternMode) {
 }
 
 func (m *model) Escape() {
+	if m.selectionIndicator == SelectNothing && m.patternMode == PatternFill {
+		m.visualMode = false
+	}
 	m.patternMode = PatternFill
 	m.selectionIndicator = SelectNothing
 }
