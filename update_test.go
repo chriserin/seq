@@ -2257,6 +2257,147 @@ func TestNewLine(t *testing.T) {
 	}
 }
 
+func TestSectionCommands(t *testing.T) {
+	tests := []struct {
+		name                  string
+		commands              []any
+		expectedSelection     Selection
+		expectedSideIndicator bool
+		description           string
+	}{
+		{
+			name:                  "NewSectionAfter sets selection and side indicator",
+			commands:              []any{mappings.NewSectionAfter},
+			expectedSelection:     SelectPart,
+			expectedSideIndicator: true,
+			description:           "Should set selection to SelectPart and sectionSideIndicator to true",
+		},
+		{
+			name:                  "NewSectionBefore sets selection and side indicator",
+			commands:              []any{mappings.NewSectionBefore},
+			expectedSelection:     SelectPart,
+			expectedSideIndicator: false,
+			description:           "Should set selection to SelectPart and sectionSideIndicator to false",
+		},
+		{
+			name:              "ChangePart sets selection",
+			commands:          []any{mappings.ChangePart},
+			expectedSelection: SelectChangePart,
+			description:       "Should set selection to SelectChangePart",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			// Verify initial state
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+
+			// Execute commands
+			m, _ = processCommands(tt.commands, m)
+
+			// Verify final state
+			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description+" - selection state")
+
+			if tt.name == "NewSectionAfter sets selection and side indicator" || tt.name == "NewSectionBefore sets selection and side indicator" {
+				assert.Equal(t, tt.expectedSideIndicator, m.sectionSideIndicator, tt.description+" - side indicator")
+			}
+		})
+	}
+}
+
+func TestSectionNavigation(t *testing.T) {
+	tests := []struct {
+		name               string
+		commands           []any
+		expectedPartIndex  int
+		expectedMoveResult bool
+		description        string
+	}{
+		{
+			name:               "NextSection moves cursor forward",
+			commands:           []any{mappings.NewSectionAfter, mappings.Enter, mappings.NextSection},
+			expectedMoveResult: true,
+			description:        "Should move to next section successfully",
+		},
+		{
+			name:               "PrevSection moves cursor backward",
+			commands:           []any{mappings.NewSectionBefore, mappings.Enter, mappings.PrevSection},
+			expectedMoveResult: true,
+			description:        "Should move to previous section successfully",
+		},
+		{
+			name:               "NextSection on single section",
+			commands:           []any{mappings.NextSection},
+			expectedMoveResult: false,
+			description:        "Should not move when only one section exists",
+		},
+		{
+			name:               "PrevSection on first section",
+			commands:           []any{mappings.NewSectionAfter, mappings.PrevSection},
+			expectedMoveResult: false,
+			description:        "Should not move when already on first section",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			// Store initial cursor state for comparison
+			initialCursor := m.arrangement.Cursor
+
+			// Execute commands
+			m, _ = processCommands(tt.commands, m)
+
+			// Verify cursor movement occurred or not as expected
+			cursorMoved := !m.arrangement.Cursor.Equals(initialCursor)
+
+			assert.Equal(t, tt.expectedMoveResult, cursorMoved, tt.description+" - cursor movement")
+		})
+	}
+}
+
+func TestSectionNavigationResetOverlay(t *testing.T) {
+	tests := []struct {
+		name        string
+		commands    []any
+		description string
+	}{
+		{
+			name:        "NextSection resets current overlay",
+			commands:    []any{mappings.NewSectionAfter, mappings.Enter, mappings.NextSection},
+			description: "Should reset current overlay after moving to next section",
+		},
+		{
+			name:        "PrevSection resets current overlay",
+			commands:    []any{mappings.NewSectionBefore, mappings.Enter, mappings.PrevSection},
+			description: "Should reset current overlay after moving to previous section",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					nonRootKey := overlaykey.OverlayPeriodicity{Shift: 1, Interval: 2, Width: 0, StartCycle: 0}
+					(*m.definition.parts)[0].Overlays = m.CurrentPart().Overlays.Add(nonRootKey)
+					m.currentOverlay = (*m.definition.parts)[0].Overlays.FindOverlay(nonRootKey)
+					return *m
+				},
+			)
+
+			rootKey := overlaykey.OverlayPeriodicity{Shift: 1, Interval: 1, Width: 0, StartCycle: 0}
+			assert.NotEqual(t, rootKey, m.currentOverlay.Key, "Should start with non-root overlay")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, rootKey, m.currentOverlay.Key, tt.description+" - overlay should be reset to root")
+		})
+	}
+}
+
 func WithCurosrPos(pos grid.GridKey) modelFunc {
 	return func(m *model) model {
 		m.cursorPos = pos

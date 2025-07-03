@@ -130,7 +130,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		// Handle start beat
 		startBeat := songSection.StartBeat
 		startBeatText := ""
-		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_START_BEAT {
+		if isSelected && m.Focus && m.oldCursor.attribute == SectionStartBeat {
 			startBeatText = selectedStyle.Render(fmt.Sprintf("%d", startBeat))
 		} else {
 			startBeatText = themes.NumberStyle.Render(fmt.Sprintf("%d", startBeat))
@@ -141,7 +141,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		// Handle start cycle
 		startCycle := songSection.StartCycles
 		startCycleText := ""
-		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_START_CYCLE {
+		if isSelected && m.Focus && m.oldCursor.attribute == SectionStartCycle {
 			startCycleText = selectedStyle.Render(fmt.Sprintf("%d", startCycle))
 		} else {
 			startCycleText = themes.NumberStyle.Render(fmt.Sprintf("%d", startCycle))
@@ -158,7 +158,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		}
 
 		cyclesText := ""
-		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_CYCLES {
+		if isSelected && m.Focus && m.oldCursor.attribute == SectionCycles {
 			cyclesText = selectedStyle.Render(cyclesString)
 		} else {
 			cyclesText = themes.NumberStyle.Render(cyclesString)
@@ -174,7 +174,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 			keepCycles = "-"
 		}
 		keepText := ""
-		if isSelected && m.Focus && m.oldCursor.attribute == SECTION_KEEP_CYCLES {
+		if isSelected && m.Focus && m.oldCursor.attribute == SectionKeepCycles {
 			keepText = selectedStyle.Render(keepCycles)
 		} else {
 			keepText = themes.NumberStyle.Render(keepCycles)
@@ -213,18 +213,18 @@ func (ac ArrCursor) PlayStateView(cycles int) string {
 	return buf.String()
 }
 
-func (arr Arrangement) PlayStateView(buf *strings.Builder, cycles int) {
-	if arr.IsGroup() {
-		if arr.IsInfinite() {
-			fmt.Fprintf(buf, "∞/%d", arr.Iterations)
+func (a Arrangement) PlayStateView(buf *strings.Builder, cycles int) {
+	if a.IsGroup() {
+		if a.IsInfinite() {
+			fmt.Fprintf(buf, "∞/%d", a.Iterations)
 		} else {
-			fmt.Fprintf(buf, "%d/%d", arr.playingIterations, arr.Iterations)
+			fmt.Fprintf(buf, "%d/%d", a.playingIterations, a.Iterations)
 		}
 	} else {
-		if arr.Section.infinite {
+		if a.Section.infinite {
 			fmt.Fprintf(buf, "%d/∞", cycles)
 		} else {
-			fmt.Fprintf(buf, "%d/%d", cycles, arr.Section.Cycles)
+			fmt.Fprintf(buf, "%d/%d", cycles, a.Section.Cycles)
 		}
 	}
 }

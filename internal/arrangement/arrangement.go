@@ -1,3 +1,22 @@
+// Package arrangement provides hierarchical song structure management for the
+// sequencer. It implements a tree-based arrangement system where musical
+// parts can be organized into sections with configurable iteration counts,
+// timing parameters, and playback behaviors.
+//
+// The package supports:
+//   - Creating and managing song sections with associated musical parts
+//   - Hierarchical arrangement trees with nested groupings
+//   - Cursor-based navigation through arrangement structure
+//   - Iteration control and playback state management
+//   - Section timing configuration (start beats, cycles, etc.)
+//   - Interactive editing through the Bubble Tea framework
+//   - Undo/redo functionality for arrangement modifications
+//
+// Key types:
+//   - Arrangement: Tree node representing a section or group
+//   - SongSection: Configuration for timing and part association
+//   - Model: Bubble Tea model for interactive arrangement editing
+//   - ArrCursor: Navigation cursor for tree traversal
 package arrangement
 
 import (
@@ -11,7 +30,6 @@ import (
 	"github.com/chriserin/seq/internal/overlays"
 )
 
-// New tree-based arrangement structure
 type Arrangement struct {
 	Section           SongSection
 	Nodes             []*Arrangement
@@ -87,6 +105,18 @@ func (a *Arrangement) CountEndNodes() int {
 
 type ArrCursor []*Arrangement
 
+func (ac ArrCursor) Equals(other ArrCursor) bool {
+	if len(ac) != len(other) {
+		return false
+	}
+	for i := range ac {
+		if (ac)[i] != (other)[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // IsEndNode checks if an arrangement is an end node (no children)
 func (a *Arrangement) IsEndNode() bool {
 	return len(a.Nodes) == 0
@@ -96,27 +126,27 @@ func (a *Arrangement) IsGroup() bool {
 	return len(a.Nodes) != 0
 }
 
-func (a *ArrCursor) IsRoot() bool {
-	return len(*a) == 1
+func (ac *ArrCursor) IsRoot() bool {
+	return len(*ac) == 1
 }
 
-func (a *ArrCursor) HasParentIterations() bool {
-	cursorLength := len(*a)
+func (ac *ArrCursor) HasParentIterations() bool {
+	cursorLength := len(*ac)
 	if cursorLength < 2 {
 		return false
 	}
 
-	parent := (*a)[cursorLength-2]
+	parent := (*ac)[cursorLength-2]
 	return parent.playingIterations > 0
 }
 
-func (a *ArrCursor) GetParentNode() *Arrangement {
-	cursorLength := len(*a)
+func (ac *ArrCursor) GetParentNode() *Arrangement {
+	cursorLength := len(*ac)
 	if cursorLength < 2 {
-		return (*a)[0] // Root node or empty cursor
+		return (*ac)[0] // Root node or empty cursor
 	}
 
-	parent := (*a)[cursorLength-2]
+	parent := (*ac)[cursorLength-2]
 	return parent
 }
 
@@ -371,15 +401,15 @@ func GroupNodes(parent *Arrangement, index1, index2 int) {
 	parent.Nodes = slices.Insert(parent.Nodes, index1, newParent)
 }
 
-func (arr *Arrangement) IncreaseIterations() {
-	if arr.Iterations < 128 {
-		arr.Iterations++
+func (a *Arrangement) IncreaseIterations() {
+	if a.Iterations < 128 {
+		a.Iterations++
 	}
 }
 
-func (arr *Arrangement) DecreaseIterations() {
-	if arr.Iterations > 1 {
-		arr.Iterations--
+func (a *Arrangement) DecreaseIterations() {
+	if a.Iterations > 1 {
+		a.Iterations--
 	}
 }
 
@@ -394,10 +424,10 @@ func (c cursor) Matches(attribute SectionAttribute) bool {
 type SectionAttribute int
 
 const (
-	SECTION_START_BEAT SectionAttribute = iota
-	SECTION_START_CYCLE
-	SECTION_CYCLES
-	SECTION_KEEP_CYCLES
+	SectionStartBeat SectionAttribute = iota
+	SectionStartCycle
+	SectionCycles
+	SectionKeepCycles
 )
 
 type Model struct {
@@ -438,13 +468,13 @@ type NewPart struct {
 }
 
 func (m *Model) NewPart(index int, after bool, isPlaying bool) {
-	partId := index
+	partID := index
 	if index < 0 {
-		partId = len(*m.parts)
-		*m.parts = append(*m.parts, InitPart(fmt.Sprintf("Part %d", partId+1)))
+		partID = len(*m.parts)
+		*m.parts = append(*m.parts, InitPart(fmt.Sprintf("Part %d", partID+1)))
 	}
 
-	section := InitSongSection(partId)
+	section := InitSongSection(partID)
 	newNode := &Arrangement{
 		Section:    section,
 		Iterations: 1,
@@ -458,13 +488,13 @@ type ChangePart struct {
 }
 
 func (m *Model) ChangePart(index int) {
-	partId := index
+	partID := index
 	if index < 0 {
-		partId = len(*m.parts)
-		*m.parts = append(*m.parts, InitPart(fmt.Sprintf("Part %d", partId+1)))
+		partID = len(*m.parts)
+		*m.parts = append(*m.parts, InitPart(fmt.Sprintf("Part %d", partID+1)))
 	}
 	currentNode := m.Cursor[m.depthCursor]
-	currentNode.Section.Part = partId
+	currentNode.Section.Part = partID
 }
 
 func (m *Model) AddPart(after bool, newNode *Arrangement, isPlaying bool) {
@@ -490,23 +520,23 @@ func (m *Model) AddPart(after bool, newNode *Arrangement, isPlaying bool) {
 	}
 }
 
-func (cursor ArrCursor) IsFirstSibling() bool {
-	if len(cursor) < 2 {
+func (ac ArrCursor) IsFirstSibling() bool {
+	if len(ac) < 2 {
 		return false
 	}
-	leaf := cursor[len(cursor)-1]
-	parent := cursor[len(cursor)-2]
+	leaf := ac[len(ac)-1]
+	parent := ac[len(ac)-2]
 	return slices.Index(parent.Nodes, leaf) == 0
 }
 
-func (a *ArrCursor) IsLastSibling() bool {
-	cursorLength := len(*a)
+func (ac *ArrCursor) IsLastSibling() bool {
+	cursorLength := len(*ac)
 	if cursorLength < 2 {
 		return false // Root node or empty cursor
 	}
 
-	leaf := (*a)[cursorLength-1]
-	parent := (*a)[cursorLength-2]
+	leaf := (*ac)[cursorLength-1]
+	parent := (*ac)[cursorLength-2]
 
 	index := slices.Index(parent.Nodes, leaf)
 	return index == len(parent.Nodes)-1
@@ -812,13 +842,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			if m.depthCursor == len(m.Cursor)-1 {
 				// For end nodes, modify section properties
 				switch m.oldCursor.attribute {
-				case SECTION_START_BEAT:
+				case SectionStartBeat:
 					currentNode.Section.IncreaseStartBeats(int((*m.parts)[currentNode.Section.Part].Beats))
-				case SECTION_START_CYCLE:
+				case SectionStartCycle:
 					currentNode.Section.IncreaseStartCycles()
-				case SECTION_CYCLES:
+				case SectionCycles:
 					currentNode.Section.IncreaseCycles()
-				case SECTION_KEEP_CYCLES:
+				case SectionKeepCycles:
 					currentNode.Section.ToggleKeepCycles()
 				}
 			} else {
@@ -829,13 +859,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			currentNode := m.Cursor.GetCurrentNode()
 			if m.depthCursor+1 == len(m.Cursor) {
 				switch m.oldCursor.attribute {
-				case SECTION_START_BEAT:
+				case SectionStartBeat:
 					currentNode.Section.DecreaseStartBeats()
-				case SECTION_START_CYCLE:
+				case SectionStartCycle:
 					currentNode.Section.DecreaseStartCycles()
-				case SECTION_CYCLES:
+				case SectionCycles:
 					currentNode.Section.DecreaseCycles()
-				case SECTION_KEEP_CYCLES:
+				case SectionKeepCycles:
 					currentNode.Section.ToggleKeepCycles()
 				}
 			} else {
@@ -1011,9 +1041,9 @@ func (m Model) CreateUndoCmd(undo Undoable, redo Undoable) tea.Cmd {
 	}
 }
 
-func CreateUndoTree(arr *Arrangement) UndoTree {
-	undoTree := UndoTree{arrRef: arr, nodes: make([]UndoTree, 0)}
-	for _, arrRef := range arr.Nodes {
+func CreateUndoTree(a *Arrangement) UndoTree {
+	undoTree := UndoTree{arrRef: a, nodes: make([]UndoTree, 0)}
+	for _, arrRef := range a.Nodes {
 		undoTree.nodes = append(undoTree.nodes, CreateUndoTree(arrRef))
 	}
 	return undoTree

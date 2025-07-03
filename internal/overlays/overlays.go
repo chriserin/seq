@@ -236,6 +236,7 @@ func (ol *Overlay) CombineOverlayPattern(pattern *OverlayPattern, keyCycles int)
 
 func (ol *Overlay) FindOverlay(key Key) *Overlay {
 	var currentOverlay *Overlay
+
 	for currentOverlay = ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		if currentOverlay.Key == key {
 			return currentOverlay
