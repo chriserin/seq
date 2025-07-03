@@ -43,6 +43,7 @@ type transitiveKeyMap struct {
 	Increase               key.Binding
 	Decrease               key.Binding
 	Enter                  key.Binding
+	Escape                 key.Binding
 	NewSectionAfter        key.Binding
 	NewSectionBefore       key.Binding
 	ChangePart             key.Binding
@@ -60,6 +61,7 @@ var transitiveKeys = transitiveKeyMap{
 	Increase:               Key("Tempo Increase", "+", "="),
 	Decrease:               Key("Tempo Decrease", "-"),
 	Enter:                  Key("Enter", "enter"),
+	Escape:                 Key("Escape", "esc", "ctrl+c"),
 	ArrangementInputSwitch: Key("Arrangement Input Indicator", "ctrl+x"),
 	ToggleArrangementView:  Key("Arrangement Input Indicator", "ctrl+f"),
 	NewSectionAfter:        Key("New Part After", "ctrl+]"),
@@ -328,7 +330,6 @@ const (
 	SelectNothing Selection = iota
 	SelectTempo
 	SelectTempoSubdivision
-	SelectOverlay
 	SelectSetupChannel
 	SelectSetupMessageType
 	SelectSetupValue
@@ -345,7 +346,6 @@ const (
 	SelectChangePart
 	SelectConfirmNew
 	SelectConfirmQuit
-	SelectArrangementEditor
 	SelectRenamePart
 	SelectFileName
 	SelectError
@@ -1256,20 +1256,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			case SelectPart:
 				_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator, IsPlaying: m.playing != PlayStopped})
 				m.currentOverlay = m.CurrentPart().Overlays
-				if m.focus == FocusArrangementEditor {
-					m.selectionIndicator = SelectArrangementEditor
-				} else {
-					m.selectionIndicator = SelectNothing
-				}
+				m.selectionIndicator = SelectNothing
 				return m, cmd
 			case SelectChangePart:
 				_, cmd := m.arrangement.Update(arrangement.ChangePart{Index: m.partSelectorIndex})
 				m.currentOverlay = m.CurrentPart().Overlays
-				if m.focus == FocusArrangementEditor {
-					m.selectionIndicator = SelectArrangementEditor
-				} else {
-					m.selectionIndicator = SelectNothing
-				}
+				m.selectionIndicator = SelectNothing
 				return m, cmd
 			case SelectConfirmNew:
 				m.NewSequence()
@@ -1285,31 +1277,37 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			default:
 				m.Escape()
 			}
-		}
-		if Is(msg, keys.Quit) {
-			m.SetSelectionIndicator(SelectConfirmQuit)
-		}
-		if m.selectionIndicator == SelectRenamePart || m.selectionIndicator == SelectFileName {
-			if msg.String() == "esc" {
+		} else if Is(msg, keys.Escape) {
+			if m.selectionIndicator != SelectNothing {
 				m.textInput.Reset()
 				m.selectionIndicator = SelectNothing
 				return m, nil
 			}
+		}
+
+		if Is(msg, keys.Quit) {
+			m.SetSelectionIndicator(SelectConfirmQuit)
+		}
+
+		if m.selectionIndicator == SelectRenamePart || m.selectionIndicator == SelectFileName {
 			tiModel, cmd := m.textInput.Update(msg)
 			m.textInput = tiModel
 			return m, cmd
 		}
+
 		if m.focus == FocusOverlayKey {
 			okModel, cmd := m.overlayKeyEdit.Update(msg)
 			m.overlayKeyEdit = okModel
 			return m, cmd
 		}
+
 		if m.focus == FocusArrangementEditor && !m.IsPartOperation(msg) && !m.IsPlayOperation(msg) && !m.IsArrangementViewOperation(msg) {
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
 			m.ResetCurrentOverlay()
 			return m, cmd
 		}
+
 		mappingsCommand := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PatternFill)
 
 		switch mappingsCommand.Command {
@@ -1399,7 +1397,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.OverlayInputSwitch:
 			// NOTE: This component handles getting into the overlay key edit mode
 			// the overlaykey component handles getting out of it
-			m.SetSelectionIndicator(SelectOverlay)
+			m.SetSelectionIndicator(SelectNothing)
 			m.focus = FocusOverlayKey
 			m.overlayKeyEdit.Focus(true)
 		case mappings.TempoInputSwitch:
@@ -1426,25 +1424,15 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.BeatInputSwitch:
 			states := []Selection{SelectNothing, SelectBeats, SelectStartBeats, SelectCycles, SelectStartCycles}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
-		case mappings.ArrangementInputSwitch:
-			states := []Selection{SelectNothing, SelectArrangementEditor}
-			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
-			if m.selectionIndicator == SelectArrangementEditor {
-				m.focus = FocusArrangementEditor
-				m.arrangement.Focus = true
-			} else {
-				model, cmd := m.arrangement.Update(tea.KeyMsg{Type: tea.KeyEsc})
-				m.arrangement = model
-				return m, cmd
-			}
 		case mappings.ToggleArrangementView:
-			m.showArrangementView = !m.showArrangementView
+			m.showArrangementView = !m.showArrangementView || m.focus != FocusArrangementEditor
 			if m.showArrangementView {
-				m.SetSelectionIndicator(SelectArrangementEditor)
+				m.SetSelectionIndicator(SelectNothing)
 				m.focus = FocusArrangementEditor
 				m.arrangement.Focus = true
 			} else {
 				m.Escape()
+				m.focus = FocusGrid
 				model, cmd := m.arrangement.Update(tea.KeyMsg{Type: tea.KeyEsc})
 				m.arrangement = model
 				return m, cmd

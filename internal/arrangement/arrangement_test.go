@@ -283,7 +283,7 @@ func TestSongSectionMethods(t *testing.T) {
 	}
 
 	// Test increase methods
-	section.IncreaseStartBeats()
+	section.IncreaseStartBeats(32)
 	assert.Equal(t, 2, section.StartBeat)
 
 	section.IncreaseStartCycles()
@@ -318,12 +318,12 @@ func TestSongSectionMethods(t *testing.T) {
 
 	// Test increase bounds
 	for i := 0; i < 130; i++ {
-		section.IncreaseStartBeats()
+		section.IncreaseStartBeats(32)
 		section.IncreaseStartCycles()
 		section.IncreaseCycles()
 	}
 
-	assert.Equal(t, 127, section.StartBeat, "StartBeat should not exceed 127")
+	assert.Equal(t, 31, section.StartBeat, "StartBeat should not exceed 127")
 	assert.Equal(t, 127, section.StartCycles, "StartCycles should not exceed 127")
 	assert.Equal(t, 127, section.Cycles, "Cycles should not exceed 127")
 }

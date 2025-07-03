@@ -659,7 +659,7 @@ func TestOverlayInputSwitch(t *testing.T) {
 		{
 			name:              "Single OverlayInputSwitch",
 			commands:          []mappings.Command{mappings.OverlayInputSwitch},
-			expectedSelection: SelectOverlay,
+			expectedSelection: SelectNothing,
 			expectedFocus:     FocusOverlayKey,
 			description:       "First overlay input switch should select overlay and set focus to overlay key",
 		},
@@ -1043,6 +1043,120 @@ func TestBeatInputSwitchStartBeatsIncrease(t *testing.T) {
 
 			assert.Equal(t, SelectStartBeats, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedStartBeats, m.CurrentSongSection().StartBeat, tt.description+" - start beats value")
+		})
+	}
+}
+
+func TestBeatInputSwitchStartCyclesIncrease(t *testing.T) {
+	tests := []struct {
+		name                string
+		commands            []mappings.Command
+		initialStartCycles  int
+		expectedStartCycles int
+		description         string
+	}{
+		{
+			name:                "Beat Input Switch StartCycles with Increase",
+			commands:            []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			initialStartCycles:  4,
+			expectedStartCycles: 5,
+			description:         "Two beat input switches should select start cycles and increase should increment it",
+		},
+		{
+			name:                "Beat Input Switch StartCycles with Decrease",
+			commands:            []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			initialStartCycles:  4,
+			expectedStartCycles: 3,
+			description:         "Two beat input switches should select start cycles and decrease should decrement it",
+		},
+		{
+			name:                "Beat Input Switch StartCycles with Increase At Upper Boundary",
+			commands:            []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			initialStartCycles:  127,
+			expectedStartCycles: 127,
+			description:         "Two beat input switches should select start cycles and increase should not go above 127",
+		},
+		{
+			name:                "Beat Input Switch StartCycles with Decrease At Lower Boundary",
+			commands:            []mappings.Command{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			initialStartCycles:  0,
+			expectedStartCycles: 0,
+			description:         "Two beat input switches should select start cycles and decrease should not go below 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					currentNode := m.arrangement.Cursor.GetCurrentNode()
+					currentNode.Section.StartCycles = tt.initialStartCycles
+					return *m
+				},
+			)
+
+			assert.Equal(t, tt.initialStartCycles, m.CurrentSongSection().StartCycles, "Initial start cycles should match")
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, SelectStartCycles, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, tt.expectedStartCycles, m.CurrentSongSection().StartCycles, tt.description+" - start cycles value")
+		})
+	}
+}
+
+func TestToggleArrangementViewSwitch(t *testing.T) {
+	tests := []struct {
+		name              string
+		commands          []mappings.Command
+		expectedFocus     focus
+		expectedSelection Selection
+		expectedArrIsOpen bool
+		description       string
+	}{
+		{
+			name:              "Toggle Arrangement View",
+			commands:          []mappings.Command{mappings.ToggleArrangementView},
+			expectedFocus:     FocusArrangementEditor,
+			expectedSelection: SelectNothing,
+			expectedArrIsOpen: true,
+			description:       "First toggle should open arrangement view",
+		},
+		{
+			name:              "Toggle Arrangement View Switch Back to Grid",
+			commands:          []mappings.Command{mappings.ToggleArrangementView, mappings.ToggleArrangementView},
+			expectedFocus:     FocusGrid,
+			expectedSelection: SelectNothing,
+			expectedArrIsOpen: false,
+			description:       "Second toggle should switch back to grid and close arrangement view",
+		},
+		{
+			name:              "Toggle Arrangement View Switch to Grid keep Arrangement Open",
+			commands:          []mappings.Command{mappings.ToggleArrangementView, mappings.Escape},
+			expectedFocus:     FocusGrid,
+			expectedSelection: SelectNothing,
+			expectedArrIsOpen: true,
+			description:       "Escape should switch back to grid and keep arrangement view open",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cmd tea.Cmd
+			m := createTestModel()
+
+			m, cmd = processCommands(tt.commands, m)
+			if cmd != nil {
+				updateModel, _ := m.Update(cmd())
+				switch um := updateModel.(type) {
+				case model:
+					m = um
+				}
+			}
+			assert.Equal(t, tt.expectedFocus, m.focus, tt.description+" - arrangement view state")
+			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, tt.expectedArrIsOpen, m.showArrangementView, tt.description+" - arrangement open state")
 		})
 	}
 }

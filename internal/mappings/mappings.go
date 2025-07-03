@@ -54,7 +54,6 @@ const (
 	AccentInputSwitch
 	RatchetInputSwitch
 	BeatInputSwitch
-	ArrangementInputSwitch
 	ToggleArrangementView
 	Increase
 	Decrease
@@ -214,7 +213,6 @@ var mappings = registry{
 	k("ctrl+u"): PressDownOverlay,
 	k("ctrl+v"): Save,
 	k("ctrl+w"): ToggleWaitMode,
-	k("ctrl+x"): ArrangementInputSwitch,
 	k("ctrl+y"): RatchetInputSwitch,
 	k("a"):      AccentDecrease,
 	k("b"):      ActionAddSkipBeat,
