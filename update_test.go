@@ -2164,6 +2164,99 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func TestNewLine(t *testing.T) {
+	tests := []struct {
+		name                string
+		commands            []any
+		initialLineCount    int
+		expectedLineCount   int
+		expectedLastChannel uint8
+		expectedLastNote    uint8
+		description         string
+	}{
+		{
+			name:                "Add new line with default values",
+			commands:            []any{mappings.NewLine},
+			initialLineCount:    8,
+			expectedLineCount:   9,
+			expectedLastChannel: 10,
+			expectedLastNote:    61,
+			description:         "Should add a new line with channel from last line and note+1",
+		},
+		{
+			name:                "Add new line with custom last line values",
+			commands:            []any{mappings.NewLine},
+			initialLineCount:    8,
+			expectedLineCount:   9,
+			expectedLastChannel: 5,
+			expectedLastNote:    73,
+			description:         "Should add a new line with channel 5 and note 73",
+		},
+		{
+			name:                "Add multiple new lines",
+			commands:            []any{mappings.NewLine, mappings.NewLine, mappings.NewLine},
+			initialLineCount:    8,
+			expectedLineCount:   11,
+			expectedLastChannel: 10,
+			expectedLastNote:    63,
+			description:         "Should add three new lines with incrementing note values",
+		},
+		{
+			name: "Cannot add more than 16 lines total",
+			commands: []any{
+				mappings.NewLine,
+				mappings.NewLine,
+				mappings.NewLine,
+				mappings.NewLine,
+				mappings.NewLine,
+				mappings.NewLine,
+				mappings.NewLine,
+				mappings.NewLine,
+				mappings.NewLine,
+			},
+			initialLineCount:    8,
+			expectedLineCount:   16,
+			expectedLastChannel: 10,
+			expectedLastNote:    68,
+			description:         "Should cap at 16 lines total",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					// Set up the last line with specific values for the second test
+					if tt.name == "Add new line with custom last line values" {
+						m.definition.lines[len(m.definition.lines)-1].Channel = 5
+						m.definition.lines[len(m.definition.lines)-1].Note = 72
+					}
+					return *m
+				},
+			)
+
+			// Verify initial state
+			assert.Equal(t, tt.initialLineCount, len(m.definition.lines), "Initial line count should match")
+
+			// Execute commands
+			m, _ = processCommands(tt.commands, m)
+
+			// Verify final state
+			assert.Equal(t, tt.expectedLineCount, len(m.definition.lines), tt.description+" - line count")
+
+			if tt.expectedLineCount > tt.initialLineCount {
+				// Check the last line properties
+				lastLine := m.definition.lines[len(m.definition.lines)-1]
+				assert.Equal(t, tt.expectedLastChannel, lastLine.Channel, tt.description+" - last line channel")
+				assert.Equal(t, tt.expectedLastNote, lastLine.Note, tt.description+" - last line note")
+
+				// Check that the new line has default message type
+				assert.Equal(t, grid.MessageTypeNote, lastLine.MsgType, tt.description+" - last line message type should be default")
+			}
+		})
+	}
+}
+
 func WithCurosrPos(pos grid.GridKey) modelFunc {
 	return func(m *model) model {
 		m.cursorPos = pos
