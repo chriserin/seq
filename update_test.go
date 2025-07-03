@@ -1217,6 +1217,63 @@ func TestPatternModeGateIncrease(t *testing.T) {
 	}
 }
 
+func TestPatternModeAccentIncrease(t *testing.T) {
+	tests := []struct {
+		name           string
+		commands       []any
+		expectedAccent uint8
+		description    string
+	}{
+		{
+			name: "Add note, switch to accent mode, increase accent by 1",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleAccentMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+			},
+			expectedAccent: 4,
+			description:    "Should add note, switch to accent mode, and increase accent by 1",
+		},
+		{
+			name: "Add note, switch to accent mode, move to right no change",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleAccentMode,
+				mappings.CursorRight,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+				mappings.CursorLeft, // move back to the note
+			},
+			expectedAccent: 5,
+			description:    "Should add note, switch to accent mode, move cursor right and accent should remain 0",
+		},
+		{
+			name: "Add note, switch to accent mode, increase accent by 1, decrease accent by 1",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleAccentMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+			},
+			expectedAccent: 6,
+			description:    "Should add note, switch to accent mode, and decrease accent by 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			// NOTE: Initial value for accent is 5
+			// and "increasing" accent index means moving to 4
+			// as accents are defined backwards
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist")
+			assert.Equal(t, tt.expectedAccent, currentNote.AccentIndex, tt.description+" - accent value")
+		})
+	}
+}
+
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
