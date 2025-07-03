@@ -94,10 +94,21 @@ func (n Note) IncrementRatchet(modifier int8) Note {
 	var ratchetsLength int8 = 8
 	newRatchet := int8(currentRatchet) + modifier
 	if n.AccentIndex > 0 && n.Action == ActionNothing && newRatchet < ratchetsLength && int8(currentRatchet)+modifier >= 0 {
-		n.Ratchets.Length = uint8(int8(currentRatchet) + modifier)
-		n.Ratchets.SetRatchet(true, n.Ratchets.Length)
+		n.Ratchets.SetLength(uint8(int8(currentRatchet) + modifier))
 	}
 	return n
+}
+
+func (r *Ratchet) SetLength(length uint8) {
+	r.Length = length
+
+	r.SetRatchet(true, length)
+	//Ensure no hits are set beyond the new length
+	for i := range uint8(8) {
+		if i > length {
+			r.SetRatchet(false, i)
+		}
+	}
 }
 
 type Pattern map[GridKey]Note

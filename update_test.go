@@ -1274,6 +1274,75 @@ func TestPatternModeAccentIncrease(t *testing.T) {
 	}
 }
 
+func TestPatternModeRatchetIncrease(t *testing.T) {
+	tests := []struct {
+		name            string
+		commands        []any
+		expectedRatchet grid.Ratchet
+		description     string
+	}{
+		{
+			name: "Add note, switch to ratchet mode, increase ratchet by 1",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleRatchetMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   3, // hits are 0b11, so 3
+				Length: 1,
+			},
+			description: "Should add note, switch to ratchet mode, and increase ratchet by 1",
+		},
+		{
+			name: "Add note, switch to ratchet mode, move to right no change",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleRatchetMode,
+				mappings.CursorRight,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+				mappings.CursorLeft, // move back to the note
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   1,
+				Length: 0,
+			},
+			description: "Should add note, switch to ratchet mode, move cursor right and ratchet should remain default",
+		},
+		{
+			name: "Add note, switch to ratchet mode, increase then decrease ratchet",
+			commands: []any{
+				mappings.TriggerAdd,
+				mappings.ToggleRatchetMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+			},
+			expectedRatchet: grid.Ratchet{
+				Span:   0,
+				Hits:   1,
+				Length: 0,
+			},
+			description: "Should add note, switch to ratchet mode, and set ratchet to 2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist")
+			assert.Equal(t, tt.expectedRatchet.Span, currentNote.Ratchets.Span, tt.description+" - ratchet span")
+			assert.Equal(t, tt.expectedRatchet.Hits, currentNote.Ratchets.Hits, tt.description+" - ratchet hits")
+			assert.Equal(t, tt.expectedRatchet.Length, currentNote.Ratchets.Length, tt.description+" - ratchet length")
+		})
+	}
+}
+
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
