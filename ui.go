@@ -1183,9 +1183,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.LogString(fmt.Sprintf(" ------ Panic Message ------- \n%s\n", msg.message))
 		m.LogString(fmt.Sprintf(" ------ Stacktrace ---------- \n%s\n", msg.stacktrace))
 	case tea.KeyMsg:
-		mapping := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PatternFill)
-		switch mapping.Command {
-		case mappings.Enter:
+		switch msg.String() {
+		case "enter":
 			switch m.selectionIndicator {
 			case SelectRenamePart:
 				m.RenamePart(m.textInput.Value())
@@ -1227,16 +1226,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			default:
 				m.Escape()
 			}
-		case mappings.Escape:
+		case "escape":
 			if m.selectionIndicator != SelectNothing {
 				m.textInput.Reset()
 				m.selectionIndicator = SelectNothing
 				return m, nil
 			}
-		}
-
-		if mapping.Command == mappings.Quit {
-			m.SetSelectionIndicator(SelectConfirmQuit)
 		}
 
 		if m.selectionIndicator == SelectRenamePart || m.selectionIndicator == SelectFileName {
@@ -1249,6 +1244,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			okModel, cmd := m.overlayKeyEdit.Update(msg)
 			m.overlayKeyEdit = okModel
 			return m, cmd
+		}
+
+		mapping := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PatternFill)
+		if mapping.Command == mappings.Quit {
+			m.SetSelectionIndicator(SelectConfirmQuit)
 		}
 
 		if m.focus == FocusArrangementEditor && !m.IsPartOperation(mapping) && !m.IsPlayOperation(mapping) && mapping.Command != mappings.ToggleArrangementView {

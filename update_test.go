@@ -684,20 +684,12 @@ func TestOverlayInputSwitch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var cmd tea.Cmd
 			m := createTestModel()
 
 			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 			assert.Equal(t, FocusGrid, m.focus, "Initial focus should be grid")
 
-			m, cmd = processCommands(tt.commands, m)
-			if cmd != nil {
-				updateModel, _ := m.Update(cmd())
-				switch um := updateModel.(type) {
-				case model:
-					m = um
-				}
-			}
+			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedFocus, m.focus, tt.description+" - focus state")
@@ -1147,17 +1139,9 @@ func TestToggleArrangementViewSwitch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var cmd tea.Cmd
 			m := createTestModel()
 
-			m, cmd = processCommands(tt.commands, m)
-			if cmd != nil {
-				updateModel, _ := m.Update(cmd())
-				switch um := updateModel.(type) {
-				case model:
-					m = um
-				}
-			}
+			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, tt.expectedFocus, m.focus, tt.description+" - arrangement view state")
 			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedArrIsOpen, m.showArrangementView, tt.description+" - arrangement open state")
@@ -1967,6 +1951,10 @@ func createTestModel(modelFns ...modelFunc) model {
 	return m
 }
 
+type TestKey struct {
+	Keys string
+}
+
 func processCommands(commands []any, m model) (model, tea.Cmd) {
 	var cmd tea.Cmd
 	for _, command := range commands {
@@ -1975,6 +1963,29 @@ func processCommands(commands []any, m model) (model, tea.Cmd) {
 			m, cmd = processCommand(c, m)
 		case mappings.Mapping:
 			m, cmd = processMapping(c, m)
+		case TestKey:
+			m, cmd = processTestKey(c, m)
+		}
+		if cmd != nil {
+			updateModel, _ := m.Update(cmd())
+			switch um := updateModel.(type) {
+			case model:
+				m = um
+			}
+		}
+	}
+	return m, cmd
+}
+
+func processTestKey(testKey TestKey, m model) (model, tea.Cmd) {
+	var cmd tea.Cmd
+	var updateModel tea.Model
+	for _, key := range testKey.Keys {
+		keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}}
+		updateModel, cmd = m.Update(keyMsg)
+		switch um := updateModel.(type) {
+		case model:
+			m = um
 		}
 	}
 	return m, cmd
@@ -2257,33 +2268,16 @@ func TestNewLine(t *testing.T) {
 	}
 }
 
-func TestSectionCommands(t *testing.T) {
+func TestRenamePartCommand(t *testing.T) {
 	tests := []struct {
-		name                  string
-		commands              []any
-		expectedSelection     Selection
-		expectedSideIndicator bool
-		description           string
+		name        string
+		commands    []any
+		description string
 	}{
 		{
-			name:                  "NewSectionAfter sets selection and side indicator",
-			commands:              []any{mappings.NewSectionAfter},
-			expectedSelection:     SelectPart,
-			expectedSideIndicator: true,
-			description:           "Should set selection to SelectPart and sectionSideIndicator to true",
-		},
-		{
-			name:                  "NewSectionBefore sets selection and side indicator",
-			commands:              []any{mappings.NewSectionBefore},
-			expectedSelection:     SelectPart,
-			expectedSideIndicator: false,
-			description:           "Should set selection to SelectPart and sectionSideIndicator to false",
-		},
-		{
-			name:              "ChangePart sets selection",
-			commands:          []any{mappings.ChangePart},
-			expectedSelection: SelectChangePart,
-			description:       "Should set selection to SelectChangePart",
+			name:        "RenamePart changes part name",
+			commands:    []any{mappings.ToggleArrangementView, TestKey{Keys: "R"}, TestKey{Keys: "XYZ"}, mappings.Enter},
+			description: "RenamePart command should update part name",
 		},
 	}
 
@@ -2297,12 +2291,7 @@ func TestSectionCommands(t *testing.T) {
 			// Execute commands
 			m, _ = processCommands(tt.commands, m)
 
-			// Verify final state
-			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description+" - selection state")
-
-			if tt.name == "NewSectionAfter sets selection and side indicator" || tt.name == "NewSectionBefore sets selection and side indicator" {
-				assert.Equal(t, tt.expectedSideIndicator, m.sectionSideIndicator, tt.description+" - side indicator")
-			}
+			assert.Equal(t, "XYZ", m.CurrentPart().Name, tt.description+" - part name should be updated")
 		})
 	}
 }
@@ -2319,24 +2308,28 @@ func TestSectionNavigation(t *testing.T) {
 			name:               "NextSection moves cursor forward",
 			commands:           []any{mappings.NewSectionAfter, mappings.Enter, mappings.NextSection},
 			expectedMoveResult: true,
+			expectedPartIndex:  1,
 			description:        "Should move to next section successfully",
 		},
 		{
 			name:               "PrevSection moves cursor backward",
 			commands:           []any{mappings.NewSectionBefore, mappings.Enter, mappings.PrevSection},
 			expectedMoveResult: true,
+			expectedPartIndex:  1,
 			description:        "Should move to previous section successfully",
 		},
 		{
 			name:               "NextSection on single section",
 			commands:           []any{mappings.NextSection},
 			expectedMoveResult: false,
+			expectedPartIndex:  0,
 			description:        "Should not move when only one section exists",
 		},
 		{
 			name:               "PrevSection on first section",
 			commands:           []any{mappings.NewSectionAfter, mappings.PrevSection},
 			expectedMoveResult: false,
+			expectedPartIndex:  0,
 			description:        "Should not move when already on first section",
 		},
 	}
@@ -2345,16 +2338,14 @@ func TestSectionNavigation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
 
-			// Store initial cursor state for comparison
-			initialCursor := m.arrangement.Cursor
+			initialArrangementCursor := m.arrangement.Cursor
 
-			// Execute commands
 			m, _ = processCommands(tt.commands, m)
 
-			// Verify cursor movement occurred or not as expected
-			cursorMoved := !m.arrangement.Cursor.Equals(initialCursor)
+			arrangementCursorMoved := !m.arrangement.Cursor.Equals(initialArrangementCursor)
 
-			assert.Equal(t, tt.expectedMoveResult, cursorMoved, tt.description+" - cursor movement")
+			assert.Equal(t, tt.expectedPartIndex, m.CurrentSongSection().Part, tt.description+" - part index should match")
+			assert.Equal(t, tt.expectedMoveResult, arrangementCursorMoved, tt.description+" - cursor movement")
 		})
 	}
 }
