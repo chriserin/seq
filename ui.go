@@ -2269,7 +2269,8 @@ func (m *model) NextOverlay(direction int) {
 }
 
 func (m *model) ClearOverlayLine() {
-	for i := uint8(0); i < m.CurrentPart().Beats; i++ {
+	start := m.cursorPos.Beat
+	for i := start; i < m.CurrentPart().Beats; i++ {
 		m.currentOverlay.RemoveNote(GK(m.cursorPos.Line, i))
 	}
 }
