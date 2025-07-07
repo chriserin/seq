@@ -334,3 +334,59 @@ func TestClearLine(t *testing.T) {
 		})
 	}
 }
+
+func TestClearOverlay(t *testing.T) {
+	tests := []struct {
+		name        string
+		commands    []any
+		description string
+	}{
+		{
+			name: "Clear overlay removes current overlay",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ClearOverlay,
+			},
+			description: "Should remove the current overlay from the part",
+		},
+		{
+			name: "Clear overlay with multiple overlays",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.NextOverlay,
+				mappings.NoteAdd,
+				mappings.ClearOverlay,
+			},
+			description: "Should remove the current overlay and switch to next available overlay",
+		},
+	}
+
+	overlayKey := overlaykey.OverlayPeriodicity{
+		Shift:      2,
+		Interval:   4,
+		Width:      0,
+		StartCycle: 0,
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				WithNonRootOverlay(overlayKey),
+			)
+
+			initialOverlayKey := m.currentOverlay.Key
+			keys := make([]overlaykey.OverlayPeriodicity, 0)
+			m.CurrentPart().Overlays.CollectKeys(&keys)
+			initialOverlayCount := len(keys)
+
+			m, _ = processCommands(tt.commands, m)
+
+			keys = make([]overlaykey.OverlayPeriodicity, 0)
+			m.CurrentPart().Overlays.CollectKeys(&keys)
+			finalOverlayCount := len(keys)
+			assert.Equal(t, initialOverlayCount-1, finalOverlayCount, tt.description+" - overlay count should decrease by 1")
+
+			assert.NotEqual(t, initialOverlayKey, m.currentOverlay.Key, tt.description+" - should switch to different overlay")
+		})
+	}
+}

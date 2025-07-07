@@ -93,7 +93,7 @@ const (
 	WaitIncrease
 	WaitDecrease
 	ClearLine
-	ClearSeq
+	ClearOverlay
 	RatchetIncrease
 	RatchetDecrease
 	ActionAddLineReset
@@ -174,7 +174,7 @@ var mappings = registry{
 	k("?"):      Help,
 	k("A"):      AccentIncrease,
 	k("B"):      ActionAddLineBounce,
-	k("C"):      ClearSeq,
+	k("C"):      ClearOverlay,
 	k("]", "g"): GateIncrease,
 	k("]", "e"): GateBigIncrease,
 	k("J"):      RotateDown,
