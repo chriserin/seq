@@ -81,8 +81,9 @@ const (
 	Yank
 	Mute
 	Solo
-	TriggerAdd
-	TriggerRemove
+	NoteAdd
+	NoteRemove
+	OverlayNoteRemove
 	AccentIncrease
 	AccentDecrease
 	GateIncrease
@@ -91,7 +92,6 @@ const (
 	GateBigDecrease
 	WaitIncrease
 	WaitDecrease
-	OverlayTriggerRemove
 	ClearLine
 	ClearSeq
 	RatchetIncrease
@@ -214,9 +214,9 @@ var mappings = registry{
 	k("a"):      AccentDecrease,
 	k("b"):      ActionAddSkipBeat,
 	k("c"):      ClearLine,
-	k("d"):      TriggerRemove,
+	k("d"):      NoteRemove,
 	k("e"):      TogglePlayEdit,
-	k("f"):      TriggerAdd,
+	k("f"):      NoteAdd,
 	k("g", "r"): ReloadFile,
 	k("g", "v"): ActionAddSpecificValue,
 	k("h"):      CursorLeft,
@@ -236,7 +236,7 @@ var mappings = registry{
 	k("u"):      Undo,
 	k("v"):      ToggleVisualMode,
 	k("w"):      WaitDecrease,
-	k("x"):      OverlayTriggerRemove,
+	k("x"):      OverlayNoteRemove,
 	k("y"):      Yank,
 	k("z"):      ActionAddLineDelay,
 	k("{"):      NextOverlay,

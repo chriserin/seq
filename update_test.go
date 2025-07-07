@@ -712,25 +712,25 @@ func TestRatchetInputSwitch(t *testing.T) {
 		},
 		{
 			name:              "RatchetInputSwitch when cursor on note",
-			commands:          []any{mappings.TriggerAdd, mappings.RatchetInputSwitch},
+			commands:          []any{mappings.NoteAdd, mappings.RatchetInputSwitch},
 			expectedSelection: SelectRatchets,
 			description:       "First ratchet input switch should select ratchet",
 		},
 		{
 			name:              "Second RatchetInputSwitch when cursor on note",
-			commands:          []any{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
+			commands:          []any{mappings.NoteAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
 			expectedSelection: SelectRatchetSpan,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
 		{
 			name:              "Third RatchetInputSwitch",
-			commands:          []any{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
+			commands:          []any{mappings.NoteAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
 			expectedSelection: SelectNothing,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
 		{
 			name:              "Escape Ratchet Input",
-			commands:          []any{mappings.TriggerAdd, mappings.RatchetInputSwitch, mappings.Escape},
+			commands:          []any{mappings.NoteAdd, mappings.RatchetInputSwitch, mappings.Escape},
 			expectedSelection: SelectNothing,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
@@ -759,7 +759,7 @@ func TestRatchetInputValues(t *testing.T) {
 		{
 			name: "RatchetInputSwitch with Mute Ratchet",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetInputSwitch,
 				mappings.Mute,
 			},
@@ -773,7 +773,7 @@ func TestRatchetInputValues(t *testing.T) {
 		{
 			name: "RatchetInputSwitch with Mute Ratchet and Remute",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetInputSwitch,
 				mappings.Mute,
 				mappings.Mute,
@@ -788,7 +788,7 @@ func TestRatchetInputValues(t *testing.T) {
 		{
 			name: "RatchetInputSwitch with Span Increase",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetInputSwitch,
 				mappings.RatchetInputSwitch,
 				mappings.Increase,
@@ -803,7 +803,7 @@ func TestRatchetInputValues(t *testing.T) {
 		{
 			name: "RatchetInputSwitch with Span Increase/Decrease",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetInputSwitch,
 				mappings.RatchetInputSwitch,
 				mappings.Increase,
@@ -819,7 +819,7 @@ func TestRatchetInputValues(t *testing.T) {
 		{
 			name: "RatchetInputSwitch with Mute Second Hit",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetIncrease,
 				mappings.RatchetInputSwitch,
 				mappings.CursorRight,
@@ -835,7 +835,7 @@ func TestRatchetInputValues(t *testing.T) {
 		{
 			name: "RatchetInputSwitch with Mute First Hit after moving cursor",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetIncrease,
 				mappings.RatchetInputSwitch,
 				mappings.CursorRight,
@@ -1159,7 +1159,7 @@ func TestPatternModeGateIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to gate mode, increase gate by 1",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleGateMode,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
 			},
@@ -1169,7 +1169,7 @@ func TestPatternModeGateIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to gate mode, move to right no change",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleGateMode,
 				mappings.CursorRight,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
@@ -1181,7 +1181,7 @@ func TestPatternModeGateIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to gate mode, increase gate by 1, decrease gate by 1",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleGateMode,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
@@ -1214,7 +1214,7 @@ func TestPatternModeAccentIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to accent mode, increase accent by 1",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleAccentMode,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
 			},
@@ -1224,7 +1224,7 @@ func TestPatternModeAccentIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to accent mode, move to right no change",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleAccentMode,
 				mappings.CursorRight,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
@@ -1236,7 +1236,7 @@ func TestPatternModeAccentIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to accent mode, increase accent by 1, decrease accent by 1",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleAccentMode,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
 			},
@@ -1271,7 +1271,7 @@ func TestPatternModeRatchetIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to ratchet mode, increase ratchet by 1",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleRatchetMode,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
 			},
@@ -1285,7 +1285,7 @@ func TestPatternModeRatchetIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to ratchet mode, move to right no change",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleRatchetMode,
 				mappings.CursorRight,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
@@ -1301,7 +1301,7 @@ func TestPatternModeRatchetIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to ratchet mode, increase then decrease ratchet",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleRatchetMode,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
@@ -1340,7 +1340,7 @@ func TestPatternModeWaitIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to wait mode, increase wait by 1",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleWaitMode,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
 			},
@@ -1350,7 +1350,7 @@ func TestPatternModeWaitIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to wait mode, move to right no change",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleWaitMode,
 				mappings.CursorRight,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
@@ -1362,7 +1362,7 @@ func TestPatternModeWaitIncrease(t *testing.T) {
 		{
 			name: "Add note, switch to wait mode, increase wait by 1, decrease wait by 1",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.ToggleWaitMode,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
@@ -1395,7 +1395,7 @@ func TestAccentIncrease(t *testing.T) {
 		{
 			name: "Add note and increase accent",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.AccentIncrease,
 			},
 			expectedAccent: 4,
@@ -1404,7 +1404,7 @@ func TestAccentIncrease(t *testing.T) {
 		{
 			name: "Add note and increase accent twice",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.AccentIncrease,
 				mappings.AccentIncrease,
 			},
@@ -1414,7 +1414,7 @@ func TestAccentIncrease(t *testing.T) {
 		{
 			name: "Add note and increase accent at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.AccentIncrease,
 				mappings.AccentIncrease,
 				mappings.AccentIncrease,
@@ -1427,7 +1427,7 @@ func TestAccentIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease accent",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.AccentDecrease,
 			},
 			expectedAccent: 6,
@@ -1436,7 +1436,7 @@ func TestAccentIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease accent twice",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.AccentDecrease,
 				mappings.AccentDecrease,
 			},
@@ -1446,7 +1446,7 @@ func TestAccentIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease accent at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.AccentDecrease,
 				mappings.AccentDecrease,
 				mappings.AccentDecrease,
@@ -1459,7 +1459,7 @@ func TestAccentIncrease(t *testing.T) {
 		{
 			name: "Add note, increase then decrease accent",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.AccentIncrease,
 				mappings.AccentDecrease,
 			},
@@ -1491,7 +1491,7 @@ func TestGateIncrease(t *testing.T) {
 		{
 			name: "Add note and increase gate",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.GateIncrease,
 			},
 			expectedGate: 1,
@@ -1500,7 +1500,7 @@ func TestGateIncrease(t *testing.T) {
 		{
 			name: "Add note and increase gate twice",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.GateIncrease,
 				mappings.GateIncrease,
 			},
@@ -1510,7 +1510,7 @@ func TestGateIncrease(t *testing.T) {
 		{
 			name: "Add note and increase gate at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.GateIncrease,
 				mappings.GateIncrease,
 				mappings.GateIncrease,
@@ -1526,7 +1526,7 @@ func TestGateIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease gate",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.GateIncrease,
 				mappings.GateIncrease,
 				mappings.GateDecrease,
@@ -1537,7 +1537,7 @@ func TestGateIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease gate twice",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.GateIncrease,
 				mappings.GateIncrease,
 				mappings.GateIncrease,
@@ -1550,7 +1550,7 @@ func TestGateIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease gate at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.GateDecrease,
 			},
 			expectedGate: 0,
@@ -1559,7 +1559,7 @@ func TestGateIncrease(t *testing.T) {
 		{
 			name: "Add note, increase then decrease gate",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.GateIncrease,
 				mappings.GateDecrease,
 			},
@@ -1591,7 +1591,7 @@ func TestWaitIncrease(t *testing.T) {
 		{
 			name: "Add note and increase wait",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.WaitIncrease,
 			},
 			expectedWait: 1,
@@ -1600,7 +1600,7 @@ func TestWaitIncrease(t *testing.T) {
 		{
 			name: "Add note and increase wait twice",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.WaitIncrease,
 				mappings.WaitIncrease,
 			},
@@ -1610,7 +1610,7 @@ func TestWaitIncrease(t *testing.T) {
 		{
 			name: "Add note and increase wait at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.WaitIncrease,
 				mappings.WaitIncrease,
 				mappings.WaitIncrease,
@@ -1626,7 +1626,7 @@ func TestWaitIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease wait",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.WaitIncrease,
 				mappings.WaitIncrease,
 				mappings.WaitDecrease,
@@ -1637,7 +1637,7 @@ func TestWaitIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease wait twice",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.WaitIncrease,
 				mappings.WaitIncrease,
 				mappings.WaitIncrease,
@@ -1650,7 +1650,7 @@ func TestWaitIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease wait at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.WaitDecrease,
 			},
 			expectedWait: 0,
@@ -1659,7 +1659,7 @@ func TestWaitIncrease(t *testing.T) {
 		{
 			name: "Add note, increase then decrease wait",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.WaitIncrease,
 				mappings.WaitDecrease,
 			},
@@ -1691,7 +1691,7 @@ func TestRatchetIncrease(t *testing.T) {
 		{
 			name: "Add note and increase ratchet",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetIncrease,
 			},
 			expectedRatchet: grid.Ratchet{
@@ -1704,7 +1704,7 @@ func TestRatchetIncrease(t *testing.T) {
 		{
 			name: "Add note and increase ratchet twice",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetIncrease,
 				mappings.RatchetIncrease,
 			},
@@ -1718,7 +1718,7 @@ func TestRatchetIncrease(t *testing.T) {
 		{
 			name: "Add note and increase ratchet at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetIncrease,
 				mappings.RatchetIncrease,
 				mappings.RatchetIncrease,
@@ -1738,7 +1738,7 @@ func TestRatchetIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease ratchet",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetIncrease,
 				mappings.RatchetIncrease,
 				mappings.RatchetDecrease,
@@ -1753,7 +1753,7 @@ func TestRatchetIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease ratchet twice",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetIncrease,
 				mappings.RatchetIncrease,
 				mappings.RatchetIncrease,
@@ -1770,7 +1770,7 @@ func TestRatchetIncrease(t *testing.T) {
 		{
 			name: "Add note and decrease ratchet at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetDecrease,
 			},
 			expectedRatchet: grid.Ratchet{
@@ -1783,7 +1783,7 @@ func TestRatchetIncrease(t *testing.T) {
 		{
 			name: "Add note, increase then decrease ratchet",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RatchetIncrease,
 				mappings.RatchetDecrease,
 			},
@@ -1822,7 +1822,7 @@ func TestRotate(t *testing.T) {
 		{
 			name: "Rotate down",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RotateDown,
 			},
 			initialPos:  grid.GridKey{Line: 2, Beat: 4},
@@ -1832,7 +1832,7 @@ func TestRotate(t *testing.T) {
 		{
 			name: "Rotate down at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RotateDown,
 			},
 			initialPos:  grid.GridKey{Line: 7, Beat: 4},
@@ -1842,7 +1842,7 @@ func TestRotate(t *testing.T) {
 		{
 			name: "Rotate up",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RotateUp,
 			},
 			initialPos:  grid.GridKey{Line: 2, Beat: 4},
@@ -1852,7 +1852,7 @@ func TestRotate(t *testing.T) {
 		{
 			name: "Rotate up at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RotateUp,
 			},
 			initialPos:  grid.GridKey{Line: 0, Beat: 4},
@@ -1862,7 +1862,7 @@ func TestRotate(t *testing.T) {
 		{
 			name: "Rotate right",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RotateRight,
 			},
 			initialPos:  grid.GridKey{Line: 2, Beat: 4},
@@ -1872,7 +1872,7 @@ func TestRotate(t *testing.T) {
 		{
 			name: "Rotate right at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.CursorLineStart,
 				mappings.RotateRight,
 			},
@@ -1883,7 +1883,7 @@ func TestRotate(t *testing.T) {
 		{
 			name: "Rotate left",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.CursorLeft,
 				mappings.RotateLeft,
 			},
@@ -1894,7 +1894,7 @@ func TestRotate(t *testing.T) {
 		{
 			name: "Rotate left at boundary",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RotateLeft,
 			},
 			initialPos:  grid.GridKey{Line: 2, Beat: 0},
@@ -1904,7 +1904,7 @@ func TestRotate(t *testing.T) {
 		{
 			name: "Multiple rotations",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.RotateDown,
 				mappings.CursorDown,
 				mappings.RotateRight,
@@ -1921,7 +1921,7 @@ func TestRotate(t *testing.T) {
 				WithCurosrPos(tt.initialPos),
 			)
 
-			m, _ = processCommand(mappings.TriggerAdd, m)
+			m, _ = processCommand(mappings.NoteAdd, m)
 			initialNote, exists := m.currentOverlay.GetNote(tt.initialPos)
 			assert.True(t, exists, tt.description+" - note should exist at initial position")
 
@@ -2151,7 +2151,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "New Sequence Clears Notes",
 			commands: []any{
-				mappings.TriggerAdd,
+				mappings.NoteAdd,
 				mappings.CursorRight,
 				mappings.New,
 				mappings.Enter,
@@ -2594,7 +2594,6 @@ func TestMuteAndSolo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					// Initialize playState for testing
 					m.playState = make([]linestate, len(m.definition.lines))
 					for i := range m.playState {
 						m.playState[i] = InitLineState(PlayStatePlay, uint8(i), 0)
@@ -2626,9 +2625,263 @@ func TestMuteAndSolo(t *testing.T) {
 	}
 }
 
+func TestNoteAddRemoveAndOverlayRemoveOnRootOverlay(t *testing.T) {
+	tests := []struct {
+		name           string
+		commands       []any
+		initialPos     grid.GridKey
+		shouldHaveNote bool
+		description    string
+	}{
+		{
+			name:           "NoteAdd creates note at cursor position",
+			commands:       []any{mappings.NoteAdd},
+			initialPos:     grid.GridKey{Line: 0, Beat: 4},
+			shouldHaveNote: true,
+			description:    "Should add a note at the cursor position",
+		},
+		{
+			name:           "NoteRemove removes note at cursor position",
+			commands:       []any{mappings.NoteAdd, mappings.NoteRemove},
+			initialPos:     grid.GridKey{Line: 1, Beat: 8},
+			shouldHaveNote: false,
+			description:    "Should remove the note at the cursor position",
+		},
+		{
+			name:           "OverlayNoteRemove removes note from overlay",
+			commands:       []any{mappings.NoteAdd, mappings.OverlayNoteRemove},
+			initialPos:     grid.GridKey{Line: 2, Beat: 12},
+			shouldHaveNote: false,
+			description:    "Should remove the note from the overlay",
+		},
+		{
+			name:           "NoteAdd on existing note position",
+			commands:       []any{mappings.NoteAdd, mappings.NoteAdd},
+			initialPos:     grid.GridKey{Line: 3, Beat: 16},
+			shouldHaveNote: true,
+			description:    "Should still have a note after adding to existing position",
+		},
+		{
+			name:           "NoteRemove on empty position does nothing",
+			commands:       []any{mappings.NoteRemove},
+			initialPos:     grid.GridKey{Line: 4, Beat: 20},
+			shouldHaveNote: false,
+			description:    "Should remain empty after removing from empty position",
+		},
+		{
+			name:           "OverlayNoteRemove on empty position does nothing",
+			commands:       []any{mappings.OverlayNoteRemove},
+			initialPos:     grid.GridKey{Line: 5, Beat: 24},
+			shouldHaveNote: false,
+			description:    "Should remain empty after overlay removing from empty position",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				WithCurosrPos(tt.initialPos),
+			)
+
+			initialNote, initialExists := m.CurrentNote()
+			assert.False(t, initialExists || initialNote != zeronote, "Should start with no note at position")
+
+			m, _ = processCommands(tt.commands, m)
+
+			_, exists := m.CurrentNote()
+
+			assert.Equal(t, tt.shouldHaveNote, exists, tt.description)
+
+		})
+	}
+}
+
 func WithCurosrPos(pos grid.GridKey) modelFunc {
 	return func(m *model) model {
 		m.cursorPos = pos
 		return *m
+	}
+}
+
+func WithNonRootOverlay(overlayKey overlaykey.OverlayPeriodicity) modelFunc {
+	return func(m *model) model {
+		(*m.definition.parts)[0].Overlays = m.CurrentPart().Overlays.Add(overlayKey)
+		m.currentOverlay = m.CurrentPart().Overlays.FindAboveOverlay(overlayKey)
+		return *m
+	}
+}
+
+func TestNoteAddRemoveAndOverlayRemoveOnNonRootOverlay(t *testing.T) {
+	nonRootOverlayKey := overlaykey.OverlayPeriodicity{
+		Shift:      2,
+		Interval:   4,
+		Width:      0,
+		StartCycle: 0,
+	}
+
+	tests := []struct {
+		name           string
+		commands       []any
+		initialPos     grid.GridKey
+		shouldHaveNote bool
+		description    string
+	}{
+		{
+			name:           "NoteAdd creates note at cursor position",
+			commands:       []any{mappings.NoteAdd},
+			initialPos:     grid.GridKey{Line: 0, Beat: 4},
+			shouldHaveNote: true,
+			description:    "Should add a note at the cursor position",
+		},
+		{
+			name:           "NoteRemove removes note at cursor position",
+			commands:       []any{mappings.NoteAdd, mappings.NoteRemove},
+			initialPos:     grid.GridKey{Line: 1, Beat: 8},
+			shouldHaveNote: false,
+			description:    "Should remove the note at the cursor position",
+		},
+		{
+			name:           "OverlayNoteRemove removes note from overlay",
+			commands:       []any{mappings.NoteAdd, mappings.OverlayNoteRemove},
+			initialPos:     grid.GridKey{Line: 2, Beat: 12},
+			shouldHaveNote: false,
+			description:    "Should remove the note from the overlay",
+		},
+		{
+			name:           "NoteAdd on existing note position",
+			commands:       []any{mappings.NoteAdd, mappings.NoteAdd},
+			initialPos:     grid.GridKey{Line: 3, Beat: 16},
+			shouldHaveNote: true,
+			description:    "Should still have a note after adding to existing position",
+		},
+		{
+			name:           "NoteRemove on empty position does nothing",
+			commands:       []any{mappings.NoteRemove},
+			initialPos:     grid.GridKey{Line: 4, Beat: 20},
+			shouldHaveNote: false,
+			description:    "Should remain empty after removing from empty position",
+		},
+		{
+			name:           "OverlayNoteRemove on empty position does nothing",
+			commands:       []any{mappings.OverlayNoteRemove},
+			initialPos:     grid.GridKey{Line: 5, Beat: 24},
+			shouldHaveNote: false,
+			description:    "Should remain empty after overlay removing from empty position",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				WithCurosrPos(tt.initialPos),
+				WithNonRootOverlay(nonRootOverlayKey),
+			)
+
+			initialNote, initialExists := m.CurrentNote()
+			assert.False(t, initialExists || initialNote != zeronote, "Should start with no note at position")
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			hasNote := exists && currentNote != zeronote
+
+			assert.Equal(t, tt.shouldHaveNote, hasNote, tt.description)
+
+			if tt.shouldHaveNote {
+				assert.NotEqual(t, zeronote, currentNote, "Note should not be zeronote when expected to have note")
+				assert.True(t, exists, "Note should exist when expected")
+			} else {
+				assert.True(t, !exists || currentNote == zeronote, "Should not have note when not expected")
+			}
+		})
+	}
+}
+
+func TestNoteAddRemoveAndOverlayRemoveAcrossOverlays(t *testing.T) {
+	tests := []struct {
+		name               string
+		commands           []any
+		initialPos         grid.GridKey
+		shouldHaveNote     bool
+		shouldHaveZeroNote bool
+		description        string
+	}{
+		{
+			name:               "NoteAdd creates note at cursor position when note exists on root overlay",
+			commands:           []any{mappings.NoteAdd, mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.NoteAdd},
+			initialPos:         grid.GridKey{Line: 0, Beat: 4},
+			shouldHaveNote:     true,
+			shouldHaveZeroNote: false,
+			description:        "Should add a note at the cursor position",
+		},
+		{
+			name:               "NoteRemove does not zero note at cursor position when note does not exist on root overlay",
+			commands:           []any{mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.NoteRemove},
+			initialPos:         grid.GridKey{Line: 1, Beat: 8},
+			shouldHaveNote:     false,
+			shouldHaveZeroNote: false,
+			description:        "Should remove the note at the cursor position",
+		},
+		{
+			name:               "NoteRemove zeroes note at cursor position when note exists on root overlay",
+			commands:           []any{mappings.NoteAdd, mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.NoteRemove},
+			initialPos:         grid.GridKey{Line: 1, Beat: 8},
+			shouldHaveNote:     true,
+			shouldHaveZeroNote: true,
+			description:        "Should remove the note at the cursor position",
+		},
+		{
+			name:               "OverlayNoteRemove does nothing when note exists on root overlay but not on above overlay",
+			commands:           []any{mappings.NoteAdd, mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.OverlayNoteRemove},
+			initialPos:         grid.GridKey{Line: 2, Beat: 12},
+			shouldHaveNote:     true,
+			shouldHaveZeroNote: false,
+			description:        "Should remove the note from the overlay",
+		},
+		{
+			name:               "OverlayNoteRemove removes note from overlay when nothing exists below",
+			commands:           []any{mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.NoteAdd, mappings.OverlayNoteRemove},
+			initialPos:         grid.GridKey{Line: 2, Beat: 12},
+			shouldHaveNote:     false,
+			shouldHaveZeroNote: false,
+			description:        "Should remove the note from the overlay",
+		},
+		{
+			name:               "NoteRemove on empty position on root overlay does nothing",
+			commands:           []any{mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.NoteRemove},
+			initialPos:         grid.GridKey{Line: 4, Beat: 20},
+			shouldHaveNote:     false,
+			shouldHaveZeroNote: false,
+			description:        "Should remain empty after removing from empty position",
+		},
+		{
+			name:               "OverlayNoteRemove on empty position does nothing",
+			commands:           []any{mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.OverlayNoteRemove},
+			initialPos:         grid.GridKey{Line: 5, Beat: 24},
+			shouldHaveNote:     false,
+			shouldHaveZeroNote: false,
+			description:        "Should remain empty after overlay removing from empty position",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				WithCurosrPos(tt.initialPos),
+			)
+
+			initialNote, initialExists := m.CurrentNote()
+			assert.False(t, initialExists || initialNote != zeronote, "Should start with no note at position")
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+
+			assert.Equal(t, tt.shouldHaveNote, exists, tt.description)
+
+			if tt.shouldHaveNote {
+				assert.Equal(t, tt.shouldHaveZeroNote, currentNote == zeronote, "Note should be zeronote when expected to have zeronote")
+			}
+		})
 	}
 }

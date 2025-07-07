@@ -296,14 +296,14 @@ func (ol *Overlay) MoveNoteTo(gridKey grid.GridKey, note grid.Note) {
 func (ol *Overlay) SetNote(gridKey grid.GridKey, note grid.Note) {
 	_, exists := (*ol).Notes[gridKey]
 	if exists {
-		(*ol).Notes[gridKey] = note
+		ol.MoveNoteTo(gridKey, note)
 		return
 	}
 	chord, exists := ol.Chords.FindChordWithNote(gridKey)
 	if exists {
 		chord.SetChordNote(gridKey, note)
 	} else {
-		(*ol).Notes[gridKey] = note
+		ol.MoveNoteTo(gridKey, note)
 	}
 }
 

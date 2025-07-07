@@ -678,7 +678,7 @@ func (m model) VisualSelectedGridKeys() []gridKey {
 	}
 }
 
-func (m *model) AddTrigger() {
+func (m *model) AddNote() {
 	keys := m.VisualSelectedGridKeys()
 	for _, k := range keys {
 		m.currentOverlay.SetNote(k, grid.InitNote())
@@ -692,14 +692,14 @@ func (m *model) AddAction(act action) {
 	}
 }
 
-func (m *model) RemoveTrigger() {
+func (m *model) RemoveNote() {
 	keys := m.VisualSelectedGridKeys()
 	for _, k := range keys {
 		m.currentOverlay.SetNote(k, zeronote)
 	}
 }
 
-func (m *model) OverlayRemoveTrigger() {
+func (m *model) OverlayRemoveNote() {
 	keys := m.VisualSelectedGridKeys()
 	for _, gridKey := range keys {
 		m.currentOverlay.RemoveNote(gridKey)
@@ -1850,11 +1850,11 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		}
 	}
 	switch mapping.Command {
-	case mappings.TriggerAdd:
-		m.AddTrigger()
-	case mappings.TriggerRemove:
+	case mappings.NoteAdd:
+		m.AddNote()
+	case mappings.NoteRemove:
 		m.yankBuffer = m.Yank()
-		m.RemoveTrigger()
+		m.RemoveNote()
 		m.visualMode = false
 	case mappings.AccentIncrease:
 		m.AccentModify(1)
@@ -1872,11 +1872,11 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.WaitModify(1)
 	case mappings.WaitDecrease:
 		m.WaitModify(-1)
-	case mappings.OverlayTriggerRemove:
-		m.OverlayRemoveTrigger()
+	case mappings.OverlayNoteRemove:
+		m.OverlayRemoveNote()
 	case mappings.ClearLine:
 		if m.visualMode {
-			m.RemoveTrigger()
+			m.RemoveNote()
 		} else {
 			m.ClearOverlayLine()
 		}
@@ -2745,7 +2745,7 @@ func (m *model) fill(every uint8) {
 		hasNote = hasNote && currentNote != zeronote
 
 		if hasNote {
-			m.RemoveNote(gridKey)
+			m.currentOverlay.SetNote(gridKey, zeronote)
 		} else {
 			m.currentOverlay.SetNote(gridKey, grid.InitNote())
 		}
@@ -2895,14 +2895,6 @@ func (m model) PatternActionLineBoundaries() (uint8, uint8) {
 	}
 }
 
-func (m *model) RemoveNote(gridKey gridKey) {
-	if m.currentOverlay.Key == overlaykey.ROOT {
-		m.currentOverlay.RemoveNote(gridKey)
-	} else {
-		m.currentOverlay.SetNote(gridKey, zeronote)
-	}
-}
-
 // ----------------------------- View Layer ----------------------------------------
 
 func (m model) CyclesEditView() string {
@@ -3013,9 +3005,8 @@ func (m model) View() string {
 		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
 	}
 
-	leftSideView := "  "
-	seqView := m.TriggerSeqView()
-	buf.WriteString(lipgloss.JoinHorizontal(0, leftSideView, "", seqView, "  ", sideView))
+	seqView := m.SeqView()
+	buf.WriteString(lipgloss.JoinHorizontal(0, "  ", seqView, "  ", sideView))
 	if m.currentError != nil && m.selectionIndicator == SelectError {
 		buf.WriteString("\n")
 		style := lipgloss.NewStyle().Width(50)
@@ -3233,7 +3224,7 @@ func (m model) OverlaysView() string {
 	return buf.String()
 }
 
-func (m model) TriggerSeqView() string {
+func (m model) SeqView() string {
 	var buf strings.Builder
 	var mode string
 
