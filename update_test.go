@@ -2445,6 +2445,76 @@ func TestChangePartAfterNewSectionAfter(t *testing.T) {
 	}
 }
 
+func TestNextPrevTheme(t *testing.T) {
+	tests := []struct {
+		name          string
+		commands      []any
+		initialTheme  string
+		expectedTheme string
+		description   string
+	}{
+		{
+			name:          "NextTheme from default advances to seafoam",
+			commands:      []any{mappings.NextTheme},
+			initialTheme:  "default",
+			expectedTheme: "seafoam",
+			description:   "Should advance from default to seafoam theme",
+		},
+		{
+			name:          "NextTheme from last theme wraps to first",
+			commands:      []any{mappings.NextTheme},
+			initialTheme:  "miles",
+			expectedTheme: "default",
+			description:   "Should wrap from last theme (miles) to first theme (default)",
+		},
+		{
+			name:          "PrevTheme from default wraps to last",
+			commands:      []any{mappings.PrevTheme},
+			initialTheme:  "default",
+			expectedTheme: "miles",
+			description:   "Should wrap from first theme (default) to last theme (miles)",
+		},
+		{
+			name:          "PrevTheme from seafoam goes back to default",
+			commands:      []any{mappings.PrevTheme},
+			initialTheme:  "seafoam",
+			expectedTheme: "default",
+			description:   "Should go back from seafoam to default theme",
+		},
+		{
+			name:          "Multiple NextTheme commands cycle correctly",
+			commands:      []any{mappings.NextTheme, mappings.NextTheme, mappings.NextTheme},
+			initialTheme:  "default",
+			expectedTheme: "springtime",
+			description:   "Should advance from default -> seafoam -> dynamite -> springtime",
+		},
+		{
+			name:          "NextTheme then PrevTheme returns to original",
+			commands:      []any{mappings.NextTheme, mappings.PrevTheme},
+			initialTheme:  "cyberpunk",
+			expectedTheme: "cyberpunk",
+			description:   "Should return to original theme after next then prev",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					m.theme = tt.initialTheme
+					return *m
+				},
+			)
+
+			assert.Equal(t, tt.initialTheme, m.theme, "Initial theme should match")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, tt.expectedTheme, m.theme, tt.description+" - theme should match expected value")
+		})
+	}
+}
+
 func WithCurosrPos(pos grid.GridKey) modelFunc {
 	return func(m *model) model {
 		m.cursorPos = pos
