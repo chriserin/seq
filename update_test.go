@@ -2515,6 +2515,117 @@ func TestNextPrevTheme(t *testing.T) {
 	}
 }
 
+func TestMuteAndSolo(t *testing.T) {
+	tests := []struct {
+		name                   string
+		commands               []any
+		cursorLine             uint8
+		expectedGroupPlayState groupPlayState
+		expectedHasSolo        bool
+		description            string
+	}{
+		{
+			name:                   "Mute line from play state",
+			commands:               []any{mappings.Mute},
+			cursorLine:             0,
+			expectedGroupPlayState: PlayStateMute,
+			expectedHasSolo:        false,
+			description:            "Should mute line 0 from play state",
+		},
+		{
+			name:                   "Unmute line back to play state",
+			commands:               []any{mappings.Mute, mappings.Mute},
+			cursorLine:             0,
+			expectedGroupPlayState: PlayStatePlay,
+			expectedHasSolo:        false,
+			description:            "Should unmute line 0 back to play state",
+		},
+		{
+			name:                   "Solo line from play state",
+			commands:               []any{mappings.Solo},
+			cursorLine:             0,
+			expectedGroupPlayState: PlayStateSolo,
+			expectedHasSolo:        true,
+			description:            "Should solo line 0 from play state",
+		},
+		{
+			name:                   "Unsolo line back to play state",
+			commands:               []any{mappings.Solo, mappings.Solo},
+			cursorLine:             0,
+			expectedGroupPlayState: PlayStatePlay,
+			expectedHasSolo:        false,
+			description:            "Should unsolo line 0 back to play state",
+		},
+		{
+			name:                   "Solo line from muted state",
+			commands:               []any{mappings.Mute, mappings.Solo},
+			cursorLine:             0,
+			expectedGroupPlayState: PlayStateSolo,
+			expectedHasSolo:        true,
+			description:            "Should solo line 0 from muted state",
+		},
+		{
+			name:                   "Mute line from solo state",
+			commands:               []any{mappings.Solo, mappings.Mute},
+			cursorLine:             0,
+			expectedGroupPlayState: PlayStateMute,
+			expectedHasSolo:        false,
+			description:            "Should mute line 0 from solo state",
+		},
+		{
+			name:                   "Mute different line",
+			commands:               []any{mappings.CursorDown, mappings.Mute},
+			cursorLine:             1,
+			expectedGroupPlayState: PlayStateMute,
+			expectedHasSolo:        false,
+			description:            "Should mute line 1 after moving cursor down",
+		},
+		{
+			name:                   "Solo different line",
+			commands:               []any{mappings.CursorDown, mappings.CursorDown, mappings.Solo},
+			cursorLine:             2,
+			expectedGroupPlayState: PlayStateSolo,
+			expectedHasSolo:        true,
+			description:            "Should solo line 2 after moving cursor down twice",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					// Initialize playState for testing
+					m.playState = make([]linestate, len(m.definition.lines))
+					for i := range m.playState {
+						m.playState[i] = InitLineState(PlayStatePlay, uint8(i), 0)
+					}
+					return *m
+				},
+			)
+
+			assert.Equal(t, PlayStatePlay, m.playState[tt.cursorLine].groupPlayState, "Initial play state should be PlayStatePlay")
+			assert.False(t, m.hasSolo, "Initial hasSolo should be false")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, tt.expectedGroupPlayState, m.playState[tt.cursorLine].groupPlayState, tt.description+" - groupPlayState should match")
+			assert.Equal(t, tt.expectedHasSolo, m.hasSolo, tt.description+" - hasSolo should match")
+
+			switch tt.expectedGroupPlayState {
+			case PlayStateMute:
+				assert.True(t, m.playState[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return true")
+				assert.False(t, m.playState[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return false")
+			case PlayStateSolo:
+				assert.False(t, m.playState[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return false")
+				assert.True(t, m.playState[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return true")
+			default:
+				assert.False(t, m.playState[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return false")
+				assert.False(t, m.playState[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return false")
+			}
+		})
+	}
+}
+
 func WithCurosrPos(pos grid.GridKey) modelFunc {
 	return func(m *model) model {
 		m.cursorPos = pos
