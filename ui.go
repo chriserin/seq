@@ -1175,6 +1175,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		}
 	}()
 
+	// NOTE: Processing enter/escape keys before anything else
 	switch msg := msg.(type) {
 	case errorMsg:
 		m.SetCurrentError(msg.error)
@@ -1234,12 +1235,14 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		}
 
+		// NOTE: Process text input before mappings if we have a text input selected
 		if m.selectionIndicator == SelectRenamePart || m.selectionIndicator == SelectFileName {
 			tiModel, cmd := m.textInput.Update(msg)
 			m.textInput = tiModel
 			return m, cmd
 		}
 
+		// NOTE: Overlay key edit has it's own key bindings
 		if m.focus == FocusOverlayKey {
 			okModel, cmd := m.overlayKeyEdit.Update(msg)
 			m.overlayKeyEdit = okModel
@@ -1251,6 +1254,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.SetSelectionIndicator(SelectConfirmQuit)
 		}
 
+		// NOTE: Arrangement editor has its own key bindings, but some mappings we still want to route to this model
 		if m.focus == FocusArrangementEditor && !m.IsPartOperation(mapping) && !m.IsPlayOperation(mapping) && mapping.Command != mappings.ToggleArrangementView {
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
@@ -1258,6 +1262,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			return m, cmd
 		}
 
+		// NOTE: Finally process the mapping
 		switch mapping.Command {
 		case mappings.ReloadFile:
 			if m.filename != "" {
