@@ -264,3 +264,73 @@ func TestNextPrevTheme(t *testing.T) {
 		})
 	}
 }
+
+func TestClearLine(t *testing.T) {
+	tests := []struct {
+		name        string
+		commands    []any
+		cursorPos   grid.GridKey
+		description string
+	}{
+		{
+			name: "Clear line from beginning cursor position",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.CursorLineStart,
+				mappings.ClearLine,
+			},
+			cursorPos:   grid.GridKey{Line: 0, Beat: 0},
+			description: "Should clear all notes from cursor position to end of line",
+		},
+		{
+			name: "Clear line from middle cursor position",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.CursorLeft,
+				mappings.ClearLine,
+			},
+			cursorPos:   grid.GridKey{Line: 0, Beat: 1},
+			description: "Should keep notes before cursor position and clear from cursor to end",
+		},
+		{
+			name: "Clear line from end cursor position",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.ClearLine,
+			},
+			cursorPos:   grid.GridKey{Line: 0, Beat: 2},
+			description: "Should keep notes before cursor position and clear only the cursor position",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			for beat := uint8(0); beat < m.CurrentPart().Beats; beat++ {
+				m.cursorPos = grid.GridKey{Line: tt.cursorPos.Line, Beat: beat}
+				_, exists := m.CurrentNote()
+
+				if beat < tt.cursorPos.Beat {
+					assert.True(t, exists, tt.description+" - note should exist before cursor at beat %d", beat)
+				} else {
+					assert.False(t, exists, tt.description+" - note should not exist at or after cursor at beat %d", beat)
+				}
+			}
+		})
+	}
+}
