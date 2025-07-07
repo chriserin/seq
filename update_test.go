@@ -2389,6 +2389,62 @@ func TestSectionNavigationResetOverlay(t *testing.T) {
 	}
 }
 
+func TestChangePartAfterNewSectionAfter(t *testing.T) {
+	tests := []struct {
+		name              string
+		commands          []any
+		expectedPartIndex int
+		description       string
+	}{
+		{
+			name:              "ChangePart after NewSectionAfter updates part mapping",
+			commands:          []any{mappings.NewSectionAfter, mappings.Enter, mappings.ChangePart, mappings.Increase, mappings.Increase, mappings.Enter},
+			expectedPartIndex: 1,
+			description:       "Should change part mapping to index 1 after creating new section",
+		},
+		{
+			name:              "ChangePart after NewSectionAfter updates part mapping, more increases stays at top part",
+			commands:          []any{mappings.NewSectionAfter, mappings.Enter, mappings.ChangePart, mappings.Increase, mappings.Increase, mappings.Increase, mappings.Enter},
+			expectedPartIndex: 1,
+			description:       "Should change part mapping to index 1 after creating new section",
+		},
+		{
+			name:              "ChangePart with decrease after NewSectionAfter",
+			commands:          []any{mappings.NewSectionAfter, mappings.Enter, mappings.ChangePart, mappings.Increase, mappings.Increase, mappings.Decrease, mappings.Enter},
+			expectedPartIndex: 0,
+			description:       "Should change part mapping to index 0 after increase then decrease",
+		},
+		{
+			name:              "ChangePart creates new part as default operation",
+			commands:          []any{mappings.NewSectionAfter, mappings.Enter, mappings.ChangePart, mappings.Enter},
+			expectedPartIndex: 2,
+			description:       "Should create new part when selecting beyond existing parts",
+		},
+		{
+			name:              "ChangePart creates new part as default operation, decrease stays on 'Create New Part'",
+			commands:          []any{mappings.NewSectionAfter, mappings.Enter, mappings.ChangePart, mappings.Decrease, mappings.Enter},
+			expectedPartIndex: 2,
+			description:       "Should create new part when selecting beyond existing parts",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, tt.expectedPartIndex, m.CurrentSongSection().Part, tt.description+" - part index should match")
+
+			initialPartCount := 1
+			if tt.expectedPartIndex >= initialPartCount {
+				expectedPartCount := tt.expectedPartIndex + 1
+				assert.Equal(t, expectedPartCount, len(*m.definition.parts), tt.description+" - new parts should be created")
+			}
+		})
+	}
+}
+
 func WithCurosrPos(pos grid.GridKey) modelFunc {
 	return func(m *model) model {
 		m.cursorPos = pos
