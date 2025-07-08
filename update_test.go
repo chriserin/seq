@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -537,6 +539,111 @@ func TestOverlayStackToggle(t *testing.T) {
 
 			assert.Equal(t, tt.expectedPressUp, m.currentOverlay.PressUp, tt.description+" - PressUp should match expected value")
 			assert.Equal(t, tt.expectedPressDown, m.currentOverlay.PressDown, tt.description+" - PressDown should match expected value")
+		})
+	}
+}
+
+func TestYankAndPaste(t *testing.T) {
+	tests := []struct {
+		name              string
+		commands          []any
+		description       string
+		expectedNoteBeats []uint8
+	}{
+		{
+			name: "Yank single note and paste",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.Yank,
+				mappings.CursorDown,
+				mappings.Paste,
+			},
+			expectedNoteBeats: []uint8{0},
+			description:       "Should yank a single note and paste it at cursor position",
+		},
+		{
+			name: "Yank multiple notes in visual mode and paste",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.CursorLineStart,
+				mappings.ToggleVisualMode,
+				mappings.CursorRight,
+				mappings.CursorRight,
+				mappings.Yank,
+				mappings.CursorDown,
+				mappings.CursorLineStart,
+				mappings.Paste,
+			},
+			expectedNoteBeats: []uint8{0, 1, 2},
+			description:       "Should yank multiple notes in visual mode and paste them",
+		},
+		{
+			name: "Yank and paste with cursor movement",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.AccentIncrease,
+				mappings.AccentIncrease,
+				mappings.Yank,
+				mappings.CursorDown,
+				mappings.CursorRight,
+				mappings.Paste,
+			},
+			expectedNoteBeats: []uint8{1},
+			description:       "Should yank note with modifications and paste at different location",
+		},
+		{
+			name: "Yank empty selection should not crash",
+			commands: []any{
+				mappings.Yank,
+				mappings.CursorDown,
+				mappings.Paste,
+			},
+			expectedNoteBeats: []uint8{},
+			description:       "Should handle yanking empty selection gracefully",
+		},
+		{
+			name: "Yank does not capture empty space", //NOTE: Should it? This wasn't an intentional behavior, but how it fell out
+			commands: []any{
+				mappings.ToggleVisualMode,
+				mappings.CursorRight,
+				mappings.CursorRight,
+				mappings.Yank,
+				mappings.CursorDown,
+				mappings.CursorLineStart,
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.CursorLineStart,
+				mappings.Paste,
+			},
+			expectedNoteBeats: []uint8{0, 1, 2},
+			description:       "Should not paste empty space when yanking in visual mode",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			for beat := range uint8(32) {
+				_, exists := m.currentOverlay.GetNote(grid.GridKey{Line: m.cursorPos.Line, Beat: beat})
+				if slices.Contains(tt.expectedNoteBeats, uint8(beat)) {
+					fmt.Println("Checking beat:", beat)
+					assert.True(t, exists, tt.description+" - note should exist at beat "+string(beat))
+				} else {
+					fmt.Println("Checking no exist beat:", beat)
+					assert.False(t, exists, tt.description+" - note should not exist at beat "+string(beat))
+				}
+			}
 		})
 	}
 }
