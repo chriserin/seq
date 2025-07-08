@@ -390,3 +390,67 @@ func TestClearOverlay(t *testing.T) {
 		})
 	}
 }
+
+func TestActionMappings(t *testing.T) {
+	tests := []struct {
+		name           string
+		commands       []any
+		expectedAction grid.Action
+		description    string
+	}{
+		{
+			name:           "ActionAddLineReset sets ActionLineReset",
+			commands:       []any{mappings.ActionAddLineReset},
+			expectedAction: grid.ActionLineReset,
+			description:    "Should set note action to ActionLineReset",
+		},
+		{
+			name:           "ActionAddLineReverse sets ActionLineReverse",
+			commands:       []any{mappings.ActionAddLineReverse},
+			expectedAction: grid.ActionLineReverse,
+			description:    "Should set note action to ActionLineReverse",
+		},
+		{
+			name:           "ActionAddSkipBeat sets ActionLineSkipBeat",
+			commands:       []any{mappings.ActionAddSkipBeat},
+			expectedAction: grid.ActionLineSkipBeat,
+			description:    "Should set note action to ActionLineSkipBeat",
+		},
+		{
+			name:           "ActionAddReset sets ActionReset",
+			commands:       []any{mappings.ActionAddReset},
+			expectedAction: grid.ActionReset,
+			description:    "Should set note action to ActionReset",
+		},
+		{
+			name:           "ActionAddLineBounce sets ActionLineBounce",
+			commands:       []any{mappings.ActionAddLineBounce},
+			expectedAction: grid.ActionLineBounce,
+			description:    "Should set note action to ActionLineBounce",
+		},
+		{
+			name:           "ActionAddLineDelay sets ActionLineDelay",
+			commands:       []any{mappings.ActionAddLineDelay},
+			expectedAction: grid.ActionLineDelay,
+			description:    "Should set note action to ActionLineDelay",
+		},
+		{
+			name:           "ActionAddSpecificValue sets ActionSpecificValue",
+			commands:       []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.Increase, mappings.Increase, mappings.Escape, mappings.ActionAddSpecificValue},
+			expectedAction: grid.ActionSpecificValue,
+			description:    "Should set note action to ActionSpecificValue when line is ProgramChange",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			note, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist after adding action")
+			assert.Equal(t, tt.expectedAction, note.Action, tt.description+" - note action should match expected value")
+		})
+	}
+}
