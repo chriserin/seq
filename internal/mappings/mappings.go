@@ -104,7 +104,7 @@ const (
 	ActionAddLineDelay
 	ActionAddSpecificValue
 	SelectKeyLine
-	PressDownOverlay
+	OverlayStackToggle
 	NumberPattern
 	RotateRight
 	RotateLeft
@@ -207,7 +207,7 @@ var mappings = registry{
 	k("ctrl+p"): NewSectionBefore,
 	k("ctrl+s"): SetupInputSwitch,
 	k("ctrl+t"): TempoInputSwitch,
-	k("ctrl+u"): PressDownOverlay,
+	k("ctrl+u"): OverlayStackToggle,
 	k("ctrl+v"): Save,
 	k("ctrl+w"): ToggleWaitMode,
 	k("ctrl+y"): RatchetInputSwitch,

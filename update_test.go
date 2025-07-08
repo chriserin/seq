@@ -494,3 +494,49 @@ func TestSelectKeyLine(t *testing.T) {
 		})
 	}
 }
+
+func TestOverlayStackToggle(t *testing.T) {
+	tests := []struct {
+		name              string
+		commands          []any
+		expectedPressUp   bool
+		expectedPressDown bool
+		description       string
+	}{
+		{
+			name:              "Toggle from neither to PressUp",
+			commands:          []any{mappings.OverlayStackToggle},
+			expectedPressUp:   false,
+			expectedPressDown: true,
+			description:       "Should set PressUp to true when neither is set",
+		},
+		{
+			name:              "Toggle from PressUp to PressDown",
+			commands:          []any{mappings.OverlayStackToggle, mappings.OverlayStackToggle},
+			expectedPressUp:   false,
+			expectedPressDown: false,
+			description:       "Should set PressDown to true when PressUp is set",
+		},
+		{
+			name:              "Toggle from PressDown to neither",
+			commands:          []any{mappings.OverlayStackToggle, mappings.OverlayStackToggle, mappings.OverlayStackToggle},
+			expectedPressUp:   true,
+			expectedPressDown: false,
+			description:       "Should set both to false when PressDown is set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			assert.Equal(t, true, m.currentOverlay.PressUp, tt.description+" - Initial PressUp should be true")
+			assert.Equal(t, false, m.currentOverlay.PressDown, tt.description+" - Initial PressDown should be false")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, tt.expectedPressUp, m.currentOverlay.PressUp, tt.description+" - PressUp should match expected value")
+			assert.Equal(t, tt.expectedPressDown, m.currentOverlay.PressDown, tt.description+" - PressDown should match expected value")
+		})
+	}
+}

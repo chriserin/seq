@@ -1903,7 +1903,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		}
 	case mappings.SelectKeyLine:
 		m.definition.keyline = m.cursorPos.Line
-	case mappings.PressDownOverlay:
+	case mappings.OverlayStackToggle:
 		m.currentOverlay.ToggleOverlayStackOptions()
 	case mappings.ClearOverlay:
 		m.ClearOverlay()
