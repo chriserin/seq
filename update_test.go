@@ -454,3 +454,43 @@ func TestActionMappings(t *testing.T) {
 		})
 	}
 }
+
+func TestSelectKeyLine(t *testing.T) {
+	tests := []struct {
+		name            string
+		cursorPos       grid.GridKey
+		expectedKeyline uint8
+		description     string
+	}{
+		{
+			name:            "SelectKeyLine sets keyline to cursor line 0",
+			cursorPos:       grid.GridKey{Line: 0, Beat: 0},
+			expectedKeyline: 0,
+			description:     "Should set keyline to 0 when cursor is on line 0",
+		},
+		{
+			name:            "SelectKeyLine sets keyline to cursor line 2",
+			cursorPos:       grid.GridKey{Line: 2, Beat: 5},
+			expectedKeyline: 2,
+			description:     "Should set keyline to 2 when cursor is on line 2",
+		},
+		{
+			name:            "SelectKeyLine sets keyline to cursor line 7",
+			cursorPos:       grid.GridKey{Line: 7, Beat: 3},
+			expectedKeyline: 7,
+			description:     "Should set keyline to 7 when cursor is on line 7",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				WithCurosrPos(tt.cursorPos),
+			)
+
+			m, _ = processCommands([]any{mappings.SelectKeyLine}, m)
+
+			assert.Equal(t, tt.expectedKeyline, m.definition.keyline, tt.description+" - keyline should match cursor line")
+		})
+	}
+}
