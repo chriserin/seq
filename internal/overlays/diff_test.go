@@ -313,7 +313,7 @@ func TestDeepCopy(t *testing.T) {
 
 		// Modify the chord
 		chord.Double = 2
-		chord.Arppegio = ARP_UP
+		chord.Arppegio = ArpUp
 
 		clone := DeepCopy(original)
 

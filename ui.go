@@ -1312,6 +1312,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.cursorPos.Beat = 0
 		case mappings.CursorLineEnd:
 			m.cursorPos.Beat = m.CurrentPart().Beats - 1
+		case mappings.CursorLastLine:
+			m.cursorPos.Line = uint8(len(m.definition.lines) - 1)
+		case mappings.CursorFirstLine:
+			m.cursorPos.Line = 0
 		case mappings.Escape:
 			m.Escape()
 		case mappings.PlayStop:
@@ -2103,6 +2107,7 @@ func (m *model) ConvertChordToNotes() {
 		for gk, note := range pattern {
 			m.currentOverlay.SetNote(gk, note)
 		}
+		m.activeChord = overlays.OverlayChord{}
 	}
 }
 

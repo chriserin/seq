@@ -77,18 +77,13 @@ func (gc *GridChord) SetChordNote(position grid.GridKey, note grid.Note) {
 }
 
 func (gc GridChord) HasNote(position grid.GridKey) bool {
-	for _, gk := range gc.Positions() {
-		if gk == position {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(gc.Positions(), position)
 }
 
 func (gc GridChord) Positions() []grid.GridKey {
-	positions := make([]grid.GridKey, len(gc.Notes))
-
-	for i, interval := range gc.ArppegioIntervals() {
+	arpInts := gc.ArppegioIntervals()
+	positions := make([]grid.GridKey, len(arpInts))
+	for i, interval := range arpInts {
 		beatnote := gc.Notes[i]
 		positions[i] = gc.Key(interval, beatnote)
 	}
@@ -134,9 +129,9 @@ func (gc *GridChord) ApplyAlteration(alteration uint32) {
 type Arp int
 
 const (
-	ARP_NOTHING Arp = iota
-	ARP_UP
-	ARP_REVERSE
+	ArpNothing Arp = iota
+	ArpUp
+	ArpReverse
 )
 
 func (gc *GridChord) NextArp() {
@@ -177,7 +172,7 @@ func (gc *GridChord) ApplyArppegiation() {
 	gc.Notes = make([]BeatNote, 0, len(intervals))
 	for i := range intervals {
 		var step int
-		if gc.Arppegio == ARP_NOTHING {
+		if gc.Arppegio == ArpNothing {
 			step = 0
 		} else {
 			step = i
@@ -196,11 +191,11 @@ func (gc GridChord) ArppegioIntervals() []uint8 {
 	intervals := gc.Chord.Intervals()
 	doubledIntervals := gc.ApplyDoubles(intervals)
 	switch gc.Arppegio {
-	case ARP_NOTHING:
+	case ArpNothing:
 		return doubledIntervals
-	case ARP_UP:
+	case ArpUp:
 		return doubledIntervals
-	case ARP_REVERSE:
+	case ArpReverse:
 		slices.Reverse(doubledIntervals)
 		return doubledIntervals
 	}

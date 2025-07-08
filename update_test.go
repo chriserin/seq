@@ -123,6 +123,22 @@ func WithNonRootOverlay(overlayKey overlaykey.OverlayPeriodicity) modelFunc {
 	}
 }
 
+func WithPolyphony() modelFunc {
+	return func(m *model) model {
+		m.definition.templateSequencerType = grid.SeqtypePolyphony
+		m.definition.lines = make([]grid.LineDefinition, 24)
+		for i := range m.definition.lines {
+			m.definition.lines[i] = grid.LineDefinition{
+				Channel: 1,
+				Note:    uint8(i),
+				MsgType: grid.MessageTypeNote,
+				Name:    fmt.Sprintf("Line %d", i),
+			}
+		}
+		return *m
+	}
+}
+
 func TestSave(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -637,10 +653,8 @@ func TestYankAndPaste(t *testing.T) {
 			for beat := range uint8(32) {
 				_, exists := m.currentOverlay.GetNote(grid.GridKey{Line: m.cursorPos.Line, Beat: beat})
 				if slices.Contains(tt.expectedNoteBeats, uint8(beat)) {
-					fmt.Println("Checking beat:", beat)
 					assert.True(t, exists, tt.description+" - note should exist at beat "+string(beat))
 				} else {
-					fmt.Println("Checking no exist beat:", beat)
 					assert.False(t, exists, tt.description+" - note should not exist at beat "+string(beat))
 				}
 			}

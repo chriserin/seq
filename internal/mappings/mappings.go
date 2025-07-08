@@ -5,6 +5,7 @@
 package mappings
 
 import (
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -42,6 +43,8 @@ const (
 	CursorRight
 	CursorLineStart
 	CursorLineEnd
+	CursorLastLine
+	CursorFirstLine
 	Escape
 	PlayStop
 	PlayPart
@@ -144,12 +147,13 @@ const (
 type mappingKey [3]string
 type registry map[mappingKey]Command
 
-// KeysForCommand Function that gets keys for mappings by looking at the looping through the registry and returning the keys for the given command
+// KeysForCommand Function that gets keys for mappings by looking at the looping
+// through the registry and returning the keys for the given command
 // If the command is not found, it returns an empty string slice.
 // This is used to get the keys for a given command in the mappings.
 func KeysForCommand(command Command) []string {
 	var keys []string
-	for key, cmd := range mappings {
+	for key, cmd := range allCommands() {
 		if cmd == command {
 			for _, k := range key {
 				if k != "" {
@@ -162,6 +166,15 @@ func KeysForCommand(command Command) []string {
 	return keys
 }
 
+func allCommands() registry {
+	// Combine all mappings into a single registry
+	all := make(registry)
+	for _, m := range []registry{mappings, patternModeMappings, chordMappings} {
+		maps.Copy(all, m)
+	}
+	return all
+}
+
 var mappings = registry{
 	k(" "):      PlayStop,
 	k("'", " "): PlayOverlayLoop,
@@ -171,6 +184,8 @@ var mappings = registry{
 	k("<"):      CursorLineStart,
 	k("="):      Increase,
 	k(">"):      CursorLineEnd,
+	k("g", "l"): CursorLastLine,
+	k("g", "f"): CursorFirstLine,
 	k("?"):      Help,
 	k("A"):      AccentIncrease,
 	k("B"):      ActionAddLineBounce,
