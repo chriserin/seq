@@ -319,6 +319,8 @@ func k(x ...string) [3]string {
 	}
 }
 
+var holdKeysTime = time.Millisecond * 500
+
 func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType, patternMode bool) Mapping {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -358,7 +360,7 @@ func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType, patternMode bool) Ma
 	}
 
 	if !exists {
-		timer = time.AfterFunc(time.Millisecond*750, func() {
+		timer = time.AfterFunc(holdKeysTime, func() {
 			mutex.Lock()
 			defer mutex.Unlock()
 			Keycombo = make([]tea.KeyMsg, 0, 3)
