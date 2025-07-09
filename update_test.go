@@ -559,6 +559,55 @@ func TestOverlayStackToggle(t *testing.T) {
 	}
 }
 
+func TestTogglePlayEdit(t *testing.T) {
+	tests := []struct {
+		name                string
+		commands            []any
+		initialPlayEditing  bool
+		expectedPlayEditing bool
+		description         string
+	}{
+		{
+			name:                "Toggle from false to true",
+			commands:            []any{mappings.TogglePlayEdit},
+			initialPlayEditing:  false,
+			expectedPlayEditing: true,
+			description:         "Should toggle playEditing from false to true",
+		},
+		{
+			name:                "Toggle from true to false",
+			commands:            []any{mappings.TogglePlayEdit},
+			initialPlayEditing:  true,
+			expectedPlayEditing: false,
+			description:         "Should toggle playEditing from true to false",
+		},
+		{
+			name:                "Multiple toggles return to original state",
+			commands:            []any{mappings.TogglePlayEdit, mappings.TogglePlayEdit},
+			initialPlayEditing:  false,
+			expectedPlayEditing: false,
+			description:         "Should return to original state after two toggles",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					m.playEditing = tt.initialPlayEditing
+					return *m
+				},
+			)
+
+			assert.Equal(t, tt.initialPlayEditing, m.playEditing, "Initial playEditing should match")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, tt.expectedPlayEditing, m.playEditing, tt.description+" - playEditing should match expected value")
+		})
+	}
+}
+
 func TestYankAndPaste(t *testing.T) {
 	tests := []struct {
 		name              string
