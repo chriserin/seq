@@ -162,12 +162,12 @@ func InitTemplate(
 	return Template{Name: name, UIStyle: uIStyle, MaxGateLength: maxGateLength, SequencerType: seqType}
 }
 
-func (t Template) GetGateLengths() []Gate {
+func GetGateLengths(maxGateLength int) []Gate {
 	gateMarkers := []float32{0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875}
 	chars := []string{"\u258F", "\u258E", "\u258D", "\u258C", "\u258B", "\u258A", "\u2589", "\u2588"}
-	result := make([]Gate, 0, t.MaxGateLength*8)
+	result := make([]Gate, 0, maxGateLength*8)
 
-	for i := range t.MaxGateLength {
+	for i := range maxGateLength {
 		if i > 0 {
 			for j, v := range gateMarkers {
 				newGate := Gate{
@@ -193,7 +193,7 @@ func GetTemplate(name string) (Template, bool) {
 }
 
 func GetDefaultTemplate() Template {
-	defaultTemplate := InitTemplate("DEFAULT", "plain", 1, "trigger")
+	defaultTemplate := InitTemplate("DEFAULT", "plain", 32, "trigger")
 	initNote := uint8(60)
 	defaultTemplate.Lines = []grid.LineDefinition{
 		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},

@@ -7,7 +7,7 @@ local MessageType = "Note"
 
 seq.addtemplate({
 	name = "Drums",
-	maxgatelength = 1,
+	maxgatelength = 32,
 	uistyle = "plain",
 	lines = {
 		{ Channel, MessageType, C1 },

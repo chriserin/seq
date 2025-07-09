@@ -939,7 +939,7 @@ func InitDefinition(template string, instrument string) Definition {
 	if !exists {
 		gridTemplate = config.GetDefaultTemplate()
 	}
-	config.LongGates = gridTemplate.GetGateLengths()
+	config.LongGates = config.GetGateLengths(gridTemplate.MaxGateLength)
 	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
 	copy(newLines, gridTemplate.Lines)
 
@@ -991,7 +991,7 @@ func LoadFile(filename string, template string) (Definition, error) {
 		definition, fileErr = Read(filename)
 		gridTemplate, exists := config.GetTemplate(definition.template)
 		if exists {
-			config.LongGates = gridTemplate.GetGateLengths()
+			config.LongGates = config.GetGateLengths(gridTemplate.MaxGateLength)
 		} else {
 			return Definition{}, fault.Newf("template does not exist: %s", definition.template)
 		}

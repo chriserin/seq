@@ -74,6 +74,10 @@ func (n Note) IncrementGate(modifier int8, gatesLength int) Note {
 	var newGate = int8(n.GateIndex) + modifier
 	if newGate >= 0 && int(newGate) < gatesLength {
 		n.GateIndex = uint8(newGate)
+	} else if int(newGate) >= gatesLength {
+		n.GateIndex = uint8(gatesLength - 1)
+	} else if newGate < 0 {
+		n.GateIndex = 0
 	}
 	return n
 }

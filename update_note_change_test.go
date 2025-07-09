@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/mappings"
 	"github.com/chriserin/seq/internal/overlaykey"
@@ -195,6 +196,102 @@ func TestGateIncrease(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
+			config.LongGates = config.GetGateLengths(1) // Create a shorter boundary
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist")
+			assert.Equal(t, tt.expectedGate, currentNote.GateIndex, tt.description+" - gate value")
+		})
+	}
+}
+
+func TestGateBigIncrease(t *testing.T) {
+	tests := []struct {
+		name          string
+		commands      []any
+		expectedGate  uint8
+		description   string
+		maxGateLength int
+	}{
+		{
+			name: "Add note and big increase gate",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigIncrease,
+			},
+			expectedGate:  8,
+			maxGateLength: 32,
+			description:   "Should add note and big increase gate by 8",
+		},
+		{
+			name: "Add note and big increase gate from non-zero",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateIncrease,
+				mappings.GateBigIncrease,
+			},
+			expectedGate:  9,
+			maxGateLength: 32,
+			description:   "Should add note and big increase gate by 9",
+		},
+		{
+			name: "Add note and big decrease gate",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigIncrease,
+				mappings.GateBigDecrease,
+			},
+			expectedGate:  0,
+			maxGateLength: 32,
+			description:   "Should add note, big increase then big decrease gate (index 0 -> 7 -> 0)",
+		},
+		{
+			name: "Add note and big increase gate at boundary",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigIncrease,
+			},
+			expectedGate:  7,
+			maxGateLength: 1, // these work in multiples of 8
+			description:   "Should add note, big increase then big decrease gate (index 0 -> 7 -> 0)",
+		},
+		{
+			name: "Add note and big decrease gate from max",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigIncrease,
+				mappings.GateBigDecrease,
+			},
+			expectedGate: 0,
+			description:  "Should add note and big decrease gate by 8 (index 7 -> 0, capped at min)",
+		},
+		{
+			name: "Add note and big decrease gate at boundary",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigDecrease,
+			},
+			expectedGate: 0,
+			description:  "Should add note and big decrease gate stays at minimum index (0)",
+		},
+		{
+			name: "Add note, big increase then regular decrease",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigIncrease,
+				mappings.GateDecrease,
+			},
+			expectedGate: 6,
+			description:  "Should add note, big increase then decrease gate (index 0 -> 7 -> 6)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+			config.LongGates = config.GetGateLengths(tt.maxGateLength)
 
 			m, _ = processCommands(tt.commands, m)
 

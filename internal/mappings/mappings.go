@@ -230,7 +230,7 @@ var mappings = registry{
 	k("b"):      ActionAddSkipBeat,
 	k("c"):      ClearLine,
 	k("d"):      NoteRemove,
-	k("e"):      TogglePlayEdit,
+	k("g", "e"): TogglePlayEdit,
 	k("f"):      NoteAdd,
 	k("g", "r"): ReloadFile,
 	k("g", "v"): ActionAddSpecificValue,
