@@ -126,7 +126,6 @@ const (
 	IncreaseInversions
 	DecreaseInversions
 	ToggleChordMode
-	PatternMode
 	NextArpeggio
 	PrevArpeggio
 	NextDouble

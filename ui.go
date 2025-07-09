@@ -952,7 +952,7 @@ func InitDefinition(template string, instrument string) Definition {
 		subdivisions:          2,
 		lines:                 newLines,
 		accents:               patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: AccentTargetVelocity},
-		template:              template,
+		template:              gridTemplate.Name,
 		instrument:            instrument,
 		templateUIStyle:       gridTemplate.UIStyle,
 		templateSequencerType: gridTemplate.SequencerType,
@@ -993,7 +993,8 @@ func LoadFile(filename string, template string) (Definition, error) {
 		if exists {
 			config.LongGates = config.GetGateLengths(gridTemplate.MaxGateLength)
 		} else {
-			return Definition{}, fault.Newf("template does not exist: %s", definition.template)
+			maxGateLength := config.GetDefaultTemplate().MaxGateLength
+			config.LongGates = config.GetGateLengths(maxGateLength)
 		}
 	}
 

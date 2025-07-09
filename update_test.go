@@ -608,6 +608,53 @@ func TestTogglePlayEdit(t *testing.T) {
 	}
 }
 
+func TestReloadFile(t *testing.T) {
+	tests := []struct {
+		name        string
+		command     mappings.Command
+		description string
+	}{
+		{
+			name:        "ReloadFile With Filename",
+			command:     mappings.ReloadFile,
+			description: "Should reload file when filename is set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a temporary filename and save initial content
+			tempDir := t.TempDir()
+			testFilename := filepath.Join(tempDir, "test_reload.seq")
+
+			// Create initial model and save it
+			m := createTestModel(
+				func(m *model) model {
+					m.filename = testFilename
+					return *m
+				},
+			)
+
+			m, _ = processCommands([]any{mappings.NoteAdd}, m)
+
+			processCommand(mappings.Save, m)
+
+			_, err := os.Stat(testFilename)
+			assert.NoError(t, err, "File should exist after save")
+
+			m, _ = processCommands([]any{mappings.NoteRemove}, m)
+
+			_, exists := m.CurrentNote()
+			assert.False(t, exists, "Note should not exist after removal")
+
+			m, _ = processCommand(tt.command, m)
+
+			_, exists = m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist after reload")
+		})
+	}
+}
+
 func TestYankAndPaste(t *testing.T) {
 	tests := []struct {
 		name              string
