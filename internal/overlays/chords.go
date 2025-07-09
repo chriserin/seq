@@ -13,7 +13,7 @@ type GridChord struct {
 	Chord    theory.Chord
 	Notes    []BeatNote
 	Root     grid.GridKey
-	Arppegio Arp
+	Arpeggio Arp
 	Double   uint8
 }
 
@@ -61,7 +61,7 @@ func (gc *GridChord) Move(fromKey grid.GridKey, toKey grid.GridKey) {
 }
 
 func (gc *GridChord) SetChordNote(position grid.GridKey, note grid.Note) {
-	for i, interval := range gc.ArppegioIntervals() {
+	for i, interval := range gc.ArpeggioIntervals() {
 		beatnote := gc.Notes[i]
 		potentialNotePosition := gc.Key(interval, beatnote)
 		if potentialNotePosition == position {
@@ -81,7 +81,7 @@ func (gc GridChord) HasNote(position grid.GridKey) bool {
 }
 
 func (gc GridChord) Positions() []grid.GridKey {
-	arpInts := gc.ArppegioIntervals()
+	arpInts := gc.ArpeggioIntervals()
 	positions := make([]grid.GridKey, len(arpInts))
 	for i, interval := range arpInts {
 		beatnote := gc.Notes[i]
@@ -123,7 +123,7 @@ func InitChord(root grid.GridKey, alteration uint32) *GridChord {
 
 func (gc *GridChord) ApplyAlteration(alteration uint32) {
 	gc.Chord.AddNotes(alteration)
-	gc.ApplyArppegiation()
+	gc.ApplyArpeggiation()
 }
 
 type Arp int
@@ -135,24 +135,24 @@ const (
 )
 
 func (gc *GridChord) NextArp() {
-	gc.Arppegio = (gc.Arppegio + 1) % 3
-	gc.ApplyArppegiation()
+	gc.Arpeggio = (gc.Arpeggio + 1) % 3
+	gc.ApplyArpeggiation()
 }
 
 func (gc *GridChord) PrevArp() {
 	var newArp Arp
-	if gc.Arppegio == 0 {
+	if gc.Arpeggio == 0 {
 		newArp = 3
 	} else {
-		newArp = gc.Arppegio - 1
+		newArp = gc.Arpeggio - 1
 	}
-	gc.Arppegio = newArp
-	gc.ApplyArppegiation()
+	gc.Arpeggio = newArp
+	gc.ApplyArpeggiation()
 }
 
 func (gc *GridChord) NextDouble() {
 	gc.Double = (gc.Double + 1) % (uint8(len(gc.Chord.Intervals())) + 1)
-	gc.ApplyArppegiation()
+	gc.ApplyArpeggiation()
 }
 
 func (gc *GridChord) PrevDouble() {
@@ -163,16 +163,16 @@ func (gc *GridChord) PrevDouble() {
 		newDouble = gc.Double - 1
 	}
 	gc.Double = newDouble
-	gc.ApplyArppegiation()
+	gc.ApplyArpeggiation()
 }
 
-func (gc *GridChord) ApplyArppegiation() {
-	intervals := gc.ArppegioIntervals()
+func (gc *GridChord) ApplyArpeggiation() {
+	intervals := gc.ArpeggioIntervals()
 	existingNotes := gc.Notes
 	gc.Notes = make([]BeatNote, 0, len(intervals))
 	for i := range intervals {
 		var step int
-		if gc.Arppegio == ArpNothing {
+		if gc.Arpeggio == ArpNothing {
 			step = 0
 		} else {
 			step = i
@@ -187,10 +187,10 @@ func (gc *GridChord) ApplyArppegiation() {
 	}
 }
 
-func (gc GridChord) ArppegioIntervals() []uint8 {
+func (gc GridChord) ArpeggioIntervals() []uint8 {
 	intervals := gc.Chord.Intervals()
 	doubledIntervals := gc.ApplyDoubles(intervals)
-	switch gc.Arppegio {
+	switch gc.Arpeggio {
 	case ArpNothing:
 		return doubledIntervals
 	case ArpUp:
@@ -218,7 +218,7 @@ func (gc GridChord) DeepCopy() GridChord {
 	copy := GridChord{
 		Root:     gc.Root,     // GridKey is a simple struct, so a direct copy is fine
 		Chord:    gc.Chord,    // Direct copy of the Chord
-		Arppegio: gc.Arppegio, // arp is just an int, so direct copy is fine
+		Arpeggio: gc.Arpeggio, // arp is just an int, so direct copy is fine
 		Double:   gc.Double,   // uint8 is a simple type, so direct copy is fine
 	}
 

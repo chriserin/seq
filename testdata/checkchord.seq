@@ -61,7 +61,7 @@ PressUp: true
 PressDown: false
 ------------------------ CHORDS --------------------------
 ------------------------ CHORD ---------------------------
-GridKey(24,0): Arppegio=2, Double=3, Notes=137, Inversion=0
+GridKey(24,0): Arpeggio=2, Double=3, Notes=137, Inversion=0
 ------------------------ BEATNOTES --------------------------
 Beat(0): AccentIndex=5, Ratchets={Hits:1,Length:0,Span:0}, Action=0, GateIndex=0, WaitIndex=0
 Beat(1): AccentIndex=5, Ratchets={Hits:1,Length:0,Span:0}, Action=0, GateIndex=0, WaitIndex=0

@@ -1982,12 +1982,12 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.DecreaseInversions:
 		m.EnsureChord()
 		m.PreviousInversion()
-	case mappings.NextArppegio:
+	case mappings.NextArpeggio:
 		m.EnsureChord()
-		m.NextArppegio()
-	case mappings.PrevArppegio:
+		m.NextArpeggio()
+	case mappings.PrevArpeggio:
 		m.EnsureChord()
-		m.PrevArppegio()
+		m.PrevArpeggio()
 	case mappings.NextDouble:
 		m.EnsureChord()
 		m.NextDouble()
@@ -2102,7 +2102,7 @@ func (m *model) RemoveChord() {
 func (m *model) ConvertChordToNotes() {
 	if m.activeChord.HasValue() {
 		pattern := make(grid.Pattern)
-		m.activeChord.GridChord.ArppegiatedPattern(&pattern)
+		m.activeChord.GridChord.ArpeggiatedPattern(&pattern)
 		m.currentOverlay.RemoveChord(m.activeChord)
 		for gk, note := range pattern {
 			m.currentOverlay.SetNote(gk, note)
@@ -2129,13 +2129,13 @@ func (m *model) PreviousInversion() {
 	}
 }
 
-func (m *model) NextArppegio() {
+func (m *model) NextArpeggio() {
 	if m.activeChord.HasValue() {
 		m.activeChord.GridChord.NextArp()
 	}
 }
 
-func (m *model) PrevArppegio() {
+func (m *model) PrevArpeggio() {
 	if m.activeChord.HasValue() {
 		m.activeChord.GridChord.PrevArp()
 	}

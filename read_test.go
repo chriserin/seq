@@ -328,7 +328,7 @@ func TestReadFileWithChords(t *testing.T) {
 	// Verify chord properties from checkchord.seq
 	expectedGridKey := grid.GridKey{Line: 24, Beat: 0}
 	assert.Equal(t, expectedGridKey, chord.Root)
-	assert.Equal(t, overlays.Arp(2), chord.Arppegio)
+	assert.Equal(t, overlays.Arp(2), chord.Arpeggio)
 	assert.Equal(t, uint8(3), chord.Double)
 	assert.Equal(t, uint32(137), chord.Chord.Notes)
 	assert.Equal(t, int8(0), chord.Chord.Inversion)

@@ -408,9 +408,9 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 				value := strings.TrimSpace(keyVal[1])
 
 				switch key {
-				case "Arppegio":
+				case "Arpeggio":
 					if arppegio, err := strconv.ParseInt(value, 10, 8); err == nil {
-						currentChord.Arppegio = overlays.Arp(arppegio)
+						currentChord.Arpeggio = overlays.Arp(arppegio)
 					}
 				case "Double":
 					if double, err := strconv.ParseUint(value, 10, 8); err == nil {

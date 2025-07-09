@@ -175,7 +175,7 @@ func (ol *Overlay) combine(keyCycles int, addFunc AddFunc) {
 			for _, gridChord := range currentOverlay.Chords {
 				_, chordAlreadyPlaced := blockedChords[gridChord.Root]
 				if !chordAlreadyPlaced {
-					gridChord.ArppegiatedPattern(&chordPattern)
+					gridChord.ArpeggiatedPattern(&chordPattern)
 					blockedChords[gridChord.Root] = struct{}{}
 				}
 			}
@@ -347,8 +347,8 @@ func (gc GridChord) ChordNotes(pattern *grid.Pattern) {
 	}
 }
 
-func (gc GridChord) ArppegiatedPattern(pattern *grid.Pattern) {
-	for i, interval := range gc.ArppegioIntervals() {
+func (gc GridChord) ArpeggiatedPattern(pattern *grid.Pattern) {
+	for i, interval := range gc.ArpeggioIntervals() {
 		beatnote := gc.Notes[i]
 		(*pattern)[gc.Key(interval, beatnote)] = beatnote.Note
 	}

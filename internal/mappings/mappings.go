@@ -127,8 +127,8 @@ const (
 	DecreaseInversions
 	ToggleChordMode
 	PatternMode
-	NextArppegio
-	PrevArppegio
+	NextArpeggio
+	PrevArpeggio
 	NextDouble
 	PrevDouble
 	OmitRoot
@@ -302,8 +302,8 @@ var chordMappings = registry{
 	k("7", "o"): OmitSeventh,
 	k("9", "o"): OmitNinth,
 	k("D"):      RemoveChord,
-	k("]", "p"): NextArppegio,
-	k("[", "p"): PrevArppegio,
+	k("]", "p"): NextArpeggio,
+	k("[", "p"): PrevArpeggio,
 	k("]", "d"): NextDouble,
 	k("[", "d"): PrevDouble,
 	k("n", "n"): ConvertToNotes,

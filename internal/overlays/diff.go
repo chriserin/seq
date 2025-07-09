@@ -172,7 +172,7 @@ func chordsMatch(a *GridChord, b GridChord) bool {
 func compareChords(original, modified *GridChord) ChordDiff {
 	diff := ChordDiff{
 		OldChord: modified.DeepCopy(),
-		Modified: original.Arppegio != modified.Arppegio ||
+		Modified: original.Arpeggio != modified.Arpeggio ||
 			!alterationsEqual(original.Chord, modified.Chord) ||
 			original.Double != modified.Double ||
 			original.Chord.Inversion != modified.Chord.Inversion ||
@@ -324,7 +324,7 @@ func DeepCopy(ol *Overlay) *Overlay {
 		chordCopy := &GridChord{
 			Chord:    chord.Chord,
 			Root:     chord.Root,
-			Arppegio: chord.Arppegio,
+			Arpeggio: chord.Arpeggio,
 			Double:   chord.Double,
 		}
 
