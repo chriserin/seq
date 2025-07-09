@@ -655,6 +655,35 @@ func TestReloadFile(t *testing.T) {
 	}
 }
 
+func TestQuit(t *testing.T) {
+	tests := []struct {
+		name        string
+		command     mappings.Command
+		description string
+	}{
+		{
+			name:        "Quit Sets Confirmation Indicator",
+			command:     mappings.Quit,
+			description: "Should set selection indicator to SelectConfirmQuit",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			// Verify initial state
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection indicator should be SelectNothing")
+
+			// Process the quit command
+			m, _ = processCommand(tt.command, m)
+
+			// Verify quit confirmation is triggered
+			assert.Equal(t, SelectConfirmQuit, m.selectionIndicator, tt.description+" - should set selection indicator to SelectConfirmQuit")
+		})
+	}
+}
+
 func TestYankAndPaste(t *testing.T) {
 	tests := []struct {
 		name              string
