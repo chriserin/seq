@@ -73,15 +73,28 @@ const (
 
 // AddNotes adds specified notes to the chord
 func (c *Chord) AddNotes(noteConstant uint32) {
+
 	if IsTriad(noteConstant) {
 		currentTriad := c.CurrentTriad()
 		c.Replace(currentTriad, noteConstant)
-	} else if IsSeventh(noteConstant) {
-		currentSeventh := c.CurrentSeventh()
-		c.Replace(currentSeventh, noteConstant)
+	} else if IsSecond(noteConstant) {
+		currentSecond := c.Notes & (Minor2 | Major2)
+		c.Replace(currentSecond, noteConstant)
+	} else if IsThird(noteConstant) {
+		currentThird := c.Notes & (Minor3 | Major3)
+		c.Replace(currentThird, noteConstant)
 	} else if IsFifth(noteConstant) {
 		currentFifth := c.CurrentFifth()
 		c.Replace(currentFifth, noteConstant)
+	} else if IsSixth(noteConstant) {
+		c.Replace(Major6, noteConstant)
+	} else if IsOctave(noteConstant) {
+		c.Replace(Octave, noteConstant)
+	} else if IsNinth(noteConstant) {
+		c.Replace(c.Notes&(Minor9|Major9), noteConstant)
+	} else if IsSeventh(noteConstant) {
+		currentSeventh := c.CurrentSeventh()
+		c.Replace(currentSeventh, noteConstant)
 	} else {
 		c.Notes |= noteConstant
 	}
@@ -109,6 +122,51 @@ func (c *Chord) OmitInterval(omitNoteConstant uint8) {
 }
 
 var triads = []uint32{MajorTriad, MinorTriad, DiminishedTriad, AugmentedTriad}
+
+var seconds = []uint32{Minor2, Major2}
+
+func IsSecond(noteConstant uint32) bool {
+	for _, t := range seconds {
+		if ContainsBits(noteConstant, t) {
+			return true
+		}
+	}
+	return false
+}
+
+var thirds = []uint32{Minor3, Major3}
+
+func IsThird(noteConstant uint32) bool {
+	for _, t := range thirds {
+		if ContainsBits(noteConstant, t) {
+			return true
+		}
+	}
+	return false
+}
+
+func IsFourth(noteConstant uint32) bool {
+	return ContainsBits(noteConstant, Perfect4)
+}
+
+func IsSixth(noteConstant uint32) bool {
+	return ContainsBits(noteConstant, Major6)
+}
+
+func IsOctave(noteConstant uint32) bool {
+	return ContainsBits(noteConstant, Octave)
+}
+
+var ninths = []uint32{Minor9, Major9}
+
+func IsNinth(noteConstant uint32) bool {
+	for _, t := range ninths {
+		if ContainsBits(noteConstant, t) {
+			return true
+		}
+	}
+	return false
+}
 
 func IsTriad(noteConstant uint32) bool {
 	for _, t := range triads {

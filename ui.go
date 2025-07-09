@@ -1977,6 +1977,33 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.PerfectFifth:
 		m.EnsureChord()
 		m.ChordChange(theory.Perfect5)
+	case mappings.MinorSecond:
+		m.EnsureChord()
+		m.ChordChange(theory.Minor2)
+	case mappings.MajorSecond:
+		m.EnsureChord()
+		m.ChordChange(theory.Major2)
+	case mappings.MinorThird:
+		m.EnsureChord()
+		m.ChordChange(theory.Minor3)
+	case mappings.MajorThird:
+		m.EnsureChord()
+		m.ChordChange(theory.Major3)
+	case mappings.PerfectFourth:
+		m.EnsureChord()
+		m.ChordChange(theory.Perfect4)
+	case mappings.MajorSixth:
+		m.EnsureChord()
+		m.ChordChange(theory.Major6)
+	case mappings.Octave:
+		m.EnsureChord()
+		m.ChordChange(theory.Octave)
+	case mappings.MinorNinth:
+		m.EnsureChord()
+		m.ChordChange(theory.Minor9)
+	case mappings.MajorNinth:
+		m.EnsureChord()
+		m.ChordChange(theory.Major9)
 	case mappings.IncreaseInversions:
 		m.EnsureChord()
 		m.NextInversion()

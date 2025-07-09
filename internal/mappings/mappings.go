@@ -118,11 +118,20 @@ const (
 	MinorTriad
 	AugmentedTriad
 	DiminishedTriad
-	MinorSeventh
-	MajorSeventh
+	MinorSecond
+	MajorSecond
+	MinorThird
+	MajorThird
+	PerfectFourth
 	AugFifth
 	DimFifth
 	PerfectFifth
+	MajorSixth
+	MinorSeventh
+	MajorSeventh
+	Octave
+	MinorNinth
+	MajorNinth
 	IncreaseInversions
 	DecreaseInversions
 	ToggleChordMode
@@ -290,6 +299,15 @@ var chordMappings = registry{
 	k("5", "a"): AugFifth,
 	k("5", "d"): DimFifth,
 	k("5", "p"): PerfectFifth,
+	k("2", "m"): MinorSecond,
+	k("2", "M"): MajorSecond,
+	k("3", "m"): MinorThird,
+	k("3", "M"): MajorThird,
+	k("4", "p"): PerfectFourth,
+	k("6", "M"): MajorSixth,
+	k("8", "o"): Octave,
+	k("9", "m"): MinorNinth,
+	k("9", "M"): MajorNinth,
 	k("[", "i"): DecreaseInversions,
 	k("]", "i"): IncreaseInversions,
 	k("1", "o"): OmitRoot,
