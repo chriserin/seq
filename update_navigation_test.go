@@ -87,6 +87,34 @@ func TestUpdateCursorMovements(t *testing.T) {
 			expectedPos: grid.GridKey{Line: 1, Beat: 31},
 			description: "Cursor should move to end of line",
 		},
+		{
+			name:        "Cursor Last Line",
+			command:     mappings.CursorLastLine,
+			initialPos:  grid.GridKey{Line: 3, Beat: 5},
+			expectedPos: grid.GridKey{Line: 7, Beat: 5},
+			description: "Cursor should move to last line",
+		},
+		{
+			name:        "Cursor Last Line From Last Line",
+			command:     mappings.CursorLastLine,
+			initialPos:  grid.GridKey{Line: 7, Beat: 10},
+			expectedPos: grid.GridKey{Line: 7, Beat: 10},
+			description: "Cursor should stay on last line when already there",
+		},
+		{
+			name:        "Cursor First Line",
+			command:     mappings.CursorFirstLine,
+			initialPos:  grid.GridKey{Line: 4, Beat: 8},
+			expectedPos: grid.GridKey{Line: 0, Beat: 8},
+			description: "Cursor should move to first line",
+		},
+		{
+			name:        "Cursor First Line From First Line",
+			command:     mappings.CursorFirstLine,
+			initialPos:  grid.GridKey{Line: 0, Beat: 12},
+			expectedPos: grid.GridKey{Line: 0, Beat: 12},
+			description: "Cursor should stay on first line when already there",
+		},
 	}
 
 	for _, tt := range tests {
