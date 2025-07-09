@@ -142,7 +142,7 @@ func (gc *GridChord) NextArp() {
 func (gc *GridChord) PrevArp() {
 	var newArp Arp
 	if gc.Arpeggio == 0 {
-		newArp = 3
+		newArp = ArpReverse
 	} else {
 		newArp = gc.Arpeggio - 1
 	}

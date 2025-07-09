@@ -260,3 +260,72 @@ func TestConvertToNotes(t *testing.T) {
 		})
 	}
 }
+
+func TestArpeggioMappings(t *testing.T) {
+	tests := []struct {
+		name         string
+		commands     []any
+		expectedKeys []grid.GridKey
+		description  string
+	}{
+		{
+			name:         "NextArpeggio changes from ArpNothing to ArpUp",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.NextArpeggio},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 1}, {Line: 16, Beat: 2}},
+			description:  "Should change arpeggio from ArpNothing to ArpUp",
+		},
+		{
+			name:         "NextArpeggio changes from ArpUp to ArpReverse",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.NextArpeggio, mappings.NextArpeggio},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 2}, {Line: 19, Beat: 1}, {Line: 16, Beat: 0}},
+			description:  "Should change arpeggio from ArpUp to ArpReverse",
+		},
+		{
+			name:         "NextArpeggio wraps around from ArpReverse to ArpNothing",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.NextArpeggio, mappings.NextArpeggio, mappings.NextArpeggio},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
+			description:  "Should wrap around from ArpReverse to ArpNothing",
+		},
+		{
+			name:         "PrevArpeggio changes from ArpNothing to ArpReverse",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.PrevArpeggio},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 2}, {Line: 19, Beat: 1}, {Line: 16, Beat: 0}},
+			description:  "Should change arpeggio from ArpNothing to ArpReverse",
+		},
+		{
+			name:         "PrevArpeggio changes from ArpReverse to ArpUp",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.PrevArpeggio, mappings.PrevArpeggio},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 1}, {Line: 16, Beat: 2}},
+			description:  "Should change arpeggio from ArpReverse to ArpUp",
+		},
+		{
+			name:         "PrevArpeggio wraps around from ArpUp to ArpNothing",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.PrevArpeggio, mappings.PrevArpeggio, mappings.PrevArpeggio},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
+			description:  "Should wrap around from ArpUp to ArpNothing",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				WithPolyphony(),
+			)
+
+			m, _ = processCommands(tt.commands, m)
+
+			chord := m.CurrentChord()
+			assert.True(t, chord.HasValue(), tt.description+" - chord should exist")
+
+			gridPattern := make(grid.Pattern)
+			m.currentOverlay.CombinePattern(&gridPattern, 1)
+
+			for key := range gridPattern {
+				assert.Contains(t, tt.expectedKeys, key, tt.description+" - expected key should exist in pattern")
+			}
+			for _, key := range tt.expectedKeys {
+				assert.Contains(t, gridPattern, key, tt.description+" - pattern should contain expected key "+key.String())
+			}
+		})
+	}
+}
