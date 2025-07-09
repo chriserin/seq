@@ -188,3 +188,78 @@ func TestPatternModeWaitIncrease(t *testing.T) {
 		})
 	}
 }
+
+func TestPatternModeGateIncrease(t *testing.T) {
+	tests := []struct {
+		name         string
+		commands     []any
+		expectedGate uint8
+		description  string
+	}{
+		{
+			name: "Add note, switch to gate mode, increase gate by 1",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleGateMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+			},
+			expectedGate: 1,
+			description:  "Should add note, switch to gate mode, and increase gate by 1",
+		},
+		{
+			name: "Add note, switch to gate mode, move to right no change",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleGateMode,
+				mappings.CursorRight,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+				mappings.CursorLeft, // move back to the note
+			},
+			expectedGate: 0,
+			description:  "Should add note, switch to gate mode, move cursor right and gate should remain 0",
+		},
+		{
+			name: "Add note, switch to gate mode, increase gate by 1, decrease gate by 1",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleGateMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+			},
+			expectedGate: 0,
+			description:  "Should add note, switch to gate mode, increase then decrease gate by 1",
+		},
+		{
+			name: "Add note, switch to gate mode, increase by 1 every other beat",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleGateMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+			},
+			expectedGate: 1,
+			description:  "Should add note, switch to gate mode, and increase every other gate by 1",
+		},
+		{
+			name: "Add note, switch to gate mode, decrease gate by 2",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleGateMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "2"},
+			},
+			expectedGate: 0, // gate can't go below 0
+			description:  "Should add note, switch to gate mode, and attempt to decrease gate by 2 (clamped to 0)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			currentNote, exists := m.CurrentNote()
+			assert.True(t, exists, tt.description+" - note should exist")
+			assert.Equal(t, tt.expectedGate, currentNote.GateIndex, tt.description+" - gate value")
+		})
+	}
+}
