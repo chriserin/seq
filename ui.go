@@ -465,6 +465,7 @@ type temporaryState struct {
 	subdivisions int
 	accents      patternAccents
 	beats        uint8
+	active       bool
 }
 
 type patternAccents struct {
@@ -1819,7 +1820,8 @@ func (m *model) CaptureTemporaryState() {
 			Target: m.definition.accents.Target,
 			Data:   accentDataCopy,
 		},
-		beats: m.CurrentPart().Beats,
+		beats:  m.CurrentPart().Beats,
+		active: true,
 	}
 }
 
@@ -1842,7 +1844,9 @@ func IsDefinitionChangeSelection(indicator Selection) bool {
 }
 
 func (m *model) Escape() {
-	m.RecordPropertyUndo()
+	if IsPropertyIndicator(m.selectionIndicator) {
+		m.RecordPropertyUndo()
+	}
 	if m.selectionIndicator == SelectNothing && m.patternMode == PatternFill {
 		m.visualMode = false
 	}
@@ -1850,15 +1854,31 @@ func (m *model) Escape() {
 	m.selectionIndicator = SelectNothing
 }
 
+func IsPropertyIndicator(selection Selection) bool {
+	return slices.Contains([]Selection{
+		SelectTempo,
+		SelectTempoSubdivision,
+		SelectSetupChannel,
+		SelectSetupMessageType,
+		SelectSetupValue,
+		SelectAccentDiff,
+		SelectAccentTarget,
+		SelectAccentStart,
+		SelectBeats,
+	}, selection)
+}
+
 func (m *model) RecordPropertyUndo() {
-	diff := createStateDiff(&m.definition, &m.temporaryState)
-	if diff.Changed() {
-		m.PushUndoables(UndoStateDiff{diff}, UndoStateDiff{diff.Reverse()})
+	if m.temporaryState.active {
+		diff := createStateDiff(&m.definition, &m.temporaryState)
+		if diff.Changed() {
+			m.PushUndoables(UndoStateDiff{diff}, UndoStateDiff{diff.Reverse()})
+		}
+		if m.CurrentPart().Beats != m.temporaryState.beats {
+			m.PushUndoables(UndoBeats{m.temporaryState.beats, m.arrangement.Cursor}, UndoBeats{m.CurrentPart().Beats, m.arrangement.Cursor})
+		}
+		m.temporaryState = temporaryState{}
 	}
-	if m.CurrentPart().Beats != m.temporaryState.beats {
-		m.PushUndoables(UndoBeats{m.temporaryState.beats, m.arrangement.Cursor}, UndoBeats{m.CurrentPart().Beats, m.arrangement.Cursor})
-	}
-	m.temporaryState = temporaryState{}
 }
 
 func (m *model) NewSequence() {

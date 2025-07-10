@@ -196,6 +196,17 @@ func TestUpdateUndoBeats(t *testing.T) {
 			expectedBeats: 32,
 			description:   "Should restore original beats count after modification and undo",
 		},
+		{
+			name: "Escape from arrangement mode does not undo beats",
+			commands: []any{
+				mappings.ToggleArrangementView,
+				mappings.Enter,
+				mappings.Undo,
+			},
+			initialBeats:  32,
+			expectedBeats: 32,
+			description:   "Should restore original beats count after modification and undo",
+		},
 	}
 
 	for _, tt := range tests {
@@ -258,6 +269,8 @@ func TestUpdateUndoTempo(t *testing.T) {
 
 			// Verify tempo is restored
 			assert.Equal(t, tt.initialTempo, m.definition.tempo, tt.description+" - tempo should be restored")
+
+			assert.Equal(t, m.selectionIndicator, SelectTempo, tt.description+" - selection should be SelectTempo after undo")
 		})
 	}
 }
@@ -308,6 +321,7 @@ func TestUpdateUndoSubdivisions(t *testing.T) {
 
 			// Verify subdivisions are restored
 			assert.Equal(t, tt.initialSubdivision, m.definition.subdivisions, tt.description+" - subdivisions should be restored")
+			assert.Equal(t, m.selectionIndicator, SelectTempoSubdivision, tt.description+" - selection should be SelectTempo after undo")
 		})
 	}
 }
@@ -647,6 +661,7 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 			assert.Equal(t, tt.expectedStart, m.definition.accents.Start, tt.description+" - accent start should be restored")
 			assert.Equal(t, tt.expectedTarget, m.definition.accents.Target, tt.description+" - accent target should be restored")
 			assert.Equal(t, tt.expectedData, m.definition.accents.Data, tt.description+" - accent data should be restored")
+			assert.Equal(t, m.selectionIndicator, SelectAccentDiff, tt.description+" - selection should be SelectAccentDiff after undo")
 		})
 	}
 }
@@ -740,6 +755,7 @@ func TestUndoSetupInputSwitch(t *testing.T) {
 			assert.Equal(t, tt.expectedChannel, restoredLine.Channel, tt.description+" - channel should be restored")
 			assert.Equal(t, tt.expectedNote, restoredLine.Note, tt.description+" - note should be restored")
 			assert.Equal(t, tt.expectedMsgType, restoredLine.MsgType, tt.description+" - message type should be restored")
+			assert.Equal(t, m.selectionIndicator, SelectSetupChannel, tt.description+" - selection should be SetupInputSwitch after undo")
 		})
 	}
 }
