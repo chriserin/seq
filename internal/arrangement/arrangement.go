@@ -741,7 +741,7 @@ func IsArrChangeMessage(msg tea.Msg) bool {
 	return false
 }
 
-type ArrUndo struct {
+type Undo struct {
 	Undo Undoable
 	Redo Undoable
 }
@@ -1034,7 +1034,7 @@ func (m Model) CreateUndoTree() UndoTree {
 
 func (m Model) CreateUndoCmd(undo Undoable, redo Undoable) tea.Cmd {
 	return func() tea.Msg {
-		return ArrUndo{
+		return Undo{
 			Undo: undo,
 			Redo: redo,
 		}

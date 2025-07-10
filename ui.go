@@ -236,6 +236,7 @@ type model struct {
 	textInput             textinput.Model
 	midiConnection        seqmidi.MidiConnection
 	activeChord           overlays.OverlayChord
+	temporaryState        temporaryState
 	// save everything below here
 	definition Definition
 }
@@ -296,25 +297,34 @@ type Selection uint8
 
 const (
 	SelectNothing Selection = iota
+	// Definition Change
 	SelectTempo
 	SelectTempoSubdivision
 	SelectSetupChannel
 	SelectSetupMessageType
 	SelectSetupValue
-	SelectRatchets
-	SelectRatchetSpan
 	SelectAccentDiff
 	SelectAccentTarget
 	SelectAccentStart
+
+	// Part Change
 	SelectBeats
+
+	// Arrangement Change
+	SelectPart
+	SelectChangePart
+	SelectRenamePart
 	SelectCycles
 	SelectStartBeats
 	SelectStartCycles
-	SelectPart
-	SelectChangePart
+
+	// Note Change
+	SelectRatchets
+	SelectRatchetSpan
+
+	// Program Level Operation
 	SelectConfirmNew
 	SelectConfirmQuit
-	SelectRenamePart
 	SelectFileName
 	SelectError
 )
@@ -334,12 +344,12 @@ type GridNote struct {
 	note    note
 }
 
-func (m *model) PushArrUndo(arrundo arrangement.ArrUndo) {
+func (m *model) PushArrUndo(arrundo arrangement.Undo) {
 	m.PushUndoables(UndoArrangement{arrUndo: arrundo.Undo}, UndoArrangement{arrUndo: arrundo.Redo})
 }
 
 func (m *model) PushUndoables(undo Undoable, redo Undoable) {
-	if m.undoStack == NilStack {
+	if m.undoStack == EmptyStack {
 		m.undoStack = UndoStack{
 			undo: undo,
 			redo: redo,
@@ -359,7 +369,7 @@ func (m *model) PushUndoables(undo Undoable, redo Undoable) {
 }
 
 func (m *model) PushUndo(undo UndoStack) {
-	if m.undoStack == NilStack {
+	if m.undoStack == EmptyStack {
 		undo.next = nil
 		m.undoStack = undo
 	} else {
@@ -370,7 +380,7 @@ func (m *model) PushUndo(undo UndoStack) {
 }
 
 func (m *model) PushRedo(redo UndoStack) {
-	if m.redoStack == NilStack {
+	if m.redoStack == EmptyStack {
 		redo.next = nil
 		m.redoStack = redo
 	} else {
@@ -381,32 +391,32 @@ func (m *model) PushRedo(redo UndoStack) {
 }
 
 func (m *model) ResetRedo() {
-	m.redoStack = NilStack
+	m.redoStack = EmptyStack
 }
 
 func (m *model) PopUndo() UndoStack {
 	firstout := m.undoStack
-	if firstout != NilStack && firstout.next != nil {
+	if firstout != EmptyStack && firstout.next != nil {
 		m.undoStack = *m.undoStack.next
 	} else {
-		m.undoStack = NilStack
+		m.undoStack = EmptyStack
 	}
 	return firstout
 }
 
 func (m *model) PopRedo() UndoStack {
 	firstout := m.redoStack
-	if firstout != NilStack && firstout.next != nil {
+	if firstout != EmptyStack && firstout.next != nil {
 		m.redoStack = *m.redoStack.next
 	} else {
-		m.redoStack = NilStack
+		m.redoStack = EmptyStack
 	}
 	return firstout
 }
 
 func (m *model) Undo() UndoStack {
 	undoStack := m.PopUndo()
-	if undoStack != NilStack {
+	if undoStack != EmptyStack {
 		location := undoStack.undo.ApplyUndo(m)
 		if location.ApplyLocation {
 			m.cursorPos = location.GridKey
@@ -424,7 +434,7 @@ func (m *model) Undo() UndoStack {
 
 func (m *model) Redo() UndoStack {
 	undoStack := m.PopRedo()
-	if undoStack != NilStack {
+	if undoStack != EmptyStack {
 		location := undoStack.redo.ApplyUndo(m)
 		if location.ApplyLocation {
 			m.cursorPos = location.GridKey
@@ -449,6 +459,14 @@ type Definition struct {
 	templateSequencerType grid.SequencerType
 }
 
+type temporaryState struct {
+	lines        []grid.LineDefinition
+	tempo        int
+	subdivisions int
+	accents      patternAccents
+	beats        uint8
+}
+
 type patternAccents struct {
 	Diff   uint8
 	Data   []config.Accent
@@ -470,6 +488,105 @@ func (pa *patternAccents) ReCalc() {
 		accents[i+1] = a
 	}
 	pa.Data = accents
+}
+
+func (pa *patternAccents) Equal(other *patternAccents) bool {
+	if pa.Diff != other.Diff {
+		return false
+	}
+	if pa.Start != other.Start {
+		return false
+	}
+	if pa.Target != other.Target {
+		return false
+	}
+	if !slices.Equal(pa.Data, other.Data) {
+		return false
+	}
+	return true
+}
+
+type StateDiff struct {
+	LinesChanged        bool
+	TempoChanged        bool
+	SubdivisionsChanged bool
+	AccentsChanged      bool
+	OldTempo            int
+	NewTempo            int
+	OldSubdivisions     int
+	NewSubdivisions     int
+	OldAccents          patternAccents
+	NewAccents          patternAccents
+	OldLines            []grid.LineDefinition
+	NewLines            []grid.LineDefinition
+}
+
+func (s StateDiff) Changed() bool {
+	return s.LinesChanged || s.TempoChanged || s.SubdivisionsChanged || s.AccentsChanged
+}
+
+func (s StateDiff) Reverse() StateDiff {
+	return StateDiff{
+		LinesChanged:        s.LinesChanged,
+		TempoChanged:        s.TempoChanged,
+		SubdivisionsChanged: s.SubdivisionsChanged,
+		AccentsChanged:      s.AccentsChanged,
+		OldTempo:            s.NewTempo,
+		NewTempo:            s.OldTempo,
+		OldSubdivisions:     s.NewSubdivisions,
+		NewSubdivisions:     s.OldSubdivisions,
+		OldAccents:          s.NewAccents,
+		NewAccents:          s.OldAccents,
+		OldLines:            s.NewLines,
+		NewLines:            s.OldLines,
+	}
+}
+
+func (s StateDiff) Apply(m *model) {
+	if s.AccentsChanged {
+		fmt.Println("Applying accent diff", s.OldAccents, s.NewAccents)
+		m.definition.accents = s.NewAccents
+	}
+	if s.LinesChanged {
+		m.definition.lines = s.NewLines
+	}
+	if s.TempoChanged {
+		m.definition.tempo = s.NewTempo
+		m.SyncTempo()
+	}
+	if s.SubdivisionsChanged {
+		m.definition.subdivisions = s.NewSubdivisions
+	}
+}
+
+func createStateDiff(definition *Definition, temporary *temporaryState) StateDiff {
+	diff := StateDiff{}
+
+	if !slices.Equal(definition.lines, temporary.lines) {
+		diff.LinesChanged = true
+		diff.OldLines = definition.lines
+		diff.NewLines = temporary.lines
+	}
+
+	if definition.tempo != temporary.tempo {
+		diff.TempoChanged = true
+		diff.OldTempo = definition.tempo
+		diff.NewTempo = temporary.tempo
+	}
+
+	if definition.subdivisions != temporary.subdivisions {
+		diff.SubdivisionsChanged = true
+		diff.OldSubdivisions = definition.subdivisions
+		diff.NewSubdivisions = temporary.subdivisions
+	}
+
+	if !definition.accents.Equal(&temporary.accents) {
+		diff.AccentsChanged = true
+		diff.OldAccents = definition.accents
+		diff.NewAccents = temporary.accents
+	}
+
+	return diff
 }
 
 type beatMsg struct {
@@ -1521,12 +1638,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		case mappings.Undo:
 			undoStack := m.Undo()
-			if undoStack != NilStack {
+			if undoStack != EmptyStack {
 				m.PushRedo(undoStack)
 			}
 		case mappings.Redo:
 			undoStack := m.Redo()
-			if undoStack != NilStack {
+			if undoStack != EmptyStack {
 				m.PushUndo(undoStack)
 			}
 		case mappings.New:
@@ -1627,8 +1744,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.selectionIndicator = SelectNothing
 		m.focus = FocusGrid
 	case arrangement.RenamePart:
-		m.selectionIndicator = SelectRenamePart
-	case arrangement.ArrUndo:
+		m.SetSelectionIndicator(SelectRenamePart)
+	case arrangement.Undo:
 		m.PushArrUndo(msg)
 	}
 	var cmd tea.Cmd
@@ -1662,8 +1779,48 @@ func (m *model) CursorLeft() {
 }
 
 func (m *model) SetSelectionIndicator(indicator Selection) {
+	if indicator != SelectNothing && m.selectionIndicator == SelectNothing {
+		m.CaptureTemporaryState()
+	}
+	if indicator == SelectNothing && m.selectionIndicator != SelectNothing {
+		diff := createStateDiff(&m.definition, &m.temporaryState)
+		if diff.Changed() {
+			m.PushUndoables(UndoStateDiff{diff}, UndoStateDiff{diff.Reverse()})
+		}
+		if m.CurrentPart().Beats != m.temporaryState.beats {
+			m.PushUndoables(UndoBeats{m.temporaryState.beats, m.arrangement.Cursor}, UndoBeats{m.CurrentPart().Beats, m.arrangement.Cursor})
+		}
+	}
 	m.patternMode = PatternFill
 	m.selectionIndicator = indicator
+}
+
+func (m *model) CaptureTemporaryState() {
+	linesCopy := make([]grid.LineDefinition, len(m.definition.lines))
+	for i, defLine := range m.definition.lines {
+		newLine := grid.LineDefinition{
+			Channel: defLine.Channel,
+			Note:    defLine.Note,
+			MsgType: defLine.MsgType,
+			Name:    defLine.Name,
+		}
+		linesCopy[i] = newLine
+	}
+	accentDataCopy := make([]config.Accent, len(m.definition.accents.Data))
+	copy(accentDataCopy, m.definition.accents.Data)
+
+	m.temporaryState = temporaryState{
+		lines:        linesCopy,
+		tempo:        m.definition.tempo,
+		subdivisions: m.definition.subdivisions,
+		accents: patternAccents{
+			Diff:   m.definition.accents.Diff,
+			Start:  m.definition.accents.Start,
+			Target: m.definition.accents.Target,
+			Data:   accentDataCopy,
+		},
+		beats: m.CurrentPart().Beats,
+	}
 }
 
 func (m *model) SetPatternMode(mode PatternMode) {
@@ -1671,12 +1828,37 @@ func (m *model) SetPatternMode(mode PatternMode) {
 	m.selectionIndicator = SelectNothing
 }
 
+func IsDefinitionChangeSelection(indicator Selection) bool {
+	return slices.Contains([]Selection{
+		SelectTempo,
+		SelectTempoSubdivision,
+		SelectSetupChannel,
+		SelectSetupMessageType,
+		SelectSetupValue,
+		SelectAccentDiff,
+		SelectAccentTarget,
+		SelectAccentStart,
+	}, indicator)
+}
+
 func (m *model) Escape() {
+	m.RecordPropertyUndo()
 	if m.selectionIndicator == SelectNothing && m.patternMode == PatternFill {
 		m.visualMode = false
 	}
 	m.patternMode = PatternFill
 	m.selectionIndicator = SelectNothing
+}
+
+func (m *model) RecordPropertyUndo() {
+	diff := createStateDiff(&m.definition, &m.temporaryState)
+	if diff.Changed() {
+		m.PushUndoables(UndoStateDiff{diff}, UndoStateDiff{diff.Reverse()})
+	}
+	if m.CurrentPart().Beats != m.temporaryState.beats {
+		m.PushUndoables(UndoBeats{m.temporaryState.beats, m.arrangement.Cursor}, UndoBeats{m.CurrentPart().Beats, m.arrangement.Cursor})
+	}
+	m.temporaryState = temporaryState{}
 }
 
 func (m *model) NewSequence() {
@@ -2229,19 +2411,6 @@ func (m model) UpdateDefinition(mapping mappings.Mapping) model {
 	}
 
 	return m
-}
-
-func (m model) UndoableNote() Undoable {
-	overlay := m.CurrentPart().Overlays.FindOverlay(m.overlayKeyEdit.GetKey())
-	if overlay == nil {
-		return UndoNewOverlay{m.overlayKeyEdit.GetKey(), m.cursorPos, m.arrangement.Cursor}
-	}
-	currentNote, hasNote := overlay.Notes[m.cursorPos]
-	if hasNote {
-		return UndoGridNote{m.currentOverlay.Key, m.cursorPos, GridNote{m.cursorPos, currentNote}, m.arrangement.Cursor}
-	} else {
-		return UndoToNothing{m.currentOverlay.Key, m.cursorPos, m.arrangement.Cursor}
-	}
 }
 
 func (m model) UndoableOverlay(overlayA, overlayB *overlays.Overlay) UndoOverlayDiff {

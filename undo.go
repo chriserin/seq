@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/chriserin/seq/internal/arrangement"
-	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/overlays"
 )
 
@@ -23,7 +22,7 @@ type UndoStack struct {
 	id   int
 }
 
-var NilStack = UndoStack{}
+var EmptyStack = UndoStack{}
 
 type UndoBeats struct {
 	beats     uint8
@@ -35,128 +34,6 @@ func (ub UndoBeats) ApplyUndo(m *model) Location {
 	partID := m.CurrentPartID()
 	(*m.definition.parts)[partID].Beats = ub.beats
 	return Location{ApplyLocation: false}
-}
-
-type UndoTempo struct {
-	tempo int
-}
-
-func (ukl UndoTempo) ApplyUndo(m *model) Location {
-	m.definition.tempo = ukl.tempo
-	return Location{ApplyLocation: false}
-}
-
-type UndoSubdivisions struct {
-	subdivisions int
-}
-
-func (ukl UndoSubdivisions) ApplyUndo(m *model) Location {
-	m.definition.subdivisions = ukl.subdivisions
-	return Location{ApplyLocation: false}
-}
-
-type UndoGridNote struct {
-	overlayKey
-	cursorPosition gridKey
-	gridNote       GridNote
-	ArrCursor      arrangement.ArrCursor
-}
-
-func (ugn UndoGridNote) ApplyUndo(m *model) Location {
-	m.arrangement.Cursor = ugn.ArrCursor
-	m.EnsureOverlayWithKey(ugn.overlayKey)
-	overlay := m.CurrentPart().Overlays.FindOverlay(ugn.overlayKey)
-	overlay.SetNote(ugn.gridNote.gridKey, ugn.gridNote.note)
-	return Location{ugn.overlayKey, ugn.gridNote.gridKey, true}
-}
-
-type UndoLineGridNotes struct {
-	overlayKey
-	cursorPosition gridKey
-	line           uint8
-	gridNotes      []GridNote
-	ArrCursor      arrangement.ArrCursor
-}
-
-func (ulgn UndoLineGridNotes) ApplyUndo(m *model) Location {
-	m.arrangement.Cursor = ulgn.ArrCursor
-	m.EnsureOverlayWithKey(ulgn.overlayKey)
-	overlay := m.CurrentPart().Overlays.FindOverlay(ulgn.overlayKey)
-	for i := range m.CurrentPart().Beats {
-		overlay.RemoveNote(GK(ulgn.line, i))
-	}
-	for _, gridNote := range ulgn.gridNotes {
-		overlay.SetNote(gridNote.gridKey, gridNote.note)
-	}
-	return Location{ulgn.overlayKey, ulgn.cursorPosition, true}
-}
-
-type UndoBounds struct {
-	overlayKey
-	cursorPosition gridKey
-	bounds         grid.Bounds
-	gridNotes      []GridNote
-	ArrCursor      arrangement.ArrCursor
-}
-
-func (ub UndoBounds) ApplyUndo(m *model) Location {
-	m.arrangement.Cursor = ub.ArrCursor
-	m.EnsureOverlayWithKey(ub.overlayKey)
-	overlay := m.CurrentPart().Overlays.FindOverlay(ub.overlayKey)
-	for _, k := range ub.bounds.GridKeys() {
-		overlay.RemoveNote(k)
-	}
-	for _, gridNote := range ub.gridNotes {
-		overlay.SetNote(gridNote.gridKey, gridNote.note)
-	}
-	return Location{ub.overlayKey, ub.cursorPosition, true}
-}
-
-type UndoGridNotes struct {
-	overlayKey
-	gridNotes []GridNote
-	ArrCursor arrangement.ArrCursor
-}
-
-func (ugn UndoGridNotes) ApplyUndo(m *model) Location {
-	m.arrangement.Cursor = ugn.ArrCursor
-	m.EnsureOverlayWithKey(ugn.overlayKey)
-	overlay := m.CurrentPart().Overlays.FindOverlay(ugn.overlayKey)
-	for _, gridNote := range ugn.gridNotes {
-
-		overlay.SetNote(gridNote.gridKey, gridNote.note)
-	}
-	return Location{ugn.overlayKey, ugn.gridNotes[0].gridKey, true}
-}
-
-type UndoToNothing struct {
-	overlayKey overlayKey
-	location   gridKey
-	ArrCursor  arrangement.ArrCursor
-}
-
-func (utn UndoToNothing) ApplyUndo(m *model) Location {
-	m.arrangement.Cursor = utn.ArrCursor
-	overlay := m.CurrentPart().Overlays.FindOverlay(utn.overlayKey)
-	overlay.RemoveNote(utn.location)
-	return Location{utn.overlayKey, utn.location, true}
-}
-
-type UndoLineToNothing struct {
-	overlayKey     overlayKey
-	cursorPosition gridKey
-	line           uint8
-	ArrCursor      arrangement.ArrCursor
-}
-
-func (ultn UndoLineToNothing) ApplyUndo(m *model) Location {
-	m.arrangement.Cursor = ultn.ArrCursor
-	overlay := m.CurrentPart().Overlays.FindOverlay(ultn.overlayKey)
-	for i := range m.CurrentPart().Beats {
-		overlay.RemoveNote(GK(ultn.line, i))
-	}
-
-	return Location{ultn.overlayKey, ultn.cursorPosition, true}
 }
 
 type UndoNewOverlay struct {
@@ -202,4 +79,26 @@ func (uod UndoOverlayDiff) ApplyUndo(m *model) Location {
 		m.UnsetActiveChord()
 	}
 	return Location{uod.overlayKey, uod.cursorPosition, true}
+}
+
+type UndoStateDiff struct {
+	stateDiff StateDiff
+}
+
+func (usd UndoStateDiff) ApplyUndo(m *model) Location {
+	usd.stateDiff.Apply(m)
+
+	if usd.stateDiff.AccentsChanged {
+		m.selectionIndicator = SelectAccentDiff
+	}
+	if usd.stateDiff.LinesChanged {
+		m.selectionIndicator = SelectSetupChannel
+	}
+	if usd.stateDiff.SubdivisionsChanged {
+		m.selectionIndicator = SelectTempoSubdivision
+	}
+	if usd.stateDiff.TempoChanged {
+		m.selectionIndicator = SelectTempo
+	}
+	return Location{ApplyLocation: false}
 }
