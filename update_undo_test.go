@@ -372,17 +372,39 @@ func TestUpdateUndoNewOverlay(t *testing.T) {
 
 func TestUndoArrangement(t *testing.T) {
 	tests := []struct {
-		name        string
-		commands    []any
-		description string
+		name          string
+		setupCommands []any
+		commands      []any
+		description   string
 	}{
 		{
-			name: "Undo arrangement operation",
+			name:          "Undo arrangement operation",
+			setupCommands: []any{},
 			commands: []any{
 				mappings.NewSectionAfter,
-				mappings.Undo,
+				mappings.Enter,
+				mappings.NextSection,
 			},
 			description: "Should restore arrangement state after modification and undo",
+		},
+		{
+			name:          "Undo arrangement operation new section before",
+			setupCommands: []any{},
+			commands: []any{
+				mappings.NewSectionBefore,
+				mappings.Enter,
+				mappings.PrevSection,
+			},
+			description: "Should restore arrangement state",
+		},
+		{
+			name:          "Undo arrangement operation group",
+			setupCommands: []any{mappings.ToggleArrangementView},
+			commands: []any{
+				TestKey{"g"},
+				mappings.Enter,
+			},
+			description: "Should restore arrangement state",
 		},
 	}
 
@@ -390,16 +412,27 @@ func TestUndoArrangement(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
 
+			m, _ = processCommands(tt.setupCommands, m)
+
 			initialCursor := m.arrangement.Cursor
-			initialPartsCount := len(*m.definition.parts)
+			initialArrangementNodesCount := m.arrangement.Root.CountEndNodes()
 
 			m, _ = processCommands(tt.commands, m)
 
-			// Verify arrangement cursor is restored
-			assert.Equal(t, initialCursor, m.arrangement.Cursor, tt.description+" - arrangement cursor should be restored")
+			cursorBeforeUndo := m.arrangement.Cursor
+			endNodesCountBeforeUndo := m.arrangement.Root.CountEndNodes()
 
-			// Verify parts count is restored
-			assert.Equal(t, initialPartsCount, len(*m.definition.parts), tt.description+" - parts count should be restored")
+			m, _ = processCommand(mappings.Undo, m)
+
+			assert.Equal(t, initialCursor, m.arrangement.Cursor, tt.description+" - arrangement cursor should be restored")
+			assert.Equal(t, initialArrangementNodesCount, m.arrangement.Root.CountEndNodes(), tt.description+" - arrangement nodes count should be restored")
+			assert.Equal(t, m.focus, FocusArrangementEditor, tt.description+" - focus should be on arrangement editor after undo")
+			assert.Equal(t, m.arrangement.Focus, true, tt.description+" - arrangement should be focused after undo")
+
+			m, _ = processCommand(mappings.Redo, m)
+
+			assert.Equal(t, cursorBeforeUndo, m.arrangement.Cursor, tt.description+" - arrangement cursor should be restored after redo")
+			assert.Equal(t, endNodesCountBeforeUndo, m.arrangement.Root.CountEndNodes(), tt.description+" - arrangement nodes count should match after redo")
 		})
 	}
 }

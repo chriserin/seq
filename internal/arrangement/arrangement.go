@@ -103,6 +103,14 @@ func (a *Arrangement) CountEndNodes() int {
 	return count
 }
 
+func (a *Arrangement) CountAllNodes() int {
+	count := 1
+	for _, node := range a.Nodes {
+		count += node.CountEndNodes()
+	}
+	return count
+}
+
 type ArrCursor []*Arrangement
 
 func (ac ArrCursor) Equals(other ArrCursor) bool {
@@ -751,17 +759,22 @@ type Undoable interface {
 }
 
 type TreeUndo struct {
-	undoTree UndoTree
+	undoTree    UndoTree
+	Cursor      ArrCursor
+	depthCursor int
 }
 
 func (tu TreeUndo) ApplyUndo(m *Model) {
 	m.Root = Convert(tu.undoTree)
+	m.Cursor = tu.Cursor
+	m.depthCursor = tu.depthCursor
 }
 
 func Convert(ut UndoTree) *Arrangement {
 	if ut.arrRef == nil {
 		return nil
 	}
+
 	ut.arrRef.Nodes = []*Arrangement{}
 	for _, n := range ut.nodes {
 		ut.arrRef.Nodes = append(ut.arrRef.Nodes, Convert(n))
@@ -776,31 +789,39 @@ type UndoTree struct {
 }
 
 type GroupUndo struct {
-	arr        *Arrangement
-	iterations int
+	arr         *Arrangement
+	iterations  int
+	Cursor      ArrCursor
+	depthCursor int
 }
 
 func (gu GroupUndo) ApplyUndo(m *Model) {
 	(*gu.arr).Iterations = gu.iterations
+	m.Cursor = gu.Cursor
+	m.depthCursor = gu.depthCursor
 }
 
 type SectionUndo struct {
-	arr     *Arrangement
-	section SongSection
+	arr         *Arrangement
+	section     SongSection
+	Cursor      ArrCursor
+	depthCursor int
 }
 
 func (su SectionUndo) ApplyUndo(m *Model) {
 	(*su.arr).Section = su.section
+	m.Cursor = su.Cursor
+	m.depthCursor = su.depthCursor
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var undo, redo Undoable
 	if IsArrChangeMessage(msg) {
-		undo = TreeUndo{m.CreateUndoTree()}
+		undo = TreeUndo{m.CreateUndoTree(), m.Cursor, m.depthCursor}
 	} else if IsSectionChangeMessage(msg, m.Cursor[m.depthCursor].IsEndNode()) {
-		undo = SectionUndo{m.Cursor[len(m.Cursor)-1], m.Cursor[len(m.Cursor)-1].Section}
+		undo = SectionUndo{m.Cursor[len(m.Cursor)-1], m.Cursor[len(m.Cursor)-1].Section, m.Cursor, m.depthCursor}
 	} else if IsGroupChangeMessage(msg, m.Cursor[m.depthCursor].IsGroup()) {
-		undo = GroupUndo{m.Cursor[m.depthCursor], m.Cursor[m.depthCursor].Iterations}
+		undo = GroupUndo{m.Cursor[m.depthCursor], m.Cursor[m.depthCursor].Iterations, m.Cursor, m.depthCursor}
 	}
 
 	switch msg := msg.(type) {
@@ -896,13 +917,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	if IsArrChangeMessage(msg) {
-		redo = TreeUndo{m.CreateUndoTree()}
+		redo = TreeUndo{m.CreateUndoTree(), m.Cursor, m.depthCursor}
 		return m, m.CreateUndoCmd(undo, redo)
 	} else if IsSectionChangeMessage(msg, m.Cursor[m.depthCursor].IsEndNode()) {
-		redo = SectionUndo{m.Cursor[len(m.Cursor)-1], m.Cursor[len(m.Cursor)-1].Section}
+		redo = SectionUndo{m.Cursor[len(m.Cursor)-1], m.Cursor[len(m.Cursor)-1].Section, m.Cursor, m.depthCursor}
 		return m, m.CreateUndoCmd(undo, redo)
 	} else if IsGroupChangeMessage(msg, m.Cursor[m.depthCursor].IsGroup()) {
-		redo = GroupUndo{m.Cursor[m.depthCursor], m.Cursor[m.depthCursor].Iterations}
+		redo = GroupUndo{m.Cursor[m.depthCursor], m.Cursor[m.depthCursor].Iterations, m.Cursor, m.depthCursor}
 		return m, m.CreateUndoCmd(undo, redo)
 	}
 
@@ -1043,8 +1064,10 @@ func (m Model) CreateUndoCmd(undo Undoable, redo Undoable) tea.Cmd {
 
 func CreateUndoTree(a *Arrangement) UndoTree {
 	undoTree := UndoTree{arrRef: a, nodes: make([]UndoTree, 0)}
+
 	for _, arrRef := range a.Nodes {
 		undoTree.nodes = append(undoTree.nodes, CreateUndoTree(arrRef))
 	}
+
 	return undoTree
 }

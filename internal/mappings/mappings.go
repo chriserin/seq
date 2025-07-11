@@ -338,6 +338,15 @@ func k(x ...string) [3]string {
 
 var holdKeysTime = time.Millisecond * 500
 
+func ResetKeycombo() {
+	mutex.Lock()
+	defer mutex.Unlock()
+	if timer != nil {
+		timer.Stop()
+	}
+	Keycombo = make([]tea.KeyMsg, 0, 3)
+}
+
 func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType, patternMode bool) Mapping {
 	mutex.Lock()
 	defer mutex.Unlock()

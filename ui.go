@@ -419,14 +419,7 @@ func (m *model) Undo() UndoStack {
 	if undoStack != EmptyStack {
 		location := undoStack.undo.ApplyUndo(m)
 		if location.ApplyLocation {
-			m.cursorPos = location.GridKey
-			overlay := m.CurrentPart().Overlays.FindOverlay(location.OverlayKey)
-			if overlay == nil {
-				m.currentOverlay = m.CurrentPart().Overlays
-			} else {
-				m.currentOverlay = overlay
-			}
-			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
+			m.ApplyLocation(location)
 		}
 	}
 	return undoStack
@@ -437,12 +430,23 @@ func (m *model) Redo() UndoStack {
 	if undoStack != EmptyStack {
 		location := undoStack.redo.ApplyUndo(m)
 		if location.ApplyLocation {
-			m.cursorPos = location.GridKey
-			m.currentOverlay = m.CurrentPart().Overlays.FindOverlay(location.OverlayKey)
-			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
+			m.ApplyLocation(location)
 		}
 	}
 	return undoStack
+}
+
+func (m *model) ApplyLocation(location Location) {
+	m.cursorPos = location.GridKey
+	overlay := m.CurrentPart().Overlays.FindOverlay(location.OverlayKey)
+	if overlay == nil {
+		m.currentOverlay = m.CurrentPart().Overlays
+	} else {
+		m.currentOverlay = overlay
+	}
+	m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
+	m.focus = FocusGrid
+	m.arrangement.Focus = false
 }
 
 type Definition struct {
@@ -1267,13 +1271,21 @@ func IsNot(msg tea.KeyMsg, k ...key.Binding) bool {
 	return !key.Matches(msg, k...)
 }
 
-func (m model) IsPartOperation(mapping mappings.Mapping) bool {
-	return slices.Contains([]mappings.Command{mappings.ChangePart, mappings.NewSectionAfter, mappings.NewSectionBefore}, mapping.Command) ||
-		slices.Contains([]mappings.Command{mappings.Decrease, mappings.Increase}, mapping.Command) && (m.selectionIndicator == SelectPart || m.selectionIndicator == SelectChangePart)
+var skipArrangementMappings = []mappings.Command{
+	mappings.ToggleArrangementView,
+	mappings.Undo,
+	mappings.Redo,
+	mappings.PlayLoop,
+	mappings.PlayStop,
+	mappings.PlayPart,
+	mappings.ChangePart,
+	mappings.NewSectionAfter,
+	mappings.NewSectionBefore,
 }
 
-func (m model) IsPlayOperation(mapping mappings.Mapping) bool {
-	return slices.Contains([]mappings.Command{mappings.PlayLoop, mappings.PlayStop, mappings.PlayPart}, mapping.Command)
+func (m model) ShouldSkipArrangement(mapping mappings.Mapping) bool {
+	return slices.Contains(skipArrangementMappings, mapping.Command) ||
+		((m.selectionIndicator == SelectPart || m.selectionIndicator == SelectChangePart) && slices.Contains([]mappings.Command{mappings.Decrease, mappings.Increase}, mapping.Command))
 }
 
 type panicMsg struct {
@@ -1368,12 +1380,14 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		}
 
 		mapping := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != PatternFill)
+
 		if mapping.Command == mappings.Quit {
 			m.SetSelectionIndicator(SelectConfirmQuit)
 		}
 
 		// NOTE: Arrangement editor has its own key bindings, but some mappings we still want to route to this model
-		if m.focus == FocusArrangementEditor && !m.IsPartOperation(mapping) && !m.IsPlayOperation(mapping) && mapping.Command != mappings.ToggleArrangementView {
+		if m.focus == FocusArrangementEditor && !m.ShouldSkipArrangement(mapping) {
+			mappings.ResetKeycombo()
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
 			m.ResetCurrentOverlay()

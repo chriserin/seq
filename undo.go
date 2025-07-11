@@ -56,6 +56,9 @@ type UndoArrangement struct {
 
 func (ua UndoArrangement) ApplyUndo(m *model) Location {
 	m.arrangement.ApplyArrUndo(ua.arrUndo)
+	m.focus = FocusArrangementEditor
+	m.showArrangementView = true
+	m.arrangement.Focus = true
 	return Location{ApplyLocation: false}
 }
 
