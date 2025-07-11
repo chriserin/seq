@@ -545,7 +545,6 @@ func (s StateDiff) Reverse() StateDiff {
 
 func (s StateDiff) Apply(m *model) {
 	if s.AccentsChanged {
-		fmt.Println("Applying accent diff", s.OldAccents, s.NewAccents)
 		m.definition.accents = s.NewAccents
 	}
 	if s.LinesChanged {
