@@ -6,6 +6,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/aarzilli/golua/lua"
@@ -232,11 +233,21 @@ func ProcessConfig(luafilepath string) {
 	L.OpenLibs()
 	L.RegisterLibrary("seq", seqFunctions)
 
-	err := L.DoFile(luafilepath)
-	if err != nil {
-		fmt.Println(err.Error())
-		panic("Do File error!!")
+	if fileExists(luafilepath) {
+		err := L.DoFile(luafilepath)
+		if err != nil {
+			fmt.Println(err.Error())
+			panic("Do File error!!")
+		}
 	}
+}
+
+func fileExists(filePath string) bool {
+	info, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir() // Check if it's not a directory
 }
 
 // Lua Function
