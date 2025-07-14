@@ -77,6 +77,22 @@ jobs:
           make CC="clang ${ARCH_FLAGS}" AR="ar rcu" RANLIB="ranlib" macosx
           make install INSTALL_TOP="${LUA_PREFIX}"
 
+          # Create pkg-config file for our custom Lua build
+          mkdir -p "${LUA_PREFIX}/lib/pkgconfig"
+          cat > "${LUA_PREFIX}/lib/pkgconfig/lua5.4.pc" << EOF
+          prefix=${LUA_PREFIX}
+          exec_prefix=\${prefix}
+          libdir=\${exec_prefix}/lib
+          includedir=\${prefix}/include
+
+          Name: Lua
+          Description: An Extensible Extension Language
+          Version: 5.4.7
+          Requires:
+          Libs: -L\${libdir} -llua -lm
+          Cflags: -I\${includedir}
+          EOF
+
           # Verify the build
           file "${LUA_PREFIX}/bin/lua"
           "${LUA_PREFIX}/bin/lua" -v
@@ -96,9 +112,17 @@ jobs:
             export ARCH_FLAGS="-arch arm64"
           fi
 
+          # Set PKG_CONFIG_PATH to find our custom Lua
+          export PKG_CONFIG_PATH="${LUA_PREFIX}/lib/pkgconfig:$PKG_CONFIG_PATH"
+
           # Set CGO flags for static linking
           export CGO_CFLAGS="-I${LUA_PREFIX}/include ${ARCH_FLAGS}"
           export CGO_LDFLAGS="${ARCH_FLAGS} -L${LUA_PREFIX}/lib -llua -lm -framework CoreMIDI -framework CoreFoundation"
+
+          # Verify pkg-config can find our Lua
+          pkg-config --exists lua5.4 && echo "pkg-config found lua5.4" || echo "pkg-config failed to find lua5.4"
+          pkg-config --cflags lua5.4 || echo "Failed to get cflags"
+          pkg-config --libs lua5.4 || echo "Failed to get libs"
 
           # Build the binary
           go build -tags lua54 -ldflags "-s -w" -o seq-darwin-${{ matrix.arch }}
