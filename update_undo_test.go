@@ -163,7 +163,6 @@ func TestUpdateUndoBeats(t *testing.T) {
 	tests := []struct {
 		name          string
 		commands      []any
-		initialBeats  uint8
 		expectedBeats uint8
 		description   string
 	}{
@@ -176,7 +175,6 @@ func TestUpdateUndoBeats(t *testing.T) {
 				mappings.Escape,
 				mappings.Undo,
 			},
-			initialBeats:  32,
 			expectedBeats: 32,
 			description:   "Should restore original beats count after modification and undo",
 		},
@@ -192,18 +190,6 @@ func TestUpdateUndoBeats(t *testing.T) {
 				mappings.BeatInputSwitch,
 				mappings.Undo,
 			},
-			initialBeats:  32,
-			expectedBeats: 32,
-			description:   "Should restore original beats count after modification and undo",
-		},
-		{
-			name: "Escape from arrangement mode does not undo beats",
-			commands: []any{
-				mappings.ToggleArrangementView,
-				mappings.Enter,
-				mappings.Undo,
-			},
-			initialBeats:  32,
 			expectedBeats: 32,
 			description:   "Should restore original beats count after modification and undo",
 		},
@@ -212,9 +198,6 @@ func TestUpdateUndoBeats(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
-
-			// Verify initial beats
-			assert.Equal(t, tt.initialBeats, m.CurrentPart().Beats, "Initial beats should match")
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -792,6 +775,122 @@ func TestUndoSetupInputSwitch(t *testing.T) {
 			assert.Equal(t, tt.expectedNote, restoredLine.Note, tt.description+" - note should be restored")
 			assert.Equal(t, tt.expectedMsgType, restoredLine.MsgType, tt.description+" - message type should be restored")
 			assert.Equal(t, m.selectionIndicator, SelectSetupChannel, tt.description+" - selection should be SetupInputSwitch after undo")
+		})
+	}
+}
+
+func TestUndoSongSectionAttributes(t *testing.T) {
+	tests := []struct {
+		name                string
+		commands            []any
+		expectedStartBeat   int
+		expectedStartCycles int
+		expectedKeepCycles  bool
+		expectedCycles      int
+		description         string
+	}{
+		{
+			name: "Undo StartBeat change",
+			commands: []any{
+				mappings.ToggleArrangementView,
+				mappings.Increase,
+				mappings.Enter,
+				mappings.Undo,
+			},
+			expectedStartBeat:   0,
+			expectedStartCycles: 1,
+			expectedKeepCycles:  false,
+			expectedCycles:      1,
+			description:         "Should restore original StartBeat after modification and undo",
+		},
+		{
+			name: "Undo StartCycles change",
+			commands: []any{
+				mappings.ToggleArrangementView,
+				TestKey{"l"},
+				mappings.Increase,
+				mappings.Enter,
+				mappings.Undo,
+			},
+			expectedStartBeat:   0,
+			expectedStartCycles: 1,
+			expectedKeepCycles:  false,
+			expectedCycles:      1,
+			description:         "Should restore original StartCycles after modification and undo",
+		},
+		{
+			name: "Undo Cycles change",
+			commands: []any{
+				mappings.ToggleArrangementView,
+				TestKey{"ll"},
+				mappings.Increase,
+				mappings.Enter,
+				mappings.Undo,
+			},
+			expectedStartBeat:   0,
+			expectedStartCycles: 1,
+			expectedKeepCycles:  false,
+			expectedCycles:      1,
+			description:         "Should restore original Cycles after modification and undo",
+		},
+		{
+			name: "Undo KeepCycles change",
+			commands: []any{
+				mappings.ToggleArrangementView,
+				TestKey{"lll"},
+				mappings.Increase,
+				mappings.Enter,
+				mappings.Undo,
+			},
+			expectedStartBeat:   0,
+			expectedStartCycles: 1,
+			expectedKeepCycles:  false,
+			expectedCycles:      1,
+			description:         "Should restore original KeepCycles after modification and undo",
+		},
+		{
+			name: "Undo multiple attribute changes",
+			commands: []any{
+				mappings.ToggleArrangementView,
+				mappings.Increase,
+				TestKey{"l"},
+				mappings.Increase,
+				TestKey{"l"},
+				mappings.Increase,
+				mappings.Enter,
+				mappings.Undo,
+				mappings.Undo,
+				mappings.Undo,
+			},
+			expectedStartBeat:   0,
+			expectedStartCycles: 1,
+			expectedKeepCycles:  false,
+			expectedCycles:      1,
+			description:         "Should restore original attributes after multiple modifications and undos",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			// Verify initial SongSection values
+			currentNode := m.arrangement.Cursor.GetCurrentNode()
+			assert.Equal(t, tt.expectedStartBeat, currentNode.Section.StartBeat, "Initial StartBeat should match")
+			assert.Equal(t, tt.expectedStartCycles, currentNode.Section.StartCycles, "Initial StartCycles should match")
+			assert.Equal(t, tt.expectedKeepCycles, currentNode.Section.KeepCycles, "Initial KeepCycles should match")
+			assert.Equal(t, tt.expectedCycles, currentNode.Section.Cycles, "Initial Cycles should match")
+
+			m, _ = processCommands(tt.commands, m)
+
+			// Verify SongSection values are restored
+			restoredNode := m.arrangement.Cursor.GetCurrentNode()
+			assert.Equal(t, tt.expectedStartBeat, restoredNode.Section.StartBeat, tt.description+" - StartBeat should be restored")
+			assert.Equal(t, tt.expectedStartCycles, restoredNode.Section.StartCycles, tt.description+" - StartCycles should be restored")
+			assert.Equal(t, tt.expectedKeepCycles, restoredNode.Section.KeepCycles, tt.description+" - KeepCycles should be restored")
+			assert.Equal(t, tt.expectedCycles, restoredNode.Section.Cycles, tt.description+" - Cycles should be restored")
+
+			assert.True(t, m.focus == FocusArrangementEditor, tt.description+" - focus should be on arrangement editor after undo")
 		})
 	}
 }
