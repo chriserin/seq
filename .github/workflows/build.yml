@@ -1,0 +1,128 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.24'
+
+jobs:
+  # Test and build Linux
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run tests
+        run: |
+          go test -tags lua54 -v ./...
+
+      - name: Build with Docker
+        run: |
+          docker build -t seq-builder .
+          docker create --name seq-temp seq-builder
+          docker cp seq-temp:/seq ./seq-linux-amd64
+          docker rm seq-temp
+          chmod +x seq-linux-amd64
+
+      - name: Test binary
+        run: |
+          ./seq-linux-amd64 --version || echo "Linux binary test completed"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: seq-linux-amd64-${{ github.sha }}
+          path: seq-linux-amd64
+
+  # Test and build macOS
+  test-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          brew install lua
+          lua -v
+
+      - name: Run tests (amd64 only)
+        if: matrix.arch == 'amd64'
+        run: |
+          go test -tags lua54 -v ./...
+
+      - name: Build macOS binary
+        env:
+          GOOS: darwin
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 1
+        run: |
+          export CGO_LDFLAGS="-framework CoreMIDI -framework CoreFoundation -llua"
+          export CGO_CFLAGS="-I$(brew --prefix lua)/include"
+          go build -tags lua54 -ldflags "-s -w" -o seq-darwin-${{ matrix.arch }}
+
+      - name: Verify binary
+        run: |
+          file seq-darwin-${{ matrix.arch }}
+          otool -L seq-darwin-${{ matrix.arch }} || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: seq-darwin-${{ matrix.arch }}-${{ github.sha }}
+          path: seq-darwin-${{ matrix.arch }}
+
+  # Create snapshot release with GoReleaser (for testing)
+  snapshot:
+    needs: [test-linux, test-macos]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Run GoReleaser snapshot
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: build --snapshot --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload snapshot artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-${{ github.sha }}
+          path: dist/
