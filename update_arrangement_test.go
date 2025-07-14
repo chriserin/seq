@@ -87,6 +87,7 @@ func TestRenamePartCommand(t *testing.T) {
 func TestSectionNavigation(t *testing.T) {
 	tests := []struct {
 		name               string
+		setupCommands      []any
 		commands           []any
 		expectedPartIndex  int
 		expectedMoveResult bool
@@ -94,37 +95,50 @@ func TestSectionNavigation(t *testing.T) {
 	}{
 		{
 			name:               "NextSection moves cursor forward",
-			commands:           []any{mappings.NewSectionAfter, mappings.Enter, mappings.NextSection},
+			setupCommands:      []any{mappings.NewSectionAfter, mappings.Enter, mappings.PrevSection},
+			commands:           []any{mappings.NextSection},
 			expectedMoveResult: true,
 			expectedPartIndex:  1,
 			description:        "Should move to next section successfully",
 		},
 		{
 			name:               "PrevSection moves cursor backward",
-			commands:           []any{mappings.NewSectionBefore, mappings.Enter, mappings.PrevSection},
+			setupCommands:      []any{mappings.NewSectionBefore, mappings.Enter, mappings.NextSection},
+			commands:           []any{mappings.PrevSection},
 			expectedMoveResult: true,
 			expectedPartIndex:  1,
 			description:        "Should move to previous section successfully",
 		},
 		{
 			name:               "NextSection on single section",
-			commands:           []any{mappings.NextSection},
+			commands:           []any{mappings.NextSection, mappings.PrevSection},
 			expectedMoveResult: false,
 			expectedPartIndex:  0,
 			description:        "Should not move when only one section exists",
 		},
 		{
 			name:               "PrevSection on first section",
-			commands:           []any{mappings.NewSectionAfter, mappings.PrevSection},
+			setupCommands:      []any{mappings.NewSectionBefore, mappings.Enter},
+			commands:           []any{mappings.PrevSection},
 			expectedMoveResult: false,
-			expectedPartIndex:  0,
+			expectedPartIndex:  1,
 			description:        "Should not move when already on first section",
+		},
+		{
+			name:               "NextSection on last section",
+			setupCommands:      []any{mappings.NewSectionAfter, mappings.Enter},
+			commands:           []any{mappings.NextSection},
+			expectedMoveResult: false,
+			expectedPartIndex:  1,
+			description:        "Should not move when already on last section",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
+
+			m, _ = processCommands(tt.setupCommands, m)
 
 			initialArrangementCursor := m.arrangement.Cursor
 
@@ -146,12 +160,12 @@ func TestSectionNavigationResetOverlay(t *testing.T) {
 	}{
 		{
 			name:        "NextSection resets current overlay",
-			commands:    []any{mappings.NewSectionAfter, mappings.Enter, mappings.NextSection},
+			commands:    []any{mappings.NewSectionAfter, mappings.Enter},
 			description: "Should reset current overlay after moving to next section",
 		},
 		{
 			name:        "PrevSection resets current overlay",
-			commands:    []any{mappings.NewSectionBefore, mappings.Enter, mappings.PrevSection},
+			commands:    []any{mappings.NewSectionBefore, mappings.Enter},
 			description: "Should reset current overlay after moving to previous section",
 		},
 	}

@@ -196,7 +196,6 @@ func PCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 type model struct {
-	sectionSideIndicator  bool
 	hasUIFocus            bool
 	connected             bool
 	visualMode            bool
@@ -206,6 +205,7 @@ type model struct {
 	showArrangementView   bool
 	ratchetCursor         uint8
 	focus                 focus
+	sectionSideIndicator  SectionSide
 	playing               PlayMode
 	loopMode              LoopMode
 	selectionIndicator    Selection
@@ -264,6 +264,13 @@ func (m *model) ResetCurrentOverlay() {
 		}
 	}
 }
+
+type SectionSide uint8
+
+const (
+	SectionAfter SectionSide = iota
+	SectionBefore
+)
 
 type PlayMode uint8
 
@@ -1334,8 +1341,13 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 					return m, nil
 				}
 			case SelectPart:
-				_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator, IsPlaying: m.playing != PlayStopped})
-				m.currentOverlay = m.CurrentPart().Overlays
+				_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator == SectionAfter, IsPlaying: m.playing != PlayStopped})
+				if m.sectionSideIndicator == SectionAfter {
+					m.arrangement.Cursor.MoveNext()
+				} else {
+					m.arrangement.Cursor.MovePrev()
+				}
+				m.ResetCurrentOverlay()
 				m.selectionIndicator = SelectNothing
 				return m, cmd
 			case SelectChangePart:
@@ -1680,10 +1692,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		case mappings.NewSectionAfter:
 			m.SetSelectionIndicator(SelectPart)
-			m.sectionSideIndicator = true
+			m.sectionSideIndicator = SectionAfter
 		case mappings.NewSectionBefore:
 			m.SetSelectionIndicator(SelectPart)
-			m.sectionSideIndicator = false
+			m.sectionSideIndicator = SectionBefore
 		case mappings.ChangePart:
 			m.SetSelectionIndicator(SelectChangePart)
 		case mappings.NextTheme:

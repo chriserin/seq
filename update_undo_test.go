@@ -494,19 +494,20 @@ func TestUndoMultipleOperations(t *testing.T) {
 
 func TestUndoWithArrangementCursor(t *testing.T) {
 	tests := []struct {
-		name        string
-		commands    []any
-		description string
+		name          string
+		setupCommands []any
+		commands      []any
+		description   string
 	}{
 		{
 			name: "Undo restores arrangement cursor",
-			commands: []any{
+			setupCommands: []any{
 				mappings.NewSectionAfter,
 				mappings.Enter,
+			},
+			commands: []any{
 				mappings.NoteAdd,
-				mappings.NewSectionBefore,
-				mappings.Enter,
-				mappings.NoteAdd,
+				mappings.PrevSection,
 				mappings.Undo,
 			},
 			description: "Should restore arrangement cursor position after undo",
@@ -516,6 +517,8 @@ func TestUndoWithArrangementCursor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
+
+			m, _ = processCommands(tt.setupCommands, m)
 
 			initialArrangementCursor := m.arrangement.Cursor
 
