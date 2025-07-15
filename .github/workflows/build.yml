@@ -5,6 +5,7 @@ on:
 
 env:
   GO_VERSION: '1.24'
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
   # Test and build Linux
