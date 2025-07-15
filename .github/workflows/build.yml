@@ -170,9 +170,9 @@ jobs:
           mkdir -p output/seq_darwin_arm64
 
           # Move binaries to GoReleaser expected locations
-          mv seq-linux-amd64 output/linux_amd64/seq
-          mv seq-darwin-amd64 output/darwin_amd64/seq
-          mv seq-darwin-arm64 output/darwin_arm64/seq
+          mv seq-linux-amd64 output/seq_linux_amd64/seq
+          mv seq-darwin-amd64 output/seq_darwin_amd64/seq
+          mv seq-darwin-arm64 output/seq_darwin_arm64/seq
 
           # Make them executable
           chmod +x output/*/seq
