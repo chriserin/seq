@@ -169,19 +169,15 @@ jobs:
           mkdir -p output/seq_darwin_amd64
           mkdir -p output/seq_darwin_arm64
 
-          # Move binaries to GoReleaser expected locations
           mv seq-linux-amd64 output/seq_linux_amd64/seq
           mv seq-darwin-amd64 output/seq_darwin_amd64/seq
           mv seq-darwin-arm64 output/seq_darwin_arm64/seq
-
+          #
           # Make them executable
           chmod +x output/*/seq
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --config .goreleaser.yml --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tar -cvzf seq_linux_amd64.tar.gz output/seq_linux_amd64
+          tar -cvzf seq_darwin_amd64.tar.gz output/seq_darwin_amd64
+          tar -cvzf seq_darwin_arm64.tar.gz output/seq_darwin_arm64
+
+          gh release create "${GITHUB_REF}" -- *.tar.gz
