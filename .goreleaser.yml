@@ -7,64 +7,24 @@ before:
     - go generate ./...
 
 builds:
-  # Linux build using Docker for CGO cross-compilation
   - id: linux
     binary: seq
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - linux
-    goarch:
-      - amd64
-    flags:
-      - -tags=lua54
-    ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
-    # Use existing Dockerfile for Linux build
-    hooks:
-      pre:
-        - docker build -t seq-builder .
-        - docker create --name seq-temp seq-builder
-        - docker cp seq-temp:/seq ./seq-linux-{{.Arch}}
-        - docker rm seq-temp
-    skip: false
+    goos: [linux]
+    goarch: [amd64]
+    skip: true  # Skip building, use pre-built
 
-  # macOS build (handled by GitHub Actions macOS runner)
   - id: darwin
     binary: seq
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    flags:
-      - -tags=lua54
-    ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
-    # Skip for local builds (use GitHub Actions for Darwin)
-    skip: true
+    goos: [darwin]
+    goarch: [amd64, arm64]
+    skip: true  # Skip building, use pre-built
+
 archives:
   - id: default
     builds:
       - linux
       - darwin
     format: tar.gz
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- .Version }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
     format_overrides:
       - goos: windows
         format: zip
@@ -109,28 +69,29 @@ release:
     ## seq {{ .Version }}
 
     A powerful sequencer with Lua scripting support and MIDI capabilities.
+
+    ### Platform Support
+    - **Linux**: Built with Docker for maximum compatibility
+    - **macOS**: Native builds for both Intel (amd64) and Apple Silicon (arm64)
+
   footer: |
     ## Installation
 
     Download the appropriate binary for your platform from the assets above.
 
-    **Thanks to all contributors!**
+    ### Linux
+    ```bash
+    curl -L -o seq https://github.com/${{ github.repository }}/releases/download/{{ .Version }}/seq_{{ .Version }}_Linux_x86_64.tar.gz
+    tar -xzf seq_{{ .Version }}_Linux_x86_64.tar.gz
+    chmod +x seq
+    ```
 
-# Docker configuration (optional)
-dockers:
-  - id: seq-docker
-    ids:
-      - linux
-    image_templates:
-      - "{{ .Env.DOCKER_REGISTRY }}/{{ .ProjectName }}:{{ .Version }}-amd64"
-      - "{{ .Env.DOCKER_REGISTRY }}/{{ .ProjectName }}:latest-amd64"
-    dockerfile: Dockerfile
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-    skip_push: true # Set to false when you want to push to registry
+    ### macOS
+    ```bash
+    # For Intel Macs
+    curl -L -o seq https://github.com/${{ github.repository }}/releases/download/{{ .Version }}/seq_{{ .Version }}_Darwin_x86_64.tar.gz
+
+    # For Apple Silicon Macs
+    curl -L -o seq https://github.com/${{ github.repository }}/releases/download/{{ .Version }}/seq_{{ .Version }}_Darwin_arm64.tar.gz
+    ```
 
