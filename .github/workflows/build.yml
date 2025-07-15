@@ -165,17 +165,17 @@ jobs:
 
       - name: Create release directories
         run: |
-          mkdir -p dist/linux_linux_amd64_v1
-          mkdir -p dist/darwin_darwin_amd64_v1
-          mkdir -p dist/darwin_darwin_arm64_v8.0
+          mkdir -p output/seq_linux_amd64
+          mkdir -p output/seq_darwin_amd64
+          mkdir -p output/seq_darwin_arm64
 
           # Move binaries to GoReleaser expected locations
-          mv seq-linux-amd64 dist/linux_linux_amd64_v1/seq
-          mv seq-darwin-amd64 dist/darwin_darwin_amd64_v1/seq
-          mv seq-darwin-arm64 dist/darwin_darwin_arm64_v8.0/seq
+          mv seq-linux-amd64 output/linux_amd64/seq
+          mv seq-darwin-amd64 output/darwin_amd64/seq
+          mv seq-darwin-arm64 output/darwin_arm64/seq
 
           # Make them executable
-          chmod +x dist/*/seq
+          chmod +x output/*/seq
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6

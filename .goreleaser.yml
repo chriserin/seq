@@ -6,21 +6,35 @@ before:
     - go mod tidy
     - go generate ./...
 
-builds:
-  - id: linux
-    binary: seq
-    goos: [linux]
-    goarch: [amd64]
-    skip: true  # Skip building, use pre-built
 
-  - id: darwin
+builds:
+  - builder: prebuilt
+
+    # When builder is `prebuilt` there are no defaults for goos, goarch,
+    # goarm, gomips, goamd64 and targets, so you always have to specify them:
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    goamd64:
+      - v1
+
+    # prebuilt specific options
+    prebuilt:
+      # Path must be the template path to the binaries.
+      # GoReleaser removes the `dist` directory before running, so you will likely
+      # want to put the binaries elsewhere.
+      # This field is required when using the `prebuilt` builder.
+      path: output/seq_{{ .Os }}_{{ .Arch }}/seq
+
+    # Use 'binary' to set the final name of your binary.
+    # This is the name that will be used in archives et al.
     binary: seq
-    goos: [darwin]
-    goarch: [amd64, arm64]
-    skip: true  # Skip building, use pre-built
 
 archives:
-  - id: default
+  - id: seq-archive
     ids:
       - linux
       - darwin
@@ -32,9 +46,6 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-    format_overrides:
-      - goos: windows
-        formats: [zip]
     files:
       - README.md
       - LICENSE*
