@@ -81,7 +81,7 @@ release:
 
     ### Linux
     ```bash
-    curl -L -o seq https://github.com/${{ github.repository }}/releases/download/{{ .Version }}/seq_{{ .Version }}_Linux_x86_64.tar.gz
+    curl -L -o seq https://github.com/$GITHUB_REPOSITORY/releases/download/{{ .Version }}/seq_{{ .Version }}_Linux_x86_64.tar.gz
     tar -xzf seq_{{ .Version }}_Linux_x86_64.tar.gz
     chmod +x seq
     ```
@@ -89,9 +89,9 @@ release:
     ### macOS
     ```bash
     # For Intel Macs
-    curl -L -o seq https://github.com/${{ github.repository }}/releases/download/{{ .Version }}/seq_{{ .Version }}_Darwin_x86_64.tar.gz
+    curl -L -o seq https://github.com/$GITHUB_REPOSITORY/releases/download/{{ .Version }}/seq_{{ .Version }}_Darwin_x86_64.tar.gz
 
     # For Apple Silicon Macs
-    curl -L -o seq https://github.com/${{ github.repository }}/releases/download/{{ .Version }}/seq_{{ .Version }}_Darwin_arm64.tar.gz
+    curl -L -o seq https://github.com/$GITHUB_REPOSITORY/releases/download/{{ .Version }}/seq_{{ .Version }}_Darwin_arm64.tar.gz
     ```
 
