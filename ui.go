@@ -963,8 +963,11 @@ func (m *model) IncreaseBeats() {
 
 func (m *model) DecreaseBeats() {
 	newBeats := int(m.CurrentPart().Beats) - 1
-	if newBeats >= 0 {
+	if newBeats >= 1 {
 		(*m.definition.parts)[m.CurrentPartID()].Beats = uint8(newBeats)
+		if m.cursorPos.Beat >= uint8(newBeats) {
+			m.cursorPos.Beat = uint8(newBeats - 1)
+		}
 	}
 }
 
