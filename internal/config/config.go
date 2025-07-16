@@ -198,13 +198,13 @@ func GetDefaultTemplate() Template {
 	initNote := uint8(60)
 	defaultTemplate.Lines = []grid.LineDefinition{
 		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
-		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
-		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
-		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
-		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
-		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
-		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
-		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote + 1},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote + 2},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote + 3},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote + 4},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote + 5},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote + 6},
+		{Channel: 10, MsgType: grid.MessageTypeNote, Note: initNote + 7},
 	}
 	return defaultTemplate
 }

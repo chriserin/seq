@@ -674,7 +674,7 @@ func TestNewLine(t *testing.T) {
 			initialLineCount:    8,
 			expectedLineCount:   9,
 			expectedLastChannel: 10,
-			expectedLastNote:    61,
+			expectedLastNote:    68,
 			description:         "Should add a new line with channel from last line and note+1",
 		},
 		{
@@ -692,7 +692,7 @@ func TestNewLine(t *testing.T) {
 			initialLineCount:    8,
 			expectedLineCount:   11,
 			expectedLastChannel: 10,
-			expectedLastNote:    63,
+			expectedLastNote:    70,
 			description:         "Should add three new lines with incrementing note values",
 		},
 		{
@@ -711,7 +711,7 @@ func TestNewLine(t *testing.T) {
 			initialLineCount:    8,
 			expectedLineCount:   16,
 			expectedLastChannel: 10,
-			expectedLastNote:    68,
+			expectedLastNote:    75,
 			description:         "Should cap at 16 lines total",
 		},
 	}
