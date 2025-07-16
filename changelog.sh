@@ -20,7 +20,7 @@ fi
 
 date=$(git log -1 --format=%cd --date=short "$startTag")
 
-echo "## [${startTag}](https://github.com/chriserin/seq/compare/${startTag}...${lastTag}) ($date)"
+echo "## [${startTag}](https://github.com/chriserin/seq/compare/${lastTag}...${startTag}) ($date)"
 echo ""
 
 features=$(git log --oneline "${startTag}"..."${lastTag}" | awk ' $2 ~ /^feat/ {print}')
