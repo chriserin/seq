@@ -8,6 +8,7 @@ if [ -z "$tag" ]; then
     exit 1
 fi
 
+git tag "$tag"
 changeLogEntry=$(./changelog.sh)
 
 currentChangeLog=$(tail -n +2 CHANGELOG.md)
@@ -22,6 +23,8 @@ currentChangeLog=$(tail -n +2 CHANGELOG.md)
 
 git add CHANGELOG.md
 git commit -m "chore: Update CHANGELOG.md for release $tag"
+
+git tag --delete "$tag"
 
 git tag "$tag" -m "Release $tag"
 
