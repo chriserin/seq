@@ -20,7 +20,7 @@ fi
 
 date=$(git log -1 --format=%cd --date=short "$startTag")
 
-echo "## [${startTag}](github.com/chriserin/seq/compare/${startTag}...${lastTag}) ($date)"
+echo "## [${startTag}](https://github.com/chriserin/seq/compare/${startTag}...${lastTag}) ($date)"
 echo ""
 
 features=$(git log --oneline "${startTag}"..."${lastTag}" | awk ' $2 ~ /^feat/ {print}')
@@ -31,7 +31,7 @@ if [ -n "$features" ]; then
     while IFS= read -r line; do
         commit_hash=$(echo "$line" | awk '{print $1}')
         commit_message=$(echo "$line" | cut -d' ' -f3-)
-        echo "* $commit_message [${commit_hash}](github.com/chriserin/seq/commit/${commit_hash}) "
+        echo "* $commit_message [${commit_hash}](https://github.com/chriserin/seq/commit/${commit_hash}) "
     done <<<"$features"
 else
     echo "### Features"
@@ -49,7 +49,7 @@ if [ -n "$fixes" ]; then
     while IFS= read -r line; do
         commit_hash=$(echo "$line" | awk '{print $1}')
         commit_message=$(echo "$line" | cut -d' ' -f3-)
-        echo "* $commit_message [${commit_hash}](github.com/chriserin/seq/commit/${commit_hash}) "
+        echo "* $commit_message [${commit_hash}](https://github.com/chriserin/seq/commit/${commit_hash}) "
     done <<<"$fixes"
 else
     echo "### Fixes"
