@@ -1,6 +1,9 @@
 name: Build
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 env:
@@ -181,4 +184,5 @@ jobs:
           tar -cvzf seq_darwin_amd64.tar.gz output/seq_darwin_amd64
           tar -cvzf seq_darwin_arm64.tar.gz output/seq_darwin_arm64
 
-          gh release create "${GITHUB_REF}" -- *.tar.gz
+          notes=$(changelog.sh)
+          gh release create "${GITHUB_REF}" --notes=${notes} -- *.tar.gz
