@@ -8,6 +8,21 @@ if [ -z "$tag" ]; then
     exit 1
 fi
 
+changeLogEntry=$(./changelog.sh)
+
+currentChangeLog=$(tail -n +2 CHANGELOG.md)
+
+{
+    echo "# CHANGELOG"
+    echo ""
+    echo "$changeLogEntry"
+    echo ""
+    echo "$currentChangeLog"
+} >CHANGELOG.md
+
+git add CHANGELOG.md
+git commit -m "chore: Update CHANGELOG.md for release $tag"
+
 git tag "$tag" -m "Release $tag"
 
 if [ $? -ne 0 ]; then
@@ -25,19 +40,3 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Changes and tags pushed successfully."
-
-changeLogEntry=$(./changelog.sh)
-
-currentChangeLog=$(tail -n +2 CHANGELOG.md)
-
-{
-    echo "# CHANGELOG"
-    echo ""
-    echo "$changeLogEntry"
-    echo ""
-    echo "$currentChangeLog"
-} >CHANGELOG.md
-
-git add CHANGELOG.md
-git commit -m "chore: Update CHANGELOG.md for release $tag"
-git push
