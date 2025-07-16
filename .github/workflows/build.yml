@@ -143,7 +143,6 @@ jobs:
           path: seq-darwin-${{ matrix.arch }}
 
   release:
-    if: github.event_name == 'workflow_dispatch'  # Only run on manual trigger
     needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:

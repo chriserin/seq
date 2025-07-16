@@ -3,6 +3,11 @@ set -e
 
 tag="$1"
 
+if [ -z "$tag" ]; then
+    echo "Usage: $0 <tag>"
+    exit 1
+fi
+
 git tag "$tag" -m "Release $tag"
 
 if [ $? -ne 0 ]; then
@@ -26,11 +31,11 @@ changeLogEntry=$(./changelog.sh)
 currentChangeLog=$(tail -n +2 CHANGELOG.md)
 
 {
-    echo "# CHANGELOG",
-    echo "",
-    echo "$changeLogEntry",
-    echo "",
-    echo "$currentChangeLog",
+    echo "# CHANGELOG"
+    echo ""
+    echo "$changeLogEntry"
+    echo ""
+    echo "$currentChangeLog"
 } >CHANGELOG.md
 
 git add CHANGELOG.md
