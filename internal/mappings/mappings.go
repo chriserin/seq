@@ -233,7 +233,6 @@ var mappings = registry{
 	k("ctrl+t"): TempoInputSwitch,
 	k("ctrl+u"): OverlayStackToggle,
 	k("ctrl+v"): Save,
-	k("ctrl+w"): ToggleWaitMode,
 	k("ctrl+y"): RatchetInputSwitch,
 	k("a"):      AccentDecrease,
 	k("b", "b"): ActionAddSkipBeat,
