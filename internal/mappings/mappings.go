@@ -102,7 +102,7 @@ const (
 	ActionAddLineReset
 	ActionAddLineReverse
 	ActionAddSkipBeat
-	ActionAddReset
+	ActionAddResetAll
 	ActionAddLineBounce
 	ActionAddLineDelay
 	ActionAddSpecificValue
@@ -208,7 +208,7 @@ var mappings = registry{
 	k("M"):      Solo,
 	k("R"):      RatchetIncrease,
 	k("S"):      ActionAddLineReverse,
-	k("T"):      ActionAddReset,
+	k("T"):      ActionAddResetAll,
 	k("U"):      Redo,
 	k("W"):      WaitIncrease,
 	k("[", "c"): PrevTheme,

@@ -16,7 +16,7 @@ const (
 	ActionLineReset
 	ActionLineReverse
 	ActionLineSkipBeat
-	ActionReset
+	ActionResetAll
 	ActionLineBounce
 	ActionLineDelay
 	ActionSpecificValue

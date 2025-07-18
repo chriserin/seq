@@ -48,7 +48,7 @@ var Lineactions = map[grid.Action]lineaction{
 	grid.ActionLineReset:     {'↔', "#cf142b"},
 	grid.ActionLineReverse:   {'←', "#f8730e"},
 	grid.ActionLineSkipBeat:  {'⇒', "#a9e5bb"},
-	grid.ActionReset:         {'⇚', "#fcf6b1"},
+	grid.ActionResetAll:      {'⇚', "#fcf6b1"},
 	grid.ActionLineBounce:    {'↨', "#fcf6b1"},
 	grid.ActionLineDelay:     {'ℤ', "#cc4bc2"},
 	grid.ActionSpecificValue: {'V', "#cc4bc2"},

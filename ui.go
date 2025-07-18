@@ -2126,8 +2126,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.AddAction(grid.ActionLineReverse)
 	case mappings.ActionAddSkipBeat:
 		m.AddAction(grid.ActionLineSkipBeat)
-	case mappings.ActionAddReset:
-		m.AddAction(grid.ActionReset)
+	case mappings.ActionAddResetAll:
+		m.AddAction(grid.ActionResetAll)
 	case mappings.ActionAddLineBounce:
 		m.AddAction(grid.ActionLineBounce)
 	case mappings.ActionAddLineDelay:
@@ -2880,7 +2880,7 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 		m.advancePlayState(combinedPattern, lineIndex)
 	case grid.ActionLineDelay:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
-	case grid.ActionReset:
+	case grid.ActionResetAll:
 		for i := range m.playState {
 			m.playState[i].currentBeat = 0
 			m.playState[i].direction = 1
