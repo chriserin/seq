@@ -2273,6 +2273,9 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.OmitSeventh:
 		m.EnsureChord()
 		m.OmitChordNote(theory.OmitSeventh)
+	case mappings.OmitOctave:
+		m.EnsureChord()
+		m.OmitChordNote(theory.OmitOctave)
 	case mappings.OmitNinth:
 		m.EnsureChord()
 		m.OmitChordNote(theory.OmitNinth)

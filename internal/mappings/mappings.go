@@ -146,6 +146,7 @@ const (
 	OmitFifth
 	OmitSixth
 	OmitSeventh
+	OmitOctave
 	OmitNinth
 	RemoveChord
 	ConvertToNotes
@@ -305,7 +306,7 @@ var chordMappings = registry{
 	k("3", "M"): MajorThird,
 	k("4", "p"): PerfectFourth,
 	k("6", "M"): MajorSixth,
-	k("8", "o"): Octave,
+	k("8", "p"): Octave,
 	k("9", "m"): MinorNinth,
 	k("9", "M"): MajorNinth,
 	k("[", "i"): DecreaseInversions,
@@ -317,6 +318,7 @@ var chordMappings = registry{
 	k("5", "o"): OmitFifth,
 	k("6", "o"): OmitSixth,
 	k("7", "o"): OmitSeventh,
+	k("8", "o"): OmitOctave,
 	k("9", "o"): OmitNinth,
 	k("D"):      RemoveChord,
 	k("]", "p"): NextArpeggio,

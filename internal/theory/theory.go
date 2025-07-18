@@ -108,6 +108,7 @@ const (
 	OmitFifth      = Dim5 | Perfect5 | Aug5
 	OmitSixth      = Major6
 	OmitSeventh    = Minor7 | Major7
+	OmitOctave     = Octave
 	OmitNinth      = Minor9 | Major9
 	OmitEleventh   = Dim11 | Perfect11 | Aug11
 	OmitThirteenth = Dim13 | Major13 | Aug13
