@@ -17,12 +17,14 @@ This document lists all keyboard mappings for the sequencer application.
 | CursorFirstLine | b + f | Move cursor to first line |
 | AccentIncrease | A | Increase accent value for current note. |
 | AccentDecrease | a | Decrease accent value for current note. |
-| ActionAddLineBounce | b + B | Add line bounce action to current note.  When the playback cursor reaches this action it will reverse direction, and reverse again when reaching the line beginning. creating a bouncing effect. |
-| ActionAddSkipBeat | b + b | Add skip beat action to current line.  When the playback cursor reaches this action, it will advance an additional beat.  |
-| ActionAddLineReverse | S | Add line reverse action to current line.  When the playback cursor reaches this action, the playback will reverse for this line. |
-| ActionAddResetAll | T | Add reset action all to current line.  When the playback cursor reaches this action, all playback cursors will reset to the first beat.  |
-| ActionAddLineReset | s | Add line reset action to current note.  When the playback cursor reaches this action, the playback cursor will reset to the first beat. |
-| ActionAddLineDelay | z | Add line delay action to current note |
+| ActionAddLineReset | s + s | Add line reset action to current line.  When the playback cursor reaches this action, the playback cursor will reset to the first beat. |
+| ActionAddResetAll | s + S | Add reset action all to current line.  When the playback cursor reaches this action, all playback cursors will reset to the first beat.  |
+| ActionAddLineBounce | s + b | Add line bounce action to current line.  When the playback cursor reaches this action it will reverse direction, and reverse again when reaching the line beginning creating a bouncing effect. |
+| ActionAddLineBounceAll | s + B | Add line bounce all action to current line.  When the playback cursor reaches this action all playback cursors will reverse direction, and reverse again when reaching the line beginning creating a bouncing effect. |
+| ActionAddSkipBeat | s + k | Add skip beat all action to current line.  When the playback cursor reaches this action, all the playback cursors will advance an additional beat.  |
+| ActionAddSkipBeatAll | s + K | Add skip beat action to current line.  When the playback cursor reaches this action, it will advance an additional beat.  |
+| ActionAddLineReverse | s + r | Add line reverse action to current line.  When the playback cursor reaches this action, the playback will reverse for this line. |
+| ActionAddLineDelay | s + z | Add line delay action to current line. |
 | ClearOverlay | C | Remove all notes and actions from the current overlay layer |
 | GateIncrease | G | Increases the gate value for current note.  The gate corresponds to the length of the note. |
 | GateDecrease | g | Decreases the gate value for current note.  The gate corresponds to the length of the note. |
