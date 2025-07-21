@@ -14,10 +14,13 @@ type Action uint8
 const (
 	ActionNothing Action = iota
 	ActionLineReset
+	ActionLineResetAll
 	ActionLineReverse
+	// ActionLineReverseAll
 	ActionLineSkipBeat
-	ActionResetAll
+	ActionLineSkipBeatAll
 	ActionLineBounce
+	ActionLineBounceAll
 	ActionLineDelay
 	ActionSpecificValue
 )

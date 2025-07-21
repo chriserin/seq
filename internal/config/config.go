@@ -39,19 +39,22 @@ var Accents = []Accent{
 const C1 = 36
 
 type lineaction struct {
-	Shape rune
+	Shape string
 	Color lipgloss.Color
 }
 
 var Lineactions = map[grid.Action]lineaction{
-	grid.ActionNothing:       {' ', "#000000"},
-	grid.ActionLineReset:     {'↔', "#cf142b"},
-	grid.ActionLineReverse:   {'←', "#f8730e"},
-	grid.ActionLineSkipBeat:  {'⇒', "#a9e5bb"},
-	grid.ActionResetAll:      {'⇚', "#fcf6b1"},
-	grid.ActionLineBounce:    {'↨', "#fcf6b1"},
-	grid.ActionLineDelay:     {'ℤ', "#cc4bc2"},
-	grid.ActionSpecificValue: {'V', "#cc4bc2"},
+	grid.ActionNothing:     {" ", "#000000"},
+	grid.ActionLineReset:   {"↔", "#cf142b"},
+	grid.ActionLineReverse: {"←", "#f8730e"},
+	// grid.ActionLineReverseAll:  {"←͚͒", "#f8730e"},
+	grid.ActionLineSkipBeat:    {"⇒", "#a9e5bb"},
+	grid.ActionLineSkipBeatAll: {"⇛", "#a9e5bb"},
+	grid.ActionLineResetAll:    {"⇚", "#fcf6b1"},
+	grid.ActionLineBounce:      {"↨", "#fcf6b1"},
+	grid.ActionLineBounceAll:   {"↨͚͒", "#fcf6b1"},
+	grid.ActionLineDelay:       {"ℤ", "#cc4bc2"},
+	grid.ActionSpecificValue:   {"V", "#cc4bc2"},
 }
 
 type ratchetDiacritical string

@@ -2126,10 +2126,14 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.AddAction(grid.ActionLineReverse)
 	case mappings.ActionAddSkipBeat:
 		m.AddAction(grid.ActionLineSkipBeat)
-	case mappings.ActionAddResetAll:
-		m.AddAction(grid.ActionResetAll)
+	case mappings.ActionAddSkipBeatAll:
+		m.AddAction(grid.ActionLineSkipBeatAll)
+	case mappings.ActionAddLineResetAll:
+		m.AddAction(grid.ActionLineResetAll)
 	case mappings.ActionAddLineBounce:
 		m.AddAction(grid.ActionLineBounce)
+	case mappings.ActionAddLineBounceAll:
+		m.AddAction(grid.ActionLineBounceAll)
 	case mappings.ActionAddLineDelay:
 		m.AddAction(grid.ActionLineDelay)
 	case mappings.ActionAddSpecificValue:
@@ -2883,12 +2887,30 @@ func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bo
 		m.advancePlayState(combinedPattern, lineIndex)
 	case grid.ActionLineDelay:
 		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
-	case grid.ActionResetAll:
+	case grid.ActionLineResetAll:
 		for i := range m.playState {
 			m.playState[i].currentBeat = 0
 			m.playState[i].direction = 1
 			m.playState[i].resetLocation = 0
 			m.playState[i].resetDirection = 1
+		}
+		return false
+	case grid.ActionLineBounceAll:
+		for i := range m.playState {
+			if i <= lineIndex {
+				m.playState[i].currentBeat = uint8(max(m.playState[i].currentBeat-1, 0))
+			}
+			m.playState[i].direction = -1
+		}
+		return false
+	case grid.ActionLineSkipBeatAll:
+		for i := range m.playState {
+			if i <= lineIndex {
+				m.advancePlayState(combinedPattern, i)
+			} else {
+				m.advancePlayState(combinedPattern, i)
+				m.advancePlayState(combinedPattern, i)
+			}
 		}
 		return false
 	}

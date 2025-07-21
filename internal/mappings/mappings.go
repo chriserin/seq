@@ -100,10 +100,13 @@ const (
 	RatchetIncrease
 	RatchetDecrease
 	ActionAddLineReset
+	ActionAddLineResetAll
 	ActionAddLineReverse
+	// ActionAddLineReverseAll
 	ActionAddSkipBeat
-	ActionAddResetAll
+	ActionAddSkipBeatAll
 	ActionAddLineBounce
+	ActionAddLineBounceAll
 	ActionAddLineDelay
 	ActionAddSpecificValue
 	SelectKeyLine
@@ -197,7 +200,6 @@ var mappings = registry{
 	k("b", "f"): CursorFirstLine,
 	k("?"):      Help,
 	k("A"):      AccentIncrease,
-	k("b", "B"): ActionAddLineBounce,
 	k("C"):      ClearOverlay,
 	k("G"):      GateIncrease,
 	k("E"):      GateBigIncrease,
@@ -208,8 +210,6 @@ var mappings = registry{
 	k("Y"):      SelectKeyLine,
 	k("M"):      Solo,
 	k("R"):      RatchetIncrease,
-	k("S"):      ActionAddLineReverse,
-	k("T"):      ActionAddResetAll,
 	k("U"):      Redo,
 	k("W"):      WaitIncrease,
 	k("[", "c"): PrevTheme,
@@ -235,7 +235,6 @@ var mappings = registry{
 	k("ctrl+v"): Save,
 	k("ctrl+y"): RatchetInputSwitch,
 	k("a"):      AccentDecrease,
-	k("b", "b"): ActionAddSkipBeat,
 	k("c"):      ClearLine,
 	k("d"):      NoteRemove,
 	k("b", "e"): TogglePlayEdit,
@@ -255,13 +254,20 @@ var mappings = registry{
 	k("p"):      Paste,
 	k("q"):      Quit,
 	k("r"):      RatchetDecrease,
-	k("s"):      ActionAddLineReset,
+	k("s", "s"): ActionAddLineReset,
+	k("s", "S"): ActionAddLineResetAll,
+	k("s", "b"): ActionAddLineBounce,
+	k("s", "B"): ActionAddLineBounceAll,
+	k("s", "k"): ActionAddSkipBeat,
+	k("s", "K"): ActionAddSkipBeatAll,
+	k("s", "r"): ActionAddLineReverse,
+	// k("s", "R"): ActionAddLineReverseAll,
+	k("s", "z"): ActionAddLineDelay,
 	k("u"):      Undo,
 	k("v"):      ToggleVisualMode,
 	k("w"):      WaitDecrease,
 	k("x"):      OverlayNoteRemove,
 	k("y"):      Yank,
-	k("z"):      ActionAddLineDelay,
 	k("{"):      NextOverlay,
 	k("}"):      PrevOverlay,
 	k("enter"):  Enter,

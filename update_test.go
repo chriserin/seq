@@ -436,8 +436,8 @@ func TestActionMappings(t *testing.T) {
 		},
 		{
 			name:           "ActionAddReset sets ActionReset",
-			commands:       []any{mappings.ActionAddResetAll},
-			expectedAction: grid.ActionResetAll,
+			commands:       []any{mappings.ActionAddLineResetAll},
+			expectedAction: grid.ActionLineResetAll,
 			description:    "Should set note action to ActionReset",
 		},
 		{
