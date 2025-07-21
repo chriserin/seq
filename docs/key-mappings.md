@@ -22,6 +22,7 @@ This document lists all keyboard mappings for the sequencer application.
 | ActionAddLineReverse | S | Add line reverse action to current line.  When the playback cursor reaches this action, the playback will reverse for this line. |
 | ActionAddResetAll | T | Add reset action all to current line.  When the playback cursor reaches this action, all playback cursors will reset to the first beat.  |
 | ActionAddLineReset | s | Add line reset action to current note.  When the playback cursor reaches this action, the playback cursor will reset to the first beat. |
+| ActionAddLineDelay | z | Add line delay action to current note |
 | ClearOverlay | C | Remove all notes and actions from the current overlay layer |
 | GateIncrease | G | Increases the gate value for current note.  The gate corresponds to the length of the note. |
 | GateDecrease | g | Decreases the gate value for current note.  The gate corresponds to the length of the note. |
@@ -78,7 +79,6 @@ This document lists all keyboard mappings for the sequencer application.
 | Undo | u | Undo last action |
 | Redo | U | Redo last undone action |
 | ToggleVisualMode | v | Toggle visual selection.  SEE VISUAL MODE |
-| ActionAddLineDelay | z | Add line delay action to current note |
 | NextOverlay | { | Move to next overlay SEE OVERLAYS|
 | PrevOverlay | } | Move to previous overlay SEE OVERLAYS|
 | Enter | Enter | Confirm current action, move focus to the grid when elsewhere, or escape from visual mode |
@@ -95,7 +95,7 @@ default mode is Pattern Mode - Fill.
 This is the default mode.  When seq starts, it starts in Pattern Mode - Fill.
 
 Numbers will a note every X beats from the cursor to the end of the line.  If a
-note already exists in that location the note will be removed. 
+note already exists in that location the note will be removed.
 
 EXAMPLE: With the cursor at the start of the line `1` will add a note at every
 beat.  `1` will then remove a note at every beat.
@@ -152,7 +152,7 @@ at the top of the chord.
 
 Some mappings exist in Pattern Fill mode as well.  `L` will move the entire
 chord to the right one beat.  `A` will increase the accent value of every note
-in the chord.  
+in the chord.
 
 Pattern mode (value) also works differently in chord mode. Enter pattern
 mode for accents with `na` and then use `shift+2` to increase the accent
@@ -220,18 +220,18 @@ arrangement view.
 
 | Mapping | Key Binding | Description |
 |---------|-------------|-------------|
-| CursorUp |  k| Move the cursor to the previous arrangement section   |    
-| CursorDown | j | Move the cursor to the next arrangement section   |  
-| CursorLeft | h | Move the cursor to the section attribute to the left  |  
-| CursorRight | l | Move the cursor to the section attribute to the right   | 
-| Increase | + | Increase the value of the currently selected section attribute   |    
-| Decrease | - | Decrease the value of the currently selected section attribute   |    
-| GroupNodes | g | Group one or two parts together   |  
-| DeleteNode | d | Remove the current section attribute   |  
+| CursorUp |  k| Move the cursor to the previous arrangement section   |
+| CursorDown | j | Move the cursor to the next arrangement section   |
+| CursorLeft | h | Move the cursor to the section attribute to the left  |
+| CursorRight | l | Move the cursor to the section attribute to the right   |
+| Increase | + | Increase the value of the currently selected section attribute   |
+| Decrease | - | Decrease the value of the currently selected section attribute   |
+| GroupNodes | g | Group one or two parts together   |
+| DeleteNode | d | Remove the current section attribute   |
 | MovePartDown | J | Move the current section below the next section   |
-| MovePartUp | K | Move the current section above the next section   |  
-| RenamePart | R | Rename the current part   |  
-| Escape | esc / enter  | Move focus back to the grid   |      
+| MovePartUp | K | Move the current section above the next section   |
+| RenamePart | R | Rename the current part   |
+| Escape | esc / enter  | Move focus back to the grid   |
 
 
 ## Overlay Key Mappings
@@ -241,12 +241,12 @@ Once having focused the overlay key inputs with `ctrl+o` a new set of mappings a
 
 | Mapping | Key Binding | Description |
 |---------|-------------|-------------|
-| FocusWidth | :  |    |   
-| FocusInterval | /  |    |
-| FocusShift | ^  |    |   
-| FocusStart | S |    |   
-| RemoveStart | s |    |  
-| Increase | + |    |     
-| Decrease | - |    |     
-| Escape | esc / enter  |    |       
+| FocusWidth | :  | Select the width attribute   |
+| FocusInterval | /  |  Select the interval attribute  |
+| FocusShift | ^  |  Select the shift attribute |
+| FocusStart | S |  Select the start attribute  |
+| RemoveStart | s |  Remove the start attribute (set to zero)  |
+| Increase | + |  Increase the selected value  |
+| Decrease | - |  Decrease the selected value  |
+| Escape | esc / enter  |  Return focus to the grid  |
 
