@@ -54,7 +54,7 @@ This document lists all keyboard mappings for the sequencer application.
 | TempoInputSwitch | Ctrl + t | Select the inputs that control the tempo and subdivision. Press once to select the tempo input, press again to select the subdivisions input.   |
 | OverlayStackToggle | Ctrl + u | Toggle the behaviour of the current overlay layer between three options: No association, press up, press down.  SEE OVERLAYS |
 | ChangePart | Ctrl + c | Change the part of the section to either an existing part or a new part |
-| ToggleArrangementView | Ctrl + a | Open the arrangement view when closed.  Focus the arrangement view while unfocused and open.  Press enter to move focus back to the grid.  While open and focused, close the arrangement view.  |
+| ToggleArrangementView | Ctrl + a | Open the arrangement view when closed.  Focus the arrangement view while unfocused and open.  Press enter to move focus back to the grid.  While open and focused, close the arrangement view. SEE ARRANGEMENT |
 | NewLine | Ctrl + l | Create a new line with a value 1 greater than the previous line |
 | New | Ctrl + n | Create a new sequence using the same template as the current sequence |
 | Save | Ctrl + v | Save the current sequence.  If not previously saved, you will be prompted to name the new file.  The file will be saved in the directory from which you opened seq |
