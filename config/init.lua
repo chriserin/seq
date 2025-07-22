@@ -40,6 +40,17 @@ seq.addtemplate({
 })
 
 seq.addtemplate({
+	name = "SVMA",
+	maxgatelength = 1,
+	uistyle = "plain",
+	lines = {
+		{ Channel, MessageType, C1, "BD" },
+		{ Channel, MessageType, 40, "SN" },
+		{ Channel, MessageType, 49, "H1" },
+	},
+})
+
+seq.addtemplate({
 	name = "PPHT",
 	maxgatelength = 1,
 	uistyle = "plain",
