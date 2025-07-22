@@ -432,9 +432,9 @@ func (c cursor) Matches(attribute SectionAttribute) bool {
 type SectionAttribute int
 
 const (
-	SectionStartBeat SectionAttribute = iota
+	SectionCycles SectionAttribute = iota
 	SectionStartCycle
-	SectionCycles
+	SectionStartBeat
 	SectionKeepCycles
 )
 

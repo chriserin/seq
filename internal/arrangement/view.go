@@ -16,9 +16,9 @@ func (m Model) View() string {
 	// Create stylish header
 	header := lipgloss.JoinHorizontal(lipgloss.Top,
 		lipgloss.PlaceHorizontal(24, lipgloss.Left, themes.AppTitleStyle.Render("Section "), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
-		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("Start Beat"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
-		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("⟳ Start"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
 		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("⟳ Amount"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("⟳ Start"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
+		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("Start Beat"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
 		lipgloss.PlaceHorizontal(12, lipgloss.Right, themes.AppTitleStyle.Render("⟳ Keep"), lipgloss.WithWhitespaceChars("─"), lipgloss.WithWhitespaceForeground(themes.ArrangementSelectedLineColor)),
 	)
 	buf.WriteString(header)
@@ -57,24 +57,25 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 			options = []lipgloss.WhitespaceOption{}
 		}
 
-		row := lipgloss.JoinHorizontal(lipgloss.Top,
-			lipgloss.PlaceHorizontal(22, lipgloss.Left, nodeName, options...),
-			lipgloss.PlaceHorizontal(12, lipgloss.Right, "", options...),
-			lipgloss.PlaceHorizontal(12, lipgloss.Right, "", options...),
-		)
-
 		// Display iterations
 		iterations := fmt.Sprintf("%d", node.Iterations)
-		iterationsText := ""
+
+		var iterationsText string
 		if isSelected && m.Focus {
 			iterationsText = themes.SelectedStyle.MarginLeft(1).Render(iterations)
 		} else {
 			iterationsText = themes.NumberStyle.Render(iterations)
 		}
 
+		row := lipgloss.JoinHorizontal(lipgloss.Top,
+			lipgloss.PlaceHorizontal(22, lipgloss.Left, nodeName, options...),
+			lipgloss.PlaceHorizontal(12, lipgloss.Right, iterationsText, options...),
+			lipgloss.PlaceHorizontal(12, lipgloss.Right, "", options...),
+		)
+
 		row = lipgloss.JoinHorizontal(lipgloss.Top,
 			row,
-			lipgloss.PlaceHorizontal(12, lipgloss.Right, iterationsText, options...),
+			lipgloss.PlaceHorizontal(12, lipgloss.Right, "", options...),
 			lipgloss.PlaceHorizontal(12, lipgloss.Right, "", options...),
 		)
 
@@ -127,28 +128,6 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 
 		selectedStyle := themes.SelectedStyle.MarginLeft(1)
 
-		// Handle start beat
-		startBeat := songSection.StartBeat
-		startBeatText := ""
-		if isSelected && m.Focus && m.oldCursor.attribute == SectionStartBeat {
-			startBeatText = selectedStyle.Render(fmt.Sprintf("%d", startBeat))
-		} else {
-			startBeatText = themes.NumberStyle.Render(fmt.Sprintf("%d", startBeat))
-		}
-		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
-			lipgloss.PlaceHorizontal(12, lipgloss.Right, startBeatText, options...))
-
-		// Handle start cycle
-		startCycle := songSection.StartCycles
-		startCycleText := ""
-		if isSelected && m.Focus && m.oldCursor.attribute == SectionStartCycle {
-			startCycleText = selectedStyle.Render(fmt.Sprintf("%d", startCycle))
-		} else {
-			startCycleText = themes.NumberStyle.Render(fmt.Sprintf("%d", startCycle))
-		}
-		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
-			lipgloss.PlaceHorizontal(12, lipgloss.Right, startCycleText, options...))
-
 		// Handle cycles
 		var cyclesString string
 		if songSection.infinite {
@@ -165,6 +144,28 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		}
 		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
 			lipgloss.PlaceHorizontal(12, lipgloss.Right, cyclesText, options...))
+
+		// Handle start cycle
+		startCycle := songSection.StartCycles
+		startCycleText := ""
+		if isSelected && m.Focus && m.oldCursor.attribute == SectionStartCycle {
+			startCycleText = selectedStyle.Render(fmt.Sprintf("%d", startCycle))
+		} else {
+			startCycleText = themes.NumberStyle.Render(fmt.Sprintf("%d", startCycle))
+		}
+		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
+			lipgloss.PlaceHorizontal(12, lipgloss.Right, startCycleText, options...))
+
+		// Handle start beat
+		startBeat := songSection.StartBeat
+		startBeatText := ""
+		if isSelected && m.Focus && m.oldCursor.attribute == SectionStartBeat {
+			startBeatText = selectedStyle.Render(fmt.Sprintf("%d", startBeat))
+		} else {
+			startBeatText = themes.NumberStyle.Render(fmt.Sprintf("%d", startBeat))
+		}
+		row = lipgloss.JoinHorizontal(lipgloss.Top, row,
+			lipgloss.PlaceHorizontal(12, lipgloss.Right, startBeatText, options...))
 
 		// Handle keep cycles
 		var keepCycles string
