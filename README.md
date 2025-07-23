@@ -17,22 +17,20 @@ SEQ is a terminal-based MIDI sequencer that brings midi sequencer capabilities t
 - **MIDI Integration**: Full MIDI output support for hardware and software instruments
 - **Vim-inspired Navigation**: Familiar key bindings for efficient workflow
 
-## Installation
+## Install from package
 
-### Download from a releases archive
+Pre-built packages for macOS and Linux are found on the [Releases](https://github.com/chriserin/seq/releases) page.
 
-TBD
+## Install from Source
 
-### Build from Source
-
-#### Dependencies MACOS
+### Dependencies MACOS
 
 ```
 # Lua 5.4
 brew install lua@5.4-dev
 ```
 
-#### Dependencies Linux
+### Dependencies Linux
 
 ```
 sudo apt-get install liblua5.4-dev

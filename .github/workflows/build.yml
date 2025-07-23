@@ -168,20 +168,28 @@ jobs:
 
       - name: Create release directories
         run: |
-          mkdir -p output/seq_linux_amd64
-          mkdir -p output/seq_darwin_amd64
-          mkdir -p output/seq_darwin_arm64
+          mkdir -p output/seq-linux-X86_64/bin
+          mkdir -p output/seq-darwin-X86_64/bin
+          mkdir -p output/seq-darwin-arm64/bin
 
-          mv seq-linux-amd64 output/seq_linux_amd64/seq
-          mv seq-darwin-amd64 output/seq_darwin_amd64/seq
-          mv seq-darwin-arm64 output/seq_darwin_arm64/seq
+          mv seq-linux-X86_64 output/seq-linux-amd64/bin/seq
+          mv seq-darwin-X86_64 output/seq-darwin-amd64/bin/seq
+          mv seq-darwin-arm64 output/seq-darwin-arm64/bin/seq
           #
           # Make them executable
-          chmod +x output/*/seq
+          chmod +x output/*/bin/seq
 
-          tar -cvzf seq_linux_amd64.tar.gz output/seq_linux_amd64
-          tar -cvzf seq_darwin_amd64.tar.gz output/seq_darwin_amd64
-          tar -cvzf seq_darwin_arm64.tar.gz output/seq_darwin_arm64
+          tar -cvzf seq-linux-X86_64.tar.gz -C output seq-linux-X86_64
+          tar -cvzf seq-darwin-X86_64.tar.gz -C output seq-darwin-X86_64
+          tar -cvzf seq-darwin-arm64.tar.gz -C output seq-darwin-arm64
 
           ./changelog.sh > release-notes.md
-          gh release create -F release-notes.md "${GITHUB_REF}" -- *.tar.gz
+          # if the github_ref has alpha or beta make this a prerelease
+          case "${GITHUB_REF}" in
+            *alpha*|*beta*)
+              gh release create --prerelease -F release-notes.md "${GITHUB_REF}" -- *.tar.gz
+              ;;
+            *)
+              gh release create -F release-notes.md "${GITHUB_REF}" -- *.tar.gz
+              ;;
+          esac

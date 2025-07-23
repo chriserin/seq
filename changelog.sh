@@ -18,6 +18,31 @@ if [ -z "$lastTag" ]; then
     exit 0
 fi
 
+cat <<EOF
+## Install
+
+### macOS (x86_64)
+
+1. Download seq-macos-x86_64.tar.gz
+2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf seq-macos-x86_64.tar.gz
+4. Run ./seq-macos-x86_64/bin/seq
+
+### macOS (arm64)
+
+1. Download seq-macos-arm64.tar.gz
+2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf seq-macos-arm64.tar.gz
+4. Run ./seq-macos-arm64/bin/seq
+
+### Linux (x86_64)
+
+1. Download seq-linux-x86_64.tar.gz
+2. Extract: tar xzvf seq-linux-x86_64.tar.gz
+3. Run ./seq-linux-x86_64/bin/seq
+
+EOF
+
 date=$(git log -1 --format=%cd --date=short "$startTag")
 
 echo "## [${startTag}](https://github.com/chriserin/seq/compare/${lastTag}...${startTag}) ($date)"
