@@ -1372,10 +1372,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			default:
 				m.Escape()
 			}
-		case "escape":
+		case "esc":
 			if m.selectionIndicator != SelectNothing {
 				m.textInput.Reset()
-				m.selectionIndicator = SelectNothing
+				m.Escape()
 				return m, nil
 			}
 		}

@@ -15,8 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestUpdateCursorMovements tests all cursor movement keybindings
-
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
@@ -176,6 +174,78 @@ func TestSave(t *testing.T) {
 			fileInfo, err := os.Stat(testFilename)
 			assert.NoError(t, err, "Should be able to get file info")
 			assert.Greater(t, fileInfo.Size(), int64(0), "File should not be empty")
+		})
+	}
+}
+
+func TestSaveBeforeFilename(t *testing.T) {
+	//NOTE: Using this temp directory method to work around limits on file name length within the input
+	tempDir, err := os.MkdirTemp("./", "ex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := os.RemoveAll(tempDir)
+		if err != nil {
+			t.Fatalf("Failed to remove temp dir: %v", err)
+		}
+	}()
+
+	tests := []struct {
+		name        string
+		commands    []any
+		description string
+	}{
+		{
+			name:        "Save Before Filename",
+			commands:    []any{mappings.Save, TestKey{Keys: filepath.Join(tempDir, "tsave")}, mappings.Enter},
+			description: "Should save file when filename is set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a temporary filename
+			testFilename := filepath.Join(tempDir, "tsave.seq")
+
+			m := createTestModel()
+
+			_, err := os.Stat(testFilename)
+			assert.True(t, os.IsNotExist(err), "File should not exist initially")
+
+			processCommands(tt.commands, m)
+
+			_, err = os.Stat(testFilename)
+			assert.NoError(t, err, tt.description+" - file should be created")
+
+			fileInfo, err := os.Stat(testFilename)
+			assert.NoError(t, err, "Should be able to get file info")
+			assert.Greater(t, fileInfo.Size(), int64(0), "File should not be empty")
+		})
+	}
+}
+
+func TestSaveBeforeFilenameEscape(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		commands    []any
+		description string
+	}{
+		{
+			name:        "Save Before Filename Escape",
+			commands:    []any{mappings.Save, TestKey{Keys: "X"}, mappings.Escape},
+			description: "Should save file when filename is set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+			assert.Equal(t, "", m.filename, tt.description+" - filename should be empty after escape")
+			assert.Equal(t, SelectNothing, m.selectionIndicator, tt.description+" - selection indicator should be SelectNothing after escape")
 		})
 	}
 }
