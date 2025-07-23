@@ -50,14 +50,14 @@ This document lists all keyboard mappings for the sequencer application.
 | BeatInputSwitch | Ctrl + b | This selects the current part's beats which can be increased or decreased with +/-.  Using this key combination again will move through selections Beats, Start Beats, Cycles and Start Cycles.  | |
 | AccentInputSwitch | Ctrl + e | This selects the controls that determine the accent values and target.  Use +/- to increase and decrease the selections. SEE ACCENT CONTROLS |
 | OverlayInputSwitch | Ctrl + o | This selects the inputs that control the overlay period/key.  SEE OVERLAY KEY CONTROLS |
-| SetupInputSwitch | Ctrl + s | Select the inputs that control the midi message for each line.  Pressing this key combo repeatedly will move through the channel, target and value inputs.  |
+| SetupInputSwitch | Ctrl + d | Select the inputs that control the midi message for each line.  Pressing this key combo repeatedly will move through the channel, target and value inputs.  |
 | TempoInputSwitch | Ctrl + t | Select the inputs that control the tempo and subdivision. Press once to select the tempo input, press again to select the subdivisions input.   |
 | OverlayStackToggle | Ctrl + u | Toggle the behaviour of the current overlay layer between three options: No association, press up, press down.  SEE OVERLAYS |
 | ChangePart | Ctrl + c | Change the part of the section to either an existing part or a new part |
 | ToggleArrangementView | Ctrl + a | Open the arrangement view when closed.  Focus the arrangement view while unfocused and open.  Press enter to move focus back to the grid.  While open and focused, close the arrangement view. SEE ARRANGEMENT |
 | NewLine | Ctrl + l | Create a new line with a value 1 greater than the previous line |
 | New | Ctrl + n | Create a new sequence using the same template as the current sequence |
-| Save | Ctrl + v | Save the current sequence.  If not previously saved, you will be prompted to name the new file.  The file will be saved in the directory from which you opened seq |
+| Save | Ctrl + s | Save the current sequence.  If not previously saved, you will be prompted to name the new file.  The file will be saved in the directory from which you opened seq |
 | ToggleAccentMode | n + a | Start Pattern Mode - Accent.  Use the facilities of pattern mode to increase or decrease the accent values of the line. SEE PATTERN MODE |
 | ToggleWaitMode | n + w | Start Pattern Mode - Wait.  Use the facilities of pattern mode to increase or decrease the wait values of the line. SEE PATTERN MODE |
 | ToggleGateMode | n + g |  Start Pattern Mode - Gate.  Use the facilities of pattern mode to increase or decrease the gate values of the line. SEE PATTERN MODE |

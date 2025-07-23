@@ -59,7 +59,7 @@ go build -tags lua54 -o seq
 1. **Launch SEQ**: `./seq`
 2. **Create a beat**: Move cursor with `hjkl`, press `1` for notes on every beat
 3. **Play**: Press `Space` to play/stop
-4. **Save**: `Ctrl+v` to save your sequence
+4. **Save**: `Ctrl+s` to save your sequence
 
 ### Basic Beat Creation Example
 
@@ -179,7 +179,7 @@ Some actions have "All" variants (`sS`, `sB`, `sK`) that affect all playback cur
 - `Ctrl+b`: Beat input controls
 - `Ctrl+e`: Accent input controls
 - `Ctrl+o`: Overlay key controls
-- `Ctrl+s`: MIDI setup controls
+- `Ctrl+d`: MIDI setup controls
 - `Ctrl+t`: Tempo controls
 
 > 📖 **Complete Reference**: [Key Mappings Documentation](docs/key-mappings.md)
@@ -212,7 +212,7 @@ Rotate patterns in any direction:
 ## File Operations
 
 - `Ctrl+n`: New sequence
-- `Ctrl+v`: Save sequence
+- `Ctrl+s`: Save sequence
 - `br`: Reload file (lose unsaved changes)
 - `q`: Quit
 
