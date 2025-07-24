@@ -1911,7 +1911,7 @@ func (m *model) NewSequence() {
 	m.cursorPos = GK(0, 0)
 	m.definition = InitDefinition(m.definition.template, m.definition.instrument)
 	m.arrangement = arrangement.InitModel(m.definition.arrangement, m.definition.parts)
-	m.currentOverlay = m.CurrentPart().Overlays
+	m.ResetCurrentOverlay()
 }
 
 func (m model) NeedsWrite() bool {

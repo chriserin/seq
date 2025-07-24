@@ -15,17 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createTestModel(modelFns ...modelFunc) model {
-
-	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
-
-	for _, fn := range modelFns {
-		m = fn(&m)
-	}
-
-	return m
-}
-
 type TestKey struct {
 	Keys string
 }
@@ -106,6 +95,17 @@ func getKeyMsgs(command mappings.Command) []tea.KeyMsg {
 
 type modelFunc func(m *model) model
 
+func createTestModel(modelFns ...modelFunc) model {
+
+	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
+
+	for _, fn := range modelFns {
+		m = fn(&m)
+	}
+
+	return m
+}
+
 func WithCurosrPos(pos grid.GridKey) modelFunc {
 	return func(m *model) model {
 		m.cursorPos = pos
@@ -117,6 +117,7 @@ func WithNonRootOverlay(overlayKey overlaykey.OverlayPeriodicity) modelFunc {
 	return func(m *model) model {
 		(*m.definition.parts)[0].Overlays = m.CurrentPart().Overlays.Add(overlayKey)
 		m.currentOverlay = m.CurrentPart().Overlays.FindAboveOverlay(overlayKey)
+		m.overlayKeyEdit.SetOverlayKey(overlayKey)
 		return *m
 	}
 }
@@ -270,13 +271,17 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(
+				WithNonRootOverlay(overlaykey.InitOverlayKey(2, 1)),
+			)
 
 			m, _ = processCommands(tt.commands, m)
 
 			note, exists := m.CurrentNote()
 			assert.False(t, exists, tt.description+" - note should not exist after new sequence")
 			assert.Equal(t, zeronote, note, tt.description+" - note should be zero note")
+			assert.Equal(t, overlaykey.InitOverlayKey(1, 1), m.currentOverlay.Key, tt.description+" - current overlay should be reset")
+			assert.Equal(t, overlaykey.InitOverlayKey(1, 1), m.overlayKeyEdit.GetKey(), tt.description+" - current overlay should be reset")
 
 			assert.Equal(t, grid.GridKey{Line: 0, Beat: 0}, m.cursorPos, "Cursor should be reset to origin")
 		})
