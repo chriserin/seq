@@ -422,7 +422,7 @@ func TestSetupCCChange(t *testing.T) {
 	}
 }
 
-func TestBeatInputSwitchIncrease(t *testing.T) {
+func TestBeatInputSwitch(t *testing.T) {
 	tests := []struct {
 		name          string
 		commands      []any
@@ -490,28 +490,28 @@ func TestBeatInputSwitchCyclesIncrease(t *testing.T) {
 	}{
 		{
 			name:           "Beat Input Switch Cycles with Increase",
-			commands:       []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			commands:       []any{mappings.CyclesInputSwitch, mappings.Increase},
 			initialCycles:  4,
 			expectedCycles: 5,
 			description:    "Three beat input switches should select cycles and increase should increment it",
 		},
 		{
 			name:           "Beat Input Switch Cycles with Decrease",
-			commands:       []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			commands:       []any{mappings.CyclesInputSwitch, mappings.Decrease},
 			initialCycles:  4,
 			expectedCycles: 3,
 			description:    "Three beat input switches should select cycles and decrease should decrement it",
 		},
 		{
 			name:           "Beat Input Switch Cycles with Increase At Upper Boundary",
-			commands:       []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			commands:       []any{mappings.CyclesInputSwitch, mappings.Increase},
 			initialCycles:  127,
 			expectedCycles: 127,
 			description:    "Three beat input switches should select cycles and increase should not go above 127",
 		},
 		{
 			name:           "Beat Input Switch Cycles with Decrease At Lower Boundary",
-			commands:       []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			commands:       []any{mappings.CyclesInputSwitch, mappings.Decrease},
 			initialCycles:  0,
 			expectedCycles: 0,
 			description:    "Three beat input switches should select cycles and decrease should not go below 0",
@@ -609,28 +609,28 @@ func TestBeatInputSwitchStartCyclesIncrease(t *testing.T) {
 	}{
 		{
 			name:                "Beat Input Switch StartCycles with Increase",
-			commands:            []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			commands:            []any{mappings.CyclesInputSwitch, mappings.CyclesInputSwitch, mappings.Increase},
 			initialStartCycles:  4,
 			expectedStartCycles: 5,
 			description:         "Two beat input switches should select start cycles and increase should increment it",
 		},
 		{
 			name:                "Beat Input Switch StartCycles with Decrease",
-			commands:            []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			commands:            []any{mappings.CyclesInputSwitch, mappings.CyclesInputSwitch, mappings.Decrease},
 			initialStartCycles:  4,
 			expectedStartCycles: 3,
 			description:         "Two beat input switches should select start cycles and decrease should decrement it",
 		},
 		{
 			name:                "Beat Input Switch StartCycles with Increase At Upper Boundary",
-			commands:            []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Increase},
+			commands:            []any{mappings.CyclesInputSwitch, mappings.CyclesInputSwitch, mappings.Increase},
 			initialStartCycles:  127,
 			expectedStartCycles: 127,
 			description:         "Two beat input switches should select start cycles and increase should not go above 127",
 		},
 		{
 			name:                "Beat Input Switch StartCycles with Decrease At Lower Boundary",
-			commands:            []any{mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.BeatInputSwitch, mappings.Decrease},
+			commands:            []any{mappings.CyclesInputSwitch, mappings.CyclesInputSwitch, mappings.Decrease},
 			initialStartCycles:  0,
 			expectedStartCycles: 0,
 			description:         "Two beat input switches should select start cycles and decrease should not go below 0",

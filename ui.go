@@ -332,6 +332,7 @@ const (
 	// Program Level Operation
 	SelectConfirmNew
 	SelectConfirmQuit
+	SelectConfirmReload
 	SelectFileName
 	SelectError
 )
@@ -1358,6 +1359,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			case SelectConfirmNew:
 				m.NewSequence()
 				m.selectionIndicator = SelectNothing
+			case SelectConfirmReload:
+				m.ReloadFile()
+				m.selectionIndicator = SelectNothing
 			case SelectConfirmQuit:
 				m.programChannel <- quitMsg{}
 				err := m.logFile.Close()
@@ -1409,14 +1413,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
 		case mappings.ReloadFile:
-			if m.filename != "" {
-				var err error
-				m.definition, err = LoadFile(m.filename, m.definition.template)
-				if err != nil {
-					m.SetCurrentError(fault.Wrap(err, fmsg.WithDesc("could not reload file", fmt.Sprintf("Could not reload file %s", m.filename))))
-				}
-				m.ResetCurrentOverlay()
-			}
+			m.SetSelectionIndicator(SelectConfirmReload)
 		case mappings.HoldingKeys:
 			return m, nil
 		case mappings.CursorDown:
@@ -1523,7 +1520,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.ratchetCursor = 0
 			}
 		case mappings.BeatInputSwitch:
-			states := []Selection{SelectNothing, SelectBeats, SelectStartBeats, SelectCycles, SelectStartCycles}
+			states := []Selection{SelectNothing, SelectBeats, SelectStartBeats}
+			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
+		case mappings.CyclesInputSwitch:
+			states := []Selection{SelectNothing, SelectCycles, SelectStartCycles}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.ToggleArrangementView:
 			m.showArrangementView = !m.showArrangementView || m.focus != FocusArrangementEditor
@@ -3173,6 +3173,17 @@ func (m model) PatternActionLineBoundaries() (uint8, uint8) {
 	}
 }
 
+func (m *model) ReloadFile() {
+	if m.filename != "" {
+		var err error
+		m.definition, err = LoadFile(m.filename, m.definition.template)
+		if err != nil {
+			m.SetCurrentError(fault.Wrap(err, fmsg.WithDesc("could not reload file", fmt.Sprintf("Could not reload file %s", m.filename))))
+		}
+		m.ResetCurrentOverlay()
+	}
+}
+
 // ----------------------------- View Layer ----------------------------------------
 
 func (m model) CyclesEditView() string {
@@ -3542,6 +3553,8 @@ func (m model) SeqView() string {
 		buf.WriteString(m.ConfirmNewSequenceView())
 	} else if m.selectionIndicator == SelectConfirmQuit {
 		buf.WriteString(m.ConfirmQuitView())
+	} else if m.selectionIndicator == SelectConfirmReload {
+		buf.WriteString(m.ConfirmReloadView())
 	} else if exists && currentNote.Note.Action == grid.ActionSpecificValue {
 		buf.WriteString(m.SpecificValueEditView(currentNote.Note))
 	} else if m.playing != PlayStopped {
@@ -3611,6 +3624,14 @@ func (m model) ConfirmNewSequenceView() string {
 func (m model) ConfirmQuitView() string {
 	var buf strings.Builder
 	buf.WriteString(" Quit: ")
+	buf.WriteString(themes.SelectedStyle.Render("Confirm"))
+	buf.WriteString("\n")
+	return buf.String()
+}
+
+func (m model) ConfirmReloadView() string {
+	var buf strings.Builder
+	buf.WriteString(" Reload: ")
 	buf.WriteString(themes.SelectedStyle.Render("Confirm"))
 	buf.WriteString("\n")
 	return buf.String()

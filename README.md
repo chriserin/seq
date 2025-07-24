@@ -176,11 +176,12 @@ Some actions have "All" variants (`sS`, `sB`, `sK`) that affect all playback cur
 - `u`/`U`: Undo/redo
 
 ### Input Modes
+- `Ctrl+t`: Tempo controls
+- `Ctrl+k`: Cycles input controls
 - `Ctrl+b`: Beat input controls
 - `Ctrl+e`: Accent input controls
 - `Ctrl+o`: Overlay key controls
 - `Ctrl+d`: MIDI setup controls
-- `Ctrl+t`: Tempo controls
 
 > 📖 **Complete Reference**: [Key Mappings Documentation](docs/key-mappings.md)
 

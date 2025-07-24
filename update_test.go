@@ -681,12 +681,12 @@ func TestTogglePlayEdit(t *testing.T) {
 func TestReloadFile(t *testing.T) {
 	tests := []struct {
 		name        string
-		command     mappings.Command
+		commands    []any
 		description string
 	}{
 		{
 			name:        "ReloadFile With Filename",
-			command:     mappings.ReloadFile,
+			commands:    []any{mappings.ReloadFile, mappings.Enter},
 			description: "Should reload file when filename is set",
 		},
 	}
@@ -705,19 +705,19 @@ func TestReloadFile(t *testing.T) {
 				},
 			)
 
-			m, _ = processCommands([]any{mappings.NoteAdd}, m)
+			m, _ = processCommand(mappings.NoteAdd, m)
 
 			processCommand(mappings.Save, m)
 
 			_, err := os.Stat(testFilename)
 			assert.NoError(t, err, "File should exist after save")
 
-			m, _ = processCommands([]any{mappings.NoteRemove}, m)
+			m, _ = processCommand(mappings.NoteRemove, m)
 
 			_, exists := m.CurrentNote()
 			assert.False(t, exists, "Note should not exist after removal")
 
-			m, _ = processCommand(tt.command, m)
+			m, _ = processCommands(tt.commands, m)
 
 			_, exists = m.CurrentNote()
 			assert.True(t, exists, tt.description+" - note should exist after reload")

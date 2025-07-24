@@ -57,6 +57,7 @@ const (
 	AccentInputSwitch
 	RatchetInputSwitch
 	BeatInputSwitch
+	CyclesInputSwitch
 	ToggleArrangementView
 	Increase
 	Decrease
@@ -222,6 +223,7 @@ var mappings = registry{
 	k("ctrl+@"): PlayPart,
 	k("ctrl+]"): NewSectionAfter,
 	k("ctrl+b"): BeatInputSwitch,
+	k("ctrl+k"): CyclesInputSwitch,
 	k("ctrl+c"): ChangePart,
 	k("ctrl+e"): AccentInputSwitch,
 	k("ctrl+a"): ToggleArrangementView,
