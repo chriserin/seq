@@ -35,6 +35,15 @@ type Arrangement struct {
 	Nodes             []*Arrangement
 	Iterations        int
 	playingIterations int
+	isRoot            bool
+}
+
+func InitRoot(parts []Part) *Arrangement {
+	return &Arrangement{
+		Iterations: 1,
+		Nodes:      make([]*Arrangement, 0, len(parts)),
+		isRoot:     true,
+	}
 }
 
 func (a *Arrangement) Reset() {
@@ -95,7 +104,6 @@ func (a *Arrangement) CountEndNodes() int {
 	if a.IsEndNode() {
 		return 1
 	}
-
 	count := 0
 	for _, node := range a.Nodes {
 		count += node.CountEndNodes()
@@ -103,10 +111,23 @@ func (a *Arrangement) CountEndNodes() int {
 	return count
 }
 
+func (a *Arrangement) CountGroupNodes() int {
+	count := 0
+	if a.IsGroup() && !a.isRoot {
+		count = 1
+	}
+
+	for _, node := range a.Nodes {
+		count += node.CountGroupNodes()
+	}
+
+	return count
+}
+
 func (a *Arrangement) CountAllNodes() int {
 	count := 1
 	for _, node := range a.Nodes {
-		count += node.CountEndNodes()
+		count += node.CountAllNodes()
 	}
 	return count
 }
@@ -447,16 +468,20 @@ type Model struct {
 	depthCursor int
 }
 
+func (m Model) CurrentNode() *Arrangement {
+	return m.Cursor[m.depthCursor]
+}
+
 func (m *Model) ResetDepth() {
 	m.depthCursor = len(m.Cursor) - 1
 }
 
 func (m *Model) GroupNodes() {
 	if len(m.Cursor) >= 2 {
-		currentNode := m.Cursor[len(m.Cursor)-1]
-		parentNode := m.Cursor[len(m.Cursor)-2]
+		currentNode := m.Cursor[m.depthCursor]
+		parentNode := m.Cursor[m.depthCursor-1]
 
-		currentIndex := slices.Index(m.Cursor.GetParentNode().Nodes, currentNode)
+		currentIndex := slices.Index(parentNode.Nodes, currentNode)
 
 		m.Cursor.MovePrev()
 		if currentIndex+1 < len(parentNode.Nodes) {
@@ -465,7 +490,6 @@ func (m *Model) GroupNodes() {
 			GroupNodes(parentNode, currentIndex, currentIndex)
 		}
 		m.Cursor.MoveNext()
-		m.ResetDepth()
 	}
 }
 

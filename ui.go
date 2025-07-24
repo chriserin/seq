@@ -1091,10 +1091,7 @@ func InitDefinition(template string, instrument string) Definition {
 }
 
 func InitArrangement(parts []arrangement.Part) *arrangement.Arrangement {
-	root := &arrangement.Arrangement{
-		Iterations: 1,
-		Nodes:      make([]*arrangement.Arrangement, 0, len(parts)),
-	}
+	root := arrangement.InitRoot(parts)
 
 	for i := range parts {
 		section := arrangement.InitSongSection(i)

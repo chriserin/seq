@@ -246,3 +246,56 @@ func TestChangePartAfterNewSectionAfter(t *testing.T) {
 		})
 	}
 }
+
+func TestGroupKeybinding(t *testing.T) {
+	tests := []struct {
+		name           string
+		setupCommands  []any
+		commands       []any
+		expectedGroups int
+		expectedNodes  int
+		description    string
+	}{
+		{
+			name:           "Group keybinding creates group with current and next node",
+			setupCommands:  []any{mappings.ToggleArrangementView, mappings.NewSectionAfter, mappings.Enter, mappings.NewSectionAfter, mappings.Enter, mappings.CursorUp, mappings.CursorUp},
+			commands:       []any{TestKey{Keys: "g"}},
+			expectedGroups: 1,
+			expectedNodes:  2,
+			description:    "Should create a group containing current and next node",
+		},
+		{
+			name:           "Group keybinding at end of list groups with itself",
+			setupCommands:  []any{mappings.ToggleArrangementView, mappings.NewSectionAfter, mappings.Enter, mappings.NewSectionAfter, mappings.Enter},
+			commands:       []any{TestKey{Keys: "g"}},
+			expectedGroups: 1,
+			expectedNodes:  1,
+			description:    "Should create a group containing the last node with itself",
+		},
+		{
+			name:           "Group keybinding with single node",
+			setupCommands:  []any{mappings.ToggleArrangementView},
+			commands:       []any{TestKey{Keys: "g"}},
+			expectedGroups: 1,
+			expectedNodes:  1,
+			description:    "Should create a group containing single node with itself",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.setupCommands, m)
+
+			m, _ = processCommands(tt.commands, m)
+
+			groupCount := m.arrangement.Root.CountGroupNodes()
+			currentNode := m.arrangement.CurrentNode()
+
+			assert.True(t, currentNode.IsGroup(), tt.description+" - current node should be a group")
+			assert.Equal(t, tt.expectedGroups, groupCount, tt.description+" - group count")
+			assert.Equal(t, tt.expectedNodes, currentNode.CountEndNodes(), tt.description+" - group node should contain expected number of children")
+		})
+	}
+}
