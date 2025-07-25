@@ -695,25 +695,6 @@ func TestNewLine(t *testing.T) {
 			expectedLastNote:    70,
 			description:         "Should add three new lines with incrementing note values",
 		},
-		{
-			name: "Cannot add more than 16 lines total",
-			commands: []any{
-				mappings.NewLine,
-				mappings.NewLine,
-				mappings.NewLine,
-				mappings.NewLine,
-				mappings.NewLine,
-				mappings.NewLine,
-				mappings.NewLine,
-				mappings.NewLine,
-				mappings.NewLine,
-			},
-			initialLineCount:    8,
-			expectedLineCount:   16,
-			expectedLastChannel: 10,
-			expectedLastNote:    75,
-			description:         "Should cap at 16 lines total",
-		},
 	}
 
 	for _, tt := range tests {

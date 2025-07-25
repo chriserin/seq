@@ -1680,7 +1680,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.TogglePlayEdit:
 			m.playEditing = !m.playEditing
 		case mappings.NewLine:
-			if len(m.definition.lines) < 16 {
+			if len(m.definition.lines) < 100 {
 				lastline := m.definition.lines[len(m.definition.lines)-1]
 				m.definition.lines = append(m.definition.lines, grid.LineDefinition{
 					Channel: lastline.Channel,
@@ -3572,7 +3572,7 @@ func (m model) SeqView() string {
 	beats := m.CurrentPart().Beats
 	topLine := strings.Repeat("─", max(32, int(beats)))
 	buf.WriteString("   ")
-	buf.WriteString(themes.SeqBorderStyle.Render(fmt.Sprintf("┌%s", topLine)))
+	buf.WriteString(themes.SeqBorderStyle.Render(fmt.Sprintf(" ┌%s", topLine)))
 	buf.WriteString("\n")
 
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
@@ -3730,7 +3730,7 @@ func (m model) LineIndicator(lineNumber uint8) string {
 			lineName = themes.WhiteKeyStyle.Render(notename)
 		}
 	} else {
-		lineName = themes.LineNumberStyle.Render(fmt.Sprintf(" %d", lineNumber))
+		lineName = themes.LineNumberStyle.Render(fmt.Sprintf(" %2d", lineNumber))
 	}
 
 	return fmt.Sprintf("%2s%s%s", lineName, KeyLineIndicator(m.definition.keyline, lineNumber), indicator)
