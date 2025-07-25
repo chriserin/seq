@@ -132,6 +132,22 @@ func TestSectionNavigation(t *testing.T) {
 			expectedPartIndex:  1,
 			description:        "Should not move when already on last section",
 		},
+		{
+			name:               "NextSection moves cursor forward with arrangement focus",
+			setupCommands:      []any{mappings.NewSectionAfter, mappings.Enter, mappings.PrevSection, mappings.ToggleArrangementView},
+			commands:           []any{mappings.NextSection},
+			expectedMoveResult: true,
+			expectedPartIndex:  1,
+			description:        "Should move to next section successfully",
+		},
+		{
+			name:               "PrevSection moves cursor backward with arrangement focus",
+			setupCommands:      []any{mappings.NewSectionBefore, mappings.Enter, mappings.NextSection, mappings.ToggleArrangementView},
+			commands:           []any{mappings.PrevSection},
+			expectedMoveResult: true,
+			expectedPartIndex:  1,
+			description:        "Should move to previous section successfully",
+		},
 	}
 
 	for _, tt := range tests {

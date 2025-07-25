@@ -1289,6 +1289,9 @@ var skipArrangementMappings = []mappings.Command{
 	mappings.ChangePart,
 	mappings.NewSectionAfter,
 	mappings.NewSectionBefore,
+	mappings.NextSection,
+	mappings.PrevSection,
+	mappings.HoldingKeys,
 }
 
 func (m model) ShouldSkipArrangement(mapping mappings.Mapping) bool {
