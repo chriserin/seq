@@ -1667,14 +1667,22 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.Save()
 			}
 		case mappings.Undo:
+			tempo, subdiv := m.definition.tempo, m.definition.subdivisions
 			undoStack := m.Undo()
 			if undoStack != EmptyStack {
 				m.PushRedo(undoStack)
 			}
+			if tempo != m.definition.tempo || subdiv != m.definition.subdivisions {
+				m.SyncTempo()
+			}
 		case mappings.Redo:
+			tempo, subdiv := m.definition.tempo, m.definition.subdivisions
 			undoStack := m.Redo()
 			if undoStack != EmptyStack {
 				m.PushUndo(undoStack)
+			}
+			if tempo != m.definition.tempo || subdiv != m.definition.subdivisions {
+				m.SyncTempo()
 			}
 		case mappings.New:
 			m.selectionIndicator = SelectConfirmNew
