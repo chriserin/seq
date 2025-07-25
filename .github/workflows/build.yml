@@ -179,9 +179,9 @@ jobs:
           # Make them executable
           chmod +x output/*/bin/seq
 
-          tar -cvzf seq-linux-X86_64.tar.gz -C output/seq-linux-X86_64
-          tar -cvzf seq-darwin-X86_64.tar.gz -C output/seq-darwin-X86_64
-          tar -cvzf seq-darwin-arm64.tar.gz -C output/seq-darwin-arm64
+          tar -cvzf seq-linux-X86_64.tar.gz -C output seq-linux-X86_64
+          tar -cvzf seq-darwin-X86_64.tar.gz -C output seq-darwin-X86_64
+          tar -cvzf seq-darwin-arm64.tar.gz -C output seq-darwin-arm64
 
           ./changelog.sh > release-notes.md
           # if the github_ref has alpha or beta make this a prerelease
