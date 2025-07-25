@@ -172,8 +172,8 @@ jobs:
           mkdir -p output/seq-darwin-X86_64/bin
           mkdir -p output/seq-darwin-arm64/bin
 
-          mv seq-linux-X86_64 output/seq-linux-amd64/bin/seq
-          mv seq-darwin-X86_64 output/seq-darwin-amd64/bin/seq
+          mv seq-linux-amd64 output/seq-linux-amd64/bin/seq
+          mv seq-darwin-amd64 output/seq-darwin-amd64/bin/seq
           mv seq-darwin-arm64 output/seq-darwin-arm64/bin/seq
           #
           # Make them executable
