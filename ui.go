@@ -1324,6 +1324,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter":
+			switch m.focus {
+			case FocusOverlayKey:
+				m.EnsureOverlay()
+			}
 			switch m.selectionIndicator {
 			case SelectRenamePart:
 				m.RenamePart(m.textInput.Value())
