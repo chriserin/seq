@@ -20,6 +20,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/chriserin/seq/internal/arrangement"
 	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
@@ -3722,6 +3723,15 @@ func KeyLineIndicator(k uint8, l uint8) string {
 
 var blackNotes = []uint8{1, 3, 6, 8, 10}
 
+func ensureStringLengthWc(s string, length int) string {
+	if ansi.StringWidthWc(s) <= length {
+		padding := length - ansi.StringWidthWc(s)
+		return strings.Repeat(" ", padding) + s
+	}
+
+	return ansi.CutWc(s, 0, length)
+}
+
 func (m model) LineIndicator(lineNumber uint8) string {
 	indicator := themes.SeqBorderStyle.Render("│")
 	if lineNumber == m.cursorPos.Line {
@@ -3745,10 +3755,11 @@ func (m model) LineIndicator(lineNumber uint8) string {
 			lineName = themes.WhiteKeyStyle.Render(notename)
 		}
 	} else {
-		lineName = themes.LineNumberStyle.Render(fmt.Sprintf(" %2d", lineNumber))
+		lineName = themes.LineNumberStyle.Render(fmt.Sprintf("%2d", lineNumber))
 	}
 
-	return fmt.Sprintf("%2s%s%s", lineName, KeyLineIndicator(m.definition.keyline, lineNumber), indicator)
+	return fmt.Sprintf("%3s%s%s", ensureStringLengthWc(lineName, 3), KeyLineIndicator(m.definition.keyline, lineNumber), indicator)
+
 }
 
 type GateSpace struct {
@@ -3825,7 +3836,9 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 			gateSpace.StringValue = []rune(gateSpaceValue)
 			gateSpace.Color = foregroundColor
 		}
+
 		gridChord, exists := m.currentOverlay.FindChordWithNote(currentGridKey)
+
 		if exists && gridChord == currentChord.GridChord && !cursorMatch {
 			fg := style.GetForeground()
 			bg := style.GetBackground()
