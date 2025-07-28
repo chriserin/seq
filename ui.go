@@ -1239,7 +1239,7 @@ func (m *model) LogFromBeatTime() {
 }
 
 func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) *tea.Program {
-	config.ProcessConfig("./config/init.lua")
+	config.Init()
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	err := MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)

@@ -228,7 +228,15 @@ func GetInstrument(name string) Instrument {
 	return Instrument{}
 }
 
-func ProcessConfig(luafilepath string) {
+func Init() {
+	configFilePath, exists := findConfigFile()
+
+	if exists {
+		ProcessConfig(configFilePath)
+	}
+}
+
+func ProcessConfig(configFilePath string) {
 	L := lua.NewState()
 	defer L.Close()
 
@@ -236,8 +244,8 @@ func ProcessConfig(luafilepath string) {
 	L.OpenLibs()
 	L.RegisterLibrary("seq", seqFunctions)
 
-	if fileExists(luafilepath) {
-		err := L.DoFile(luafilepath)
+	if fileExists(configFilePath) {
+		err := L.DoFile(configFilePath)
 		if err != nil {
 			fmt.Println(err.Error())
 			panic("Do File error!!")
@@ -245,12 +253,38 @@ func ProcessConfig(luafilepath string) {
 	}
 }
 
+func findConfigFile() (string, bool) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic("Could not find home directory")
+	}
+
+	filename := "init.lua"
+	xdgConfigDir := os.Getenv("XDG_CONFIG_HOME")
+
+	possibleDirs := []string{
+		"./",
+		"./config",
+		homeDir + "/.seq",
+		xdgConfigDir + "/seq",
+	}
+
+	for _, dir := range possibleDirs {
+		filePath := dir + "/" + filename
+		if fileExists(filePath) {
+			return filePath, true
+		}
+	}
+
+	return "", false
+}
+
 func fileExists(filePath string) bool {
 	info, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
 		return false
 	}
-	return !info.IsDir() // Check if it's not a directory
+	return !info.IsDir()
 }
 
 // Lua Function
