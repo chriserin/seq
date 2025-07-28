@@ -3710,7 +3710,7 @@ func (m model) CurrentOverlayView() string {
 
 	editOverlay := fmt.Sprintf("%s %s", editOverlayTitle, lipgloss.PlaceHorizontal(11, 0, m.ViewOverlay()))
 	playOverlay := fmt.Sprintf("%s %s", playOverlayTitle, lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
-	return fmt.Sprintf("   %s  %s", editOverlay, playOverlay)
+	return fmt.Sprintf("    %s  %s", editOverlay, playOverlay)
 }
 
 func KeyLineIndicator(k uint8, l uint8) string {
