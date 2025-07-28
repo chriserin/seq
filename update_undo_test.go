@@ -67,7 +67,7 @@ func TestUpdateUndoGridNote(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify cursor position is restored
-			assert.Equal(t, tt.expectedCursorPos, m.cursorPos, tt.description+" - cursor position should be restored")
+			assert.Equal(t, tt.expectedCursorPos, m.gridCursor, tt.description+" - cursor position should be restored")
 		})
 	}
 }
@@ -99,13 +99,13 @@ func TestUpdateUndoLineGridNotes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
-				WithCurosrPos(tt.cursorPos),
+				WithGridCursor(tt.cursorPos),
 			)
 
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify cursor position is restored
-			assert.Equal(t, tt.cursorPos, m.cursorPos, tt.description+" - cursor position should be restored")
+			assert.Equal(t, tt.cursorPos, m.gridCursor, tt.description+" - cursor position should be restored")
 
 			// Verify notes are restored on the line
 			for beat := range uint8(3) {
@@ -148,13 +148,13 @@ func TestUpdateUndoBounds(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
-				WithCurosrPos(tt.cursorPos),
+				WithGridCursor(tt.cursorPos),
 			)
 
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify cursor position is restored
-			assert.Equal(t, tt.expectedCursorPos, m.cursorPos, tt.description+" - cursor position should be restored")
+			assert.Equal(t, tt.expectedCursorPos, m.gridCursor, tt.description+" - cursor position should be restored")
 		})
 	}
 }
@@ -470,7 +470,7 @@ func TestUndoMultipleOperations(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify model is in a consistent state after multiple undos
-			assert.Equal(t, grid.GridKey{Line: 0, Beat: 0}, m.cursorPos, tt.description+" - cursor should be at origin after all undos")
+			assert.Equal(t, grid.GridKey{Line: 0, Beat: 0}, m.gridCursor, tt.description+" - cursor should be at origin after all undos")
 		})
 	}
 }
@@ -545,7 +545,7 @@ func TestUndoEmptyStack(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify model is in a consistent state
-			assert.Equal(t, grid.GridKey{Line: 0, Beat: 0}, m.cursorPos, tt.description+" - cursor should remain at origin")
+			assert.Equal(t, grid.GridKey{Line: 0, Beat: 0}, m.gridCursor, tt.description+" - cursor should remain at origin")
 		})
 	}
 }
@@ -762,7 +762,7 @@ func TestUndoSetupInputSwitch(t *testing.T) {
 			m := createTestModel()
 
 			// Verify initial setup values
-			currentLine := m.definition.lines[m.cursorPos.Line]
+			currentLine := m.definition.lines[m.gridCursor.Line]
 			assert.Equal(t, tt.expectedChannel, currentLine.Channel, "Initial channel should match")
 			assert.Equal(t, tt.expectedNote, currentLine.Note, "Initial note should match")
 			assert.Equal(t, tt.expectedMsgType, currentLine.MsgType, "Initial message type should match")
@@ -770,7 +770,7 @@ func TestUndoSetupInputSwitch(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify setup values are restored
-			restoredLine := m.definition.lines[m.cursorPos.Line]
+			restoredLine := m.definition.lines[m.gridCursor.Line]
 			assert.Equal(t, tt.expectedChannel, restoredLine.Channel, tt.description+" - channel should be restored")
 			assert.Equal(t, tt.expectedNote, restoredLine.Note, tt.description+" - note should be restored")
 			assert.Equal(t, tt.expectedMsgType, restoredLine.MsgType, tt.description+" - message type should be restored")

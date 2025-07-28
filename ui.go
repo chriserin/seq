@@ -212,7 +212,7 @@ type model struct {
 	selectionIndicator    Selection
 	patternMode           PatternMode
 	midiLoopMode          MidiLoopMode
-	cursorPos             gridKey
+	gridCursor            gridKey
 	visualAnchorCursor    gridKey
 	partSelectorIndex     int
 	needsWrite            int
@@ -240,6 +240,10 @@ type model struct {
 	temporaryState        temporaryState
 	// save everything below here
 	definition Definition
+}
+
+func (m *model) SetGridCursor(key gridKey) {
+	m.gridCursor = key
 }
 
 func (m *model) UnsetActiveChord() {
@@ -446,7 +450,7 @@ func (m *model) Redo() UndoStack {
 }
 
 func (m *model) ApplyLocation(location Location) {
-	m.cursorPos = location.GridKey
+	m.SetGridCursor(location.GridKey)
 	overlay := m.CurrentPart().Overlays.FindOverlay(location.OverlayKey)
 	if overlay == nil {
 		m.currentOverlay = m.CurrentPart().Overlays
@@ -768,7 +772,7 @@ func InitBounds(cursorA, cursorB gridKey) grid.Bounds {
 }
 
 func (m model) VisualSelectionBounds() grid.Bounds {
-	return InitBounds(m.cursorPos, m.visualAnchorCursor)
+	return InitBounds(m.gridCursor, m.visualAnchorCursor)
 }
 
 func (m model) PatternBounds() grid.Bounds {
@@ -792,7 +796,7 @@ func (m model) YankBounds() grid.Bounds {
 	if m.visualMode {
 		return m.VisualSelectionBounds()
 	} else {
-		return InitBounds(m.cursorPos, m.cursorPos)
+		return InitBounds(m.gridCursor, m.gridCursor)
 	}
 }
 
@@ -802,9 +806,9 @@ func (m model) InVisualSelection(key gridKey) bool {
 
 func (m model) VisualSelectedGridKeys() []gridKey {
 	if m.visualMode {
-		return InitBounds(m.visualAnchorCursor, m.cursorPos).GridKeys()
+		return InitBounds(m.visualAnchorCursor, m.gridCursor).GridKeys()
 	} else {
-		return []gridKey{m.cursorPos}
+		return []gridKey{m.gridCursor}
 	}
 }
 
@@ -851,22 +855,22 @@ func (m *model) EnsureRatchetCursorVisible() {
 }
 
 func (m *model) IncrementCC() {
-	note := m.definition.lines[m.cursorPos.Line].Note
+	note := m.definition.lines[m.gridCursor.Line].Note
 	for i := note + 1; i <= 127; i++ {
 		_, exists := config.FindCC(i, m.definition.instrument)
 		if exists {
-			m.definition.lines[m.cursorPos.Line].Note = i
+			m.definition.lines[m.gridCursor.Line].Note = i
 			return
 		}
 	}
 }
 
 func (m *model) DecrementCC() {
-	note := m.definition.lines[m.cursorPos.Line].Note
+	note := m.definition.lines[m.gridCursor.Line].Note
 	for i := note - 1; i != 255; i-- {
 		_, exists := config.FindCC(i, m.definition.instrument)
 		if exists {
-			m.definition.lines[m.cursorPos.Line].Note = i
+			m.definition.lines[m.gridCursor.Line].Note = i
 			return
 		}
 	}
@@ -879,7 +883,7 @@ func (m *model) IncreaseSpan() {
 		if span < 8 {
 			currentNote.Ratchets.Span = span + 1
 		}
-		m.currentOverlay.SetNote(m.cursorPos, currentNote)
+		m.currentOverlay.SetNote(m.gridCursor, currentNote)
 	}
 }
 
@@ -890,7 +894,7 @@ func (m *model) DecreaseSpan() {
 		if span > 0 {
 			currentNote.Ratchets.Span = span - 1
 		}
-		m.currentOverlay.SetNote(m.cursorPos, currentNote)
+		m.currentOverlay.SetNote(m.gridCursor, currentNote)
 	}
 }
 
@@ -967,8 +971,11 @@ func (m *model) DecreaseBeats() {
 	newBeats := int(m.CurrentPart().Beats) - 1
 	if newBeats >= 1 {
 		(*m.definition.parts)[m.CurrentPartID()].Beats = uint8(newBeats)
-		if m.cursorPos.Beat >= uint8(newBeats) {
-			m.cursorPos.Beat = uint8(newBeats - 1)
+		if m.gridCursor.Beat >= uint8(newBeats) {
+			m.SetGridCursor(gridKey{
+				Line: m.gridCursor.Line,
+				Beat: uint8(newBeats - 1),
+			})
 		}
 	}
 }
@@ -1036,7 +1043,7 @@ func (m *model) DecreasePartSelector() {
 func (m *model) ToggleRatchetMute() {
 	currentNote, _ := m.CurrentNote()
 	currentNote.Ratchets.Toggle(m.ratchetCursor)
-	m.currentOverlay.SetNote(m.cursorPos, currentNote)
+	m.currentOverlay.SetNote(m.gridCursor, currentNote)
 }
 
 func InitLineStates(lines int, previousPlayState []linestate, startBeat uint8) []linestate {
@@ -1173,7 +1180,7 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 		midiConnection:        midiConnection,
 		logFile:               logFile,
 		logFileAvailable:      logFileErr == nil,
-		cursorPos:             GK(0, 0),
+		gridCursor:            GK(0, 0),
 		currentOverlay:        (*definition.parts)[0].Overlays,
 		overlayKeyEdit:        overlaykey.InitModel(),
 		arrangement:           arrangement.InitModel(definition.arrangement, definition.parts),
@@ -1458,13 +1465,25 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.UnsetActiveChord()
 			}
 		case mappings.CursorLineStart:
-			m.cursorPos.Beat = 0
+			m.SetGridCursor(gridKey{
+				Line: m.gridCursor.Line,
+				Beat: 0,
+			})
 		case mappings.CursorLineEnd:
-			m.cursorPos.Beat = m.CurrentPart().Beats - 1
+			m.SetGridCursor(gridKey{
+				Line: m.gridCursor.Line,
+				Beat: m.CurrentPart().Beats - 1,
+			})
 		case mappings.CursorLastLine:
-			m.cursorPos.Line = uint8(len(m.definition.lines) - 1)
+			m.SetGridCursor(gridKey{
+				Line: uint8(len(m.definition.lines) - 1),
+				Beat: m.gridCursor.Beat,
+			})
 		case mappings.CursorFirstLine:
-			m.cursorPos.Line = 0
+			m.SetGridCursor(gridKey{
+				Line: 0,
+				Beat: m.gridCursor.Beat,
+			})
 		case mappings.Escape:
 			m.Escape()
 		case mappings.PlayStop:
@@ -1511,7 +1530,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.SetupInputSwitch:
 			var states []Selection
-			if m.definition.lines[m.cursorPos.Line].MsgType == grid.MessageTypeProgramChange {
+			if m.definition.lines[m.gridCursor.Line].MsgType == grid.MessageTypeProgramChange {
 				states = []Selection{SelectNothing, SelectSetupChannel, SelectSetupMessageType}
 			} else {
 				states = []Selection{SelectNothing, SelectSetupChannel, SelectSetupMessageType, SelectSetupValue}
@@ -1556,13 +1575,13 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				}
 				m.SyncTempo()
 			case SelectSetupChannel:
-				m.definition.lines[m.cursorPos.Line].IncrementChannel()
+				m.definition.lines[m.gridCursor.Line].IncrementChannel()
 			case SelectSetupMessageType:
-				m.definition.lines[m.cursorPos.Line].IncrementMessageType()
+				m.definition.lines[m.gridCursor.Line].IncrementMessageType()
 			case SelectSetupValue:
-				switch m.definition.lines[m.cursorPos.Line].MsgType {
+				switch m.definition.lines[m.gridCursor.Line].MsgType {
 				case grid.MessageTypeNote:
-					m.definition.lines[m.cursorPos.Line].IncrementNote()
+					m.definition.lines[m.gridCursor.Line].IncrementNote()
 				case grid.MessageTypeCc:
 					m.IncrementCC()
 				}
@@ -1606,13 +1625,13 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				}
 				m.SyncTempo()
 			case SelectSetupChannel:
-				m.definition.lines[m.cursorPos.Line].DecrementChannel()
+				m.definition.lines[m.gridCursor.Line].DecrementChannel()
 			case SelectSetupMessageType:
-				m.definition.lines[m.cursorPos.Line].DecrementMessageType()
+				m.definition.lines[m.gridCursor.Line].DecrementMessageType()
 			case SelectSetupValue:
-				switch m.definition.lines[m.cursorPos.Line].MsgType {
+				switch m.definition.lines[m.gridCursor.Line].MsgType {
 				case grid.MessageTypeNote:
-					m.definition.lines[m.cursorPos.Line].DecrementNote()
+					m.definition.lines[m.gridCursor.Line].DecrementNote()
 				case grid.MessageTypeCc:
 					m.DecrementCC()
 				}
@@ -1691,7 +1710,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.New:
 			m.selectionIndicator = SelectConfirmNew
 		case mappings.ToggleVisualMode:
-			m.visualAnchorCursor = m.cursorPos
+			m.visualAnchorCursor = m.gridCursor
 			m.visualMode = !m.visualMode
 		case mappings.TogglePlayEdit:
 			m.playEditing = !m.playEditing
@@ -1724,17 +1743,17 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.PrevSection()
 		case mappings.Yank:
 			m.yankBuffer = m.Yank()
-			m.cursorPos = m.YankBounds().TopLeft()
+			m.SetGridCursor(m.YankBounds().TopLeft())
 			m.visualMode = false
 		case mappings.Mute:
 			if m.IsRatchetSelector() {
 				m.ToggleRatchetMute()
 			} else {
-				m.playState = Mute(m.playState, m.cursorPos.Line)
+				m.playState = Mute(m.playState, m.gridCursor.Line)
 				m.hasSolo = m.HasSolo()
 			}
 		case mappings.Solo:
-			m.playState = Solo(m.playState, m.cursorPos.Line)
+			m.playState = Solo(m.playState, m.gridCursor.Line)
 			m.hasSolo = m.HasSolo()
 		case mappings.Enter:
 			// NOTE: Do nothing, we've reacted to Enter at the beginning of Update
@@ -1797,26 +1816,38 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 }
 
 func (m *model) CursorDown() {
-	if m.cursorPos.Line < uint8(len(m.definition.lines)-1) {
-		m.cursorPos.Line++
+	if m.gridCursor.Line < uint8(len(m.definition.lines)-1) {
+		m.SetGridCursor(gridKey{
+			Line: m.gridCursor.Line + 1,
+			Beat: m.gridCursor.Beat,
+		})
 	}
 }
 
 func (m *model) CursorUp() {
-	if m.cursorPos.Line > 0 {
-		m.cursorPos.Line--
+	if m.gridCursor.Line > 0 {
+		m.SetGridCursor(gridKey{
+			Line: m.gridCursor.Line - 1,
+			Beat: m.gridCursor.Beat,
+		})
 	}
 }
 
 func (m *model) CursorRight() {
-	if m.cursorPos.Beat < m.CurrentPart().Beats-1 {
-		m.cursorPos.Beat++
+	if m.gridCursor.Beat < m.CurrentPart().Beats-1 {
+		m.SetGridCursor(gridKey{
+			Line: m.gridCursor.Line,
+			Beat: m.gridCursor.Beat + 1,
+		})
 	}
 }
 
 func (m *model) CursorLeft() {
-	if m.cursorPos.Beat > 0 {
-		m.cursorPos.Beat--
+	if m.gridCursor.Beat > 0 {
+		m.SetGridCursor(gridKey{
+			Line: m.gridCursor.Line,
+			Beat: m.gridCursor.Beat - 1,
+		})
 	}
 }
 
@@ -1924,9 +1955,9 @@ func (m *model) RecordPropertyUndo() {
 
 func (m *model) NewSequence() {
 	m.filename = ""
-	m.cursorPos = GK(0, 0)
 	m.definition = InitDefinition(m.definition.template, m.definition.instrument)
 	m.arrangement = arrangement.InitModel(m.definition.arrangement, m.definition.parts)
+	m.SetGridCursor(GK(0, 0))
 	m.ResetCurrentOverlay()
 }
 
@@ -2092,7 +2123,7 @@ func AdvanceSelectionState(states []Selection, currentSelection Selection) Selec
 
 func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	if !m.activeChord.HasValue() {
-		chord, exists := m.currentOverlay.FindChord(m.cursorPos)
+		chord, exists := m.currentOverlay.FindChord(m.gridCursor)
 		if exists {
 			m.activeChord = chord
 		}
@@ -2150,11 +2181,11 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.ActionAddLineDelay:
 		m.AddAction(grid.ActionLineDelay)
 	case mappings.ActionAddSpecificValue:
-		if m.definition.lines[m.cursorPos.Line].MsgType != grid.MessageTypeNote {
+		if m.definition.lines[m.gridCursor.Line].MsgType != grid.MessageTypeNote {
 			m.AddAction(grid.ActionSpecificValue)
 		}
 	case mappings.SelectKeyLine:
-		m.definition.keyline = m.cursorPos.Line
+		m.definition.keyline = m.gridCursor.Line
 	case mappings.OverlayStackToggle:
 		m.currentOverlay.ToggleOverlayStackOptions()
 	case mappings.ClearOverlay:
@@ -2351,7 +2382,7 @@ func (m model) CurrentChord() overlays.OverlayChord {
 	if m.definition.templateSequencerType == grid.SeqtypeTrigger {
 		return overlays.OverlayChord{}
 	}
-	overlayChord, exists := m.currentOverlay.FindChord(m.cursorPos)
+	overlayChord, exists := m.currentOverlay.FindChord(m.gridCursor)
 	if exists {
 		return overlayChord
 	} else if m.activeChord.GridChord != nil {
@@ -2364,7 +2395,7 @@ func (m model) CurrentChord() overlays.OverlayChord {
 func (m *model) ChordChange(alteration uint32) {
 	overlayChord := m.CurrentChord()
 	if overlayChord.GridChord == nil {
-		m.currentOverlay.CreateChord(m.cursorPos, alteration)
+		m.currentOverlay.CreateChord(m.gridCursor, alteration)
 	} else {
 		overlayChord.GridChord.ApplyAlteration(alteration)
 	}
@@ -2483,7 +2514,7 @@ func (m model) UpdateDefinition(mapping mappings.Mapping) model {
 
 func (m model) UndoableOverlay(overlayA, overlayB *overlays.Overlay) UndoOverlayDiff {
 	diff := overlays.DiffOverlays(overlayA, overlayB)
-	return UndoOverlayDiff{m.currentOverlay.Key, m.cursorPos, m.arrangement.Cursor, diff}
+	return UndoOverlayDiff{m.currentOverlay.Key, m.gridCursor, m.arrangement.Cursor, diff}
 }
 
 func (m *model) Save() {
@@ -2521,7 +2552,7 @@ func (m model) CurrentSongSection() arrangement.SongSection {
 }
 
 func (m model) CurrentNote() (note, bool) {
-	note, exists := m.currentOverlay.GetNote(m.cursorPos)
+	note, exists := m.currentOverlay.GetNote(m.gridCursor)
 	return note, exists
 }
 
@@ -2539,9 +2570,9 @@ func (m *model) NextOverlay(direction int) {
 }
 
 func (m *model) ClearOverlayLine() {
-	start := m.cursorPos.Beat
+	start := m.gridCursor.Beat
 	for i := start; i < m.CurrentPart().Beats; i++ {
-		m.currentOverlay.RemoveNote(GK(m.cursorPos.Line, i))
+		m.currentOverlay.RemoveNote(GK(m.gridCursor.Line, i))
 	}
 }
 
@@ -2647,7 +2678,7 @@ func (m *model) RotateLeft() {
 
 func (m *model) RotateUp() {
 	pattern := m.CombinedEditPattern(m.currentOverlay)
-	beat := m.cursorPos.Beat
+	beat := m.gridCursor.Beat
 	for l := 0; l < len(m.definition.lines); l++ {
 		key := GK(uint8(l), beat)
 		_, exists := pattern[key]
@@ -2672,7 +2703,7 @@ func (m *model) RotateUp() {
 
 func (m *model) RotateDown() {
 	pattern := m.CombinedEditPattern(m.currentOverlay)
-	beat := m.cursorPos.Beat
+	beat := m.gridCursor.Beat
 	for l := len(m.definition.lines); l >= 0; l-- {
 		key := GK(uint8(l), beat)
 		_, exists := pattern[key]
@@ -2811,7 +2842,7 @@ func (m model) Yank() Buffer {
 
 func (m *model) Paste() {
 	if m.yankBuffer.IsChord() {
-		m.currentOverlay.PasteChord(m.cursorPos, m.yankBuffer.gridChord)
+		m.currentOverlay.PasteChord(m.gridCursor, m.yankBuffer.gridChord)
 	} else {
 		bounds := m.PasteBounds()
 
@@ -2819,7 +2850,7 @@ func (m *model) Paste() {
 		if m.visualMode {
 			keyModifier = bounds.TopLeft()
 		} else {
-			keyModifier = m.cursorPos
+			keyModifier = m.gridCursor
 		}
 		gridNotes := m.yankBuffer.gridNotes
 
@@ -2856,10 +2887,10 @@ func (m model) CurrentBeatGridKeys(gridKeys *[]grid.GridKey) {
 var chordFindDistance int = 3
 
 func (m model) ChordFindBeatGridKeys(gridKeys *[]grid.GridKey) {
-	start := max(0, int(m.cursorPos.Line)-chordFindDistance)
-	end := min(len(m.definition.lines)-1, int(m.cursorPos.Line)+chordFindDistance)
+	start := max(0, int(m.gridCursor.Line)-chordFindDistance)
+	end := min(len(m.definition.lines)-1, int(m.gridCursor.Line)+chordFindDistance)
 	for i := start; i <= end; i++ {
-		*gridKeys = append(*gridKeys, GK(uint8(i), m.cursorPos.Beat))
+		*gridKeys = append(*gridKeys, GK(uint8(i), m.gridCursor.Beat))
 	}
 }
 
@@ -3108,14 +3139,14 @@ func (m *model) IncrementSpecificValue(note grid.Note) {
 	note.AccentIndex = note.AccentIndex + 1
 	if note.AccentIndex < 128 {
 
-		m.currentOverlay.SetNote(m.cursorPos, note)
+		m.currentOverlay.SetNote(m.gridCursor, note)
 	}
 }
 
 func (m *model) DecrementSpecificValue(note grid.Note) {
 	if note.AccentIndex > 0 {
 		note.AccentIndex = note.AccentIndex - 1
-		m.currentOverlay.SetNote(m.cursorPos, note)
+		m.currentOverlay.SetNote(m.gridCursor, note)
 	}
 }
 
@@ -3167,25 +3198,25 @@ func (m *model) WaitModify(modifier int8) {
 
 func (m model) PatternActionBeatBoundaries() (uint8, uint8) {
 	if m.visualMode {
-		if m.visualAnchorCursor.Beat < m.cursorPos.Beat {
-			return m.visualAnchorCursor.Beat, m.cursorPos.Beat
+		if m.visualAnchorCursor.Beat < m.gridCursor.Beat {
+			return m.visualAnchorCursor.Beat, m.gridCursor.Beat
 		} else {
-			return m.cursorPos.Beat, m.visualAnchorCursor.Beat
+			return m.gridCursor.Beat, m.visualAnchorCursor.Beat
 		}
 	} else {
-		return m.cursorPos.Beat, m.CurrentPart().Beats - 1
+		return m.gridCursor.Beat, m.CurrentPart().Beats - 1
 	}
 }
 
 func (m model) PatternActionLineBoundaries() (uint8, uint8) {
 	if m.visualMode {
-		if m.visualAnchorCursor.Line < m.cursorPos.Line {
-			return m.visualAnchorCursor.Line, m.cursorPos.Line
+		if m.visualAnchorCursor.Line < m.gridCursor.Line {
+			return m.visualAnchorCursor.Line, m.gridCursor.Line
 		} else {
-			return m.cursorPos.Line, m.visualAnchorCursor.Line
+			return m.gridCursor.Line, m.visualAnchorCursor.Line
 		}
 	} else {
-		return m.cursorPos.Line, m.cursorPos.Line
+		return m.gridCursor.Line, m.gridCursor.Line
 	}
 }
 
@@ -3396,7 +3427,7 @@ func (m model) SetupView() string {
 	for i, line := range m.definition.lines {
 
 		buf.WriteString("CH ")
-		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SelectSetupChannel {
+		if uint8(i) == m.gridCursor.Line && m.selectionIndicator == SelectSetupChannel {
 			buf.WriteString(themes.SelectedStyle.Render(fmt.Sprintf("%2d", line.Channel)))
 		} else {
 			buf.WriteString(themes.NumberStyle.Render(fmt.Sprintf("%2d", line.Channel)))
@@ -3412,7 +3443,7 @@ func (m model) SetupView() string {
 			messageType = "Program Change"
 		}
 
-		if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SelectSetupMessageType {
+		if uint8(i) == m.gridCursor.Line && m.selectionIndicator == SelectSetupMessageType {
 			messageType = fmt.Sprintf(" %s ", themes.SelectedStyle.Render(messageType))
 		} else {
 			messageType = fmt.Sprintf(" %s ", messageType)
@@ -3423,7 +3454,7 @@ func (m model) SetupView() string {
 		if line.MsgType == grid.MessageTypeProgramChange {
 			buf.WriteString("")
 		} else {
-			if uint8(i) == m.cursorPos.Line && m.selectionIndicator == SelectSetupValue {
+			if uint8(i) == m.gridCursor.Line && m.selectionIndicator == SelectSetupValue {
 				buf.WriteString(themes.SelectedStyle.Render(strconv.Itoa(int(line.Note))))
 			} else {
 				buf.WriteString(themes.NumberStyle.Render(strconv.Itoa(int(line.Note))))
@@ -3534,7 +3565,7 @@ func (m model) SeqView() string {
 	var mode string
 
 	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
-	currentNote, exists := visualCombinedPattern[m.cursorPos]
+	currentNote, exists := visualCombinedPattern[m.gridCursor]
 
 	buf.WriteString(m.WriteView())
 	if m.patternMode == PatternAccent {
@@ -3734,7 +3765,7 @@ func ensureStringLengthWc(s string, length int) string {
 
 func (m model) LineIndicator(lineNumber uint8) string {
 	indicator := themes.SeqBorderStyle.Render("│")
-	if lineNumber == m.cursorPos.Line {
+	if lineNumber == m.gridCursor.Line {
 		indicator = themes.LineCursorStyle.Render("┤")
 	}
 	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PlayStateMute {
@@ -3819,7 +3850,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		}
 
 		style := lipgloss.NewStyle().Background(backgroundSeqColor)
-		cursorMatch := m.cursorPos.Line == uint8(lineNumber) && m.cursorPos.Beat == i
+		cursorMatch := m.gridCursor.Line == uint8(lineNumber) && m.gridCursor.Beat == i
 		if cursorMatch {
 			m.cursor.SetChar(char)
 			char = m.cursor.View()

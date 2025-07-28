@@ -106,9 +106,9 @@ func createTestModel(modelFns ...modelFunc) model {
 	return m
 }
 
-func WithCurosrPos(pos grid.GridKey) modelFunc {
+func WithGridCursor(pos grid.GridKey) modelFunc {
 	return func(m *model) model {
-		m.cursorPos = pos
+		m.gridCursor = pos
 		return *m
 	}
 }
@@ -283,7 +283,7 @@ func TestNew(t *testing.T) {
 			assert.Equal(t, overlaykey.InitOverlayKey(1, 1), m.currentOverlay.Key, tt.description+" - current overlay should be reset")
 			assert.Equal(t, overlaykey.InitOverlayKey(1, 1), m.overlayKeyEdit.GetKey(), tt.description+" - current overlay should be reset")
 
-			assert.Equal(t, grid.GridKey{Line: 0, Beat: 0}, m.cursorPos, "Cursor should be reset to origin")
+			assert.Equal(t, grid.GridKey{Line: 0, Beat: 0}, m.gridCursor, "Cursor should be reset to origin")
 		})
 	}
 }
@@ -415,7 +415,7 @@ func TestClearLine(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			for beat := uint8(0); beat < m.CurrentPart().Beats; beat++ {
-				m.cursorPos = grid.GridKey{Line: tt.cursorPos.Line, Beat: beat}
+				m.gridCursor = grid.GridKey{Line: tt.cursorPos.Line, Beat: beat}
 				_, exists := m.CurrentNote()
 
 				if beat < tt.cursorPos.Beat {
@@ -578,7 +578,7 @@ func TestSelectKeyLine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
-				WithCurosrPos(tt.cursorPos),
+				WithGridCursor(tt.cursorPos),
 			)
 
 			m, _ = processCommands([]any{mappings.SelectKeyLine}, m)
@@ -851,7 +851,7 @@ func TestYankAndPaste(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			for beat := range uint8(32) {
-				_, exists := m.currentOverlay.GetNote(grid.GridKey{Line: m.cursorPos.Line, Beat: beat})
+				_, exists := m.currentOverlay.GetNote(grid.GridKey{Line: m.gridCursor.Line, Beat: beat})
 				if slices.Contains(tt.expectedNoteBeats, uint8(beat)) {
 					assert.True(t, exists, tt.description+" - note should exist at beat "+string(beat))
 				} else {

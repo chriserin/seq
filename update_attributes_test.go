@@ -184,18 +184,18 @@ func TestSetupInputSwitchWithIncrease(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.lines[m.cursorPos.Line].Channel = tt.initialSetupChannel
+					m.definition.lines[m.gridCursor.Line].Channel = tt.initialSetupChannel
 					return *m
 				},
 			)
 
-			assert.Equal(t, tt.initialSetupChannel, m.definition.lines[m.cursorPos.Line].Channel, "Initial setup channel should match")
+			assert.Equal(t, tt.initialSetupChannel, m.definition.lines[m.gridCursor.Line].Channel, "Initial setup channel should match")
 			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, SelectSetupChannel, m.selectionIndicator, tt.description+" - selection state")
-			assert.Equal(t, tt.expectedSetupChannel, m.definition.lines[m.cursorPos.Line].Channel, tt.description+" - channel value")
+			assert.Equal(t, tt.expectedSetupChannel, m.definition.lines[m.gridCursor.Line].Channel, tt.description+" - channel value")
 		})
 	}
 }
@@ -256,18 +256,18 @@ func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.lines[m.cursorPos.Line].MsgType = tt.initialMessageType
+					m.definition.lines[m.gridCursor.Line].MsgType = tt.initialMessageType
 					return *m
 				},
 			)
 
-			assert.Equal(t, tt.initialMessageType, m.definition.lines[m.cursorPos.Line].MsgType, "Initial message type should match")
+			assert.Equal(t, tt.initialMessageType, m.definition.lines[m.gridCursor.Line].MsgType, "Initial message type should match")
 			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, SelectSetupMessageType, m.selectionIndicator, tt.description+" - selection state")
-			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.cursorPos.Line].MsgType, tt.description+" - message type value")
+			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.gridCursor.Line].MsgType, tt.description+" - message type value")
 		})
 	}
 }
@@ -302,7 +302,7 @@ func TestSetupInputSwitchMessageTypeBackToGrid(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, SelectNothing, m.selectionIndicator, "Should select back to nothing")
-			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.cursorPos.Line].MsgType, tt.description+" - message type value")
+			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.gridCursor.Line].MsgType, tt.description+" - message type value")
 		})
 	}
 }
@@ -356,14 +356,14 @@ func TestSetupNoteChange(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.lines[m.cursorPos.Line].Note = tt.initialNote
+					m.definition.lines[m.gridCursor.Line].Note = tt.initialNote
 					return *m
 				},
 			)
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, tt.expectedNote, m.definition.lines[m.cursorPos.Line].Note, tt.description)
+			assert.Equal(t, tt.expectedNote, m.definition.lines[m.gridCursor.Line].Note, tt.description)
 		})
 	}
 }
@@ -410,14 +410,14 @@ func TestSetupCCChange(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.lines[m.cursorPos.Line].Note = tt.initialCc
+					m.definition.lines[m.gridCursor.Line].Note = tt.initialCc
 					return *m
 				},
 			)
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, tt.expectedCc, m.definition.lines[m.cursorPos.Line].Note, tt.description)
+			assert.Equal(t, tt.expectedCc, m.definition.lines[m.gridCursor.Line].Note, tt.description)
 		})
 	}
 }

@@ -120,11 +120,11 @@ func TestUpdateCursorMovements(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
-				WithCurosrPos(tt.initialPos),
+				WithGridCursor(tt.initialPos),
 			)
 			m, _ = processCommand(tt.command, m)
-			assert.Equal(t, tt.expectedPos.Line, m.cursorPos.Line, tt.description+" - line position")
-			assert.Equal(t, tt.expectedPos.Beat, m.cursorPos.Beat, tt.description+" - beat position")
+			assert.Equal(t, tt.expectedPos.Line, m.gridCursor.Line, tt.description+" - line position")
+			assert.Equal(t, tt.expectedPos.Beat, m.gridCursor.Beat, tt.description+" - beat position")
 		})
 	}
 }
