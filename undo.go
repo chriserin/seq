@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/chriserin/seq/internal/arrangement"
+	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlays"
 )
 
@@ -56,7 +57,7 @@ type UndoArrangement struct {
 
 func (ua UndoArrangement) ApplyUndo(m *model) Location {
 	m.arrangement.ApplyArrUndo(ua.arrUndo)
-	m.focus = FocusArrangementEditor
+	m.focus = operation.FocusArrangementEditor
 	m.showArrangementView = true
 	m.arrangement.Focus = true
 	return Location{ApplyLocation: false}
@@ -92,16 +93,16 @@ func (usd UndoStateDiff) ApplyUndo(m *model) Location {
 	usd.stateDiff.Apply(m)
 
 	if usd.stateDiff.AccentsChanged {
-		m.selectionIndicator = SelectAccentDiff
+		m.selectionIndicator = operation.SelectAccentDiff
 	}
 	if usd.stateDiff.LinesChanged {
-		m.selectionIndicator = SelectSetupChannel
+		m.selectionIndicator = operation.SelectSetupChannel
 	}
 	if usd.stateDiff.SubdivisionsChanged {
-		m.selectionIndicator = SelectTempoSubdivision
+		m.selectionIndicator = operation.SelectTempoSubdivision
 	}
 	if usd.stateDiff.TempoChanged {
-		m.selectionIndicator = SelectTempo
+		m.selectionIndicator = operation.SelectTempo
 	}
 	return Location{ApplyLocation: false}
 }

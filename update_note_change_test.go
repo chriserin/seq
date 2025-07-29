@@ -6,6 +6,7 @@ import (
 	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/mappings"
+	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
@@ -911,37 +912,37 @@ func TestRatchetInputSwitch(t *testing.T) {
 	tests := []struct {
 		name              string
 		commands          []any
-		expectedSelection Selection
+		expectedSelection operation.Selection
 		description       string
 	}{
 		{
 			name:              "RatchetInputSwitch when cursor note no note",
 			commands:          []any{mappings.RatchetInputSwitch},
-			expectedSelection: SelectNothing,
+			expectedSelection: operation.SelectNothing,
 			description:       "First ratchet input switch does nothing if not on a note",
 		},
 		{
 			name:              "RatchetInputSwitch when cursor on note",
 			commands:          []any{mappings.NoteAdd, mappings.RatchetInputSwitch},
-			expectedSelection: SelectRatchets,
+			expectedSelection: operation.SelectRatchets,
 			description:       "First ratchet input switch should select ratchet",
 		},
 		{
 			name:              "Second RatchetInputSwitch when cursor on note",
 			commands:          []any{mappings.NoteAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
-			expectedSelection: SelectRatchetSpan,
+			expectedSelection: operation.SelectRatchetSpan,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
 		{
 			name:              "Third RatchetInputSwitch",
 			commands:          []any{mappings.NoteAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
-			expectedSelection: SelectNothing,
+			expectedSelection: operation.SelectNothing,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
 		{
 			name:              "Escape Ratchet Input",
 			commands:          []any{mappings.NoteAdd, mappings.RatchetInputSwitch, mappings.Escape},
-			expectedSelection: SelectNothing,
+			expectedSelection: operation.SelectNothing,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
 	}
@@ -950,7 +951,7 @@ func TestRatchetInputSwitch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
 
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -1082,7 +1083,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 		testCommands      []any
 		initialPos        grid.GridKey
 		moveToPos         grid.GridKey
-		expectedSelection Selection
+		expectedSelection operation.Selection
 		expectedValue     uint8
 		description       string
 	}{
@@ -1098,7 +1099,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 				mappings.ActionAddSpecificValue,
 			},
 			initialPos:        grid.GridKey{Line: 0, Beat: 4},
-			expectedSelection: SelectSpecificValue,
+			expectedSelection: operation.SelectSpecificValue,
 			expectedValue:     0,
 			description:       "Should add specific value action and set selection indicator when cursor is on note",
 		},
@@ -1115,7 +1116,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 				mappings.Increase,
 			},
 			initialPos:        grid.GridKey{Line: 0, Beat: 4},
-			expectedSelection: SelectSpecificValue,
+			expectedSelection: operation.SelectSpecificValue,
 			expectedValue:     1,
 			description:       "Should increase specific value by 1",
 		},
@@ -1134,7 +1135,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 				mappings.Decrease,
 			},
 			initialPos:        grid.GridKey{Line: 0, Beat: 4},
-			expectedSelection: SelectSpecificValue,
+			expectedSelection: operation.SelectSpecificValue,
 			expectedValue:     1,
 			description:       "Should increase specific value by 2 then decrease by 1",
 		},
@@ -1152,7 +1153,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 			},
 			initialPos:        grid.GridKey{Line: 0, Beat: 4},
 			moveToPos:         grid.GridKey{Line: 0, Beat: 5},
-			expectedSelection: SelectNothing,
+			expectedSelection: operation.SelectNothing,
 			expectedValue:     0,
 			description:       "Should reset selection indicator when cursor moves away from specific value note",
 		},
@@ -1171,7 +1172,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 				mappings.CursorLeft,
 			},
 			initialPos:        grid.GridKey{Line: 0, Beat: 4},
-			expectedSelection: SelectSpecificValue,
+			expectedSelection: operation.SelectSpecificValue,
 			expectedValue:     1,
 			description:       "Should set selection indicator when cursor moves back to specific value note",
 		},
@@ -1193,7 +1194,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 			},
 			initialPos:        grid.GridKey{Line: 0, Beat: 4},
 			moveToPos:         grid.GridKey{Line: 0, Beat: 5},
-			expectedSelection: SelectSpecificValue,
+			expectedSelection: operation.SelectSpecificValue,
 			expectedValue:     1,
 			description:       "Should handle multiple specific value notes correctly",
 		},
@@ -1213,7 +1214,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 				mappings.Undo,
 			},
 			initialPos:        grid.GridKey{Line: 0, Beat: 0},
-			expectedSelection: SelectSpecificValue,
+			expectedSelection: operation.SelectSpecificValue,
 			expectedValue:     0,
 			description:       "Should handle multiple specific value notes correctly",
 		},
@@ -1229,7 +1230,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 			m, _ = processCommands(tt.setupCommands, m)
 
 			// Verify initial state
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			// Run test commands
 			m, _ = processCommands(tt.testCommands, m)
@@ -1244,7 +1245,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 
 			// Verify the note exists and has correct properties
 			currentNote, exists := m.CurrentNote()
-			if tt.expectedSelection == SelectSpecificValue {
+			if tt.expectedSelection == operation.SelectSpecificValue {
 				assert.True(t, exists, tt.description+" - note should exist")
 				assert.Equal(t, grid.ActionSpecificValue, currentNote.Action, tt.description+" - action type")
 				assert.Equal(t, tt.expectedValue, currentNote.AccentIndex, tt.description+" - specific value")

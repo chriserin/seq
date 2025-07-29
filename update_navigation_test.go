@@ -5,6 +5,7 @@ import (
 
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/mappings"
+	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
@@ -203,29 +204,29 @@ func TestOverlayInputSwitch(t *testing.T) {
 	tests := []struct {
 		name              string
 		commands          []any
-		expectedSelection Selection
-		expectedFocus     focus
+		expectedSelection operation.Selection
+		expectedFocus     operation.Focus
 		description       string
 	}{
 		{
 			name:              "Single OverlayInputSwitch",
 			commands:          []any{mappings.OverlayInputSwitch},
-			expectedSelection: SelectNothing,
-			expectedFocus:     FocusOverlayKey,
+			expectedSelection: operation.SelectNothing,
+			expectedFocus:     operation.FocusOverlayKey,
 			description:       "First overlay input switch should select overlay and set focus to overlay key",
 		},
 		{
 			name:              "Double OverlayInputSwitch",
 			commands:          []any{mappings.OverlayInputSwitch, mappings.OverlayInputSwitch},
-			expectedSelection: SelectNothing,
-			expectedFocus:     FocusGrid,
+			expectedSelection: operation.SelectNothing,
+			expectedFocus:     operation.FocusGrid,
 			description:       "Second overlay input switch should cycle back to nothing but keep overlay key focus",
 		},
 		{
 			name:              "Escape Overlay Input state",
 			commands:          []any{mappings.OverlayInputSwitch, mappings.Escape},
-			expectedSelection: SelectNothing,
-			expectedFocus:     FocusGrid,
+			expectedSelection: operation.SelectNothing,
+			expectedFocus:     operation.FocusGrid,
 			description:       "Escape should set focus and selection back to an initial state",
 		},
 	}
@@ -234,8 +235,8 @@ func TestOverlayInputSwitch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
 
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
-			assert.Equal(t, FocusGrid, m.focus, "Initial focus should be grid")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.FocusGrid, m.focus, "Initial focus should be grid")
 
 			m, _ = processCommands(tt.commands, m)
 

@@ -12,7 +12,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chriserin/seq/internal/grid"
+	"github.com/chriserin/seq/internal/operation"
 )
 
 var Keycombo = make([]tea.KeyMsg, 0, 3)
@@ -356,7 +356,7 @@ func ResetKeycombo() {
 	Keycombo = make([]tea.KeyMsg, 0, 3)
 }
 
-func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType, patternMode bool) Mapping {
+func ProcessKey(key tea.KeyMsg, seqtype operation.SequencerMode, patternMode bool) Mapping {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if len(Keycombo) < 3 {
@@ -372,13 +372,13 @@ func ProcessKey(key tea.KeyMsg, seqtype grid.SequencerType, patternMode bool) Ma
 
 	command, exists := mappings[ToMappingKey(Keycombo)]
 	switch seqtype {
-	case grid.SeqtypeTrigger:
+	case operation.SeqModeLine:
 		triggerCommand, triggerExists := patternModeMappings[ToMappingKey(Keycombo)]
 		if triggerExists {
 			command = triggerCommand
 			exists = triggerExists
 		}
-	case grid.SeqtypePolyphony:
+	case operation.SeqModeChord:
 		var chordCommand Command
 		var chordExists bool
 

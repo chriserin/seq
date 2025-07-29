@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/chriserin/seq/internal/arrangement"
 	"github.com/chriserin/seq/internal/grid"
+	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,20 +29,20 @@ func TestUpdateArrangementFocus(t *testing.T) {
 			definition:     def,
 			programChannel: make(chan midiEventLoopMsg),
 			playState:      InitLineStates(1, []linestate{}, 0),
-			focus:          FocusGrid, // Start with grid focus
+			focus:          operation.FocusGrid, // Start with grid focus
 		}
 
 		initialNodeCount := m.arrangement.Root.CountEndNodes()
 		updatedModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlA})
 		modelPtr := updatedModel.(model)
 
-		assert.Equal(t, FocusArrangementEditor, modelPtr.focus, "Model should have arrangement editor focus")
+		assert.Equal(t, operation.FocusArrangementEditor, modelPtr.focus, "Model should have arrangement editor focus")
 		assert.True(t, modelPtr.arrangement.Focus, "Arrangement model should have focus flag set to true")
 
 		updatedModel, _ = updatedModel.Update(tea.KeyMsg{Type: tea.KeyCtrlCloseBracket})
 		modelPtr = updatedModel.(model)
 
-		assert.Equal(t, FocusArrangementEditor, modelPtr.focus, "Model should have arrangement editor focus")
+		assert.Equal(t, operation.FocusArrangementEditor, modelPtr.focus, "Model should have arrangement editor focus")
 		assert.True(t, modelPtr.arrangement.Focus, "Arrangement model should have focus flag set to true")
 
 		updatedModelAfterPart, _ := updatedModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -50,9 +51,9 @@ func TestUpdateArrangementFocus(t *testing.T) {
 		finalNodeCount := finalModel.arrangement.Root.CountEndNodes()
 		assert.Greater(t, finalNodeCount, initialNodeCount, "Arrangement should have more end nodes after part creation")
 
-		assert.Equal(t, FocusArrangementEditor, finalModel.focus, "Model should still have arrangement editor focus")
+		assert.Equal(t, operation.FocusArrangementEditor, finalModel.focus, "Model should still have arrangement editor focus")
 		assert.True(t, finalModel.arrangement.Focus, "Arrangement model should still have focus flag set to true")
-		assert.Equal(t, SelectNothing, finalModel.selectionIndicator, "Selection indicator should be reset to nothing")
+		assert.Equal(t, operation.SelectNothing, finalModel.selectionIndicator, "Selection indicator should be reset to nothing")
 	})
 }
 

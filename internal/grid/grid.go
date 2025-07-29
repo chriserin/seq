@@ -25,13 +25,6 @@ const (
 	ActionSpecificValue
 )
 
-type SequencerType uint8
-
-const (
-	SeqtypeTrigger SequencerType = iota
-	SeqtypePolyphony
-)
-
 type GridKey struct {
 	Line uint8
 	Beat uint8

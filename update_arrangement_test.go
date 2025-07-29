@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/chriserin/seq/internal/mappings"
+	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
@@ -13,32 +14,32 @@ func TestToggleArrangementViewSwitch(t *testing.T) {
 	tests := []struct {
 		name              string
 		commands          []any
-		expectedFocus     focus
-		expectedSelection Selection
+		expectedFocus     operation.Focus
+		expectedSelection operation.Selection
 		expectedArrIsOpen bool
 		description       string
 	}{
 		{
 			name:              "Toggle Arrangement View",
 			commands:          []any{mappings.ToggleArrangementView},
-			expectedFocus:     FocusArrangementEditor,
-			expectedSelection: SelectNothing,
+			expectedFocus:     operation.FocusArrangementEditor,
+			expectedSelection: operation.SelectNothing,
 			expectedArrIsOpen: true,
 			description:       "First toggle should open arrangement view",
 		},
 		{
 			name:              "Toggle Arrangement View Switch Back to Grid",
 			commands:          []any{mappings.ToggleArrangementView, mappings.ToggleArrangementView},
-			expectedFocus:     FocusGrid,
-			expectedSelection: SelectNothing,
+			expectedFocus:     operation.FocusGrid,
+			expectedSelection: operation.SelectNothing,
 			expectedArrIsOpen: false,
 			description:       "Second toggle should switch back to grid and close arrangement view",
 		},
 		{
 			name:              "Toggle Arrangement View Switch to Grid keep Arrangement Open",
 			commands:          []any{mappings.ToggleArrangementView, mappings.Escape},
-			expectedFocus:     FocusGrid,
-			expectedSelection: SelectNothing,
+			expectedFocus:     operation.FocusGrid,
+			expectedSelection: operation.SelectNothing,
 			expectedArrIsOpen: true,
 			description:       "Escape should switch back to grid and keep arrangement view open",
 		},
@@ -74,7 +75,7 @@ func TestRenamePartCommand(t *testing.T) {
 			m := createTestModel()
 
 			// Verify initial state
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			// Execute commands
 			m, _ = processCommands(tt.commands, m)

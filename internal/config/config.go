@@ -12,6 +12,7 @@ import (
 	"github.com/aarzilli/golua/lua"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/chriserin/seq/internal/grid"
+	"github.com/chriserin/seq/internal/operation"
 )
 
 type Config struct {
@@ -146,7 +147,7 @@ type Template struct {
 	Lines         []grid.LineDefinition
 	UIStyle       string
 	MaxGateLength int
-	SequencerType grid.SequencerType
+	SequencerType operation.SequencerMode
 }
 
 func InitTemplate(
@@ -156,12 +157,13 @@ func InitTemplate(
 	sequencerType string,
 
 ) Template {
-	var seqType grid.SequencerType
+	var seqType operation.SequencerMode
+
 	switch sequencerType {
 	case "trigger":
-		seqType = grid.SeqtypeTrigger
+		seqType = operation.SeqModeLine
 	case "polyphony":
-		seqType = grid.SeqtypePolyphony
+		seqType = operation.SeqModeChord
 	}
 	return Template{Name: name, UIStyle: uIStyle, MaxGateLength: maxGateLength, SequencerType: seqType}
 }

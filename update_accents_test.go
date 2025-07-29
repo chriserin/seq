@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/chriserin/seq/internal/mappings"
+	"github.com/chriserin/seq/internal/operation"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,7 +37,7 @@ func TestAccentInputSwitchDiffAndData(t *testing.T) {
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, SelectAccentDiff, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, operation.SelectAccentDiff, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedAccentDiff, m.definition.accents.Diff, tt.description+" - accent diff value")
 			for i, value := range tt.expectedAccentValues {
 				assert.Equalf(t, value, m.definition.accents.Data[i].Value, "accent values should match expected values - %d == %d", value, m.definition.accents.Data[0].Value)
@@ -77,7 +78,7 @@ func TestAccentInputSwitchTarget(t *testing.T) {
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, SelectAccentTarget, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, operation.SelectAccentTarget, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedAccentTarget, m.definition.accents.Target, tt.description)
 		})
 	}
@@ -132,7 +133,7 @@ func TestAccentInputSwitchStartValue(t *testing.T) {
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, SelectAccentStart, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, operation.SelectAccentStart, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedAccentStart, m.definition.accents.Start, tt.description+" - accent start value")
 		})
 	}

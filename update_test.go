@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/mappings"
+	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/seqmidi"
 	"github.com/stretchr/testify/assert"
@@ -124,7 +125,7 @@ func WithNonRootOverlay(overlayKey overlaykey.OverlayPeriodicity) modelFunc {
 
 func WithPolyphony() modelFunc {
 	return func(m *model) model {
-		m.definition.templateSequencerType = grid.SeqtypePolyphony
+		m.definition.templateSequencerType = operation.SeqModeChord
 		m.definition.lines = make([]grid.LineDefinition, 24)
 		for i := range m.definition.lines {
 			m.definition.lines[i] = grid.LineDefinition{
@@ -246,7 +247,7 @@ func TestSaveBeforeFilenameEscape(t *testing.T) {
 
 			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, "", m.filename, tt.description+" - filename should be empty after escape")
-			assert.Equal(t, SelectNothing, m.selectionIndicator, tt.description+" - selection indicator should be SelectNothing after escape")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, tt.description+" - selection indicator should be SelectNothing after escape")
 		})
 	}
 }
@@ -748,13 +749,13 @@ func TestQuit(t *testing.T) {
 			m := createTestModel()
 
 			// Verify initial state
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection indicator should be SelectNothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection indicator should be SelectNothing")
 
 			// Process the quit command
 			m, _ = processCommand(tt.command, m)
 
 			// Verify quit confirmation is triggered
-			assert.Equal(t, SelectConfirmQuit, m.selectionIndicator, tt.description+" - should set selection indicator to SelectConfirmQuit")
+			assert.Equal(t, operation.SelectConfirmQuit, m.selectionIndicator, tt.description+" - should set selection indicator to SelectConfirmQuit")
 		})
 	}
 }

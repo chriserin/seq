@@ -6,6 +6,7 @@ import (
 	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/mappings"
+	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
@@ -253,7 +254,7 @@ func TestUpdateUndoTempo(t *testing.T) {
 			// Verify tempo is restored
 			assert.Equal(t, tt.initialTempo, m.definition.tempo, tt.description+" - tempo should be restored")
 
-			assert.Equal(t, m.selectionIndicator, SelectTempo, tt.description+" - selection should be SelectTempo after undo")
+			assert.Equal(t, m.selectionIndicator, operation.SelectTempo, tt.description+" - selection should be SelectTempo after undo")
 		})
 	}
 }
@@ -304,7 +305,7 @@ func TestUpdateUndoSubdivisions(t *testing.T) {
 
 			// Verify subdivisions are restored
 			assert.Equal(t, tt.initialSubdivision, m.definition.subdivisions, tt.description+" - subdivisions should be restored")
-			assert.Equal(t, m.selectionIndicator, SelectTempoSubdivision, tt.description+" - selection should be SelectTempo after undo")
+			assert.Equal(t, m.selectionIndicator, operation.SelectTempoSubdivision, tt.description+" - selection should be SelectTempo after undo")
 		})
 	}
 }
@@ -409,7 +410,7 @@ func TestUndoArrangement(t *testing.T) {
 
 			assert.Equal(t, initialCursor, m.arrangement.Cursor, tt.description+" - arrangement cursor should be restored")
 			assert.Equal(t, initialArrangementNodesCount, m.arrangement.Root.CountEndNodes(), tt.description+" - arrangement nodes count should be restored")
-			assert.Equal(t, m.focus, FocusArrangementEditor, tt.description+" - focus should be on arrangement editor after undo")
+			assert.Equal(t, m.focus, operation.FocusArrangementEditor, tt.description+" - focus should be on arrangement editor after undo")
 			assert.Equal(t, m.arrangement.Focus, true, tt.description+" - arrangement should be focused after undo")
 
 			m, _ = processCommand(mappings.Redo, m)
@@ -680,7 +681,7 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 			assert.Equal(t, tt.expectedStart, m.definition.accents.Start, tt.description+" - accent start should be restored")
 			assert.Equal(t, tt.expectedTarget, m.definition.accents.Target, tt.description+" - accent target should be restored")
 			assert.Equal(t, tt.expectedData, m.definition.accents.Data, tt.description+" - accent data should be restored")
-			assert.Equal(t, m.selectionIndicator, SelectAccentDiff, tt.description+" - selection should be SelectAccentDiff after undo")
+			assert.Equal(t, m.selectionIndicator, operation.SelectAccentDiff, tt.description+" - selection should be SelectAccentDiff after undo")
 		})
 	}
 }
@@ -774,7 +775,7 @@ func TestUndoSetupInputSwitch(t *testing.T) {
 			assert.Equal(t, tt.expectedChannel, restoredLine.Channel, tt.description+" - channel should be restored")
 			assert.Equal(t, tt.expectedNote, restoredLine.Note, tt.description+" - note should be restored")
 			assert.Equal(t, tt.expectedMsgType, restoredLine.MsgType, tt.description+" - message type should be restored")
-			assert.Equal(t, m.selectionIndicator, SelectSetupChannel, tt.description+" - selection should be SetupInputSwitch after undo")
+			assert.Equal(t, m.selectionIndicator, operation.SelectSetupChannel, tt.description+" - selection should be SetupInputSwitch after undo")
 		})
 	}
 }
@@ -890,7 +891,7 @@ func TestUndoSongSectionAttributes(t *testing.T) {
 			assert.Equal(t, tt.expectedKeepCycles, restoredNode.Section.KeepCycles, tt.description+" - KeepCycles should be restored")
 			assert.Equal(t, tt.expectedCycles, restoredNode.Section.Cycles, tt.description+" - Cycles should be restored")
 
-			assert.True(t, m.focus == FocusArrangementEditor, tt.description+" - focus should be on arrangement editor after undo")
+			assert.True(t, m.focus == operation.FocusArrangementEditor, tt.description+" - focus should be on arrangement editor after undo")
 		})
 	}
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/mappings"
+	"github.com/chriserin/seq/internal/operation"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -190,11 +191,11 @@ func TestSetupInputSwitchWithIncrease(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialSetupChannel, m.definition.lines[m.gridCursor.Line].Channel, "Initial setup channel should match")
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, SelectSetupChannel, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, operation.SelectSetupChannel, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedSetupChannel, m.definition.lines[m.gridCursor.Line].Channel, tt.description+" - channel value")
 		})
 	}
@@ -262,11 +263,11 @@ func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialMessageType, m.definition.lines[m.gridCursor.Line].MsgType, "Initial message type should match")
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, SelectSetupMessageType, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, operation.SelectSetupMessageType, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.gridCursor.Line].MsgType, tt.description+" - message type value")
 		})
 	}
@@ -297,11 +298,11 @@ func TestSetupInputSwitchMessageTypeBackToGrid(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
 
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Should select back to nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Should select back to nothing")
 			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.gridCursor.Line].MsgType, tt.description+" - message type value")
 		})
 	}
@@ -470,11 +471,11 @@ func TestBeatInputSwitch(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialBeats, m.CurrentPart().Beats, "Initial beats should match")
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, SelectBeats, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, operation.SelectBeats, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedBeats, m.CurrentPart().Beats, tt.description+" - beats value")
 		})
 	}
@@ -529,11 +530,11 @@ func TestBeatInputSwitchCyclesIncrease(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialCycles, m.CurrentSongSection().Cycles, "Initial cycles should match")
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, SelectCycles, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, operation.SelectCycles, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedCycles, m.CurrentSongSection().Cycles, tt.description+" - cycles value")
 		})
 	}
@@ -589,11 +590,11 @@ func TestBeatInputSwitchStartBeatsIncrease(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialStartBeats, m.CurrentSongSection().StartBeat, "Initial start beats should match")
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, SelectStartBeats, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, operation.SelectStartBeats, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedStartBeats, m.CurrentSongSection().StartBeat, tt.description+" - start beats value")
 		})
 	}
@@ -648,11 +649,11 @@ func TestBeatInputSwitchStartCyclesIncrease(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialStartCycles, m.CurrentSongSection().StartCycles, "Initial start cycles should match")
-			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, SelectStartCycles, m.selectionIndicator, tt.description+" - selection state")
+			assert.Equal(t, operation.SelectStartCycles, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedStartCycles, m.CurrentSongSection().StartCycles, tt.description+" - start cycles value")
 		})
 	}
