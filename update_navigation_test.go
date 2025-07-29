@@ -211,21 +211,21 @@ func TestOverlayInputSwitch(t *testing.T) {
 		{
 			name:              "Single OverlayInputSwitch",
 			commands:          []any{mappings.OverlayInputSwitch},
-			expectedSelection: operation.SelectNothing,
+			expectedSelection: operation.SelectGrid,
 			expectedFocus:     operation.FocusOverlayKey,
 			description:       "First overlay input switch should select overlay and set focus to overlay key",
 		},
 		{
 			name:              "Double OverlayInputSwitch",
 			commands:          []any{mappings.OverlayInputSwitch, mappings.OverlayInputSwitch},
-			expectedSelection: operation.SelectNothing,
+			expectedSelection: operation.SelectGrid,
 			expectedFocus:     operation.FocusGrid,
 			description:       "Second overlay input switch should cycle back to nothing but keep overlay key focus",
 		},
 		{
 			name:              "Escape Overlay Input state",
 			commands:          []any{mappings.OverlayInputSwitch, mappings.Escape},
-			expectedSelection: operation.SelectNothing,
+			expectedSelection: operation.SelectGrid,
 			expectedFocus:     operation.FocusGrid,
 			description:       "Escape should set focus and selection back to an initial state",
 		},
@@ -235,7 +235,7 @@ func TestOverlayInputSwitch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
 
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 			assert.Equal(t, operation.FocusGrid, m.focus, "Initial focus should be grid")
 
 			m, _ = processCommands(tt.commands, m)

@@ -53,7 +53,7 @@ func TestUpdateArrangementFocus(t *testing.T) {
 
 		assert.Equal(t, operation.FocusArrangementEditor, finalModel.focus, "Model should still have arrangement editor focus")
 		assert.True(t, finalModel.arrangement.Focus, "Arrangement model should still have focus flag set to true")
-		assert.Equal(t, operation.SelectNothing, finalModel.selectionIndicator, "Selection indicator should be reset to nothing")
+		assert.Equal(t, operation.SelectGrid, finalModel.selectionIndicator, "Selection indicator should be reset to nothing")
 	})
 }
 

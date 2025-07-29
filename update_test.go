@@ -247,7 +247,7 @@ func TestSaveBeforeFilenameEscape(t *testing.T) {
 
 			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, "", m.filename, tt.description+" - filename should be empty after escape")
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, tt.description+" - selection indicator should be SelectNothing after escape")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, tt.description+" - selection indicator should be SelectNothing after escape")
 		})
 	}
 }
@@ -749,7 +749,7 @@ func TestQuit(t *testing.T) {
 			m := createTestModel()
 
 			// Verify initial state
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection indicator should be SelectNothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection indicator should be SelectNothing")
 
 			// Process the quit command
 			m, _ = processCommand(tt.command, m)

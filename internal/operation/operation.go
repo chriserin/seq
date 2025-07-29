@@ -4,7 +4,8 @@ package operation
 type SequencerMode uint8
 
 const (
-	SeqModeLine SequencerMode = iota
+	SeqModeAny SequencerMode = iota
+	SeqModeLine
 	SeqModeChord
 )
 
@@ -15,7 +16,8 @@ type Focus uint8
 // out for a selection indicator, but the pattern is to focus components that have their
 // own key event responses.
 const (
-	FocusGrid Focus = iota
+	FocusAny Focus = iota
+	FocusGrid
 	FocusOverlayKey
 	FocusArrangementEditor
 )
@@ -23,7 +25,9 @@ const (
 type Selection uint8
 
 const (
-	SelectNothing Selection = iota
+	// Value used for matching mappings
+	SelectAny Selection = iota
+	SelectGrid
 	// Definition Change
 	SelectTempo
 	SelectTempoSubdivision
@@ -61,7 +65,8 @@ const (
 type PatternMode uint8
 
 const (
-	PatternFill PatternMode = iota
+	PatternAny PatternMode = iota
+	PatternFill
 	PatternAccent
 	PatternGate
 	PatternWait

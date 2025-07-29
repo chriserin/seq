@@ -191,7 +191,7 @@ func TestSetupInputSwitchWithIncrease(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialSetupChannel, m.definition.lines[m.gridCursor.Line].Channel, "Initial setup channel should match")
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -263,7 +263,7 @@ func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialMessageType, m.definition.lines[m.gridCursor.Line].MsgType, "Initial message type should match")
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -298,11 +298,11 @@ func TestSetupInputSwitchMessageTypeBackToGrid(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
 
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Should select back to nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Should select back to nothing")
 			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.gridCursor.Line].MsgType, tt.description+" - message type value")
 		})
 	}
@@ -471,7 +471,7 @@ func TestBeatInputSwitch(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialBeats, m.CurrentPart().Beats, "Initial beats should match")
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -530,7 +530,7 @@ func TestBeatInputSwitchCyclesIncrease(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialCycles, m.CurrentSongSection().Cycles, "Initial cycles should match")
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -590,7 +590,7 @@ func TestBeatInputSwitchStartBeatsIncrease(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialStartBeats, m.CurrentSongSection().StartBeat, "Initial start beats should match")
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -649,7 +649,7 @@ func TestBeatInputSwitchStartCyclesIncrease(t *testing.T) {
 			)
 
 			assert.Equal(t, tt.initialStartCycles, m.CurrentSongSection().StartCycles, "Initial start cycles should match")
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 

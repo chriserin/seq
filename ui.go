@@ -249,7 +249,7 @@ func (m *model) SetGridCursor(key gridKey) {
 	if exists && note.Action == grid.ActionSpecificValue {
 		m.SetSelectionIndicator(operation.SelectSpecificValue)
 	} else {
-		m.SetSelectionIndicator(operation.SelectNothing)
+		m.SetSelectionIndicator(operation.SelectGrid)
 	}
 }
 
@@ -1127,6 +1127,7 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 		cursor:                newCursor,
 		midiConnection:        midiConnection,
 		logFile:               logFile,
+		selectionIndicator:    operation.SelectGrid,
 		logFileAvailable:      logFileErr == nil,
 		gridCursor:            GK(0, 0),
 		currentOverlay:        (*definition.parts)[0].Overlays,
@@ -1291,17 +1292,17 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			case operation.SelectRenamePart:
 				m.RenamePart(m.textInput.Value())
 				m.textInput.Reset()
-				m.selectionIndicator = operation.SelectNothing
+				m.selectionIndicator = operation.SelectGrid
 				return m, nil
 			case operation.SelectFileName:
 				if m.textInput.Value() != "" {
 					m.filename = fmt.Sprintf("%s.seq", m.textInput.Value())
 					m.textInput.Reset()
-					m.selectionIndicator = operation.SelectNothing
+					m.selectionIndicator = operation.SelectGrid
 					m.Save()
 					return m, nil
 				} else {
-					m.selectionIndicator = operation.SelectNothing
+					m.selectionIndicator = operation.SelectGrid
 					return m, nil
 				}
 			case operation.SelectPart:
@@ -1312,19 +1313,19 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 					m.arrangement.Cursor.MovePrev()
 				}
 				m.ResetCurrentOverlay()
-				m.selectionIndicator = operation.SelectNothing
+				m.selectionIndicator = operation.SelectGrid
 				return m, cmd
 			case operation.SelectChangePart:
 				_, cmd := m.arrangement.Update(arrangement.ChangePart{Index: m.partSelectorIndex})
 				m.currentOverlay = m.CurrentPart().Overlays
-				m.selectionIndicator = operation.SelectNothing
+				m.selectionIndicator = operation.SelectGrid
 				return m, cmd
 			case operation.SelectConfirmNew:
 				m.NewSequence()
-				m.selectionIndicator = operation.SelectNothing
+				m.selectionIndicator = operation.SelectGrid
 			case operation.SelectConfirmReload:
 				m.ReloadFile()
-				m.selectionIndicator = operation.SelectNothing
+				m.selectionIndicator = operation.SelectGrid
 			case operation.SelectConfirmQuit:
 				m.programChannel <- quitMsg{}
 				err := m.logFile.Close()
@@ -1337,7 +1338,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.Escape()
 			}
 		case "esc":
-			if m.selectionIndicator != operation.SelectNothing {
+			if m.selectionIndicator != operation.SelectGrid {
 				m.textInput.Reset()
 				m.Escape()
 				return m, nil
@@ -1380,12 +1381,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.HoldingKeys:
 			return m, nil
 		case mappings.CursorDown:
-			if slices.Contains([]operation.Selection{operation.SelectNothing, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue}, m.selectionIndicator) {
+			if slices.Contains([]operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue}, m.selectionIndicator) {
 				m.CursorDown()
 				m.UnsetActiveChord()
 			}
 		case mappings.CursorUp:
-			if slices.Contains([]operation.Selection{operation.SelectNothing, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue}, m.selectionIndicator) {
+			if slices.Contains([]operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue}, m.selectionIndicator) {
 				m.CursorUp()
 				m.UnsetActiveChord()
 			}
@@ -1394,7 +1395,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				if m.ratchetCursor > 0 {
 					m.ratchetCursor--
 				}
-			} else if m.selectionIndicator > 0 && m.selectionIndicator != operation.SelectSpecificValue {
+			} else if m.selectionIndicator > operation.SelectGrid && m.selectionIndicator != operation.SelectSpecificValue {
 				// Do Nothing
 			} else {
 				m.CursorLeft()
@@ -1406,7 +1407,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				if m.ratchetCursor < currentNote.Ratchets.Length {
 					m.ratchetCursor++
 				}
-			} else if m.selectionIndicator > 0 && m.selectionIndicator != operation.SelectSpecificValue {
+			} else if m.selectionIndicator > operation.SelectGrid && m.selectionIndicator != operation.SelectSpecificValue {
 				// Do Nothing
 			} else {
 				m.CursorRight()
@@ -1470,40 +1471,40 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.OverlayInputSwitch:
 			// NOTE: This component handles getting into the overlay key edit mode
 			// the overlaykey component handles getting out of it
-			m.SetSelectionIndicator(operation.SelectNothing)
+			m.SetSelectionIndicator(operation.SelectGrid)
 			m.focus = operation.FocusOverlayKey
 			m.overlayKeyEdit.Focus(true)
 		case mappings.TempoInputSwitch:
-			states := []operation.Selection{operation.SelectNothing, operation.SelectTempo, operation.SelectTempoSubdivision}
+			states := []operation.Selection{operation.SelectGrid, operation.SelectTempo, operation.SelectTempoSubdivision}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.SetupInputSwitch:
 			var states []operation.Selection
 			if m.definition.lines[m.gridCursor.Line].MsgType == grid.MessageTypeProgramChange {
-				states = []operation.Selection{operation.SelectNothing, operation.SelectSetupChannel, operation.SelectSetupMessageType}
+				states = []operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType}
 			} else {
-				states = []operation.Selection{operation.SelectNothing, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue}
+				states = []operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue}
 			}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.AccentInputSwitch:
-			states := []operation.Selection{operation.SelectNothing, operation.SelectAccentDiff, operation.SelectAccentTarget, operation.SelectAccentStart}
+			states := []operation.Selection{operation.SelectGrid, operation.SelectAccentDiff, operation.SelectAccentTarget, operation.SelectAccentStart}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.RatchetInputSwitch:
 			currentNote, _ := m.CurrentNote()
 			if currentNote.AccentIndex > 0 {
-				states := []operation.Selection{operation.SelectNothing, operation.SelectRatchets, operation.SelectRatchetSpan}
+				states := []operation.Selection{operation.SelectGrid, operation.SelectRatchets, operation.SelectRatchetSpan}
 				m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 				m.ratchetCursor = 0
 			}
 		case mappings.BeatInputSwitch:
-			states := []operation.Selection{operation.SelectNothing, operation.SelectBeats, operation.SelectStartBeats}
+			states := []operation.Selection{operation.SelectGrid, operation.SelectBeats, operation.SelectStartBeats}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.CyclesInputSwitch:
-			states := []operation.Selection{operation.SelectNothing, operation.SelectCycles, operation.SelectStartCycles}
+			states := []operation.Selection{operation.SelectGrid, operation.SelectCycles, operation.SelectStartCycles}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.ToggleArrangementView:
 			m.showArrangementView = !m.showArrangementView || m.focus != operation.FocusArrangementEditor
 			if m.showArrangementView {
-				m.SetSelectionIndicator(operation.SelectNothing)
+				m.SetSelectionIndicator(operation.SelectGrid)
 				m.focus = operation.FocusArrangementEditor
 				m.arrangement.Focus = true
 			} else {
@@ -1711,7 +1712,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	case overlaykey.UpdatedOverlayKey:
 		if !msg.HasFocus {
 			m.focus = operation.FocusGrid
-			m.selectionIndicator = operation.SelectNothing
+			m.selectionIndicator = operation.SelectGrid
 		}
 	case uiStartMsg:
 		if m.playing == PlayStopped {
@@ -1746,7 +1747,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		}
 	case arrangement.GiveBackFocus:
-		m.selectionIndicator = operation.SelectNothing
+		m.selectionIndicator = operation.SelectGrid
 		m.focus = operation.FocusGrid
 	case arrangement.RenamePart:
 		m.SetSelectionIndicator(operation.SelectRenamePart)
@@ -1796,10 +1797,10 @@ func (m *model) CursorLeft() {
 }
 
 func (m *model) SetSelectionIndicator(desiredIndicator operation.Selection) {
-	if desiredIndicator != operation.SelectNothing && m.selectionIndicator == operation.SelectNothing {
+	if desiredIndicator != operation.SelectGrid && m.selectionIndicator == operation.SelectGrid {
 		m.CaptureTemporaryState()
 	}
-	if desiredIndicator == operation.SelectNothing && m.selectionIndicator != operation.SelectNothing {
+	if desiredIndicator == operation.SelectGrid && m.selectionIndicator != operation.SelectGrid {
 		diff := createStateDiff(&m.definition, &m.temporaryState)
 		if diff.Changed() {
 			m.PushUndoables(UndoStateDiff{diff}, UndoStateDiff{diff.Reverse()})
@@ -1843,7 +1844,7 @@ func (m *model) CaptureTemporaryState() {
 
 func (m *model) SetPatternMode(mode operation.PatternMode) {
 	m.patternMode = mode
-	m.selectionIndicator = operation.SelectNothing
+	m.selectionIndicator = operation.SelectGrid
 }
 
 func IsDefinitionChangeSelection(indicator operation.Selection) bool {
@@ -1863,11 +1864,11 @@ func (m *model) Escape() {
 	if IsPropertyIndicator(m.selectionIndicator) {
 		m.RecordPropertyUndo()
 	}
-	if m.selectionIndicator == operation.SelectNothing && m.patternMode == operation.PatternFill {
+	if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternFill {
 		m.visualMode = false
 	}
 	m.patternMode = operation.PatternFill
-	m.selectionIndicator = operation.SelectNothing
+	m.selectionIndicator = operation.SelectGrid
 }
 
 func IsPropertyIndicator(selection operation.Selection) bool {
@@ -2058,7 +2059,7 @@ func AdvanceSelectionState(states []operation.Selection, currentSelection operat
 	index := slices.Index(states, currentSelection)
 	var resultSelection operation.Selection
 	if index < 0 {
-		indexNothing := slices.Index(states, operation.SelectNothing)
+		indexNothing := slices.Index(states, operation.SelectGrid)
 		resultSelection = states[uint8(indexNothing+1)%uint8(len(states))]
 	} else {
 		resultSelection = states[uint8(index+1)%uint8(len(states))]
@@ -3313,6 +3314,8 @@ func (m model) View() string {
 		buf.WriteString("\n")
 		buf.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, "  ", m.arrangement.View()))
 	}
+	buf.WriteString(mappings.KeycomboView())
+	buf.WriteString("\n")
 	return buf.String()
 }
 

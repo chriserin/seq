@@ -918,7 +918,7 @@ func TestRatchetInputSwitch(t *testing.T) {
 		{
 			name:              "RatchetInputSwitch when cursor note no note",
 			commands:          []any{mappings.RatchetInputSwitch},
-			expectedSelection: operation.SelectNothing,
+			expectedSelection: operation.SelectGrid,
 			description:       "First ratchet input switch does nothing if not on a note",
 		},
 		{
@@ -936,13 +936,13 @@ func TestRatchetInputSwitch(t *testing.T) {
 		{
 			name:              "Third RatchetInputSwitch",
 			commands:          []any{mappings.NoteAdd, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch, mappings.RatchetInputSwitch},
-			expectedSelection: operation.SelectNothing,
+			expectedSelection: operation.SelectGrid,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
 		{
 			name:              "Escape Ratchet Input",
 			commands:          []any{mappings.NoteAdd, mappings.RatchetInputSwitch, mappings.Escape},
-			expectedSelection: operation.SelectNothing,
+			expectedSelection: operation.SelectGrid,
 			description:       "Second ratchet input switch should select ratchet span",
 		},
 	}
@@ -951,7 +951,7 @@ func TestRatchetInputSwitch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
 
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -1153,7 +1153,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 			},
 			initialPos:        grid.GridKey{Line: 0, Beat: 4},
 			moveToPos:         grid.GridKey{Line: 0, Beat: 5},
-			expectedSelection: operation.SelectNothing,
+			expectedSelection: operation.SelectGrid,
 			expectedValue:     0,
 			description:       "Should reset selection indicator when cursor moves away from specific value note",
 		},
@@ -1230,7 +1230,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 			m, _ = processCommands(tt.setupCommands, m)
 
 			// Verify initial state
-			assert.Equal(t, operation.SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			// Run test commands
 			m, _ = processCommands(tt.testCommands, m)
