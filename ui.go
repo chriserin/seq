@@ -1359,7 +1359,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			return m, cmd
 		}
 
-		mapping := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode != operation.PatternFill)
+		mapping := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode)
 
 		if mapping.Command == mappings.Quit {
 			m.SetSelectionIndicator(operation.SelectConfirmQuit)

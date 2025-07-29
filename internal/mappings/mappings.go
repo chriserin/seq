@@ -182,7 +182,7 @@ func KeysForCommand(command Command) []string {
 func allCommands() registry {
 	// Combine all mappings into a single registry
 	all := make(registry)
-	for _, m := range []registry{mappings, patternModeMappings, chordMappings} {
+	for _, m := range []registry{mappings} {
 		maps.Copy(all, m)
 	}
 	return all
@@ -197,148 +197,143 @@ type OperationKey struct {
 }
 
 var mappings = registry{
-	OperationKey{key: k(" ")}:      PlayStop,
-	OperationKey{key: k("'", " ")}: PlayOverlayLoop,
-	OperationKey{key: k(":", " ")}: PlayRecord,
-	OperationKey{key: k("+")}:      Increase,
-	OperationKey{key: k("-")}:      Decrease,
-	OperationKey{key: k("<")}:      CursorLineStart,
-	OperationKey{key: k("=")}:      Increase,
-	OperationKey{key: k(">")}:      CursorLineEnd,
-	OperationKey{key: k("b", "l")}: CursorLastLine,
-	OperationKey{key: k("b", "f")}: CursorFirstLine,
-	OperationKey{key: k("?")}:      Help,
-	OperationKey{key: k("A")}:      AccentIncrease,
-	OperationKey{key: k("C")}:      ClearOverlay,
-	OperationKey{key: k("G")}:      GateIncrease,
-	OperationKey{key: k("E")}:      GateBigIncrease,
-	OperationKey{key: k("J")}:      RotateDown,
-	OperationKey{key: k("K")}:      RotateUp,
-	OperationKey{key: k("H")}:      RotateLeft,
-	OperationKey{key: k("L")}:      RotateRight,
-	OperationKey{key: k("Y")}:      SelectKeyLine,
-	OperationKey{key: k("M")}:      Solo,
-	OperationKey{key: k("R")}:      RatchetIncrease,
-	OperationKey{key: k("U")}:      Redo,
-	OperationKey{key: k("W")}:      WaitIncrease,
-	OperationKey{key: k("[", "c")}: PrevTheme,
-	OperationKey{key: k("[", "s")}: PrevSection,
-	OperationKey{key: k("]", "c")}: NextTheme,
-	OperationKey{key: k("]", "s")}: NextSection,
-	OperationKey{key: k("g")}:      GateDecrease,
-	OperationKey{key: k("e")}:      GateBigDecrease,
-	OperationKey{key: k("alt+ ")}:  PlayLoop,
-	OperationKey{key: k("ctrl+@")}: PlayPart,
-	OperationKey{key: k("ctrl+]")}: NewSectionAfter,
-	OperationKey{key: k("ctrl+b")}: BeatInputSwitch,
-	OperationKey{key: k("ctrl+k")}: CyclesInputSwitch,
-	OperationKey{key: k("ctrl+c")}: ChangePart,
-	OperationKey{key: k("ctrl+e")}: AccentInputSwitch,
-	OperationKey{key: k("ctrl+a")}: ToggleArrangementView,
-	OperationKey{key: k("ctrl+l")}: NewLine,
-	OperationKey{key: k("ctrl+n")}: New,
-	OperationKey{key: k("ctrl+o")}: OverlayInputSwitch,
-	OperationKey{key: k("ctrl+p")}: NewSectionBefore,
-	OperationKey{key: k("ctrl+d")}: SetupInputSwitch,
-	OperationKey{key: k("ctrl+t")}: TempoInputSwitch,
-	OperationKey{key: k("ctrl+u")}: OverlayStackToggle,
-	OperationKey{key: k("ctrl+s")}: Save,
-	OperationKey{key: k("ctrl+y")}: RatchetInputSwitch,
-	OperationKey{key: k("a")}:      AccentDecrease,
-	OperationKey{key: k("c")}:      ClearLine,
-	OperationKey{key: k("d")}:      NoteRemove,
-	OperationKey{key: k("b", "e")}: TogglePlayEdit,
-	OperationKey{key: k("f")}:      NoteAdd,
-	OperationKey{key: k("b", "r")}: ReloadFile,
-	OperationKey{key: k("b", "v")}: ActionAddSpecificValue,
-	OperationKey{key: k("h")}:      CursorLeft,
-	OperationKey{key: k("j")}:      CursorDown,
-	OperationKey{key: k("k")}:      CursorUp,
-	OperationKey{key: k("l")}:      CursorRight,
-	OperationKey{key: k("m")}:      Mute,
-	OperationKey{key: k("o")}:      ToggleChordMode,
-	OperationKey{key: k("n", "a")}: ToggleAccentMode,
-	OperationKey{key: k("n", "w")}: ToggleWaitMode,
-	OperationKey{key: k("n", "g")}: ToggleGateMode,
-	OperationKey{key: k("n", "r")}: ToggleRatchetMode,
-	OperationKey{key: k("p")}:      Paste,
-	OperationKey{key: k("q")}:      Quit,
-	OperationKey{key: k("r")}:      RatchetDecrease,
-	OperationKey{key: k("s", "s")}: ActionAddLineReset,
-	OperationKey{key: k("s", "S")}: ActionAddLineResetAll,
-	OperationKey{key: k("s", "b")}: ActionAddLineBounce,
-	OperationKey{key: k("s", "B")}: ActionAddLineBounceAll,
-	OperationKey{key: k("s", "k")}: ActionAddSkipBeat,
-	OperationKey{key: k("s", "K")}: ActionAddSkipBeatAll,
-	OperationKey{key: k("s", "r")}: ActionAddLineReverse,
-	OperationKey{key: k("s", "z")}: ActionAddLineDelay,
-	OperationKey{key: k("u")}:      Undo,
-	OperationKey{key: k("v")}:      ToggleVisualMode,
-	OperationKey{key: k("w")}:      WaitDecrease,
-	OperationKey{key: k("x")}:      OverlayNoteRemove,
-	OperationKey{key: k("y")}:      Yank,
-	OperationKey{key: k("{")}:      NextOverlay,
-	OperationKey{key: k("}")}:      PrevOverlay,
-	OperationKey{key: k("enter")}:  Enter,
-	OperationKey{key: k("esc")}:    Escape,
-}
-
-var patternModeMappings = registry{
-	OperationKey{key: k("!")}: NumberPattern,
-	OperationKey{key: k("@")}: NumberPattern,
-	OperationKey{key: k("#")}: NumberPattern,
-	OperationKey{key: k("$")}: NumberPattern,
-	OperationKey{key: k("%")}: NumberPattern,
-	OperationKey{key: k("^")}: NumberPattern,
-	OperationKey{key: k("&")}: NumberPattern,
-	OperationKey{key: k("*")}: NumberPattern,
-	OperationKey{key: k("(")}: NumberPattern,
-	OperationKey{key: k("1")}: NumberPattern,
-	OperationKey{key: k("2")}: NumberPattern,
-	OperationKey{key: k("3")}: NumberPattern,
-	OperationKey{key: k("4")}: NumberPattern,
-	OperationKey{key: k("5")}: NumberPattern,
-	OperationKey{key: k("6")}: NumberPattern,
-	OperationKey{key: k("7")}: NumberPattern,
-	OperationKey{key: k("8")}: NumberPattern,
-	OperationKey{key: k("9")}: NumberPattern,
-}
-var chordMappings = registry{
-	OperationKey{key: k("t", "M")}: MajorTriad,
-	OperationKey{key: k("t", "m")}: MinorTriad,
-	OperationKey{key: k("t", "d")}: DiminishedTriad,
-	OperationKey{key: k("t", "a")}: AugmentedTriad,
-	OperationKey{key: k("7", "m")}: MinorSeventh,
-	OperationKey{key: k("7", "M")}: MajorSeventh,
-	OperationKey{key: k("5", "a")}: AugFifth,
-	OperationKey{key: k("5", "d")}: DimFifth,
-	OperationKey{key: k("5", "p")}: PerfectFifth,
-	OperationKey{key: k("2", "m")}: MinorSecond,
-	OperationKey{key: k("2", "M")}: MajorSecond,
-	OperationKey{key: k("3", "m")}: MinorThird,
-	OperationKey{key: k("3", "M")}: MajorThird,
-	OperationKey{key: k("4", "p")}: PerfectFourth,
-	OperationKey{key: k("6", "M")}: MajorSixth,
-	OperationKey{key: k("8", "p")}: Octave,
-	OperationKey{key: k("9", "m")}: MinorNinth,
-	OperationKey{key: k("9", "M")}: MajorNinth,
-	OperationKey{key: k("[", "i")}: DecreaseInversions,
-	OperationKey{key: k("]", "i")}: IncreaseInversions,
-	OperationKey{key: k("1", "o")}: OmitRoot,
-	OperationKey{key: k("2", "o")}: OmitSecond,
-	OperationKey{key: k("3", "o")}: OmitThird,
-	OperationKey{key: k("4", "o")}: OmitFourth,
-	OperationKey{key: k("5", "o")}: OmitFifth,
-	OperationKey{key: k("6", "o")}: OmitSixth,
-	OperationKey{key: k("7", "o")}: OmitSeventh,
-	OperationKey{key: k("8", "o")}: OmitOctave,
-	OperationKey{key: k("9", "o")}: OmitNinth,
-	OperationKey{key: k("D")}:      RemoveChord,
-	OperationKey{key: k("]", "p")}: NextArpeggio,
-	OperationKey{key: k("[", "p")}: PrevArpeggio,
-	OperationKey{key: k("]", "d")}: NextDouble,
-	OperationKey{key: k("[", "d")}: PrevDouble,
-	OperationKey{key: k("n", "n")}: ConvertToNotes,
+	OperationKey{key: k(" ")}:                                    PlayStop,
+	OperationKey{key: k("'", " ")}:                               PlayOverlayLoop,
+	OperationKey{key: k(":", " ")}:                               PlayRecord,
+	OperationKey{key: k("+")}:                                    Increase,
+	OperationKey{key: k("-")}:                                    Decrease,
+	OperationKey{key: k("<")}:                                    CursorLineStart,
+	OperationKey{key: k("=")}:                                    Increase,
+	OperationKey{key: k(">")}:                                    CursorLineEnd,
+	OperationKey{key: k("b", "l")}:                               CursorLastLine,
+	OperationKey{key: k("b", "f")}:                               CursorFirstLine,
+	OperationKey{key: k("?")}:                                    Help,
+	OperationKey{key: k("A")}:                                    AccentIncrease,
+	OperationKey{key: k("C")}:                                    ClearOverlay,
+	OperationKey{key: k("G")}:                                    GateIncrease,
+	OperationKey{key: k("E")}:                                    GateBigIncrease,
+	OperationKey{key: k("J")}:                                    RotateDown,
+	OperationKey{key: k("K")}:                                    RotateUp,
+	OperationKey{key: k("H")}:                                    RotateLeft,
+	OperationKey{key: k("L")}:                                    RotateRight,
+	OperationKey{key: k("Y")}:                                    SelectKeyLine,
+	OperationKey{key: k("M")}:                                    Solo,
+	OperationKey{key: k("R")}:                                    RatchetIncrease,
+	OperationKey{key: k("U")}:                                    Redo,
+	OperationKey{key: k("W")}:                                    WaitIncrease,
+	OperationKey{key: k("[", "c")}:                               PrevTheme,
+	OperationKey{key: k("[", "s")}:                               PrevSection,
+	OperationKey{key: k("]", "c")}:                               NextTheme,
+	OperationKey{key: k("]", "s")}:                               NextSection,
+	OperationKey{key: k("g")}:                                    GateDecrease,
+	OperationKey{key: k("e")}:                                    GateBigDecrease,
+	OperationKey{key: k("alt+ ")}:                                PlayLoop,
+	OperationKey{key: k("ctrl+@")}:                               PlayPart,
+	OperationKey{key: k("ctrl+]")}:                               NewSectionAfter,
+	OperationKey{key: k("ctrl+b")}:                               BeatInputSwitch,
+	OperationKey{key: k("ctrl+k")}:                               CyclesInputSwitch,
+	OperationKey{key: k("ctrl+c")}:                               ChangePart,
+	OperationKey{key: k("ctrl+e")}:                               AccentInputSwitch,
+	OperationKey{key: k("ctrl+a")}:                               ToggleArrangementView,
+	OperationKey{key: k("ctrl+l")}:                               NewLine,
+	OperationKey{key: k("ctrl+n")}:                               New,
+	OperationKey{key: k("ctrl+o")}:                               OverlayInputSwitch,
+	OperationKey{key: k("ctrl+p")}:                               NewSectionBefore,
+	OperationKey{key: k("ctrl+d")}:                               SetupInputSwitch,
+	OperationKey{key: k("ctrl+t")}:                               TempoInputSwitch,
+	OperationKey{key: k("ctrl+u")}:                               OverlayStackToggle,
+	OperationKey{key: k("ctrl+s")}:                               Save,
+	OperationKey{key: k("ctrl+y")}:                               RatchetInputSwitch,
+	OperationKey{key: k("a")}:                                    AccentDecrease,
+	OperationKey{key: k("c")}:                                    ClearLine,
+	OperationKey{key: k("d")}:                                    NoteRemove,
+	OperationKey{key: k("b", "e")}:                               TogglePlayEdit,
+	OperationKey{key: k("f")}:                                    NoteAdd,
+	OperationKey{key: k("b", "r")}:                               ReloadFile,
+	OperationKey{key: k("b", "v")}:                               ActionAddSpecificValue,
+	OperationKey{key: k("h")}:                                    CursorLeft,
+	OperationKey{key: k("j")}:                                    CursorDown,
+	OperationKey{key: k("k")}:                                    CursorUp,
+	OperationKey{key: k("l")}:                                    CursorRight,
+	OperationKey{key: k("m")}:                                    Mute,
+	OperationKey{key: k("o")}:                                    ToggleChordMode,
+	OperationKey{key: k("n", "a")}:                               ToggleAccentMode,
+	OperationKey{key: k("n", "w")}:                               ToggleWaitMode,
+	OperationKey{key: k("n", "g")}:                               ToggleGateMode,
+	OperationKey{key: k("n", "r")}:                               ToggleRatchetMode,
+	OperationKey{key: k("p")}:                                    Paste,
+	OperationKey{key: k("q")}:                                    Quit,
+	OperationKey{key: k("r")}:                                    RatchetDecrease,
+	OperationKey{key: k("s", "s")}:                               ActionAddLineReset,
+	OperationKey{key: k("s", "S")}:                               ActionAddLineResetAll,
+	OperationKey{key: k("s", "b")}:                               ActionAddLineBounce,
+	OperationKey{key: k("s", "B")}:                               ActionAddLineBounceAll,
+	OperationKey{key: k("s", "k")}:                               ActionAddSkipBeat,
+	OperationKey{key: k("s", "K")}:                               ActionAddSkipBeatAll,
+	OperationKey{key: k("s", "r")}:                               ActionAddLineReverse,
+	OperationKey{key: k("s", "z")}:                               ActionAddLineDelay,
+	OperationKey{key: k("u")}:                                    Undo,
+	OperationKey{key: k("v")}:                                    ToggleVisualMode,
+	OperationKey{key: k("w")}:                                    WaitDecrease,
+	OperationKey{key: k("x")}:                                    OverlayNoteRemove,
+	OperationKey{key: k("y")}:                                    Yank,
+	OperationKey{key: k("{")}:                                    NextOverlay,
+	OperationKey{key: k("}")}:                                    PrevOverlay,
+	OperationKey{key: k("enter")}:                                Enter,
+	OperationKey{key: k("esc")}:                                  Escape,
+	OperationKey{key: k("!")}:                                    NumberPattern,
+	OperationKey{key: k("@")}:                                    NumberPattern,
+	OperationKey{key: k("#")}:                                    NumberPattern,
+	OperationKey{key: k("$")}:                                    NumberPattern,
+	OperationKey{key: k("%")}:                                    NumberPattern,
+	OperationKey{key: k("^")}:                                    NumberPattern,
+	OperationKey{key: k("&")}:                                    NumberPattern,
+	OperationKey{key: k("*")}:                                    NumberPattern,
+	OperationKey{key: k("(")}:                                    NumberPattern,
+	OperationKey{key: k("1")}:                                    NumberPattern,
+	OperationKey{key: k("2")}:                                    NumberPattern,
+	OperationKey{key: k("3")}:                                    NumberPattern,
+	OperationKey{key: k("4")}:                                    NumberPattern,
+	OperationKey{key: k("5")}:                                    NumberPattern,
+	OperationKey{key: k("6")}:                                    NumberPattern,
+	OperationKey{key: k("7")}:                                    NumberPattern,
+	OperationKey{key: k("8")}:                                    NumberPattern,
+	OperationKey{key: k("9")}:                                    NumberPattern,
+	OperationKey{mode: operation.SeqModeChord, key: k("t", "M")}: MajorTriad,
+	OperationKey{mode: operation.SeqModeChord, key: k("t", "m")}: MinorTriad,
+	OperationKey{mode: operation.SeqModeChord, key: k("t", "d")}: DiminishedTriad,
+	OperationKey{mode: operation.SeqModeChord, key: k("t", "a")}: AugmentedTriad,
+	OperationKey{mode: operation.SeqModeChord, key: k("7", "m")}: MinorSeventh,
+	OperationKey{mode: operation.SeqModeChord, key: k("7", "M")}: MajorSeventh,
+	OperationKey{mode: operation.SeqModeChord, key: k("5", "a")}: AugFifth,
+	OperationKey{mode: operation.SeqModeChord, key: k("5", "d")}: DimFifth,
+	OperationKey{mode: operation.SeqModeChord, key: k("5", "p")}: PerfectFifth,
+	OperationKey{mode: operation.SeqModeChord, key: k("2", "m")}: MinorSecond,
+	OperationKey{mode: operation.SeqModeChord, key: k("2", "M")}: MajorSecond,
+	OperationKey{mode: operation.SeqModeChord, key: k("3", "m")}: MinorThird,
+	OperationKey{mode: operation.SeqModeChord, key: k("3", "M")}: MajorThird,
+	OperationKey{mode: operation.SeqModeChord, key: k("4", "p")}: PerfectFourth,
+	OperationKey{mode: operation.SeqModeChord, key: k("6", "M")}: MajorSixth,
+	OperationKey{mode: operation.SeqModeChord, key: k("8", "p")}: Octave,
+	OperationKey{mode: operation.SeqModeChord, key: k("9", "m")}: MinorNinth,
+	OperationKey{mode: operation.SeqModeChord, key: k("9", "M")}: MajorNinth,
+	OperationKey{mode: operation.SeqModeChord, key: k("[", "i")}: DecreaseInversions,
+	OperationKey{mode: operation.SeqModeChord, key: k("]", "i")}: IncreaseInversions,
+	OperationKey{mode: operation.SeqModeChord, key: k("1", "o")}: OmitRoot,
+	OperationKey{mode: operation.SeqModeChord, key: k("2", "o")}: OmitSecond,
+	OperationKey{mode: operation.SeqModeChord, key: k("3", "o")}: OmitThird,
+	OperationKey{mode: operation.SeqModeChord, key: k("4", "o")}: OmitFourth,
+	OperationKey{mode: operation.SeqModeChord, key: k("5", "o")}: OmitFifth,
+	OperationKey{mode: operation.SeqModeChord, key: k("6", "o")}: OmitSixth,
+	OperationKey{mode: operation.SeqModeChord, key: k("7", "o")}: OmitSeventh,
+	OperationKey{mode: operation.SeqModeChord, key: k("8", "o")}: OmitOctave,
+	OperationKey{mode: operation.SeqModeChord, key: k("9", "o")}: OmitNinth,
+	OperationKey{mode: operation.SeqModeChord, key: k("D")}:      RemoveChord,
+	OperationKey{mode: operation.SeqModeChord, key: k("]", "p")}: NextArpeggio,
+	OperationKey{mode: operation.SeqModeChord, key: k("[", "p")}: PrevArpeggio,
+	OperationKey{mode: operation.SeqModeChord, key: k("]", "d")}: NextDouble,
+	OperationKey{mode: operation.SeqModeChord, key: k("[", "d")}: PrevDouble,
+	OperationKey{mode: operation.SeqModeChord, key: k("n", "n")}: ConvertToNotes,
 }
 
 func k(x ...string) [3]string {
@@ -362,7 +357,7 @@ func ResetKeycombo() {
 	Keycombo = make([]tea.KeyMsg, 0, 3)
 }
 
-func ProcessKey(key tea.KeyMsg, seqtype operation.SequencerMode, patternMode bool) Mapping {
+func ProcessKey(key tea.KeyMsg, seqtype operation.SequencerMode, patternMode operation.PatternMode) Mapping {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if len(Keycombo) < 3 {
@@ -376,28 +371,25 @@ func ProcessKey(key tea.KeyMsg, seqtype operation.SequencerMode, patternMode boo
 		timer.Stop()
 	}
 
-	command, exists := mappings[ToMappingKey(Keycombo)]
+	var mk mappingKey
+	for i, msg := range Keycombo {
+		mk[i] = msg.String()
+	}
 
-	switch seqtype {
-	case operation.SeqModeLine:
-		triggerCommand, triggerExists := patternModeMappings[ToMappingKey(Keycombo)]
-		if triggerExists {
-			command = triggerCommand
-			exists = triggerExists
-		}
-	case operation.SeqModeChord:
-		var chordCommand Command
-		var chordExists bool
+	operationKeys := []OperationKey{
+		ToMappingKey(mk, seqtype, patternMode),
+		ToMappingKey(mk, seqtype, operation.PatternAny),
+		ToMappingKey(mk, operation.SeqModeAny, operation.PatternAny),
+	}
 
-		if patternMode {
-			chordCommand, chordExists = patternModeMappings[ToMappingKey(Keycombo)]
-		} else {
-			chordCommand, chordExists = chordMappings[ToMappingKey(Keycombo)]
-		}
+	var command Command
+	var exists bool
 
-		if chordExists {
-			command = chordCommand
-			exists = chordExists
+	for _, opKey := range operationKeys {
+		command, exists = mappings[opKey]
+
+		if exists {
+			break
 		}
 	}
 
@@ -417,17 +409,13 @@ func ProcessKey(key tea.KeyMsg, seqtype operation.SequencerMode, patternMode boo
 	}
 }
 
-func ToMappingKey(keyCombo []tea.KeyMsg) OperationKey {
-	var mk mappingKey
-	for i, msg := range keyCombo {
-		mk[i] = msg.String()
-	}
+func ToMappingKey(mk [3]string, seqMode operation.SequencerMode, patternMode operation.PatternMode) OperationKey {
 
 	return OperationKey{
 		key:         mk,
 		focus:       operation.FocusAny,
 		selection:   operation.SelectAny,
-		mode:        operation.SeqModeAny,
-		patternMode: operation.PatternAny,
+		mode:        seqMode,
+		patternMode: patternMode,
 	}
 }
