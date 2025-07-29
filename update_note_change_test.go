@@ -1074,3 +1074,191 @@ func TestRatchetInputValues(t *testing.T) {
 		})
 	}
 }
+
+func TestSpecificValueActionAndCursorMovement(t *testing.T) {
+	tests := []struct {
+		name              string
+		setupCommands     []any
+		testCommands      []any
+		initialPos        grid.GridKey
+		moveToPos         grid.GridKey
+		expectedSelection Selection
+		expectedValue     uint8
+		description       string
+	}{
+		{
+			name: "Add specific value action and test cursor movement sets selection indicator",
+			setupCommands: []any{
+				mappings.SetupInputSwitch,
+				mappings.SetupInputSwitch,
+				mappings.Increase, // Set to ProgramChange
+				mappings.Escape,
+			},
+			testCommands: []any{
+				mappings.ActionAddSpecificValue,
+			},
+			initialPos:        grid.GridKey{Line: 0, Beat: 4},
+			expectedSelection: SelectSpecificValue,
+			expectedValue:     0,
+			description:       "Should add specific value action and set selection indicator when cursor is on note",
+		},
+		{
+			name: "Increase specific value note",
+			setupCommands: []any{
+				mappings.SetupInputSwitch,
+				mappings.SetupInputSwitch,
+				mappings.Increase,
+				mappings.Escape,
+			},
+			testCommands: []any{
+				mappings.ActionAddSpecificValue,
+				mappings.Increase,
+			},
+			initialPos:        grid.GridKey{Line: 0, Beat: 4},
+			expectedSelection: SelectSpecificValue,
+			expectedValue:     1,
+			description:       "Should increase specific value by 1",
+		},
+		{
+			name: "Increase then decrease specific value note",
+			setupCommands: []any{
+				mappings.SetupInputSwitch,
+				mappings.SetupInputSwitch,
+				mappings.Increase,
+				mappings.Escape,
+			},
+			testCommands: []any{
+				mappings.ActionAddSpecificValue,
+				mappings.Increase,
+				mappings.Increase,
+				mappings.Decrease,
+			},
+			initialPos:        grid.GridKey{Line: 0, Beat: 4},
+			expectedSelection: SelectSpecificValue,
+			expectedValue:     1,
+			description:       "Should increase specific value by 2 then decrease by 1",
+		},
+		{
+			name: "Move cursor away from specific value note resets selection indicator",
+			setupCommands: []any{
+				mappings.SetupInputSwitch,
+				mappings.SetupInputSwitch,
+				mappings.Increase,
+				mappings.Escape,
+			},
+			testCommands: []any{
+				mappings.ActionAddSpecificValue,
+				mappings.CursorRight,
+			},
+			initialPos:        grid.GridKey{Line: 0, Beat: 4},
+			moveToPos:         grid.GridKey{Line: 0, Beat: 5},
+			expectedSelection: SelectNothing,
+			expectedValue:     0,
+			description:       "Should reset selection indicator when cursor moves away from specific value note",
+		},
+		{
+			name: "Move cursor back to specific value note sets selection indicator",
+			setupCommands: []any{
+				mappings.SetupInputSwitch,
+				mappings.SetupInputSwitch,
+				mappings.Increase,
+				mappings.Escape,
+			},
+			testCommands: []any{
+				mappings.ActionAddSpecificValue,
+				mappings.Increase,
+				mappings.CursorRight,
+				mappings.CursorLeft,
+			},
+			initialPos:        grid.GridKey{Line: 0, Beat: 4},
+			expectedSelection: SelectSpecificValue,
+			expectedValue:     1,
+			description:       "Should set selection indicator when cursor moves back to specific value note",
+		},
+		{
+			name: "Multiple specific value notes with cursor movement",
+			setupCommands: []any{
+				mappings.SetupInputSwitch,
+				mappings.SetupInputSwitch,
+				mappings.Increase,
+				mappings.Escape,
+			},
+			testCommands: []any{
+				mappings.ActionAddSpecificValue,
+				mappings.Increase,
+				mappings.Increase,
+				mappings.CursorRight,
+				mappings.ActionAddSpecificValue,
+				mappings.Increase,
+			},
+			initialPos:        grid.GridKey{Line: 0, Beat: 4},
+			moveToPos:         grid.GridKey{Line: 0, Beat: 5},
+			expectedSelection: SelectSpecificValue,
+			expectedValue:     1,
+			description:       "Should handle multiple specific value notes correctly",
+		},
+		{
+			name: "undo specific value",
+			setupCommands: []any{
+				mappings.SetupInputSwitch,
+				mappings.SetupInputSwitch,
+				mappings.Increase,
+				mappings.Escape,
+			},
+			testCommands: []any{
+				mappings.ActionAddSpecificValue,
+				mappings.Increase,
+				mappings.Increase,
+				mappings.Enter,
+				mappings.Undo,
+			},
+			initialPos:        grid.GridKey{Line: 0, Beat: 0},
+			expectedSelection: SelectSpecificValue,
+			expectedValue:     0,
+			description:       "Should handle multiple specific value notes correctly",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				WithGridCursor(tt.initialPos),
+			)
+
+			// Run setup commands to configure the line
+			m, _ = processCommands(tt.setupCommands, m)
+
+			// Verify initial state
+			assert.Equal(t, SelectNothing, m.selectionIndicator, "Initial selection should be nothing")
+
+			// Run test commands
+			m, _ = processCommands(tt.testCommands, m)
+
+			// Check final state
+			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description+" - selection indicator")
+
+			// If we moved cursor, verify we're at the expected position
+			if tt.moveToPos != (grid.GridKey{}) {
+				assert.Equal(t, tt.moveToPos, m.gridCursor, tt.description+" - cursor position")
+			}
+
+			// Verify the note exists and has correct properties
+			currentNote, exists := m.CurrentNote()
+			if tt.expectedSelection == SelectSpecificValue {
+				assert.True(t, exists, tt.description+" - note should exist")
+				assert.Equal(t, grid.ActionSpecificValue, currentNote.Action, tt.description+" - action type")
+				assert.Equal(t, tt.expectedValue, currentNote.AccentIndex, tt.description+" - specific value")
+			}
+
+			// Test that the first note still exists with correct value if we created multiple notes
+			if tt.moveToPos != (grid.GridKey{}) && tt.moveToPos != tt.initialPos {
+				firstNote, firstExists := m.currentOverlay.GetNote(tt.initialPos)
+				if tt.name == "Multiple specific value notes with cursor movement" {
+					assert.True(t, firstExists, tt.description+" - first note should still exist")
+					assert.Equal(t, grid.ActionSpecificValue, firstNote.Action, tt.description+" - first note action type")
+					assert.Equal(t, uint8(2), firstNote.AccentIndex, tt.description+" - first note specific value should be 2")
+				}
+			}
+		})
+	}
+}

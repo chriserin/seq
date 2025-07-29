@@ -244,6 +244,12 @@ type model struct {
 
 func (m *model) SetGridCursor(key gridKey) {
 	m.gridCursor = key
+	note, exists := m.CurrentNote()
+	if exists && note.Action == grid.ActionSpecificValue {
+		m.SetSelectionIndicator(SelectSpecificValue)
+	} else {
+		m.SetSelectionIndicator(SelectNothing)
+	}
 }
 
 func (m *model) UnsetActiveChord() {
@@ -333,6 +339,7 @@ const (
 	// Note Change
 	SelectRatchets
 	SelectRatchetSpan
+	SelectSpecificValue
 
 	// Program Level Operation
 	SelectConfirmNew
@@ -1446,7 +1453,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				if m.ratchetCursor > 0 {
 					m.ratchetCursor--
 				}
-			} else if m.selectionIndicator > 0 {
+			} else if m.selectionIndicator > 0 && m.selectionIndicator != SelectSpecificValue {
 				// Do Nothing
 			} else {
 				m.CursorLeft()
@@ -1458,7 +1465,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				if m.ratchetCursor < currentNote.Ratchets.Length {
 					m.ratchetCursor++
 				}
-			} else if m.selectionIndicator > 0 {
+			} else if m.selectionIndicator > 0 && m.selectionIndicator != SelectSpecificValue {
 				// Do Nothing
 			} else {
 				m.CursorRight()
@@ -1607,13 +1614,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.IncreasePartSelector()
 			case SelectChangePart:
 				m.IncreasePartSelector()
+			case SelectSpecificValue:
+				note, _ := m.CurrentNote()
+				m.IncrementSpecificValue(note)
 			default:
-				note, exists := m.CurrentNote()
-				if exists && note.Action == grid.ActionSpecificValue {
-					m.IncrementSpecificValue(note)
-				} else {
-					m.IncreaseTempo(5)
-				}
+				m.IncreaseTempo(5)
 			}
 		case mappings.Decrease:
 			switch m.selectionIndicator {
@@ -1655,13 +1660,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.DecreasePartSelector()
 			case SelectChangePart:
 				m.DecreasePartSelector()
+			case SelectSpecificValue:
+				note, _ := m.CurrentNote()
+				m.DecrementSpecificValue(note)
 			default:
-				note, exists := m.CurrentNote()
-				if exists && note.Action == grid.ActionSpecificValue {
-					m.DecrementSpecificValue(note)
-				} else {
-					m.DecreaseTempo(5)
-				}
+				m.DecreaseTempo(5)
 			}
 		case mappings.ToggleGateMode:
 			m.SetPatternMode(PatternGate)
@@ -1851,11 +1854,11 @@ func (m *model) CursorLeft() {
 	}
 }
 
-func (m *model) SetSelectionIndicator(indicator Selection) {
-	if indicator != SelectNothing && m.selectionIndicator == SelectNothing {
+func (m *model) SetSelectionIndicator(desiredIndicator Selection) {
+	if desiredIndicator != SelectNothing && m.selectionIndicator == SelectNothing {
 		m.CaptureTemporaryState()
 	}
-	if indicator == SelectNothing && m.selectionIndicator != SelectNothing {
+	if desiredIndicator == SelectNothing && m.selectionIndicator != SelectNothing {
 		diff := createStateDiff(&m.definition, &m.temporaryState)
 		if diff.Changed() {
 			m.PushUndoables(UndoStateDiff{diff}, UndoStateDiff{diff.Reverse()})
@@ -1865,7 +1868,7 @@ func (m *model) SetSelectionIndicator(indicator Selection) {
 		}
 	}
 	m.patternMode = PatternFill
-	m.selectionIndicator = indicator
+	m.selectionIndicator = desiredIndicator
 }
 
 func (m *model) CaptureTemporaryState() {
@@ -1937,6 +1940,7 @@ func IsPropertyIndicator(selection Selection) bool {
 		SelectAccentTarget,
 		SelectAccentStart,
 		SelectBeats,
+		SelectSpecificValue,
 	}, selection)
 }
 
@@ -2183,6 +2187,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.ActionAddSpecificValue:
 		if m.definition.lines[m.gridCursor.Line].MsgType != grid.MessageTypeNote {
 			m.AddAction(grid.ActionSpecificValue)
+			m.SetSelectionIndicator(SelectSpecificValue)
 		}
 	case mappings.SelectKeyLine:
 		m.definition.keyline = m.gridCursor.Line
@@ -3565,7 +3570,7 @@ func (m model) SeqView() string {
 	var mode string
 
 	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
-	currentNote, exists := visualCombinedPattern[m.gridCursor]
+	currentNote := visualCombinedPattern[m.gridCursor]
 
 	buf.WriteString(m.WriteView())
 	if m.patternMode == PatternAccent {
@@ -3602,7 +3607,7 @@ func (m model) SeqView() string {
 		buf.WriteString(m.ConfirmQuitView())
 	} else if m.selectionIndicator == SelectConfirmReload {
 		buf.WriteString(m.ConfirmReloadView())
-	} else if exists && currentNote.Note.Action == grid.ActionSpecificValue {
+	} else if m.selectionIndicator == SelectSpecificValue {
 		buf.WriteString(m.SpecificValueEditView(currentNote.Note))
 	} else if m.playing != PlayStopped {
 		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
