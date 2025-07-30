@@ -1412,6 +1412,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				Beat: m.gridCursor.Beat,
 			})
 		case mappings.Escape:
+			m.PushUndoableDefinitionState()
 			m.Escape()
 		case mappings.PlayStop:
 			if m.playing == PlayStopped {
@@ -1460,6 +1461,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		case mappings.TempoInputSwitch:
 			states := []operation.Selection{operation.SelectGrid, operation.SelectTempo, operation.SelectTempoSubdivision}
+			if m.selectionIndicator == states[0] {
+				m.CaptureTemporaryState()
+			}
+			if m.selectionIndicator == states[len(states)-1] {
+				m.PushUndoableDefinitionState()
+			}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.SetupInputSwitch:
 			var states []operation.Selection
@@ -1468,22 +1475,52 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			} else {
 				states = []operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue}
 			}
+			if m.selectionIndicator == states[0] {
+				m.CaptureTemporaryState()
+			}
+			if m.selectionIndicator == states[len(states)-1] {
+				m.PushUndoableDefinitionState()
+			}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.AccentInputSwitch:
 			states := []operation.Selection{operation.SelectGrid, operation.SelectAccentDiff, operation.SelectAccentTarget, operation.SelectAccentStart}
+			if m.selectionIndicator == states[0] {
+				m.CaptureTemporaryState()
+			}
+			if m.selectionIndicator == states[len(states)-1] {
+				m.PushUndoableDefinitionState()
+			}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.RatchetInputSwitch:
 			currentNote, _ := m.CurrentNote()
 			if currentNote.AccentIndex > 0 {
 				states := []operation.Selection{operation.SelectGrid, operation.SelectRatchets, operation.SelectRatchetSpan}
+				if m.selectionIndicator == states[0] {
+					m.CaptureTemporaryState()
+				}
+				if m.selectionIndicator == states[len(states)-1] {
+					m.PushUndoableDefinitionState()
+				}
 				m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 				m.ratchetCursor = 0
 			}
 		case mappings.BeatInputSwitch:
 			states := []operation.Selection{operation.SelectGrid, operation.SelectBeats, operation.SelectStartBeats}
+			if m.selectionIndicator == states[0] {
+				m.CaptureTemporaryState()
+			}
+			if m.selectionIndicator == states[len(states)-1] {
+				m.PushUndoableDefinitionState()
+			}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.CyclesInputSwitch:
 			states := []operation.Selection{operation.SelectGrid, operation.SelectCycles, operation.SelectStartCycles}
+			if m.selectionIndicator == states[0] {
+				m.CaptureTemporaryState()
+			}
+			if m.selectionIndicator == states[len(states)-1] {
+				m.PushUndoableDefinitionState()
+			}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.ToggleArrangementView:
 			m.showArrangementView = !m.showArrangementView || m.focus != operation.FocusArrangementEditor
@@ -1685,7 +1722,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.playState = Solo(m.playState, m.gridCursor.Line)
 			m.hasSolo = m.HasSolo()
 		case mappings.Enter:
-			// NOTE: Do nothing, we've reacted to Enter at the beginning of Update
+			m.PushUndoableDefinitionState()
+			m.SetSelectionIndicator(operation.SelectGrid)
 		default:
 			m = m.UpdateDefinition(mapping)
 		}
@@ -1781,10 +1819,12 @@ func (m *model) CursorLeft() {
 }
 
 func (m *model) SetSelectionIndicator(desiredIndicator operation.Selection) {
-	if desiredIndicator != operation.SelectGrid && m.selectionIndicator == operation.SelectGrid {
-		m.CaptureTemporaryState()
-	}
-	if desiredIndicator == operation.SelectGrid && m.selectionIndicator != operation.SelectGrid {
+	m.patternMode = operation.PatternFill
+	m.selectionIndicator = desiredIndicator
+}
+
+func (m *model) PushUndoableDefinitionState() {
+	if m.temporaryState.active {
 		diff := createStateDiff(&m.definition, &m.temporaryState)
 		if diff.Changed() {
 			m.PushUndoables(UndoStateDiff{diff}, UndoStateDiff{diff.Reverse()})
@@ -1792,9 +1832,8 @@ func (m *model) SetSelectionIndicator(desiredIndicator operation.Selection) {
 		if m.CurrentPart().Beats != m.temporaryState.beats {
 			m.PushUndoables(UndoBeats{m.temporaryState.beats, m.arrangement.Cursor}, UndoBeats{m.CurrentPart().Beats, m.arrangement.Cursor})
 		}
+		m.temporaryState = temporaryState{}
 	}
-	m.patternMode = operation.PatternFill
-	m.selectionIndicator = desiredIndicator
 }
 
 func (m *model) CaptureTemporaryState() {
@@ -1831,58 +1870,14 @@ func (m *model) SetPatternMode(mode operation.PatternMode) {
 	m.selectionIndicator = operation.SelectGrid
 }
 
-func IsDefinitionChangeSelection(indicator operation.Selection) bool {
-	return slices.Contains([]operation.Selection{
-		operation.SelectTempo,
-		operation.SelectTempoSubdivision,
-		operation.SelectSetupChannel,
-		operation.SelectSetupMessageType,
-		operation.SelectSetupValue,
-		operation.SelectAccentDiff,
-		operation.SelectAccentTarget,
-		operation.SelectAccentStart,
-	}, indicator)
-}
-
 func (m *model) Escape() {
 	m.focus = operation.FocusGrid
 	m.textInput.Reset()
-	if IsPropertyIndicator(m.selectionIndicator) {
-		m.RecordPropertyUndo()
-	}
 	if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternFill {
 		m.visualMode = false
 	}
 	m.patternMode = operation.PatternFill
 	m.selectionIndicator = operation.SelectGrid
-}
-
-func IsPropertyIndicator(selection operation.Selection) bool {
-	return slices.Contains([]operation.Selection{
-		operation.SelectTempo,
-		operation.SelectTempoSubdivision,
-		operation.SelectSetupChannel,
-		operation.SelectSetupMessageType,
-		operation.SelectSetupValue,
-		operation.SelectAccentDiff,
-		operation.SelectAccentTarget,
-		operation.SelectAccentStart,
-		operation.SelectBeats,
-		operation.SelectSpecificValue,
-	}, selection)
-}
-
-func (m *model) RecordPropertyUndo() {
-	if m.temporaryState.active {
-		diff := createStateDiff(&m.definition, &m.temporaryState)
-		if diff.Changed() {
-			m.PushUndoables(UndoStateDiff{diff}, UndoStateDiff{diff.Reverse()})
-		}
-		if m.CurrentPart().Beats != m.temporaryState.beats {
-			m.PushUndoables(UndoBeats{m.temporaryState.beats, m.arrangement.Cursor}, UndoBeats{m.CurrentPart().Beats, m.arrangement.Cursor})
-		}
-		m.temporaryState = temporaryState{}
-	}
 }
 
 func (m *model) NewSequence() {
