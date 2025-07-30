@@ -1348,12 +1348,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 
 		mapping := mappings.ProcessKey(msg, m.focus, m.selectionIndicator, m.definition.templateSequencerType, m.patternMode)
 
-		if mapping.Command == mappings.Quit {
-			m.SetSelectionIndicator(operation.SelectConfirmQuit)
-		}
-
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
+		case mappings.Quit:
+			m.SetSelectionIndicator(operation.SelectConfirmQuit)
 		case mappings.ArrKeyMessage:
 			mappings.ResetKeycombo()
 			arrangmementModel, cmd := m.arrangement.Update(msg)
