@@ -1283,73 +1283,61 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.LogString(fmt.Sprintf(" ------ Panic Message ------- \n%s\n", msg.message))
 		m.LogString(fmt.Sprintf(" ------ Stacktrace ---------- \n%s\n", msg.stacktrace))
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "enter":
-			switch m.focus {
-			case operation.FocusOverlayKey:
-				m.EnsureOverlay()
-			}
-			switch m.selectionIndicator {
-			case operation.SelectRenamePart:
-				m.RenamePart(m.textInput.Value())
-				m.textInput.Reset()
-				m.selectionIndicator = operation.SelectGrid
-				return m, nil
-			case operation.SelectFileName:
-				if m.textInput.Value() != "" {
-					m.filename = fmt.Sprintf("%s.seq", m.textInput.Value())
-					m.textInput.Reset()
-					m.selectionIndicator = operation.SelectGrid
-					m.Save()
-					return m, nil
-				} else {
-					m.selectionIndicator = operation.SelectGrid
-					return m, nil
-				}
-			case operation.SelectPart:
-				_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator == SectionAfter, IsPlaying: m.playing != PlayStopped})
-				if m.sectionSideIndicator == SectionAfter {
-					m.arrangement.Cursor.MoveNext()
-				} else {
-					m.arrangement.Cursor.MovePrev()
-				}
-				m.ResetCurrentOverlay()
-				m.selectionIndicator = operation.SelectGrid
-				return m, cmd
-			case operation.SelectChangePart:
-				_, cmd := m.arrangement.Update(arrangement.ChangePart{Index: m.partSelectorIndex})
-				m.currentOverlay = m.CurrentPart().Overlays
-				m.selectionIndicator = operation.SelectGrid
-				return m, cmd
-			case operation.SelectConfirmNew:
-				m.NewSequence()
-				m.selectionIndicator = operation.SelectGrid
-			case operation.SelectConfirmReload:
-				m.ReloadFile()
-				m.selectionIndicator = operation.SelectGrid
-			case operation.SelectConfirmQuit:
-				m.programChannel <- quitMsg{}
-				err := m.logFile.Close()
-				if err != nil {
-					// NOTE: no good way to display this error when quitting, just panic
-					panic("Unable to close logfile")
-				}
-				return m, tea.Quit
-			default:
-				m.Escape()
-			}
-		case "esc":
-			if m.selectionIndicator != operation.SelectGrid {
-				m.textInput.Reset()
-				m.Escape()
-				return m, nil
-			}
-		}
 
 		mapping := mappings.ProcessKey(msg, m.focus, m.selectionIndicator, m.definition.templateSequencerType, m.patternMode)
 
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
+		case mappings.ConfirmConfirmQuit:
+			m.programChannel <- quitMsg{}
+			err := m.logFile.Close()
+			if err != nil {
+				// NOTE: no good way to display this error when quitting, just panic
+				panic("Unable to close logfile")
+			}
+			return m, tea.Quit
+		case mappings.ConfirmConfirmReload:
+			m.ReloadFile()
+			m.selectionIndicator = operation.SelectGrid
+		case mappings.ConfirmConfirmNew:
+			m.NewSequence()
+			m.selectionIndicator = operation.SelectGrid
+		case mappings.ConfirmChangePart:
+			_, cmd := m.arrangement.Update(arrangement.ChangePart{Index: m.partSelectorIndex})
+			m.currentOverlay = m.CurrentPart().Overlays
+			m.selectionIndicator = operation.SelectGrid
+			return m, cmd
+		case mappings.ConfirmSelectPart:
+			_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator == SectionAfter, IsPlaying: m.playing != PlayStopped})
+			if m.sectionSideIndicator == SectionAfter {
+				m.arrangement.Cursor.MoveNext()
+			} else {
+				m.arrangement.Cursor.MovePrev()
+			}
+			m.ResetCurrentOverlay()
+			m.selectionIndicator = operation.SelectGrid
+			return m, cmd
+		case mappings.ConfirmFileName:
+			if m.textInput.Value() != "" {
+				m.filename = fmt.Sprintf("%s.seq", m.textInput.Value())
+				m.textInput.Reset()
+				m.selectionIndicator = operation.SelectGrid
+				m.Save()
+				return m, nil
+			} else {
+				m.selectionIndicator = operation.SelectGrid
+				return m, nil
+			}
+		case mappings.ConfirmRenamePart:
+			m.RenamePart(m.textInput.Value())
+			m.textInput.Reset()
+			m.selectionIndicator = operation.SelectGrid
+			return m, nil
+		case mappings.ConfirmOverlayKey:
+			m.focus = operation.FocusGrid
+			m.overlayKeyEdit.Focus(false)
+			m.EnsureOverlay()
+			m.EnsureOverlay()
 		case mappings.Quit:
 			m.SetSelectionIndicator(operation.SelectConfirmQuit)
 		case mappings.ArrKeyMessage:
@@ -1857,6 +1845,8 @@ func IsDefinitionChangeSelection(indicator operation.Selection) bool {
 }
 
 func (m *model) Escape() {
+	m.focus = operation.FocusGrid
+	m.textInput.Reset()
 	if IsPropertyIndicator(m.selectionIndicator) {
 		m.RecordPropertyUndo()
 	}

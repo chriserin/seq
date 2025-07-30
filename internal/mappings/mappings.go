@@ -102,7 +102,6 @@ const (
 	ActionAddLineReset
 	ActionAddLineResetAll
 	ActionAddLineReverse
-	// ActionAddLineReverseAll
 	ActionAddSkipBeat
 	ActionAddSkipBeatAll
 	ActionAddLineBounce
@@ -157,6 +156,14 @@ const (
 	OverlayKeyMessage
 	ArrKeyMessage
 	TextInputMessage
+	ConfirmOverlayKey
+	ConfirmRenamePart
+	ConfirmFileName
+	ConfirmSelectPart
+	ConfirmChangePart
+	ConfirmConfirmNew
+	ConfirmConfirmReload
+	ConfirmConfirmQuit
 )
 
 type mappingKey [3]string
@@ -281,7 +288,16 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("{")}:                                                        NextOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("}")}:                                                        PrevOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("enter")}:                                                    Enter,
-	OperationKey{focus: operation.FocusGrid, key: k("esc")}:                                                      Escape,
+	OperationKey{focus: operation.FocusOverlayKey, key: k("enter")}:                                              ConfirmOverlayKey,
+	OperationKey{focus: operation.FocusAny, selection: operation.SelectRenamePart, key: k("enter")}:              ConfirmRenamePart,
+	OperationKey{focus: operation.FocusAny, selection: operation.SelectFileName, key: k("enter")}:                ConfirmFileName,
+	OperationKey{focus: operation.FocusAny, selection: operation.SelectPart, key: k("enter")}:                    ConfirmSelectPart,
+	OperationKey{focus: operation.FocusAny, selection: operation.SelectChangePart, key: k("enter")}:              ConfirmChangePart,
+	OperationKey{focus: operation.FocusAny, selection: operation.SelectConfirmNew, key: k("enter")}:              ConfirmConfirmNew,
+	OperationKey{focus: operation.FocusAny, selection: operation.SelectConfirmReload, key: k("enter")}:           ConfirmConfirmReload,
+	OperationKey{focus: operation.FocusAny, selection: operation.SelectConfirmQuit, key: k("enter")}:             ConfirmConfirmQuit,
+	OperationKey{selection: operation.SelectFileName, key: k("esc")}:                                             Escape,
+	OperationKey{key: k("esc")}:                                                                                  Escape,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeLine, key: k("!")}:                           NumberPattern,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeLine, key: k("@")}:                           NumberPattern,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeLine, key: k("#")}:                           NumberPattern,
@@ -389,10 +405,12 @@ func ProcessKey(key tea.KeyMsg, focus operation.Focus, selection operation.Selec
 		ToMappingKey([3]string{}, operation.FocusAny, selection, operation.SeqModeAny, operation.PatternAny),
 		// For mappings good in any focus, like Play
 		ToMappingKey(mk, operation.FocusAny, operation.SelectAny, operation.SeqModeAny, operation.PatternAny),
+		// Handle focus specific commands handled by ui
+		ToMappingKey(mk, focus, operation.SelectAny, operation.SeqModeAny, operation.PatternAny),
 		// Route any text keys to other focuses
 		ToMappingKey([3]string{}, focus, operation.SelectAny, operation.SeqModeAny, operation.PatternAny),
 		// Route selection specific mappings to those selections.
-		// ToMappingKey(mk, focus, selection, operation.SeqModeAny, operation.PatternAny),
+		ToMappingKey(mk, focus, selection, operation.SeqModeAny, operation.PatternAny),
 		// ToMappingKey(mk, focus, operation.SelectAny, seqtype, patternMode),
 		ToMappingKey(mk, focus, operation.SelectAny, seqtype, operation.PatternAny),
 		ToMappingKey(mk, focus, operation.SelectAny, operation.SeqModeAny, operation.PatternAny),
@@ -403,7 +421,6 @@ func ProcessKey(key tea.KeyMsg, focus operation.Focus, selection operation.Selec
 
 	for _, opKey := range operationKeys {
 		command, exists = mappings[opKey]
-
 		if exists {
 			break
 		}
