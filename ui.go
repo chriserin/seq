@@ -1128,6 +1128,7 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 		midiConnection:        midiConnection,
 		logFile:               logFile,
 		selectionIndicator:    operation.SelectGrid,
+		focus:                 operation.FocusGrid,
 		logFileAvailable:      logFileErr == nil,
 		gridCursor:            GK(0, 0),
 		currentOverlay:        (*definition.parts)[0].Overlays,
@@ -1345,37 +1346,28 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		}
 
-		// NOTE: Process text input before mappings if we have a text input selected
-		if m.selectionIndicator == operation.SelectRenamePart || m.selectionIndicator == operation.SelectFileName {
-			tiModel, cmd := m.textInput.Update(msg)
-			m.textInput = tiModel
-			return m, cmd
-		}
-
-		// NOTE: Overlay key edit has it's own key bindings
-		if m.focus == operation.FocusOverlayKey {
-			okModel, cmd := m.overlayKeyEdit.Update(msg)
-			m.overlayKeyEdit = okModel
-			return m, cmd
-		}
-
-		mapping := mappings.ProcessKey(msg, m.definition.templateSequencerType, m.patternMode)
+		mapping := mappings.ProcessKey(msg, m.focus, m.selectionIndicator, m.definition.templateSequencerType, m.patternMode)
 
 		if mapping.Command == mappings.Quit {
 			m.SetSelectionIndicator(operation.SelectConfirmQuit)
 		}
 
-		// NOTE: Arrangement editor has its own key bindings, but some mappings we still want to route to this model
-		if m.focus == operation.FocusArrangementEditor && !m.ShouldSkipArrangement(mapping) {
+		// NOTE: Finally process the mapping
+		switch mapping.Command {
+		case mappings.ArrKeyMessage:
 			mappings.ResetKeycombo()
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
 			m.ResetCurrentOverlay()
 			return m, cmd
-		}
-
-		// NOTE: Finally process the mapping
-		switch mapping.Command {
+		case mappings.TextInputMessage:
+			tiModel, cmd := m.textInput.Update(msg)
+			m.textInput = tiModel
+			return m, cmd
+		case mappings.OverlayKeyMessage:
+			okModel, cmd := m.overlayKeyEdit.Update(msg)
+			m.overlayKeyEdit = okModel
+			return m, cmd
 		case mappings.ReloadFile:
 			m.SetSelectionIndicator(operation.SelectConfirmReload)
 		case mappings.HoldingKeys:
@@ -1472,8 +1464,14 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			// NOTE: This component handles getting into the overlay key edit mode
 			// the overlaykey component handles getting out of it
 			m.SetSelectionIndicator(operation.SelectGrid)
-			m.focus = operation.FocusOverlayKey
-			m.overlayKeyEdit.Focus(true)
+			if m.focus == operation.FocusOverlayKey {
+				m.focus = operation.FocusGrid
+				m.overlayKeyEdit.Focus(false)
+				m.EnsureOverlay()
+			} else {
+				m.focus = operation.FocusOverlayKey
+				m.overlayKeyEdit.Focus(true)
+			}
 		case mappings.TempoInputSwitch:
 			states := []operation.Selection{operation.SelectGrid, operation.SelectTempo, operation.SelectTempoSubdivision}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
