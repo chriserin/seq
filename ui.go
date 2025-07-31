@@ -1272,26 +1272,6 @@ func IsNot(msg tea.KeyMsg, k ...key.Binding) bool {
 	return !key.Matches(msg, k...)
 }
 
-var skipArrangementMappings = []mappings.Command{
-	mappings.ToggleArrangementView,
-	mappings.Undo,
-	mappings.Redo,
-	mappings.PlayLoop,
-	mappings.PlayStop,
-	mappings.PlayPart,
-	mappings.ChangePart,
-	mappings.NewSectionAfter,
-	mappings.NewSectionBefore,
-	mappings.NextSection,
-	mappings.PrevSection,
-	mappings.HoldingKeys,
-}
-
-func (m model) ShouldSkipArrangement(mapping mappings.Mapping) bool {
-	return slices.Contains(skipArrangementMappings, mapping.Command) ||
-		((m.selectionIndicator == operation.SelectPart || m.selectionIndicator == operation.SelectChangePart) && slices.Contains([]mappings.Command{mappings.Decrease, mappings.Increase}, mapping.Command))
-}
-
 type panicMsg struct {
 	message    string
 	stacktrace []byte
