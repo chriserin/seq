@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/chriserin/seq/internal/arrangement"
+	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlays"
 )
@@ -35,6 +36,25 @@ func (ub UndoBeats) ApplyUndo(m *model) Location {
 	partID := m.CurrentPartID()
 	(*m.definition.parts)[partID].Beats = ub.beats
 	return Location{ApplyLocation: false}
+}
+
+type UndoSpecificValue struct {
+	overlayKey     overlayKey
+	cursorPosition gridKey
+	ArrCursor      arrangement.ArrCursor
+	specificValue  uint8
+}
+
+func (usv UndoSpecificValue) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = usv.ArrCursor
+	overlay := m.CurrentPart().Overlays.FindOverlay(usv.overlayKey)
+	overlay.SetNote(usv.cursorPosition, note{Action: grid.ActionSpecificValue, AccentIndex: usv.specificValue})
+	m.selectionIndicator = operation.SelectSpecificValue
+	return Location{
+		OverlayKey:    usv.overlayKey,
+		GridKey:       usv.cursorPosition,
+		ApplyLocation: true,
+	}
 }
 
 type UndoNewOverlay struct {

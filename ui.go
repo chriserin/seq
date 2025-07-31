@@ -206,6 +206,7 @@ type model struct {
 	hasSolo               bool
 	showArrangementView   bool
 	ratchetCursor         uint8
+	temporaryNoteValue    uint8
 	focus                 operation.Focus
 	sectionSideIndicator  SectionSide
 	playing               PlayMode
@@ -244,12 +245,46 @@ type model struct {
 }
 
 func (m *model) SetGridCursor(key gridKey) {
+	currentNote, currentExists := m.CurrentNote()
+	currentPosition := m.gridCursor
 	m.gridCursor = key
-	note, exists := m.CurrentNote()
-	if exists && note.Action == grid.ActionSpecificValue {
-		m.SetSelectionIndicator(operation.SelectSpecificValue)
-	} else {
+	newNote, noteExists := m.CurrentNote()
+	if currentExists && currentNote.Action == grid.ActionSpecificValue && currentPosition != key {
+		m.PushSpecificValueUndoable(currentPosition, m.temporaryNoteValue, currentNote.AccentIndex)
 		m.SetSelectionIndicator(operation.SelectGrid)
+	} else if noteExists && newNote.Action == grid.ActionSpecificValue {
+		m.RecordSpecificValue(newNote.AccentIndex)
+		m.SetSelectionIndicator(operation.SelectSpecificValue)
+	}
+}
+
+func (m *model) RecordSpecificValue(value uint8) {
+	m.temporaryNoteValue = value
+}
+
+func (m *model) RecordSpecificValueUndo() {
+	currentNote, noteExists := m.CurrentNote()
+	if noteExists && currentNote.Action == grid.ActionSpecificValue {
+		m.PushSpecificValueUndoable(m.gridCursor, m.temporaryNoteValue, currentNote.AccentIndex)
+	}
+}
+
+func (m *model) PushSpecificValueUndoable(position gridKey, oldValue, newValue uint8) {
+	if oldValue != newValue {
+		m.PushUndoables(
+			UndoSpecificValue{
+				ArrCursor:      m.arrangement.Cursor,
+				overlayKey:     m.currentOverlay.Key,
+				cursorPosition: position,
+				specificValue:  oldValue,
+			},
+			UndoSpecificValue{
+				ArrCursor:      m.arrangement.Cursor,
+				overlayKey:     m.currentOverlay.Key,
+				cursorPosition: position,
+				specificValue:  newValue,
+			},
+		)
 	}
 }
 
@@ -1359,12 +1394,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.HoldingKeys:
 			return m, nil
 		case mappings.CursorDown:
-			if slices.Contains([]operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue}, m.selectionIndicator) {
+			if slices.Contains([]operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue, operation.SelectSpecificValue}, m.selectionIndicator) {
 				m.CursorDown()
 				m.UnsetActiveChord()
 			}
 		case mappings.CursorUp:
-			if slices.Contains([]operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue}, m.selectionIndicator) {
+			if slices.Contains([]operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue, operation.SelectSpecificValue}, m.selectionIndicator) {
 				m.CursorUp()
 				m.UnsetActiveChord()
 			}
@@ -1722,6 +1757,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.playState = Solo(m.playState, m.gridCursor.Line)
 			m.hasSolo = m.HasSolo()
 		case mappings.Enter:
+			m.RecordSpecificValueUndo()
 			m.PushUndoableDefinitionState()
 			m.SetSelectionIndicator(operation.SelectGrid)
 		default:
