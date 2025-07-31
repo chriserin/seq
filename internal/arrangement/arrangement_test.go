@@ -273,6 +273,69 @@ func TestGroupNodes(t *testing.T) {
 	})
 }
 
+func TestCursorForNode(t *testing.T) {
+	t.Run("one level hierarchy", func(t *testing.T) {
+		// Create a basic arrangement tree
+		root := &Arrangement{
+			Iterations: 1,
+			Nodes:      make([]*Arrangement, 0),
+		}
+
+		// Create some sections and nodes
+		section1 := SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1}
+		section2 := SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2}
+		section3 := SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1}
+
+		node1 := &Arrangement{Section: section1, Iterations: 1}
+		node2 := &Arrangement{Section: section2, Iterations: 1}
+		node3 := &Arrangement{Section: section3, Iterations: 1}
+
+		// Add nodes to root in a specific order
+		root.Nodes = append(root.Nodes, node1, node2, node3)
+
+		// Test cursor for a specific node
+		cursor := root.CursorForNode(node2)
+		assert.Equal(t, ArrCursor{root, node2}, cursor, "Cursor should point to node2")
+
+		// Test cursor for a non-existing node
+		cursor = root.CursorForNode(&Arrangement{})
+		assert.Equal(t, ArrCursor{}, cursor, "Cursor should be empty for non-existing node")
+	})
+
+	t.Run("grouped hierarcy", func(t *testing.T) {
+		// Create a basic arrangement tree
+		root := &Arrangement{
+			Iterations: 1,
+			Nodes:      make([]*Arrangement, 0),
+		}
+
+		// Create some sections and nodes
+		section1 := SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1}
+		section2 := SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2}
+		section3 := SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1}
+
+		node1 := &Arrangement{Section: section1, Iterations: 1}
+		node2 := &Arrangement{Section: section2, Iterations: 1}
+		node3 := &Arrangement{Section: section3, Iterations: 1}
+
+		groupNode := &Arrangement{
+			Iterations: 2,
+			Nodes:      []*Arrangement{node2, node3},
+		}
+
+		root.Nodes = append(root.Nodes, node1, groupNode)
+
+		cursor := root.CursorForNode(node3)
+		assert.Equal(t, ArrCursor{root, groupNode, node3}, cursor, "Cursor should point to node3 in group")
+
+		cursor = root.CursorForNode(node1)
+		assert.Equal(t, ArrCursor{root, node1}, cursor, "Cursor should point to node1")
+
+		cursor = root.CursorForNode(&Arrangement{})
+		assert.Equal(t, ArrCursor{}, cursor, "Cursor should be empty for non-existing node")
+	})
+}
+
 // TestSongSectionMethods tests the SongSection helper methods
 func TestSongSectionMethods(t *testing.T) {
 	section := SongSection{

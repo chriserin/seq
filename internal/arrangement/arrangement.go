@@ -132,6 +132,36 @@ func (a *Arrangement) CountAllNodes() int {
 	return count
 }
 
+func (a *Arrangement) CursorForNode(node *Arrangement) ArrCursor {
+	var cursor ArrCursor
+	if a == node {
+		cursor = ArrCursor{a}
+	} else {
+		cursor = a.CursorForNodeRecursive(node, ArrCursor{a})
+	}
+	return cursor
+}
+
+func (a *Arrangement) CursorForNodeRecursive(node *Arrangement, cursor ArrCursor) ArrCursor {
+
+	if a == node {
+		return cursor
+	}
+
+	for _, child := range a.Nodes {
+		if child == node {
+			return append(cursor, child)
+		} else if child.IsGroup() {
+			newCursor := child.CursorForNodeRecursive(node, append(cursor, child))
+			if len(newCursor) > 0 {
+				return newCursor
+			}
+		}
+	}
+
+	return ArrCursor{} // Return empty cursor if node not found
+}
+
 type ArrCursor []*Arrangement
 
 func (ac ArrCursor) Equals(other ArrCursor) bool {
@@ -483,13 +513,13 @@ func (m *Model) GroupNodes() {
 
 		currentIndex := slices.Index(parentNode.Nodes, currentNode)
 
-		m.Cursor.MovePrev()
+		currentEndNode := m.Cursor[len(m.Cursor)-1]
 		if currentIndex+1 < len(parentNode.Nodes) {
 			GroupNodes(parentNode, currentIndex, currentIndex+1)
 		} else {
 			GroupNodes(parentNode, currentIndex, currentIndex)
 		}
-		m.Cursor.MoveNext()
+		m.Cursor = m.Root.CursorForNode(currentEndNode)
 	}
 }
 
