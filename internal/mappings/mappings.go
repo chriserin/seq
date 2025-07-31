@@ -198,11 +198,11 @@ func allCommands() registry {
 }
 
 type OperationKey struct {
-	key         mappingKey
 	focus       operation.Focus
 	selection   operation.Selection
 	mode        operation.SequencerMode
 	patternMode operation.PatternMode
+	key         mappingKey
 }
 
 var mappings = registry{
@@ -291,13 +291,13 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("}")}:                                                        PrevOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("enter")}:                                                    Enter,
 	OperationKey{focus: operation.FocusOverlayKey, key: k("enter")}:                                              ConfirmOverlayKey,
-	OperationKey{focus: operation.FocusAny, selection: operation.SelectRenamePart, key: k("enter")}:              ConfirmRenamePart,
-	OperationKey{focus: operation.FocusAny, selection: operation.SelectFileName, key: k("enter")}:                ConfirmFileName,
-	OperationKey{focus: operation.FocusAny, selection: operation.SelectPart, key: k("enter")}:                    ConfirmSelectPart,
-	OperationKey{focus: operation.FocusAny, selection: operation.SelectChangePart, key: k("enter")}:              ConfirmChangePart,
-	OperationKey{focus: operation.FocusAny, selection: operation.SelectConfirmNew, key: k("enter")}:              ConfirmConfirmNew,
-	OperationKey{focus: operation.FocusAny, selection: operation.SelectConfirmReload, key: k("enter")}:           ConfirmConfirmReload,
-	OperationKey{focus: operation.FocusAny, selection: operation.SelectConfirmQuit, key: k("enter")}:             ConfirmConfirmQuit,
+	OperationKey{selection: operation.SelectRenamePart, key: k("enter")}:                                         ConfirmRenamePart,
+	OperationKey{selection: operation.SelectFileName, key: k("enter")}:                                           ConfirmFileName,
+	OperationKey{selection: operation.SelectPart, key: k("enter")}:                                               ConfirmSelectPart,
+	OperationKey{selection: operation.SelectChangePart, key: k("enter")}:                                         ConfirmChangePart,
+	OperationKey{selection: operation.SelectConfirmNew, key: k("enter")}:                                         ConfirmConfirmNew,
+	OperationKey{selection: operation.SelectConfirmReload, key: k("enter")}:                                      ConfirmConfirmReload,
+	OperationKey{selection: operation.SelectConfirmQuit, key: k("enter")}:                                        ConfirmConfirmQuit,
 	OperationKey{selection: operation.SelectFileName, key: k("esc")}:                                             Escape,
 	OperationKey{key: k("esc")}:                                                                                  Escape,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeLine, key: k("!")}:                           NumberPattern,

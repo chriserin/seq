@@ -18,7 +18,6 @@ type keymap struct {
 	RemoveStart   key.Binding
 	Increase      key.Binding
 	Decrease      key.Binding
-	Escape        key.Binding
 }
 
 var keys = keymap{
@@ -29,7 +28,6 @@ var keys = keymap{
 	RemoveStart:   Key("Remove Start", "s"),
 	Increase:      Key("Increase", "+"),
 	Decrease:      Key("Decrease", "-"),
-	Escape:        Key("Escape", "esc", "enter", "ctrl+o"),
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -62,6 +60,12 @@ func (m *Model) Focus(shouldFocus bool) {
 	}
 }
 
+func (m *Model) Escape(key OverlayPeriodicity) {
+	m.focus = FocusNothing
+	m.firstDigitApplied = false
+	m.overlayKey = key
+}
+
 type focus int
 
 const (
@@ -87,10 +91,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			if m.focus == FocusWidth && m.overlayKey.Width == 0 {
 				m.focus = FocusShift
 			}
-		case key.Matches(msg, keys.Escape):
-			m.focus = FocusNothing
-			m.firstDigitApplied = false
-			return m, Updated(m.overlayKey, false)
 		case key.Matches(msg, keys.FocusWidth):
 			m.focus = FocusWidth
 			if m.overlayKey.Width == 0 {

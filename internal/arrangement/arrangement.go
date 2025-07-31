@@ -498,6 +498,11 @@ type Model struct {
 	depthCursor int
 }
 
+func (m *Model) Escape() {
+	m.Focus = false
+	m.ResetDepth()
+}
+
 func (m Model) CurrentNode() *Arrangement {
 	return m.Cursor[m.depthCursor]
 }
@@ -739,7 +744,6 @@ type keymap struct {
 	DeleteNode   key.Binding
 	MovePartDown key.Binding
 	MovePartUp   key.Binding
-	Escape       key.Binding
 	RenamePart   key.Binding
 }
 
@@ -755,7 +759,6 @@ var keys = keymap{
 	MovePartDown: Key("Move Part Down", "J"),
 	MovePartUp:   Key("Move Part Up", "K"),
 	RenamePart:   Key("Rename Part", "R"),
-	Escape:       Key("Escape", "esc", "enter"),
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -964,10 +967,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case Is(msg, keys.MovePartUp):
 			MoveNodeUp(&m.Cursor)
 			m.ResetDepth()
-		case Is(msg, keys.Escape):
-			m.Focus = false
-			m.ResetDepth()
-			return m, func() tea.Msg { return GiveBackFocus{} }
 		case Is(msg, keys.RenamePart):
 			return m, func() tea.Msg { return RenamePart{} }
 		}

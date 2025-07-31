@@ -1890,8 +1890,8 @@ func (m *model) Escape() {
 	m.patternMode = operation.PatternFill
 	m.selectionIndicator = operation.SelectGrid
 
-	m.arrangement.Focus = false
-	m.arrangement.ResetDepth()
+	m.arrangement.Escape()
+	m.overlayKeyEdit.Escape(m.currentOverlay.Key)
 }
 
 func (m *model) NewSequence() {
