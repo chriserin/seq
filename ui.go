@@ -1372,7 +1372,6 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.focus = operation.FocusGrid
 			m.overlayKeyEdit.Focus(false)
 			m.EnsureOverlay()
-			m.EnsureOverlay()
 		case mappings.Quit:
 			m.SetSelectionIndicator(operation.SelectConfirmQuit)
 		case mappings.ArrKeyMessage:

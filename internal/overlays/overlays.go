@@ -42,7 +42,8 @@ func (ol Overlay) Add(key Key) *Overlay {
 	}
 
 	if aboveComparison > 0 && belowComparison > 0 {
-		ol.Below.Add(key)
+		newOverlay := ol.Below.Add(key)
+		ol.Below = newOverlay
 	} else if aboveComparison > 0 && belowComparison < 0 {
 		newOverlay := InitOverlay(key, ol.Below)
 		ol.Below = newOverlay

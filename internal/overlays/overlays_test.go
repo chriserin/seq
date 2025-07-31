@@ -63,6 +63,18 @@ func TestAddOverlays(t *testing.T) {
 	})
 }
 
+func TestAddLayeredOverlays(t *testing.T) {
+	overlay := InitOverlay(overlaykey.ROOT, nil)
+	overlay = overlay.Add(Key{Shift: 4, Interval: 1, Width: 0, StartCycle: 0})
+	overlay = overlay.Add(Key{Shift: 3, Interval: 1, Width: 0, StartCycle: 0})
+	overlay = overlay.Add(Key{Shift: 2, Interval: 1, Width: 0, StartCycle: 0})
+
+	keys := []Key{}
+	overlay.CollectKeys(&keys)
+	lastAdded := overlay.FindOverlay(overlaykey.OverlayPeriodicity{Shift: 2, Interval: 1, Width: 0, StartCycle: 0})
+	assert.NotNil(t, lastAdded, "Last added overlay should not be nil")
+}
+
 func TestFindAboveOverlay(t *testing.T) {
 	t.Run("Chords len should be the same", func(t *testing.T) {
 		overlayA := InitOverlay(overlaykey.InitOverlayKey(1, 1), nil)
