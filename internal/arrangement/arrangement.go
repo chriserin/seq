@@ -840,12 +840,15 @@ func (su SectionUndo) ApplyUndo(m *Model) {
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var undo, redo Undoable
+
+	cursorCopy := make(ArrCursor, len(m.Cursor))
+	copy(cursorCopy, m.Cursor)
 	if IsArrChangeMessage(msg) {
-		undo = TreeUndo{m.CreateUndoTree(), m.Cursor, m.depthCursor}
+		undo = TreeUndo{m.CreateUndoTree(), cursorCopy, m.depthCursor}
 	} else if IsSectionChangeMessage(msg, m.Cursor[m.depthCursor].IsEndNode()) {
-		undo = SectionUndo{m.Cursor[len(m.Cursor)-1], m.Cursor[len(m.Cursor)-1].Section, m.Cursor, m.depthCursor}
+		undo = SectionUndo{m.Cursor[len(m.Cursor)-1], m.Cursor[len(m.Cursor)-1].Section, cursorCopy, m.depthCursor}
 	} else if IsGroupChangeMessage(msg, m.Cursor[m.depthCursor].IsGroup()) {
-		undo = GroupUndo{m.Cursor[m.depthCursor], m.Cursor[m.depthCursor].Iterations, m.Cursor, m.depthCursor}
+		undo = GroupUndo{m.Cursor[m.depthCursor], m.Cursor[m.depthCursor].Iterations, cursorCopy, m.depthCursor}
 	}
 
 	switch msg := msg.(type) {
@@ -940,14 +943,16 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 	}
 
+	cursorCopyRedo := make(ArrCursor, len(m.Cursor))
+	copy(cursorCopyRedo, m.Cursor)
 	if IsArrChangeMessage(msg) {
-		redo = TreeUndo{m.CreateUndoTree(), m.Cursor, m.depthCursor}
+		redo = TreeUndo{m.CreateUndoTree(), cursorCopyRedo, m.depthCursor}
 		return m, m.CreateUndoCmd(undo, redo)
 	} else if IsSectionChangeMessage(msg, m.Cursor[m.depthCursor].IsEndNode()) {
-		redo = SectionUndo{m.Cursor[len(m.Cursor)-1], m.Cursor[len(m.Cursor)-1].Section, m.Cursor, m.depthCursor}
+		redo = SectionUndo{m.Cursor[len(m.Cursor)-1], m.Cursor[len(m.Cursor)-1].Section, cursorCopyRedo, m.depthCursor}
 		return m, m.CreateUndoCmd(undo, redo)
 	} else if IsGroupChangeMessage(msg, m.Cursor[m.depthCursor].IsGroup()) {
-		redo = GroupUndo{m.Cursor[m.depthCursor], m.Cursor[m.depthCursor].Iterations, m.Cursor, m.depthCursor}
+		redo = GroupUndo{m.Cursor[m.depthCursor], m.Cursor[m.depthCursor].Iterations, cursorCopyRedo, m.depthCursor}
 		return m, m.CreateUndoCmd(undo, redo)
 	}
 
