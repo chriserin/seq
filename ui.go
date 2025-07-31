@@ -1544,10 +1544,6 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.arrangement.Focus = true
 			} else {
 				m.Escape()
-				m.focus = operation.FocusGrid
-				model, cmd := m.arrangement.Update(tea.KeyMsg{Type: tea.KeyEsc})
-				m.arrangement = model
-				return m, cmd
 			}
 		case mappings.Increase:
 			switch m.selectionIndicator {
@@ -1893,6 +1889,9 @@ func (m *model) Escape() {
 	}
 	m.patternMode = operation.PatternFill
 	m.selectionIndicator = operation.SelectGrid
+
+	m.arrangement.Focus = false
+	m.arrangement.ResetDepth()
 }
 
 func (m *model) NewSequence() {
