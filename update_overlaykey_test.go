@@ -51,6 +51,12 @@ func TestUpdateOverlayKey(t *testing.T) {
 			expectedKey: overlaykey.OverlayPeriodicity{Shift: 3, Interval: 3, Width: 3, StartCycle: 3},
 			description: "Should create a new overlay key with StartCycle lower case s",
 		},
+		{
+			name:        "Escape from overlay key edit",
+			commands:    []any{mappings.OverlayInputSwitch, TestKey{Keys: "3:3/3S3"}, mappings.Escape},
+			expectedKey: overlaykey.OverlayPeriodicity{Shift: 1, Interval: 1, Width: 0, StartCycle: 0},
+			description: "Should escape from overlay key edit and return to current key",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -59,6 +65,7 @@ func TestUpdateOverlayKey(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, tt.expectedKey, m.currentOverlay.Key, tt.description)
+			assert.Equal(t, tt.expectedKey, m.overlayKeyEdit.GetKey(), tt.description)
 		})
 	}
 }
