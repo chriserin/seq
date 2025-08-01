@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/Southclaws/fault"
 	"github.com/Southclaws/fault/fmsg"
+	"github.com/Southclaws/fault/ftag"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/chriserin/seq/internal/config"
@@ -19,6 +21,79 @@ import (
 	themes "github.com/chriserin/seq/internal/themes"
 	midi "gitlab.com/gomidi/midi/v2"
 )
+
+func (m model) View() (output string) {
+	defer func() {
+		if r := recover(); r != nil {
+			stackTrace := make([]byte, 4096)
+			n := runtime.Stack(stackTrace, false)
+			msg := panicMsg{message: fmt.Sprintf("Caught View Panic: %v", r), stacktrace: stackTrace[:n]}
+			m.LogString(fmt.Sprintf(" ------ Panic Message ------- \n%s\n", msg.message))
+			m.LogString(fmt.Sprintf(" ------ Stacktrace ---------- \n%s\n", msg.stacktrace))
+			output = fmt.Sprintf("View Layer Panic: %v\n", r)
+			m.errChan <- fault.New(fmt.Sprintf("caught view panic: %v", r), ftag.With("view_panic"), fmsg.WithDesc(fmt.Sprintf("%v", r), "View Panic"))
+		}
+	}()
+
+	if m.currentViewError != nil {
+		result := fmt.Sprintf("There was an error rendering the view: %s", m.currentViewError)
+		result += "\n\n"
+		result += "Details in debug.log\n"
+		result += "Please consider reporting this issue\n"
+		result += "Ctrl+C or q to exit\n"
+		return result
+	}
+
+	var buf strings.Builder
+	var sideView string
+
+	if m.patternMode == operation.PatternAccent || m.IsAccentSelector() {
+		sideView = m.AccentKeyView()
+	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && m.CurrentPart().Overlays.IsFresh() && len(*m.definition.parts) == 1 && m.CurrentPartID() == 0) ||
+		slices.Contains([]operation.Selection{operation.SelectSetupValue, operation.SelectSetupMessageType, operation.SelectSetupChannel}, m.selectionIndicator) {
+		// NOTE: We want to show the setupView on the very initial screen, before any sequencing has begun OR a setup value is selected
+		sideView = m.SetupView()
+	} else {
+		sideView = m.OverlaysView()
+
+		var chordView string
+		if m.definition.templateSequencerType == operation.SeqModeChord {
+			currentChord := m.CurrentChord()
+			chordView = m.ChordView(currentChord.GridChord)
+		}
+		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
+	}
+
+	seqView := m.SeqView()
+	buf.WriteString(lipgloss.JoinHorizontal(0, "  ", seqView, "  ", sideView))
+	if m.currentError != nil && m.selectionIndicator == operation.SelectError {
+		buf.WriteString("\n")
+		style := lipgloss.NewStyle().Width(50)
+		style = style.Border(lipgloss.NormalBorder())
+		style = style.Padding(1)
+		style = style.BorderForeground(lipgloss.Color("#880000"))
+		style = style.MarginLeft(2)
+		var errorBuf strings.Builder
+		errorBuf.WriteString("ERROR: ")
+		issue := fmsg.GetIssue(m.currentError)
+		if issue != "" {
+			errorBuf.WriteString(issue)
+		} else {
+			chain := fault.Flatten(m.currentError)
+			errorBuf.WriteString(chain[0].Message)
+		}
+		buf.WriteString(style.Render(errorBuf.String()))
+	} else {
+		buf.WriteString("\n")
+	}
+	if m.showArrangementView {
+		buf.WriteString("\n")
+		buf.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, "  ", m.arrangement.View()))
+	}
+	buf.WriteString(mappings.KeycomboView())
+	buf.WriteString("\n")
+	return buf.String()
+}
 
 func (m model) CyclesEditView() string {
 	var buf strings.Builder
@@ -105,58 +180,6 @@ func (m model) IsAccentSelector() bool {
 func (m model) IsRatchetSelector() bool {
 	states := []operation.Selection{operation.SelectRatchets, operation.SelectRatchetSpan}
 	return slices.Contains(states, m.selectionIndicator)
-}
-
-func (m model) View() string {
-	var buf strings.Builder
-	var sideView string
-
-	if m.patternMode == operation.PatternAccent || m.IsAccentSelector() {
-		sideView = m.AccentKeyView()
-	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && m.CurrentPart().Overlays.IsFresh() && len(*m.definition.parts) == 1 && m.CurrentPartID() == 0) ||
-		slices.Contains([]operation.Selection{operation.SelectSetupValue, operation.SelectSetupMessageType, operation.SelectSetupChannel}, m.selectionIndicator) {
-		// NOTE: We want to show the setupView on the very initial screen, before any sequencing has begun OR a setup value is selected
-		sideView = m.SetupView()
-	} else {
-		sideView = m.OverlaysView()
-
-		var chordView string
-		if m.definition.templateSequencerType == operation.SeqModeChord {
-			currentChord := m.CurrentChord()
-			chordView = m.ChordView(currentChord.GridChord)
-		}
-		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
-	}
-
-	seqView := m.SeqView()
-	buf.WriteString(lipgloss.JoinHorizontal(0, "  ", seqView, "  ", sideView))
-	if m.currentError != nil && m.selectionIndicator == operation.SelectError {
-		buf.WriteString("\n")
-		style := lipgloss.NewStyle().Width(50)
-		style = style.Border(lipgloss.NormalBorder())
-		style = style.Padding(1)
-		style = style.BorderForeground(lipgloss.Color("#880000"))
-		style = style.MarginLeft(2)
-		var errorBuf strings.Builder
-		errorBuf.WriteString("ERROR: ")
-		issue := fmsg.GetIssue(m.currentError)
-		if issue != "" {
-			errorBuf.WriteString(issue)
-		} else {
-			chain := fault.Flatten(m.currentError)
-			errorBuf.WriteString(chain[0].Message)
-		}
-		buf.WriteString(style.Render(errorBuf.String()))
-	} else {
-		buf.WriteString("\n")
-	}
-	if m.showArrangementView {
-		buf.WriteString("\n")
-		buf.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, "  ", m.arrangement.View()))
-	}
-	buf.WriteString(mappings.KeycomboView())
-	buf.WriteString("\n")
-	return buf.String()
 }
 
 func (m model) AccentKeyView() string {

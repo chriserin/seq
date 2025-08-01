@@ -13,6 +13,7 @@ import (
 
 	"github.com/Southclaws/fault"
 	"github.com/Southclaws/fault/fmsg"
+	"github.com/Southclaws/fault/ftag"
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -228,6 +229,7 @@ type model struct {
 	unlockReceiverChannel chan bool
 	errChan               chan error
 	currentError          error
+	currentViewError      error
 	theme                 string
 	filename              string
 	help                  help.Model
@@ -293,6 +295,11 @@ func (m *model) UnsetActiveChord() {
 func (m *model) SetCurrentError(err error) {
 	m.currentError = err
 	m.selectionIndicator = operation.SelectError
+	m.LogError(err)
+}
+
+func (m *model) SetCurrentViewError(err error) {
+	m.currentViewError = err
 	m.LogError(err)
 }
 
@@ -595,6 +602,9 @@ type uiStopMsg struct{}
 type uiConnectedMsg struct{}
 type uiNotConnectedMsg struct{}
 type errorMsg struct {
+	error error
+}
+type viewPanicMsg struct {
 	error error
 }
 
@@ -1253,7 +1263,13 @@ func ErrorLoop(program *tea.Program, errChan chan error) {
 	go func() {
 		for {
 			programError := <-errChan
-			program.Send(errorMsg{programError})
+			tag := ftag.Get(programError)
+			switch tag {
+			case "view_panic":
+				program.Send(viewPanicMsg{programError})
+			default:
+				program.Send(errorMsg{programError})
+			}
 		}
 	}()
 }
@@ -1291,6 +1307,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case errorMsg:
 		m.SetCurrentError(msg.error)
+	case viewPanicMsg:
+		m.SetCurrentViewError(msg.error)
 	case panicMsg:
 		m.SetCurrentError(errors.New(msg.message))
 		m.LogString(fmt.Sprintf(" ------ Panic Message ------- \n%s\n", msg.message))
@@ -1302,13 +1320,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
 		case mappings.ConfirmConfirmQuit:
-			m.programChannel <- quitMsg{}
-			err := m.logFile.Close()
-			if err != nil {
-				// NOTE: no good way to display this error when quitting, just panic
-				panic("Unable to close logfile")
-			}
-			return m, tea.Quit
+			return m.Quit()
 		case mappings.ConfirmConfirmReload:
 			m.ReloadFile()
 			m.selectionIndicator = operation.SelectGrid
@@ -1351,7 +1363,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.overlayKeyEdit.Focus(false)
 			m.EnsureOverlay()
 		case mappings.Quit:
-			m.SetSelectionIndicator(operation.SelectConfirmQuit)
+			if m.currentViewError == nil {
+				m.SetSelectionIndicator(operation.SelectConfirmQuit)
+			} else {
+				return m.Quit()
+			}
 		case mappings.ArrKeyMessage:
 			mappings.ResetKeycombo()
 			arrangmementModel, cmd := m.arrangement.Update(msg)
@@ -1789,6 +1805,16 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
 	return m, cmd
+}
+
+func (m model) Quit() (tea.Model, tea.Cmd) {
+	m.programChannel <- quitMsg{}
+	err := m.logFile.Close()
+	if err != nil {
+		// NOTE: no good way to display this error when quitting, just panic
+		panic("Unable to close logfile")
+	}
+	return m, tea.Quit
 }
 
 func (m *model) CursorDown() {
