@@ -1118,6 +1118,7 @@ func LoadFile(filename string, template string) (Definition, error) {
 	if filename != "" {
 		definition, fileErr = Read(filename)
 		gridTemplate, exists := config.GetTemplate(definition.template)
+		definition.templateSequencerType = gridTemplate.SequencerType
 		if exists {
 			config.LongGates = config.GetGateLengths(gridTemplate.MaxGateLength)
 		} else {
@@ -1172,6 +1173,7 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 		logFile:               logFile,
 		selectionIndicator:    operation.SelectGrid,
 		focus:                 operation.FocusGrid,
+		patternMode:           operation.PatternFill,
 		logFileAvailable:      logFileErr == nil,
 		gridCursor:            GK(0, 0),
 		currentOverlay:        (*definition.parts)[0].Overlays,
