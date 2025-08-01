@@ -4,8 +4,6 @@
 // sequence playback, enabling complex arrangement variations.
 package overlaykey
 
-import "fmt"
-
 type OverlayPeriodicity struct {
 	Shift      uint8
 	Interval   uint8
@@ -17,63 +15,55 @@ func InitOverlayKey(shift, interval uint8) OverlayPeriodicity {
 	return OverlayPeriodicity{shift, interval, 0, 0}
 }
 
-func (o *OverlayPeriodicity) IncrementShift() {
-	if o.Shift < 99 {
-		o.Shift++
+func (op *OverlayPeriodicity) IncrementShift() {
+	if op.Shift < 99 {
+		op.Shift++
 	}
 }
 
-func (o *OverlayPeriodicity) IncrementInterval() {
-	if o.Interval < 99 {
-		o.Interval++
+func (op *OverlayPeriodicity) IncrementInterval() {
+	if op.Interval < 99 {
+		op.Interval++
 	}
 }
 
-func (o *OverlayPeriodicity) IncrementWidth() {
-	if o.Width < 99 {
-		o.Width++
+func (op *OverlayPeriodicity) IncrementWidth() {
+	if op.Width < 99 {
+		op.Width++
 	}
 }
 
-func (o *OverlayPeriodicity) IncrementStartCycle() {
-	if o.StartCycle < 99 {
-		o.StartCycle++
+func (op *OverlayPeriodicity) IncrementStartCycle() {
+	if op.StartCycle < 99 {
+		op.StartCycle++
 	}
 }
 
-func (o *OverlayPeriodicity) DecrementShift() {
-	if o.Shift > 1 {
-		o.Shift--
+func (op *OverlayPeriodicity) DecrementShift() {
+	if op.Shift > 1 {
+		op.Shift--
 	}
 }
 
-func (o *OverlayPeriodicity) DecrementWidth() {
-	if o.Width > 1 {
-		o.Width--
+func (op *OverlayPeriodicity) DecrementWidth() {
+	if op.Width > 1 {
+		op.Width--
 	}
 }
 
-func (o *OverlayPeriodicity) DecrementStartCycle() {
-	if o.StartCycle > 1 {
-		o.StartCycle--
+func (op *OverlayPeriodicity) DecrementStartCycle() {
+	if op.StartCycle > 1 {
+		op.StartCycle--
 	}
 }
 
-func (o *OverlayPeriodicity) DecrementInterval() {
-	if o.Interval > 1 {
-		o.Interval--
+func (op *OverlayPeriodicity) DecrementInterval() {
+	if op.Interval > 1 {
+		op.Interval--
 	}
 }
 
 var ROOT OverlayPeriodicity = OverlayPeriodicity{1, 1, 0, 0}
-
-func (op OverlayPeriodicity) MarshalTOML() ([]byte, error) {
-	return []byte(fmt.Sprintf("%d/%d", op.Shift, op.Interval)), nil
-}
-
-func (op OverlayPeriodicity) WriteKey() string {
-	return fmt.Sprintf("OverlayKey-%d/%d", op.Shift, op.Interval)
-}
 
 // Compare from most specific to least specific
 func Compare(a, b OverlayPeriodicity) int {
