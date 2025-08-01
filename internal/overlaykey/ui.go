@@ -57,6 +57,7 @@ func (m *Model) Focus(shouldFocus bool) {
 		m.focus = FocusShift
 	} else {
 		m.focus = FocusNothing
+		m.firstDigitApplied = false
 	}
 }
 
