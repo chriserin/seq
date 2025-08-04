@@ -36,8 +36,16 @@ func TestToggleArrangementViewSwitch(t *testing.T) {
 			description:       "Second toggle should switch back to grid and close arrangement view",
 		},
 		{
-			name:              "Toggle Arrangement View Switch to Grid keep Arrangement Open",
+			name:              "Toggle Arrangement View Switch to Grid with escape keep Arrangement Open",
 			commands:          []any{mappings.ToggleArrangementView, mappings.Escape},
+			expectedFocus:     operation.FocusGrid,
+			expectedSelection: operation.SelectGrid,
+			expectedArrIsOpen: true,
+			description:       "Escape should switch back to grid and keep arrangement view open",
+		},
+		{
+			name:              "Toggle Arrangement View Switch to Grid with Enter keep Arrangement Open",
+			commands:          []any{mappings.ToggleArrangementView, mappings.Enter},
 			expectedFocus:     operation.FocusGrid,
 			expectedSelection: operation.SelectGrid,
 			expectedArrIsOpen: true,

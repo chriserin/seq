@@ -1750,6 +1750,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.Enter:
 			m.RecordSpecificValueUndo()
 			m.PushUndoableDefinitionState()
+			m.Escape()
 			m.SetSelectionIndicator(operation.SelectGrid)
 		default:
 			m = m.UpdateDefinition(mapping)
@@ -1908,13 +1909,15 @@ func (m *model) SetPatternMode(mode operation.PatternMode) {
 }
 
 func (m *model) Escape() {
-	m.focus = operation.FocusGrid
-	m.textInput.Reset()
+	// NOTE: Visual mode is only exited when pressing escape in base state
 	if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternFill {
 		m.visualMode = false
 	}
+
+	m.focus = operation.FocusGrid
 	m.patternMode = operation.PatternFill
 	m.selectionIndicator = operation.SelectGrid
+	m.textInput.Reset()
 
 	m.arrangement.Escape()
 	m.overlayKeyEdit.Escape(m.currentOverlay.Key)

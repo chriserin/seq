@@ -290,6 +290,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("{")}:                                                        NextOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("}")}:                                                        PrevOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("enter")}:                                                    Enter,
+	OperationKey{focus: operation.FocusArrangementEditor, key: k("enter")}:                                       Enter,
 	OperationKey{focus: operation.FocusOverlayKey, key: k("enter")}:                                              ConfirmOverlayKey,
 	OperationKey{selection: operation.SelectRenamePart, key: k("enter")}:                                         ConfirmRenamePart,
 	OperationKey{selection: operation.SelectFileName, key: k("enter")}:                                           ConfirmFileName,
