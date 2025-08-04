@@ -73,6 +73,7 @@ const (
 	New
 	ToggleVisualMode
 	TogglePlayEdit
+	ToggleHideLines
 	NewLine
 	NewSectionAfter
 	NewSectionBefore
@@ -216,6 +217,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k(">")}:                                                        CursorLineEnd,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "l")}:                                                   CursorLastLine,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "f")}:                                                   CursorFirstLine,
+	OperationKey{focus: operation.FocusGrid, key: k("b", "h")}:                                                   ToggleHideLines,
 	OperationKey{focus: operation.FocusGrid, key: k("A")}:                                                        AccentIncrease,
 	OperationKey{focus: operation.FocusGrid, key: k("C")}:                                                        ClearOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("G")}:                                                        GateIncrease,

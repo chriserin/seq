@@ -47,12 +47,25 @@ func (m model) View() (output string) {
 	var buf strings.Builder
 	var sideView string
 
+	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
+
+	showLines := make([]uint8, 0, len(m.definition.lines))
+	for lineNumber := uint8(0); lineNumber < uint8(len(m.definition.lines)); lineNumber++ {
+		for i := uint8(0); i < m.CurrentPart().Beats; i++ {
+			gridKey := GK(uint8(lineNumber), i)
+			_, exists := visualCombinedPattern[gridKey]
+			if exists || !m.hideEmptyLines {
+				showLines = append(showLines, lineNumber)
+			}
+		}
+	}
+
 	if m.patternMode == operation.PatternAccent || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
 	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && m.CurrentPart().Overlays.IsFresh() && len(*m.definition.parts) == 1 && m.CurrentPartID() == 0) ||
 		slices.Contains([]operation.Selection{operation.SelectSetupValue, operation.SelectSetupMessageType, operation.SelectSetupChannel}, m.selectionIndicator) {
 		// NOTE: We want to show the setupView on the very initial screen, before any sequencing has begun OR a setup value is selected
-		sideView = m.SetupView()
+		sideView = m.SetupView(showLines)
 	} else {
 		sideView = m.OverlaysView()
 
@@ -64,7 +77,8 @@ func (m model) View() (output string) {
 		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
 	}
 
-	seqView := m.SeqView()
+	seqView := m.SeqView(showLines)
+
 	buf.WriteString(lipgloss.JoinHorizontal(0, "  ", seqView, "  ", sideView))
 	if m.currentError != nil && m.selectionIndicator == operation.SelectError {
 		buf.WriteString("\n")
@@ -230,13 +244,16 @@ func (m model) AccentKeyView() string {
 	return buf.String()
 }
 
-func (m model) SetupView() string {
+func (m model) SetupView(showLines []uint8) string {
 	var buf strings.Builder
 	buf.WriteString(themes.AppDescriptorStyle.Render("Setup"))
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
 	for i, line := range m.definition.lines {
+		if !slices.Contains(showLines, uint8(i)) {
+			continue
+		}
 
 		buf.WriteString("CH ")
 		if uint8(i) == m.gridCursor.Line && m.selectionIndicator == operation.SelectSetupChannel {
@@ -372,7 +389,7 @@ func (m model) OverlaysView() string {
 	return buf.String()
 }
 
-func (m model) SeqView() string {
+func (m model) SeqView(showLines []uint8) string {
 	var buf strings.Builder
 	var mode string
 
@@ -435,6 +452,9 @@ func (m model) SeqView() string {
 	buf.WriteString("\n")
 
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
+		if !slices.Contains(showLines, i) {
+			continue
+		}
 		buf.WriteString(lineView(i, m, visualCombinedPattern))
 	}
 

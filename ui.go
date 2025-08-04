@@ -204,6 +204,7 @@ type model struct {
 	playEditing           bool
 	hasSolo               bool
 	showArrangementView   bool
+	hideEmptyLines        bool
 	ratchetCursor         uint8
 	temporaryNoteValue    uint8
 	focus                 operation.Focus
@@ -1321,6 +1322,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
+		case mappings.ToggleHideLines:
+			m.hideEmptyLines = !m.hideEmptyLines
 		case mappings.ConfirmConfirmQuit:
 			return m.Quit()
 		case mappings.ConfirmConfirmReload:
