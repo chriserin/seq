@@ -2975,6 +2975,7 @@ func (m *model) PlayMove() bool {
 		}
 	} else {
 		m.arrangement.Cursor.MoveToSibling()
+		m.arrangement.Cursor.ResetIterations()
 	}
 	return true
 }
