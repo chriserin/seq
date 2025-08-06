@@ -207,6 +207,7 @@ type model struct {
 	hideEmptyLines        bool
 	ratchetCursor         uint8
 	temporaryNoteValue    uint8
+	recordPreRollBeats    uint8
 	focus                 operation.Focus
 	sectionSideIndicator  SectionSide
 	playing               PlayMode
@@ -640,7 +641,11 @@ func (m model) ProcessRatchets(note grid.Note, beatInterval time.Duration, line 
 	}
 }
 
-func (m model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) error {
+func (m *model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) error {
+	if m.recordPreRollBeats > 0 {
+		m.recordPreRollBeats--
+		return nil
+	}
 
 	lines := m.definition.lines
 
@@ -1471,6 +1476,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.SetPlayCycles(m.currentOverlay.Key.GetMinimumKeyCycle())
 		case mappings.PlayRecord:
 			if m.playing == PlayStopped {
+				m.recordPreRollBeats = 8
 				err := seqmidi.SendRecordMessage()
 				if err != nil {
 					m.SetCurrentError(err)
@@ -1784,7 +1790,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	case beatMsg:
 		m.beatTime = time.Now()
 		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
-		if m.playing != PlayStopped {
+		if m.playing != PlayStopped && m.recordPreRollBeats == 0 {
 			m.advanceCurrentBeat(playingOverlay)
 			m.advanceKeyCycle()
 		}
@@ -2001,15 +2007,18 @@ func (m *model) Start() {
 
 	pattern := m.CombinedBeatPattern(playingOverlay)
 	err := m.PlayBeat(tickInterval, pattern)
+
 	if err != nil {
 		m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot play first beat")))
 	}
+
 	if m.playing == PlayStandard {
 		m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 	}
 }
 
 func (m *model) Stop() {
+	m.recordPreRollBeats = 0
 	if m.loopMode == LoopPart {
 		m.arrangement.ResetDepth()
 	}
@@ -2855,16 +2864,6 @@ func (m model) CurrentBeatGridKeys(gridKeys *[]grid.GridKey) {
 		if linestate.IsSolo() || (!linestate.IsMuted() && !m.hasSolo) {
 			*gridKeys = append(*gridKeys, linestate.GridKey())
 		}
-	}
-}
-
-var chordFindDistance int = 3
-
-func (m model) ChordFindBeatGridKeys(gridKeys *[]grid.GridKey) {
-	start := max(0, int(m.gridCursor.Line)-chordFindDistance)
-	end := min(len(m.definition.lines)-1, int(m.gridCursor.Line)+chordFindDistance)
-	for i := start; i <= end; i++ {
-		*gridKeys = append(*gridKeys, GK(uint8(i), m.gridCursor.Beat))
 	}
 }
 
