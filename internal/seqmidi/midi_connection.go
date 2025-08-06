@@ -120,7 +120,7 @@ func SendRecordMessage() error {
 	}
 
 	if selectedOutport == nil {
-		return fault.New("could not find daw outport", fmsg.WithDesc("could not find daw outport", "Could not find a daw outport, please ensure the DAW record destination is open"))
+		return fault.New("could not find daw outport", fmsg.WithDesc("could not find daw outport", "Could not find a daw outport, please ensure the DAW record destination is open and then restart seq"))
 	}
 
 	err := selectedOutport.Open()
