@@ -2958,6 +2958,7 @@ func (m *model) PlayMove() bool {
 	if m.arrangement.Cursor.IsRoot() {
 		m.StartStop()
 		m.arrangement.Cursor.MoveNext()
+		m.arrangement.ResetDepth()
 		m.ResetCurrentOverlay()
 		return false
 	} else if m.arrangement.Cursor.IsLastSibling() {
@@ -2967,14 +2968,17 @@ func (m *model) PlayMove() bool {
 			if m.arrangement.Cursor.GetCurrentNode().IsGroup() {
 				m.arrangement.Cursor.MoveNext()
 			}
+			m.arrangement.ResetDepth()
 		} else {
 			m.arrangement.Cursor.ResetIterations()
 			m.arrangement.Cursor.Up()
+			m.arrangement.ResetDepth()
 			return m.PlayMove()
 		}
 	} else {
 		m.arrangement.Cursor.MoveToSibling()
 		m.arrangement.Cursor.ResetIterations()
+		m.arrangement.ResetDepth()
 	}
 	return true
 }
