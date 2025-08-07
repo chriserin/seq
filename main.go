@@ -20,10 +20,13 @@ var theme string
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:   "Seq",
+		Use:   "seq",
 		Short: "A sequencer for your cli",
 		Long:  "A sequencer for your cli",
-		Args:  cobra.MinimumNArgs(0),
+		Args:  cobra.MaximumNArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return []string{"seq"}, cobra.ShellCompDirectiveFilterFileExt
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 
 			defer func() {
