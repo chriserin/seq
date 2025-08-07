@@ -34,9 +34,9 @@ Line 23: Channel=1, Note=37, MessageType=0
 Line 24: Channel=1, Note=36, MessageType=0
 
 ------------------------- ACCENTS -------------------------
-Diff: 15
-Start: 120
 Target: VELOCITY
+Start: 120
+End: 15
 ----------------------- ACCENT DATA -----------------------
 Accent 0: Value=0
 Accent 1: Value=120

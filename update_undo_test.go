@@ -592,58 +592,58 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 	tests := []struct {
 		name           string
 		commands       []any
-		expectedDiff   uint8
 		expectedData   []config.Accent
 		expectedStart  uint8
+		expectedEnd    uint8
 		expectedTarget accentTarget
 		description    string
 	}{
 		{
-			name: "Undo accent diff change",
+			name: "Undo accent target change",
 			commands: []any{
 				mappings.AccentInputSwitch,
-				mappings.Increase,
 				mappings.Increase,
 				mappings.Escape,
 				mappings.Undo,
 			},
-			expectedDiff:   15,
 			expectedData:   []config.Accent{{Value: 0}, {Value: 120}, {Value: 105}, {Value: 90}, {Value: 75}, {Value: 60}, {Value: 45}, {Value: 30}, {Value: 15}},
 			expectedStart:  120,
+			expectedEnd:    15,
 			expectedTarget: AccentTargetVelocity,
-			description:    "Should restore original accent diff after modification and undo",
+			description:    "Should restore original accent target after modification and undo",
 		},
 		{
 			name: "Undo accent start change",
 			commands: []any{
 				mappings.AccentInputSwitch,
 				mappings.AccentInputSwitch,
-				mappings.AccentInputSwitch,
 				mappings.Increase,
 				mappings.Increase,
 				mappings.Escape,
 				mappings.Undo,
 			},
-			expectedDiff:   15,
 			expectedData:   []config.Accent{{Value: 0}, {Value: 120}, {Value: 105}, {Value: 90}, {Value: 75}, {Value: 60}, {Value: 45}, {Value: 30}, {Value: 15}},
 			expectedStart:  120,
+			expectedEnd:    15,
 			expectedTarget: AccentTargetVelocity,
 			description:    "Should restore original accent start after modification and undo",
 		},
 		{
-			name: "Undo accent target change",
+			name: "Undo accent end change",
 			commands: []any{
 				mappings.AccentInputSwitch,
 				mappings.AccentInputSwitch,
+				mappings.AccentInputSwitch,
+				mappings.Increase,
 				mappings.Increase,
 				mappings.Escape,
 				mappings.Undo,
 			},
-			expectedDiff:   15,
 			expectedData:   []config.Accent{{Value: 0}, {Value: 120}, {Value: 105}, {Value: 90}, {Value: 75}, {Value: 60}, {Value: 45}, {Value: 30}, {Value: 15}},
 			expectedStart:  120,
+			expectedEnd:    15,
 			expectedTarget: AccentTargetVelocity,
-			description:    "Should restore original accent target after modification and undo",
+			description:    "Should restore original accent end after modification and undo",
 		},
 		{
 			name: "Undo multiple accent changes",
@@ -657,9 +657,9 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 				mappings.Escape,
 				mappings.Undo,
 			},
-			expectedDiff:   15,
 			expectedData:   []config.Accent{{Value: 0}, {Value: 120}, {Value: 105}, {Value: 90}, {Value: 75}, {Value: 60}, {Value: 45}, {Value: 30}, {Value: 15}},
 			expectedStart:  120,
+			expectedEnd:    15,
 			expectedTarget: AccentTargetVelocity,
 			description:    "Should restore original accent values after multiple modifications and undos",
 		},
@@ -670,18 +670,18 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 			m := createTestModel()
 
 			// Verify initial accent values
-			assert.Equal(t, tt.expectedDiff, m.definition.accents.Diff, "Initial accent diff should match")
-			assert.Equal(t, tt.expectedStart, m.definition.accents.Start, "Initial accent start should match")
 			assert.Equal(t, tt.expectedTarget, m.definition.accents.Target, "Initial accent target should match")
+			assert.Equal(t, tt.expectedStart, m.definition.accents.Start, "Initial accent start should match")
+			assert.Equal(t, tt.expectedEnd, m.definition.accents.End, "Initial accent end should match")
 
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify accent values are restored
-			assert.Equal(t, tt.expectedDiff, m.definition.accents.Diff, tt.description+" - accent diff should be restored")
-			assert.Equal(t, tt.expectedStart, m.definition.accents.Start, tt.description+" - accent start should be restored")
-			assert.Equal(t, tt.expectedTarget, m.definition.accents.Target, tt.description+" - accent target should be restored")
 			assert.Equal(t, tt.expectedData, m.definition.accents.Data, tt.description+" - accent data should be restored")
-			assert.Equal(t, m.selectionIndicator, operation.SelectAccentDiff, tt.description+" - selection should be SelectAccentDiff after undo")
+			assert.Equal(t, m.selectionIndicator, operation.SelectAccentStart, tt.description+" - selection should be SelectAccentStart after undo")
+			assert.Equal(t, tt.expectedTarget, m.definition.accents.Target, tt.description+" - accent target should be restored")
+			assert.Equal(t, tt.expectedStart, m.definition.accents.Start, tt.description+" - accent start should be restored")
+			assert.Equal(t, tt.expectedEnd, m.definition.accents.End, tt.description+" - accent end should be restored")
 		})
 	}
 }

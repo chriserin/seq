@@ -476,9 +476,9 @@ type temporaryState struct {
 }
 
 type patternAccents struct {
-	Diff   uint8
 	Data   []config.Accent
 	Start  uint8
+	End    uint8
 	Target accentTarget
 }
 
@@ -491,21 +491,25 @@ const (
 
 func (pa *patternAccents) ReCalc() {
 	accents := make([]config.Accent, 9)
+
+	interval := float64(pa.Start-pa.End) / float64(len(pa.Data)-2)
+
 	for i, a := range pa.Data[1:] {
-		a.Value = pa.Start - pa.Diff*uint8(i)
+		a.Value = uint8(float64(pa.Start) - (interval * float64(i)))
 		accents[i+1] = a
 	}
+
 	pa.Data = accents
 }
 
 func (pa *patternAccents) Equal(other *patternAccents) bool {
-	if pa.Diff != other.Diff {
+	if pa.Target != other.Target {
 		return false
 	}
 	if pa.Start != other.Start {
 		return false
 	}
-	if pa.Target != other.Target {
+	if pa.End != other.End {
 		return false
 	}
 	if !slices.Equal(pa.Data, other.Data) {
@@ -895,22 +899,38 @@ func (m *model) DecreaseSpan() {
 	}
 }
 
-func (m *model) IncreaseAccentDiff() {
-	m.definition.accents.Diff = m.definition.accents.Diff + 1
-	m.definition.accents.ReCalc()
+func (m *model) IncreaseAccentEnd() {
+	end := m.definition.accents.End
 
-	// NOTE: uint8 values cannot be less than 0, so instead we check
-	// if the value wrapped around to a value greater than 127
-	// and set it back to the original value if so
-	if m.definition.accents.Data[len(m.definition.accents.Data)-1].Value > 127 {
-		m.definition.accents.Diff -= 1
+	if end < 127 && end < m.definition.accents.Start-1 {
+		m.definition.accents.End = m.definition.accents.End + 1
 		m.definition.accents.ReCalc()
 	}
 }
 
-func (m *model) DecreaseAccentDiff() {
-	m.definition.accents.Diff = m.definition.accents.Diff - 1
-	m.definition.accents.ReCalc()
+func (m *model) DecreaseAccentEnd() {
+	end := m.definition.accents.End
+
+	if end > 1 {
+		m.definition.accents.End = m.definition.accents.End - 1
+		m.definition.accents.ReCalc()
+	}
+}
+
+func (m *model) IncreaseAccentStart() {
+	if m.definition.accents.Start < 127 {
+		m.definition.accents.Start = m.definition.accents.Start + 1
+		m.definition.accents.ReCalc()
+	}
+}
+
+func (m *model) DecreaseAccentStart() {
+	start := m.definition.accents.Start
+
+	if start > 2 && start > m.definition.accents.End+1 {
+		m.definition.accents.Start = m.definition.accents.Start - 1
+		m.definition.accents.ReCalc()
+	}
 }
 
 func (m *model) DecreaseAccentTarget() {
@@ -940,20 +960,6 @@ func (m *model) DecreaseTempo(amount int) {
 	} else if newAmount < 30 {
 		m.definition.tempo = 30
 		m.SyncTempo()
-	}
-}
-
-func (m *model) IncreaseAccentStart() {
-	if m.definition.accents.Start < 127 {
-		m.definition.accents.Start = m.definition.accents.Start + 1
-		m.definition.accents.ReCalc()
-	}
-}
-
-func (m *model) DecreaseAccentStart() {
-	if m.definition.accents.Data[len(m.definition.accents.Data)-1].Value > 0 {
-		m.definition.accents.Start = m.definition.accents.Start - 1
-		m.definition.accents.ReCalc()
 	}
 }
 
@@ -1088,7 +1094,7 @@ func InitDefinition(template string, instrument string) Definition {
 		keyline:               0,
 		subdivisions:          2,
 		lines:                 newLines,
-		accents:               patternAccents{Diff: 15, Data: config.Accents, Start: 120, Target: AccentTargetVelocity},
+		accents:               patternAccents{End: 15, Data: config.Accents, Start: 120, Target: AccentTargetVelocity},
 		template:              gridTemplate.Name,
 		instrument:            instrument,
 		templateUIStyle:       gridTemplate.UIStyle,
@@ -1522,7 +1528,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.AccentInputSwitch:
-			states := []operation.Selection{operation.SelectGrid, operation.SelectAccentDiff, operation.SelectAccentTarget, operation.SelectAccentStart}
+			states := []operation.Selection{operation.SelectGrid, operation.SelectAccentTarget, operation.SelectAccentStart, operation.SelectAccentEnd}
 			if m.selectionIndicator == states[0] {
 				m.CaptureTemporaryState()
 			}
@@ -1592,8 +1598,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				}
 			case operation.SelectRatchetSpan:
 				m.IncreaseSpan()
-			case operation.SelectAccentDiff:
-				m.IncreaseAccentDiff()
+			case operation.SelectAccentEnd:
+				m.IncreaseAccentEnd()
 			case operation.SelectAccentTarget:
 				// Only two options right now, so increase and decrease would do the
 				// same thing
@@ -1640,8 +1646,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				}
 			case operation.SelectRatchetSpan:
 				m.DecreaseSpan()
-			case operation.SelectAccentDiff:
-				m.DecreaseAccentDiff()
+			case operation.SelectAccentEnd:
+				m.DecreaseAccentEnd()
 			case operation.SelectAccentTarget:
 				m.DecreaseAccentTarget()
 			case operation.SelectAccentStart:
@@ -1902,7 +1908,7 @@ func (m *model) CaptureTemporaryState() {
 		tempo:        m.definition.tempo,
 		subdivisions: m.definition.subdivisions,
 		accents: patternAccents{
-			Diff:   m.definition.accents.Diff,
+			End:    m.definition.accents.End,
 			Start:  m.definition.accents.Start,
 			Target: m.definition.accents.Target,
 			Data:   accentDataCopy,

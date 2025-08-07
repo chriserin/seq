@@ -113,7 +113,7 @@ func (usd UndoStateDiff) ApplyUndo(m *model) Location {
 	usd.stateDiff.Apply(m)
 
 	if usd.stateDiff.AccentsChanged {
-		m.selectionIndicator = operation.SelectAccentDiff
+		m.selectionIndicator = operation.SelectAccentStart
 	}
 	if usd.stateDiff.LinesChanged {
 		m.selectionIndicator = operation.SelectSetupChannel

@@ -187,7 +187,7 @@ func (m model) WriteView() string {
 }
 
 func (m model) IsAccentSelector() bool {
-	states := []operation.Selection{operation.SelectAccentDiff, operation.SelectAccentTarget, operation.SelectAccentStart}
+	states := []operation.Selection{operation.SelectAccentEnd, operation.SelectAccentTarget, operation.SelectAccentStart}
 	return slices.Contains(states, m.selectionIndicator)
 }
 
@@ -198,8 +198,7 @@ func (m model) IsRatchetSelector() bool {
 
 func (m model) AccentKeyView() string {
 	var buf strings.Builder
-	var accentDiffString string
-	var accentDiff = m.definition.accents.Diff
+	var accentEnd = m.definition.accents.End
 	var accentStart = m.definition.accents.Start
 
 	var accentTarget string
@@ -210,12 +209,6 @@ func (m model) AccentKeyView() string {
 		accentTarget = "V"
 	}
 
-	if m.selectionIndicator == operation.SelectAccentDiff {
-		accentDiffString = themes.SelectedStyle.Render(fmt.Sprintf("%2d", accentDiff))
-	} else {
-		accentDiffString = themes.NumberStyle.Render(fmt.Sprintf("%2d", accentDiff))
-	}
-
 	var accentTargetString string
 	if m.selectionIndicator == operation.SelectAccentTarget {
 		accentTargetString = themes.SelectedStyle.Render(fmt.Sprintf(" %s", accentTarget))
@@ -224,7 +217,7 @@ func (m model) AccentKeyView() string {
 	}
 
 	title := themes.AppDescriptorStyle.Render("Accents")
-	buf.WriteString(fmt.Sprintf(" %s %s %s\n", title, accentDiffString, accentTargetString))
+	buf.WriteString(fmt.Sprintf(" %s - %s\n", title, accentTargetString))
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
 
@@ -235,12 +228,21 @@ func (m model) AccentKeyView() string {
 		accentStartString = themes.NumberStyle.Render(fmt.Sprintf("%2d", accentStart))
 	}
 
+	var accentEndString string
+	if m.selectionIndicator == operation.SelectAccentEnd {
+		accentEndString = themes.SelectedStyle.Render(fmt.Sprintf("%2d", accentEnd))
+	} else {
+		accentEndString = themes.NumberStyle.Render(fmt.Sprintf("%2d", accentEnd))
+	}
+
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color(themes.AccentColors[1]))
 	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(themes.AccentIcons[1])), accentStartString))
-	for i, accent := range m.definition.accents.Data[2:] {
+	for i, accent := range m.definition.accents.Data[2 : len(m.definition.accents.Data)-1] {
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(themes.AccentColors[i+2]))
 		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(themes.AccentIcons[i+2])), accent.Value))
 	}
+	style = lipgloss.NewStyle().Foreground(lipgloss.Color(themes.AccentColors[len(themes.AccentIcons)-1]))
+	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(themes.AccentIcons[len(themes.AccentIcons)-1])), accentEndString))
 	return buf.String()
 }
 

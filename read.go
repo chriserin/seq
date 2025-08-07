@@ -36,7 +36,7 @@ func Read(filename string) (Definition, error) {
 		template:        "default",
 		templateUIStyle: "dark",
 		accents: patternAccents{
-			Diff:   10,
+			End:    10,
 			Start:  64,
 			Target: AccentTargetVelocity,
 			Data:   []config.Accent{},
@@ -247,9 +247,9 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 			value := strings.TrimSpace(parts[1])
 
 			switch key {
-			case "Diff":
-				if diff, err := strconv.ParseUint(value, 10, 8); err == nil {
-					definition.accents.Diff = uint8(diff)
+			case "End":
+				if end, err := strconv.ParseUint(value, 10, 8); err == nil {
+					definition.accents.End = uint8(end)
 				}
 			case "Start":
 				if start, err := strconv.ParseUint(value, 10, 8); err == nil {

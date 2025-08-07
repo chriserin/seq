@@ -34,9 +34,9 @@ const (
 	SelectSetupChannel
 	SelectSetupMessageType
 	SelectSetupValue
-	SelectAccentDiff
 	SelectAccentTarget
 	SelectAccentStart
+	SelectAccentEnd
 
 	// Part Change
 	SelectBeats

@@ -28,9 +28,9 @@ func TestWriteAdditionalProperties(t *testing.T) {
 
 		// Create accents
 		accents := patternAccents{
-			Diff:   5,
-			Start:  10,
 			Target: AccentTargetVelocity,
+			Start:  10,
+			End:    5,
 			Data: []config.Accent{
 				{Value: 100},
 				{Value: 80},
@@ -87,9 +87,9 @@ func TestWriteAdditionalProperties(t *testing.T) {
 
 		// Check accents
 		assert.Contains(t, contentStr, "ACCENTS")
-		assert.Contains(t, contentStr, "Diff: 5")
-		assert.Contains(t, contentStr, "Start: 10")
 		assert.Contains(t, contentStr, "Target: VELOCITY")
+		assert.Contains(t, contentStr, "Start: 10")
+		assert.Contains(t, contentStr, "End: 5")
 		assert.Contains(t, contentStr, "ACCENT DATA")
 		assert.Contains(t, contentStr, "Accent 0:")
 		assert.Contains(t, contentStr, "Value=100")

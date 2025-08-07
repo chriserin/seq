@@ -95,8 +95,6 @@ func writeLineDefinitions(w io.Writer, lines []grid.LineDefinition) error {
 // writeAccents writes the accents configuration
 func writeAccents(w io.Writer, accents patternAccents) error {
 	fmt.Fprintln(w, "------------------------- ACCENTS -------------------------")
-	fmt.Fprintf(w, "Diff: %d\n", accents.Diff)
-	fmt.Fprintf(w, "Start: %d\n", accents.Start)
 
 	// Convert accentTarget to string for better readability
 	targetStr := "UNKNOWN"
@@ -107,6 +105,9 @@ func writeAccents(w io.Writer, accents patternAccents) error {
 		targetStr = "VELOCITY"
 	}
 	fmt.Fprintf(w, "Target: %s\n", targetStr)
+
+	fmt.Fprintf(w, "Start: %d\n", accents.Start)
+	fmt.Fprintf(w, "End: %d\n", accents.End)
 
 	// Write accent data
 	if len(accents.Data) > 0 {

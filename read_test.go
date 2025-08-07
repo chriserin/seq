@@ -80,7 +80,7 @@ func TestReadWrite(t *testing.T) {
 					{Channel: 2, Note: 67, MsgType: 1},
 				},
 				accents: patternAccents{
-					Diff:   5,
+					End:    5,
 					Start:  50,
 					Target: AccentTargetVelocity,
 					Data: []config.Accent{
@@ -120,7 +120,7 @@ func TestReadWrite(t *testing.T) {
 		assert.Equal(t, grid.MessageType(1), readDef.lines[1].MsgType)
 
 		// Verify accents
-		assert.Equal(t, uint8(5), readDef.accents.Diff)
+		assert.Equal(t, uint8(5), readDef.accents.End)
 		assert.Equal(t, uint8(50), readDef.accents.Start)
 		assert.Equal(t, AccentTargetVelocity, readDef.accents.Target)
 		assert.Len(t, readDef.accents.Data, 2)
@@ -350,9 +350,9 @@ func TestReadFileWithChords(t *testing.T) {
 	assert.Len(t, readDef.lines, 25)
 
 	// Verify accent configuration
-	assert.Equal(t, uint8(15), readDef.accents.Diff)
-	assert.Equal(t, uint8(120), readDef.accents.Start)
 	assert.Equal(t, AccentTargetVelocity, readDef.accents.Target)
+	assert.Equal(t, uint8(120), readDef.accents.Start)
+	assert.Equal(t, uint8(15), readDef.accents.End)
 	assert.Len(t, readDef.accents.Data, 9)
 
 	// Verify arrangement exists
