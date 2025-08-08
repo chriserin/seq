@@ -22,6 +22,46 @@
 2. Extract: tar xzvf seq-linux-x86_64.tar.gz
 3. Run ./seq-linux-x86_64/bin/seq
 
+## [v0.1.0-alpha.5](https://github.com/chriserin/seq/compare/v0.1.0-alpha.4...v0.1.0-alpha.5) (2025-08-08)
+
+### Features
+
+* Reconfigure accent ui for ++intuitive [ce64da1](https://github.com/chriserin/seq/commit/ce64da1) 
+* Only complete files with seq ext [52abd72](https://github.com/chriserin/seq/commit/52abd72) 
+* Wait until DAW gets a chance to record [ab003bc](https://github.com/chriserin/seq/commit/ab003bc) 
+* hide lines without notes [aec0bc5](https://github.com/chriserin/seq/commit/aec0bc5) 
+
+### Fixes
+
+* Send Stop message in own process [f66f572](https://github.com/chriserin/seq/commit/f66f572) 
+* Reset depth after play move [5389336](https://github.com/chriserin/seq/commit/5389336) 
+* Improve recording dest err messsage [a15dad3](https://github.com/chriserin/seq/commit/a15dad3) 
+* Group as second sibling need reset iterations [995287b](https://github.com/chriserin/seq/commit/995287b) 
+* Exit from arrView focus with Enter [a4c9ec4](https://github.com/chriserin/seq/commit/a4c9ec4) 
+
+
+## Install
+
+### macOS (x86_64)
+
+1. Download seq-macos-x86_64.tar.gz
+2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf seq-macos-x86_64.tar.gz
+4. Run ./seq-macos-x86_64/bin/seq
+
+### macOS (arm64)
+
+1. Download seq-macos-arm64.tar.gz
+2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf seq-macos-arm64.tar.gz
+4. Run ./seq-macos-arm64/bin/seq
+
+### Linux (x86_64)
+
+1. Download seq-linux-x86_64.tar.gz
+2. Extract: tar xzvf seq-linux-x86_64.tar.gz
+3. Run ./seq-linux-x86_64/bin/seq
+
 ## [v0.1.0-alpha.4](https://github.com/chriserin/seq/compare/v0.1.0-alpha.3...v0.1.0-alpha.4) (2025-08-01)
 
 ### Features
