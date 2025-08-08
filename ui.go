@@ -2057,11 +2057,13 @@ func (m *model) StartStop() {
 		m.Start()
 	} else {
 		if m.playing == PlayStandard {
-			m.programChannel <- stopMsg{}
-			if m.midiLoopMode == MlmReceiver {
-				// NOTE: Allow transmitter messages
-				m.unlockReceiverChannel <- true
-			}
+			go func() {
+				m.programChannel <- stopMsg{}
+				if m.midiLoopMode == MlmReceiver {
+					// NOTE: Allow transmitter messages
+					m.unlockReceiverChannel <- true
+				}
+			}()
 		}
 		m.playing = PlayStopped
 		m.Stop()
