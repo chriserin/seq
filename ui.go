@@ -205,6 +205,7 @@ type model struct {
 	hasSolo               bool
 	showArrangementView   bool
 	hideEmptyLines        bool
+	started               bool
 	ratchetCursor         uint8
 	temporaryNoteValue    uint8
 	recordPreRollBeats    uint8
@@ -694,6 +695,10 @@ func (m *model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) error
 				}
 			}
 		}
+	}
+
+	if !m.started {
+		m.started = true
 	}
 
 	return nil
@@ -1796,8 +1801,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.beatTime = time.Now()
 		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
 		if m.playing != PlayStopped && m.recordPreRollBeats == 0 {
-			m.advanceCurrentBeat(playingOverlay)
-			m.advanceKeyCycle()
+			if m.started {
+				m.advanceCurrentBeat(playingOverlay)
+				m.advanceKeyCycle()
+			}
 		}
 		if m.playing != PlayStopped {
 			playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
@@ -2026,6 +2033,7 @@ func (m *model) Start() {
 }
 
 func (m *model) Stop() {
+	m.started = false
 	m.recordPreRollBeats = 0
 	if m.loopMode == LoopPart {
 		m.arrangement.ResetDepth()
