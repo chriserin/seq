@@ -1028,7 +1028,7 @@ func (ss *SongSection) IncrementPlayCycles() {
 }
 
 func (ss *SongSection) SetPlayCycles(keyCycles int) {
-	ss.playCycles++
+	ss.playCycles = keyCycles
 }
 
 func (ss *SongSection) IsDone() bool {
