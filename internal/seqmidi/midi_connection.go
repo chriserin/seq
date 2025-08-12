@@ -5,7 +5,7 @@
 package seqmidi
 
 import (
-	"slices"
+	"strings"
 	"sync"
 
 	"github.com/Southclaws/fault"
@@ -112,10 +112,16 @@ var dawOutports = []string{"Logic Pro Virtual In"}
 
 func SendRecordMessage() error {
 	outports := midi.GetOutPorts()
+
 	var selectedOutport drivers.Out
+foundtheport:
 	for _, outport := range outports {
-		if slices.Contains(dawOutports, outport.String()) {
-			selectedOutport = outport
+		for _, name := range dawOutports {
+			if strings.Contains(outport.String(), name) {
+				selectedOutport = outport
+				break foundtheport
+
+			}
 		}
 	}
 
