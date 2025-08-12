@@ -1928,12 +1928,14 @@ func (m *model) Escape() {
 		m.visualMode = false
 	}
 
-	m.focus = operation.FocusGrid
+	if m.selectionIndicator == operation.SelectGrid {
+		m.focus = operation.FocusGrid
+		m.arrangement.Escape()
+	}
 	m.patternMode = operation.PatternFill
 	m.selectionIndicator = operation.SelectGrid
 	m.textInput.Reset()
 
-	m.arrangement.Escape()
 	m.overlayKeyEdit.Escape(m.currentOverlay.Key)
 }
 
