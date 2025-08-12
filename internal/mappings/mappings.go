@@ -361,6 +361,7 @@ var mappings = registry{
 	OperationKey{selection: operation.SelectFileName, key: [3]string{}}:                                          TextInputMessage,
 	OperationKey{focus: operation.FocusArrangementEditor, selection: operation.SelectFileName, key: [3]string{}}: TextInputMessage,
 	OperationKey{focus: operation.FocusArrangementEditor, key: [3]string{}}:                                      ArrKeyMessage,
+	OperationKey{focus: operation.FocusArrangementEditor, key: k("'")}:                                           HoldingKeys,
 }
 
 func k(x ...string) [3]string {
@@ -439,7 +440,9 @@ func ProcessKey(key tea.KeyMsg, focus operation.Focus, selection operation.Selec
 		})
 	}
 
-	if exists {
+	if exists && HoldingKeys == command {
+		return Mapping{HoldingKeys, key.String()}
+	} else if exists {
 		Keycombo = make([]tea.KeyMsg, 0, 3)
 		return Mapping{command, key.String()}
 	} else {

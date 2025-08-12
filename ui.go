@@ -1385,7 +1385,6 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				return m.Quit()
 			}
 		case mappings.ArrKeyMessage:
-			mappings.ResetKeycombo()
 			arrangmementModel, cmd := m.arrangement.Update(msg)
 			m.arrangement = arrangmementModel
 			m.ResetCurrentOverlay()
