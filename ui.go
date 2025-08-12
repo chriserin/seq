@@ -2002,6 +2002,7 @@ func (m *model) Start() {
 	case LoopPart:
 		m.arrangement.SetCurrentNodeInfinite()
 	}
+	m.arrangement.ResetDepth()
 
 	m.arrangement.Root.ResetAllPlayCycles()
 	section := m.CurrentSongSection()
