@@ -72,6 +72,19 @@ func (mc *MidiConnection) ConnectAndOpen() error {
 	return nil
 }
 
+func (mc *MidiConnection) Panic() error {
+	// NOTE: No connection means nothing to panic about
+	if mc.connected {
+		for i := range 127 {
+			err := mc.outport.Send(midi.NoteOff(0, uint8(i)))
+			if err != nil {
+				return fault.Wrap(err, fmsg.With("cannot send panic note off"))
+			}
+		}
+	}
+	return nil
+}
+
 func (mc *MidiConnection) Close() {
 	if mc.connected {
 		if mc.outport.IsOpen() {

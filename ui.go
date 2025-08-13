@@ -1343,6 +1343,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
+		case mappings.MidiPanic:
+			m.midiConnection.Panic()
 		case mappings.ToggleHideLines:
 			m.hideEmptyLines = !m.hideEmptyLines
 		case mappings.ConfirmConfirmQuit:

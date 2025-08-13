@@ -165,6 +165,7 @@ const (
 	ConfirmConfirmNew
 	ConfirmConfirmReload
 	ConfirmConfirmQuit
+	MidiPanic
 )
 
 type mappingKey [3]string
@@ -207,6 +208,7 @@ type OperationKey struct {
 }
 
 var mappings = registry{
+	OperationKey{key: k("b", "p")}:                                                                                               MidiPanic,
 	OperationKey{focus: operation.FocusAny, key: k(" ")}:                                                                         PlayStop,
 	OperationKey{focus: operation.FocusAny, key: k("'", " ")}:                                                                    PlayOverlayLoop,
 	OperationKey{focus: operation.FocusAny, key: k(":", " ")}:                                                                    PlayRecord,
