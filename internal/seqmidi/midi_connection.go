@@ -82,6 +82,7 @@ func (mc *MidiConnection) Panic() error {
 			}
 		}
 	}
+
 	return nil
 }
 

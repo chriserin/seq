@@ -1088,7 +1088,7 @@ func InitDefinition(template string, instrument string) Definition {
 	if !exists {
 		gridTemplate = config.GetDefaultTemplate()
 	}
-	config.LongGates = config.GetGateLengths(gridTemplate.MaxGateLength)
+	config.LongGates = config.GetGateLengths(32)
 	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
 	copy(newLines, gridTemplate.Lines)
 
@@ -1137,11 +1137,12 @@ func LoadFile(filename string, template string) (Definition, error) {
 		definition, fileErr = Read(filename)
 		gridTemplate, exists := config.GetTemplate(definition.template)
 		definition.templateSequencerType = gridTemplate.SequencerType
+		// TODO: Give these hardcoded values a run for a bit before consolidating
 		if exists {
-			config.LongGates = config.GetGateLengths(gridTemplate.MaxGateLength)
+			config.LongGates = config.GetGateLengths(32)
 		} else {
-			maxGateLength := config.GetDefaultTemplate().MaxGateLength
-			config.LongGates = config.GetGateLengths(maxGateLength)
+			//maxGateLength := config.GetDefaultTemplate().MaxGateLength
+			config.LongGates = config.GetGateLengths(32)
 		}
 	}
 
