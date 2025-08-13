@@ -196,17 +196,21 @@ func (t *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, program *
 
 type ListenFn func(msg []byte, milliseconds int32)
 
-func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) error {
-	transmitPort, err := midi.FindInPort(TransmitterName)
-	if err != nil {
-		return fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
-	}
-	err = transmitPort.Open()
-	if err != nil {
-		return fault.Wrap(err, fmsg.WithDesc("cannot open transmitport", "Could not open a transmitter.  Start a seq program with the --transmit flag before starting a receiver"))
-	}
+func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, program *tea.Program) (receiverError error) {
+
 	go func() {
 		for {
+			// NOTE: transmitPort must be redeclared within to loop to avoid memory error
+			transmitPort, err := midi.FindInPort(TransmitterName)
+			if err != nil {
+				receiverError = fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
+				return
+			}
+			err = transmitPort.Open()
+			if err != nil {
+				receiverError = fault.Wrap(err, fmsg.WithDesc("cannot open transmitport", "Could not open a transmitter.  Start a seq program with the --transmit flag before starting a receiver"))
+				return
+			}
 			receiverChannel := make(chan midiEventLoopMsg)
 			tickChannel := make(chan Timing)
 			activeSenseChannel := make(chan bool)
