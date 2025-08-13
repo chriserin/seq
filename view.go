@@ -77,9 +77,14 @@ func (m model) View() (output string) {
 		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
 	}
 
-	seqView := m.SeqView(showLines)
+	sideView = sideView[:len(sideView)-1] // remove last newline
 
-	buf.WriteString(lipgloss.JoinHorizontal(0, "  ", seqView, "  ", sideView))
+	seqView := m.SeqView(showLines)
+	seqView = seqView[:len(seqView)-1] // remove last newline
+
+	seqAndSide := lipgloss.JoinHorizontal(0, "  ", seqView, "  ", sideView)
+	buf.WriteString(lipgloss.JoinVertical(lipgloss.Left, seqAndSide, m.CurrentOverlayView()))
+
 	if m.currentError != nil && m.selectionIndicator == operation.SelectError {
 		buf.WriteString("\n")
 		style := lipgloss.NewStyle().Width(50)
@@ -104,7 +109,6 @@ func (m model) View() (output string) {
 		buf.WriteString("\n")
 		buf.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, "  ", m.arrangement.View()))
 	}
-	buf.WriteString(mappings.KeycomboView())
 	buf.WriteString("\n")
 	return buf.String()
 }
@@ -386,7 +390,6 @@ func (m model) OverlaysView() string {
 		}
 		buf.WriteString(playing)
 		buf.WriteString(playingSpacer)
-		buf.WriteString("\n")
 	}
 	return buf.String()
 }
@@ -460,7 +463,6 @@ func (m model) SeqView(showLines []uint8) string {
 		buf.WriteString(lineView(i, m, visualCombinedPattern))
 	}
 
-	buf.WriteString(m.CurrentOverlayView())
 	return buf.String()
 }
 
@@ -575,7 +577,7 @@ func (m model) CurrentOverlayView() string {
 
 	editOverlay := fmt.Sprintf("%s %s", editOverlayTitle, lipgloss.PlaceHorizontal(11, 0, m.ViewOverlay()))
 	playOverlay := fmt.Sprintf("%s %s", playOverlayTitle, lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
-	return fmt.Sprintf("    %s  %s", editOverlay, playOverlay)
+	return fmt.Sprintf("      %s  %s %s", editOverlay, playOverlay, mappings.KeycomboView())
 }
 
 func KeyLineIndicator(k uint8, l uint8) string {
