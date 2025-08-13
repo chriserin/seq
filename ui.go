@@ -220,6 +220,7 @@ type model struct {
 	visualAnchorCursor    gridKey
 	partSelectorIndex     int
 	needsWrite            int
+	programSendFn         func(tea.Msg)
 	playState             []linestate
 	currentOverlay        *overlays.Overlay
 	logFile               *os.File
@@ -1261,33 +1262,37 @@ func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template
 	config.Init()
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
-	err := MidiEventLoop(midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, program)
+	model.programSendFn = program.Send
+	SetupMidiEventLoop(model, program.Send)
+	return program
+}
+
+func SetupMidiEventLoop(model model, sendFn func(tea.Msg)) {
+	err := MidiEventLoop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, sendFn)
 	if err != nil {
 		go func() {
-			program.Send(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
+			sendFn(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
 			for {
 				// NOTE: Eat the messages sent on the program channel so that we can quit and still send the stopMsg
 				<-model.programChannel
 			}
 		}()
-		return program
 	} else {
-		ErrorLoop(program, model.errChan)
+		ErrorLoop(sendFn, model.errChan)
 		model.SyncTempo()
-		return program
 	}
 }
 
-func ErrorLoop(program *tea.Program, errChan chan error) {
+func ErrorLoop(sendFn func(tea.Msg), errChan chan error) {
 	go func() {
 		for {
 			programError := <-errChan
 			tag := ftag.Get(programError)
 			switch tag {
 			case "view_panic":
-				program.Send(viewPanicMsg{programError})
+				sendFn(viewPanicMsg{programError})
 			default:
-				program.Send(errorMsg{programError})
+				sendFn(errorMsg{programError})
 			}
 		}
 	}()
@@ -1346,8 +1351,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.ReloadFile()
 			m.selectionIndicator = operation.SelectGrid
 		case mappings.ConfirmConfirmNew:
-			m.NewSequence()
-			m.selectionIndicator = operation.SelectGrid
+			newModel := m.NewSequence()
+			var cmd tea.Cmd
+			cursor, cmd := m.cursor.Update(tea.FocusMsg{})
+			newModel.cursor = cursor
+			return newModel, cmd
 		case mappings.ConfirmChangePart:
 			_, cmd := m.arrangement.Update(arrangement.ChangePart{Index: m.partSelectorIndex})
 			m.currentOverlay = m.CurrentPart().Overlays
@@ -1946,12 +1954,15 @@ func (m *model) Escape() {
 	m.overlayKeyEdit.Escape(m.currentOverlay.Key)
 }
 
-func (m *model) NewSequence() {
-	m.filename = ""
-	m.definition = InitDefinition(m.definition.template, m.definition.instrument)
-	m.arrangement = arrangement.InitModel(m.definition.arrangement, m.definition.parts)
-	m.SetGridCursor(GK(0, 0))
-	m.ResetCurrentOverlay()
+func (m model) NewSequence() model {
+	newModel := InitModel("", m.midiConnection, m.definition.template, m.definition.instrument, m.midiLoopMode, m.theme)
+	newModel.programSendFn = m.programSendFn
+	newModel.hasUIFocus = true
+	newModel.midiLoopMode = m.midiLoopMode
+	newModel.lockReceiverChannel = m.lockReceiverChannel
+	newModel.unlockReceiverChannel = m.unlockReceiverChannel
+	newModel.programChannel = m.programChannel
+	return newModel
 }
 
 func (m model) NeedsWrite() bool {
