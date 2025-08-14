@@ -762,10 +762,13 @@ func (m model) FindOverlay(key overlayKey) *overlays.Overlay {
 
 func (m *model) EnsureOverlayWithKey(key overlayKey) {
 	partID := m.CurrentPartID()
-	if m.FindOverlay(key) == nil {
+	overlay := m.FindOverlay(key)
+	if overlay == nil {
 		var newOverlay = m.CurrentPart().Overlays.Add(key)
 		(*m.definition.parts)[partID].Overlays = newOverlay
 		m.currentOverlay = newOverlay.FindOverlay(key)
+	} else {
+		m.currentOverlay = overlay
 	}
 }
 
