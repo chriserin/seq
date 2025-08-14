@@ -318,7 +318,7 @@ func (t *Timing) StandAloneLoop(programChannel chan midiEventLoopMsg, sendFn fun
 					t.tempo = command.tempo
 					t.subdivisions = command.subdivisions
 					t.trackTime = time.Duration(0)
-					tick(t.BeatInterval())
+					tick(0)
 				case stopMsg:
 					t.started = false
 					tickTimer.Stop()

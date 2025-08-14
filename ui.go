@@ -2031,16 +2031,6 @@ func (m *model) Start() {
 	section.ResetPlayCycles()
 	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(section.StartBeat))
 
-	playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(section.PlayCycles())
-	tickInterval := m.TickInterval()
-
-	pattern := m.CombinedBeatPattern(playingOverlay)
-	err := m.PlayBeat(tickInterval, pattern)
-
-	if err != nil {
-		m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot play first beat")))
-	}
-
 	if m.playing == PlayStandard {
 		m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 	}
