@@ -395,6 +395,7 @@ func (m model) OverlaysView() string {
 		}
 		buf.WriteString(playing)
 		buf.WriteString(playingSpacer)
+		buf.WriteString("\n")
 	}
 	return buf.String()
 }
