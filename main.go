@@ -17,6 +17,7 @@ var transmitter bool
 var receiver bool
 var outport bool
 var theme string
+var midiout string
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -36,7 +37,7 @@ func main() {
 			}()
 
 			var err error
-			midiConnection, err := seqmidi.InitMidiConnection(outport)
+			midiConnection, err := seqmidi.InitMidiConnection(outport, midiout)
 			if err != nil {
 				fmt.Println("Midi Failure", err)
 				return
@@ -89,6 +90,7 @@ func main() {
 	rootCmd.Flags().BoolVar(&receiver, "receiver", false, "Seq will run in receiver mode")
 	rootCmd.Flags().BoolVar(&outport, "outport", false, "Seq will create an outport to send midi")
 	rootCmd.Flags().StringVar(&theme, "theme", "miles", "Choose an theme for the sequencer visual representation")
+	rootCmd.Flags().StringVar(&midiout, "midiout", "", "Choose a midi out port")
 
 	err := rootCmd.Execute()
 	if err != nil {

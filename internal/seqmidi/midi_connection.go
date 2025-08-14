@@ -17,15 +17,16 @@ import (
 )
 
 type MidiConnection struct {
-	outport   drivers.Out
-	connected bool
+	outportName string
+	outport     drivers.Out
+	connected   bool
 }
 
 type SendFunc func(msg midi.Message) error
 
 var OutputName string = "seq-cli-out"
 
-func InitMidiConnection(createOut bool) (MidiConnection, error) {
+func InitMidiConnection(createOut bool, outportName string) (MidiConnection, error) {
 	if createOut {
 		driver, err := rtmididrv.New()
 		if err != nil {
@@ -38,7 +39,7 @@ func InitMidiConnection(createOut bool) (MidiConnection, error) {
 
 		return MidiConnection{connected: true, outport: out}, nil
 	} else {
-		return MidiConnection{connected: false}, nil
+		return MidiConnection{outportName: outportName, connected: false}, nil
 	}
 }
 
@@ -57,7 +58,16 @@ func (mc *MidiConnection) Connect(portnumber int) error {
 
 func (mc *MidiConnection) ConnectAndOpen() error {
 	if !mc.connected {
-		err := mc.Connect(0)
+		outports := midi.GetOutPorts()
+		//NOTE: Default to 0 (the first midi outport) if not found or if empty string
+		var outportIndex = 0
+		for i, outport := range outports {
+			if mc.outportName != "" && strings.Contains(outport.String(), mc.outportName) {
+				outportIndex = i
+			}
+		}
+
+		err := mc.Connect(outportIndex)
 		if err != nil {
 			return fault.Wrap(err)
 		}
