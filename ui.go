@@ -917,7 +917,7 @@ func (m *model) IncreaseAccentEnd() {
 func (m *model) DecreaseAccentEnd() {
 	end := m.definition.accents.End
 
-	if end > 1 {
+	if end > 0 {
 		m.definition.accents.End = m.definition.accents.End - 1
 		m.definition.accents.ReCalc()
 	}
