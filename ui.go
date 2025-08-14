@@ -1348,6 +1348,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.midiConnection.Panic()
 		case mappings.ToggleHideLines:
 			m.hideEmptyLines = !m.hideEmptyLines
+			if m.hideEmptyLines {
+				m.CursorValid()
+			}
 		case mappings.ConfirmConfirmQuit:
 			return m.Quit()
 		case mappings.ConfirmConfirmReload:
@@ -1900,6 +1903,37 @@ func (m *model) CursorUp() {
 			}
 		}
 	}
+}
+
+func (m *model) CursorValid() {
+	pattern := m.CombinedOverlayPattern(m.currentOverlay)
+	showLines := GetShowLines(len(m.definition.lines), pattern, m.CurrentPart().Beats)
+	if !slices.Contains(showLines, m.gridCursor.Line) {
+		keeper := int(m.gridCursor.Line)
+		for i := range len(m.definition.lines) + 1 {
+			var direction int
+			if i%2 == 0 {
+				direction = 1
+			} else {
+				direction = -1
+			}
+			keeper = abs(keeper - (i * direction))
+			if slices.Contains(showLines, uint8(keeper)) || !m.hideEmptyLines {
+				m.SetGridCursor(gridKey{
+					Line: uint8(keeper),
+					Beat: m.gridCursor.Beat,
+				})
+				return
+			}
+		}
+	}
+}
+
+func abs(i int) int {
+	if i < 0 {
+		return -i
+	}
+	return i
 }
 
 func (m *model) CursorRight() {
