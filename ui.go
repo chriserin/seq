@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"math"
 	"math/rand"
 	"os"
 	"runtime"
@@ -497,7 +498,9 @@ func (pa *patternAccents) ReCalc() {
 	interval := float64(pa.Start-pa.End) / float64(len(pa.Data)-2)
 
 	for i, a := range pa.Data[1:] {
-		a.Value = uint8(float64(pa.Start) - (interval * float64(i)))
+		calculatedValue := float64(pa.Start) - (interval * float64(i))
+		roundedValue := math.Round(calculatedValue)
+		a.Value = uint8(roundedValue)
 		accents[i+1] = a
 	}
 

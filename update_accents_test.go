@@ -20,14 +20,14 @@ func TestAccentInputSwitchDiffAndData(t *testing.T) {
 			name:                 "Accent Input Switch with Increase",
 			commands:             []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Increase},
 			expectedAccentStart:  121,
-			expectedAccentValues: []uint8{0, 121, 105, 90, 75, 60, 45, 30, 15},
+			expectedAccentValues: []uint8{0, 121, 106, 91, 76, 60, 45, 30, 15},
 			description:          "Should select accent input and increase should set accent values",
 		},
 		{
 			name:                 "Accent Input Switch with Decrease",
 			commands:             []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Decrease},
 			expectedAccentStart:  119,
-			expectedAccentValues: []uint8{0, 119, 104, 89, 74, 59, 44, 29, 15},
+			expectedAccentValues: []uint8{0, 119, 104, 89, 74, 60, 45, 30, 15},
 			description:          "Should select accent input and decrease should set accent values",
 		},
 	}
@@ -39,6 +39,7 @@ func TestAccentInputSwitchDiffAndData(t *testing.T) {
 
 			assert.Equal(t, operation.SelectAccentStart, m.selectionIndicator, tt.description+" - selection state")
 			assert.Equal(t, tt.expectedAccentStart, m.definition.accents.Start, tt.description+" - accent End value")
+
 			for i, value := range tt.expectedAccentValues {
 				assert.Equalf(t, value, m.definition.accents.Data[i].Value, "accent values should match expected values - %d == %d", value, m.definition.accents.Data[i].Value)
 			}
