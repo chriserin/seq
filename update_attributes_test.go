@@ -46,6 +46,20 @@ func TestTempoChanges(t *testing.T) {
 			description:   "Tempo should decrease by 1",
 		},
 		{
+			name:          "Increase Tempo from arr view",
+			commands:      []any{mappings.ToggleArrangementView, mappings.TempoInputSwitch, mappings.Increase},
+			initialTempo:  120,
+			expectedTempo: 121,
+			description:   "Tempo should increase by 1",
+		},
+		{
+			name:          "Decrease Tempo from arr view",
+			commands:      []any{mappings.ToggleArrangementView, mappings.TempoInputSwitch, mappings.Decrease},
+			initialTempo:  130,
+			expectedTempo: 129,
+			description:   "Tempo should decrease by 1",
+		},
+		{
 			name:          "Increase Tempo by 5",
 			commands:      []any{mappings.Increase},
 			initialTempo:  120,
@@ -86,6 +100,61 @@ func TestTempoChanges(t *testing.T) {
 			assert.Equal(t, tt.initialTempo, m.definition.tempo, tt.description)
 			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, tt.expectedTempo, m.definition.tempo, tt.description)
+		})
+	}
+}
+
+func TestTempoInputSwitchEscapes(t *testing.T) {
+	tests := []struct {
+		name              string
+		commands          []any
+		expectedSelection operation.Selection
+		expectedFocus     operation.Focus
+		description       string
+	}{
+		{
+			name:              "Tempo Input Switch Escape",
+			commands:          []any{mappings.TempoInputSwitch, mappings.Escape},
+			expectedSelection: operation.SelectGrid,
+			expectedFocus:     operation.FocusGrid,
+			description:       "Tempo input switch should select grid and escape should return to grid",
+		},
+		{
+			name:              "Tempo Input Switch Escape from Arrangement View",
+			commands:          []any{mappings.ToggleArrangementView, mappings.TempoInputSwitch},
+			expectedSelection: operation.SelectTempo,
+			expectedFocus:     operation.FocusArrangementEditor,
+			description:       "Tempo input switch should select grid and escape should return to grid",
+		},
+		{
+			name:              "Tempo Input Switch Escape from Arrangement View",
+			commands:          []any{mappings.ToggleArrangementView, mappings.TempoInputSwitch, mappings.Escape},
+			expectedSelection: operation.SelectGrid,
+			expectedFocus:     operation.FocusArrangementEditor,
+			description:       "Tempo input switch should select grid and escape should return to grid",
+		},
+		{
+			name:              "Tempo Input Switch Enter",
+			commands:          []any{mappings.TempoInputSwitch, mappings.Enter},
+			expectedSelection: operation.SelectGrid,
+			expectedFocus:     operation.FocusGrid,
+			description:       "Tempo input switch should select grid and escape should return to grid",
+		},
+		{
+			name:              "Tempo Input Switch Enter from Arrangement View",
+			commands:          []any{mappings.ToggleArrangementView, mappings.TempoInputSwitch, mappings.Enter},
+			expectedSelection: operation.SelectGrid,
+			expectedFocus:     operation.FocusArrangementEditor,
+			description:       "Tempo input switch should select grid and escape should return to grid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description)
 		})
 	}
 }
