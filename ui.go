@@ -1461,13 +1461,29 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				Beat: m.CurrentPart().Beats - 1,
 			})
 		case mappings.CursorLastLine:
+			var newLine uint8
+			if m.hideEmptyLines {
+				pattern := m.CombinedOverlayPattern(m.currentOverlay)
+				showLines := GetShowLines(len(m.definition.lines), pattern, m.CurrentPart().Beats)
+				newLine = showLines[len(showLines)-1]
+			} else {
+				newLine = uint8(len(m.definition.lines) - 1)
+			}
 			m.SetGridCursor(gridKey{
-				Line: uint8(len(m.definition.lines) - 1),
+				Line: newLine,
 				Beat: m.gridCursor.Beat,
 			})
 		case mappings.CursorFirstLine:
+			var newLine uint8
+			if m.hideEmptyLines {
+				pattern := m.CombinedOverlayPattern(m.currentOverlay)
+				showLines := GetShowLines(len(m.definition.lines), pattern, m.CurrentPart().Beats)
+				newLine = showLines[0]
+			} else {
+				newLine = 0
+			}
 			m.SetGridCursor(gridKey{
-				Line: 0,
+				Line: newLine,
 				Beat: m.gridCursor.Beat,
 			})
 		case mappings.Escape:
@@ -1853,20 +1869,36 @@ func (m model) Quit() (tea.Model, tea.Cmd) {
 }
 
 func (m *model) CursorDown() {
+	pattern := m.CombinedOverlayPattern(m.currentOverlay)
+	showLines := GetShowLines(len(m.definition.lines), pattern, m.CurrentPart().Beats)
 	if m.gridCursor.Line < uint8(len(m.definition.lines)-1) {
-		m.SetGridCursor(gridKey{
-			Line: m.gridCursor.Line + 1,
-			Beat: m.gridCursor.Beat,
-		})
+		for i := range m.gridCursor.Line + 1 {
+			newLine := m.gridCursor.Line + (1 + i)
+			if slices.Contains(showLines, newLine) || !m.hideEmptyLines {
+				m.SetGridCursor(gridKey{
+					Line: newLine,
+					Beat: m.gridCursor.Beat,
+				})
+				return
+			}
+		}
 	}
 }
 
 func (m *model) CursorUp() {
+	pattern := m.CombinedOverlayPattern(m.currentOverlay)
+	showLines := GetShowLines(len(m.definition.lines), pattern, m.CurrentPart().Beats)
 	if m.gridCursor.Line > 0 {
-		m.SetGridCursor(gridKey{
-			Line: m.gridCursor.Line - 1,
-			Beat: m.gridCursor.Beat,
-		})
+		for i := range m.gridCursor.Line + 1 {
+			newLine := m.gridCursor.Line - (1 + i)
+			if slices.Contains(showLines, newLine) || !m.hideEmptyLines {
+				m.SetGridCursor(gridKey{
+					Line: newLine,
+					Beat: m.gridCursor.Beat,
+				})
+				return
+			}
+		}
 	}
 }
 

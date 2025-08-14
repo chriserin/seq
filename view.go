@@ -49,16 +49,7 @@ func (m model) View() (output string) {
 
 	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
 
-	showLines := make([]uint8, 0, len(m.definition.lines))
-	for lineNumber := uint8(0); lineNumber < uint8(len(m.definition.lines)); lineNumber++ {
-		for i := uint8(0); i < m.CurrentPart().Beats; i++ {
-			gridKey := GK(uint8(lineNumber), i)
-			_, exists := visualCombinedPattern[gridKey]
-			if exists || !m.hideEmptyLines {
-				showLines = append(showLines, lineNumber)
-			}
-		}
-	}
+	showLines := GetShowLines(len(m.definition.lines), visualCombinedPattern, m.CurrentPart().Beats)
 
 	if m.patternMode == operation.PatternAccent || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
@@ -111,6 +102,20 @@ func (m model) View() (output string) {
 	}
 	buf.WriteString("\n")
 	return buf.String()
+}
+
+func GetShowLines(totalLinesCount int, visualCombinedPattern overlays.OverlayPattern, beats uint8) []uint8 {
+	showLines := make([]uint8, 0, totalLinesCount)
+	for lineNumber := uint8(0); lineNumber < uint8(totalLinesCount); lineNumber++ {
+		for i := range beats {
+			gridKey := GK(uint8(lineNumber), i)
+			_, exists := visualCombinedPattern[gridKey]
+			if exists {
+				showLines = append(showLines, lineNumber)
+			}
+		}
+	}
+	return showLines
 }
 
 func (m model) CyclesEditView() string {
@@ -257,7 +262,7 @@ func (m model) SetupView(showLines []uint8) string {
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
 	for i, line := range m.definition.lines {
-		if !slices.Contains(showLines, uint8(i)) {
+		if m.hideEmptyLines && !slices.Contains(showLines, uint8(i)) {
 			continue
 		}
 
@@ -457,7 +462,7 @@ func (m model) SeqView(showLines []uint8) string {
 	buf.WriteString("\n")
 
 	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
-		if !slices.Contains(showLines, i) {
+		if m.hideEmptyLines && !slices.Contains(showLines, i) {
 			continue
 		}
 		buf.WriteString(lineView(i, m, visualCombinedPattern))
