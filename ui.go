@@ -1477,23 +1477,23 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			if m.playing == PlayStopped {
 				m.loopMode = LoopSong
 			}
-			m.StartStop()
+			m.StartStop(0)
 		case mappings.PlayPart:
 			if m.playing == PlayStopped {
 				m.loopMode = LoopPart
 			}
-			m.StartStop()
+			m.StartStop(0)
 		case mappings.PlayLoop:
 			if m.playing == PlayStopped {
 				m.loopMode = LoopSong
 			}
 			m.arrangement.Root.SetInfinite()
-			m.StartStop()
+			m.StartStop(0)
 		case mappings.PlayOverlayLoop:
 			if m.playing == PlayStopped {
 				m.loopMode = LoopOverlay
 			}
-			m.StartStop()
+			m.StartStop(0)
 			m.SetPlayCycles(m.currentOverlay.Key.GetMinimumKeyCycle())
 		case mappings.PlayRecord:
 			if m.playing == PlayStopped {
@@ -1502,10 +1502,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				if err != nil {
 					m.SetCurrentError(err)
 				} else {
-					m.StartStop()
+					m.StartStop(28650 * time.Microsecond)
 				}
 			} else {
-				m.StartStop()
+				m.StartStop(0)
 			}
 		case mappings.OverlayInputSwitch:
 			// NOTE: This component handles getting into the overlay key edit mode
@@ -1800,7 +1800,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		} else {
 			m.SetCurrentError(errors.New("cannot start when already started"))
 		}
-		m.Start()
+		m.Start(0)
 	case uiStopMsg:
 		m.playing = PlayStopped
 		m.Stop()
@@ -2006,7 +2006,7 @@ func (m *model) PrevSection() {
 	}
 }
 
-func (m *model) Start() {
+func (m *model) Start(delay time.Duration) {
 	if !m.midiConnection.IsReady() {
 		err := m.midiConnection.ConnectAndOpen()
 		if err != nil {
@@ -2032,7 +2032,9 @@ func (m *model) Start() {
 	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(section.StartBeat))
 
 	if m.playing == PlayStandard {
-		m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
+		time.AfterFunc(delay, func() {
+			m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
+		})
 	}
 }
 
@@ -2060,7 +2062,7 @@ func (m *model) Stop() {
 	}
 }
 
-func (m *model) StartStop() {
+func (m *model) StartStop(delay time.Duration) {
 	m.playEditing = false
 	if m.playing == PlayStopped {
 		m.playing = PlayStandard
@@ -2068,7 +2070,7 @@ func (m *model) StartStop() {
 			// NOTE: When instance is receiver, allow it to play alone and lock out transmitter messages
 			m.lockReceiverChannel <- true
 		}
-		m.Start()
+		m.Start(delay)
 	} else {
 		if m.playing == PlayStandard {
 			go func() {
@@ -2978,7 +2980,7 @@ func (m *model) StartPart() {
 
 func (m *model) PlayMove() bool {
 	if m.arrangement.Cursor.IsRoot() {
-		m.StartStop()
+		m.StartStop(0)
 		m.arrangement.Cursor.MoveNext()
 		m.arrangement.ResetDepth()
 		m.ResetCurrentOverlay()
