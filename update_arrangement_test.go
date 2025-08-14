@@ -51,6 +51,22 @@ func TestToggleArrangementViewSwitch(t *testing.T) {
 			expectedArrIsOpen: true,
 			description:       "Escape should switch back to grid and keep arrangement view open",
 		},
+		{
+			name:              "Escape from new section escapes back to arr view",
+			commands:          []any{mappings.ToggleArrangementView, mappings.NewSectionAfter, mappings.Escape},
+			expectedFocus:     operation.FocusArrangementEditor,
+			expectedSelection: operation.SelectGrid,
+			expectedArrIsOpen: true,
+			description:       "Escape should switch back to grid and keep arrangement view open",
+		},
+		{
+			name:              "Escape from Change Part escapes back to arr view",
+			commands:          []any{mappings.ToggleArrangementView, mappings.ChangePart, mappings.Escape},
+			expectedFocus:     operation.FocusArrangementEditor,
+			expectedSelection: operation.SelectGrid,
+			expectedArrIsOpen: true,
+			description:       "Escape should switch back to grid and keep arrangement view open",
+		},
 	}
 
 	for _, tt := range tests {
@@ -146,6 +162,12 @@ func TestChangePartAfterNewSectionAfter(t *testing.T) {
 			description:       "Should change part mapping to index 1 after creating new section",
 		},
 		{
+			name:              "ChangePart from Arrangement View after NewSectionAfter updates part mapping",
+			commands:          []any{mappings.NewSectionAfter, mappings.Enter, mappings.ToggleArrangementView, mappings.ChangePart, mappings.Increase, mappings.Increase, mappings.Enter},
+			expectedPartIndex: 1,
+			description:       "Should change part mapping to index 1 after creating new section",
+		},
+		{
 			name:              "ChangePart after NewSectionAfter updates part mapping, more increases stays at top part",
 			commands:          []any{mappings.NewSectionAfter, mappings.Enter, mappings.ChangePart, mappings.Increase, mappings.Increase, mappings.Increase, mappings.Enter},
 			expectedPartIndex: 1,
@@ -184,6 +206,72 @@ func TestChangePartAfterNewSectionAfter(t *testing.T) {
 				expectedPartCount := tt.expectedPartIndex + 1
 				assert.Equal(t, expectedPartCount, len(*m.definition.parts), tt.description+" - new parts should be created")
 			}
+		})
+	}
+}
+
+func TestNewSectionAfter(t *testing.T) {
+	tests := []struct {
+		name                 string
+		commands             []any
+		expectedPartIndex    int
+		expectedSectionCount int
+		description          string
+	}{
+		{
+			name:                 "NewSectionAfter updates arrangement",
+			commands:             []any{mappings.NewSectionAfter, mappings.Enter},
+			expectedPartIndex:    1,
+			expectedSectionCount: 2,
+			description:          "Should create new section after current section",
+		},
+		{
+			name:                 "NewSectionAfter uses previous part",
+			commands:             []any{mappings.NewSectionAfter, mappings.Increase, mappings.Enter},
+			expectedPartIndex:    0,
+			expectedSectionCount: 2,
+			description:          "Should create new section after current section",
+		},
+		{
+			name:                 "NewSectionAfter back to create new part option",
+			commands:             []any{mappings.NewSectionAfter, mappings.Increase, mappings.Decrease, mappings.Enter},
+			expectedPartIndex:    1,
+			expectedSectionCount: 2,
+			description:          "Should create new section after current section",
+		},
+		{
+			name:                 "NewSectionAfter from arr view updates arrangement",
+			commands:             []any{mappings.ToggleArrangementView, mappings.NewSectionAfter, mappings.Enter},
+			expectedPartIndex:    1,
+			expectedSectionCount: 2,
+			description:          "Should create new section after current section",
+		},
+		{
+			name:                 "NewSectionAfter from arr view uses previous part",
+			commands:             []any{mappings.ToggleArrangementView, mappings.NewSectionAfter, mappings.Increase, mappings.Enter},
+			expectedPartIndex:    0,
+			expectedSectionCount: 2,
+			description:          "Should create new section after current section",
+		},
+		{
+			name:                 "NewSectionAfter from arr view back to create new part option",
+			commands:             []any{mappings.ToggleArrangementView, mappings.NewSectionAfter, mappings.Increase, mappings.Decrease, mappings.Enter},
+			expectedPartIndex:    1,
+			expectedSectionCount: 2,
+			description:          "Should create new section after current section",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel()
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, tt.expectedPartIndex, m.CurrentSongSection().Part, tt.description+" - part index should match")
+
+			sectionCount := m.arrangement.Root.CountEndNodes()
+			assert.Equal(t, tt.expectedSectionCount, sectionCount, tt.description+" - section counts should be equal")
 		})
 	}
 }
