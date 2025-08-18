@@ -45,11 +45,11 @@ const (
 	MlmReceiver
 )
 
-func MidiEventLoop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, sendFn func(tea.Msg)) error {
+func MidiEventLoop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, midiLoopChannel chan beatMsg, sendFn func(tea.Msg)) error {
 	timing := Timing{}
 	switch mode {
 	case MlmStandAlone:
-		timing.StandAloneLoop(programChannel, sendFn)
+		timing.StandAloneLoop(programChannel, midiLoopChannel, sendFn)
 	case MlmTransmitter:
 		err := timing.TransmitterLoop(programChannel, sendFn)
 		if err != nil {
@@ -60,7 +60,7 @@ func MidiEventLoop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel
 		if err != nil {
 			return fault.Wrap(err, fmsg.With("cannot start receiver loop"))
 		}
-		timing.StandAloneLoop(programChannel, sendFn)
+		timing.StandAloneLoop(programChannel, midiLoopChannel, sendFn)
 	}
 	return nil
 }
@@ -296,7 +296,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 	return nil
 }
 
-func (t *Timing) StandAloneLoop(programChannel chan midiEventLoopMsg, sendFn func(tea.Msg)) {
+func (t *Timing) StandAloneLoop(programChannel chan midiEventLoopMsg, midiLoopChannel chan beatMsg, sendFn func(tea.Msg)) {
 	tickChannel := make(chan Timing)
 	var command midiEventLoopMsg
 
@@ -329,8 +329,8 @@ func (t *Timing) StandAloneLoop(programChannel chan midiEventLoopMsg, sendFn fun
 			case <-tickChannel:
 				if t.started {
 					adjustedInterval := t.BeatInterval()
-					sendFn(beatMsg{adjustedInterval})
 					tick(adjustedInterval)
+					midiLoopChannel <- beatMsg{adjustedInterval}
 				}
 			}
 		}

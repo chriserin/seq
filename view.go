@@ -365,11 +365,11 @@ func (m model) OverlaysView() string {
 	for currentOverlay := m.CurrentPart().Overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
 		var playing = ""
-		if m.playing != PlayStopped && playingOverlayKeys[0] == currentOverlay.Key {
+		if m.playState.playing != PlayStopped && playingOverlayKeys[0] == currentOverlay.Key {
 			playing = themes.OverlayCurrentlyPlayingSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""
-		} else if m.playing != PlayStopped && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
+		} else if m.playState.playing != PlayStopped && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
 			playing = themes.ActiveSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""
@@ -388,7 +388,7 @@ func (m model) OverlaysView() string {
 		overlayLine := fmt.Sprintf("%s%2s%2s", overlaykey.View(currentOverlay.Key), stackModifier, editing)
 
 		buf.WriteString(playingSpacer)
-		if m.playing != PlayStopped && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
+		if m.playState.playing != PlayStopped && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
 			buf.WriteString(playingStyle.Render(overlayLine))
 		} else {
 			buf.WriteString(notPlayingStyle.Render(overlayLine))
@@ -444,7 +444,7 @@ func (m model) SeqView(showLines []uint8) string {
 		buf.WriteString(m.ConfirmReloadView())
 	} else if m.selectionIndicator == operation.SelectSpecificValue {
 		buf.WriteString(m.SpecificValueEditView(currentNote.Note))
-	} else if m.playing != PlayStopped {
+	} else if m.playState.playing != PlayStopped {
 		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
 	} else if len(*m.definition.parts) > 1 {
 		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
@@ -566,7 +566,7 @@ func (m model) ViewOverlay() string {
 
 func (m model) CurrentOverlayView() string {
 	var matchedKey overlayKey
-	if m.playing != PlayStopped {
+	if m.playState.playing != PlayStopped {
 		matchedKey = m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles()).Key
 	} else {
 		matchedKey = overlaykey.ROOT
@@ -610,10 +610,10 @@ func (m model) LineIndicator(lineNumber uint8) string {
 	if lineNumber == m.gridCursor.Line {
 		indicator = themes.LineCursorStyle.Render("┤")
 	}
-	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PlayStateMute {
+	if len(m.playState.lineStates) > int(lineNumber) && m.playState.lineStates[lineNumber].groupPlayState == PlayStateMute {
 		indicator = "M"
 	}
-	if len(m.playState) > int(lineNumber) && m.playState[lineNumber].groupPlayState == PlayStateSolo {
+	if len(m.playState.lineStates) > int(lineNumber) && m.playState.lineStates[lineNumber].groupPlayState == PlayStateSolo {
 		indicator = "S"
 	}
 
@@ -668,7 +668,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
 
 		var backgroundSeqColor lipgloss.Color
-		if m.playing != PlayStopped && m.playState[lineNumber].currentBeat == i {
+		if m.playState.playing != PlayStopped && m.playState.lineStates[lineNumber].currentBeat == i {
 			backgroundSeqColor = themes.SeqCursorColor
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
 			backgroundSeqColor = themes.SeqVisualColor

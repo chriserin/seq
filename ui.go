@@ -197,23 +197,28 @@ func PCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 	}
 }
 
+type playState struct {
+	started            bool
+	recordPreRollBeats uint8
+	playing            PlayMode
+	loopMode           LoopMode
+	lineStates         []linestate
+	beatTime           time.Time
+	hasSolo            bool
+}
+
 type model struct {
 	hasUIFocus            bool
 	connected             bool
 	visualMode            bool
 	logFileAvailable      bool
 	playEditing           bool
-	hasSolo               bool
 	showArrangementView   bool
 	hideEmptyLines        bool
-	started               bool
 	ratchetCursor         uint8
 	temporaryNoteValue    uint8
-	recordPreRollBeats    uint8
 	focus                 operation.Focus
 	sectionSideIndicator  SectionSide
-	playing               PlayMode
-	loopMode              LoopMode
 	selectionIndicator    operation.Selection
 	patternMode           operation.PatternMode
 	midiLoopMode          MidiLoopMode
@@ -221,15 +226,13 @@ type model struct {
 	visualAnchorCursor    gridKey
 	partSelectorIndex     int
 	needsWrite            int
-	programSendFn         func(tea.Msg)
-	playState             []linestate
 	currentOverlay        *overlays.Overlay
 	logFile               *os.File
 	undoStack             UndoStack
 	redoStack             UndoStack
 	yankBuffer            Buffer
-	beatTime              time.Time
 	programChannel        chan midiEventLoopMsg
+	updateChannel         chan modelMsg
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
 	errChan               chan error
@@ -245,6 +248,8 @@ type model struct {
 	midiConnection        seqmidi.MidiConnection
 	activeChord           overlays.OverlayChord
 	temporaryState        temporaryState
+	// play state
+	playState playState
 	// save everything below here
 	definition Definition
 }
@@ -309,7 +314,7 @@ func (m *model) SetCurrentViewError(err error) {
 }
 
 func (m *model) ResetCurrentOverlay() {
-	if m.playing != PlayStopped && m.playEditing {
+	if m.playState.playing != PlayStopped && m.playEditing {
 		return
 	}
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
@@ -632,82 +637,6 @@ func (m model) SyncTempo() {
 	}()
 }
 
-func (m model) ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition) {
-	for i := range note.Ratchets.Length + 1 {
-		if note.Ratchets.HitAt(i) {
-			shortGateLength := 20 * time.Millisecond
-			ratchetInterval := time.Duration(i) * note.Ratchets.Interval(beatInterval)
-			onMessage, offMessage := NoteMessages(line, m.definition.accents.Data[note.AccentIndex].Value, shortGateLength, m.definition.accents.Target, ratchetInterval)
-			err := m.ProcessNoteMsg(onMessage)
-			if err != nil {
-				m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot turn on ratchet note")))
-			}
-			err = m.ProcessNoteMsg(offMessage)
-			if err != nil {
-				m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot turn off ratchet note")))
-			}
-		}
-	}
-}
-
-func (m *model) PlayBeat(beatInterval time.Duration, pattern grid.Pattern) error {
-	if m.recordPreRollBeats > 0 {
-		m.recordPreRollBeats--
-		return nil
-	}
-
-	lines := m.definition.lines
-
-	for gridKey, note := range pattern {
-		line := lines[gridKey.Line]
-		if note.Ratchets.Length > 0 {
-			m.ProcessRatchets(note, beatInterval, line)
-		} else if note != zeronote {
-			accents := m.definition.accents
-
-			delay := Delay(note.WaitIndex, beatInterval)
-			gateLength := GateLength(note.GateIndex, beatInterval)
-
-			switch line.MsgType {
-			case grid.MessageTypeNote:
-				onMessage, offMessage := NoteMessages(
-					line,
-					m.definition.accents.Data[note.AccentIndex].Value,
-					gateLength,
-					accents.Target,
-					delay,
-				)
-				err := m.ProcessNoteMsg(onMessage)
-				if err != nil {
-					return fault.Wrap(err, fmsg.With("cannot process note on msg"))
-				}
-				err = m.ProcessNoteMsg(offMessage)
-				if err != nil {
-					return fault.Wrap(err, fmsg.With("cannot process note off msg"))
-				}
-			case grid.MessageTypeCc:
-				ccMessage := CCMessage(line, note, accents.Data, delay, true, m.definition.instrument)
-				err := m.ProcessNoteMsg(ccMessage)
-				if err != nil {
-					return fault.Wrap(err, fmsg.With("cannot process cc msg"))
-				}
-			case grid.MessageTypeProgramChange:
-				pcMessage := PCMessage(line, note, accents.Data, delay, true, m.definition.instrument)
-				err := m.ProcessNoteMsg(pcMessage)
-				if err != nil {
-					return fault.Wrap(err, fmsg.With("cannot process cc msg"))
-				}
-			}
-		}
-	}
-
-	if !m.started {
-		m.started = true
-	}
-
-	return nil
-}
-
 func Delay(waitIndex uint8, beatInterval time.Duration) time.Duration {
 	var delay time.Duration
 	if waitIndex != 0 {
@@ -733,26 +662,6 @@ func GateLength(gateIndex uint8, beatInterval time.Duration) time.Duration {
 		return time.Duration(float64(config.LongGates[gateIndex].Value) * float64(beatInterval))
 	}
 	return delay
-}
-
-func PlayMessage(delay time.Duration, message midi.Message, sendFn seqmidi.SendFunc, errChan chan error) {
-	time.AfterFunc(delay, func() {
-		err := sendFn(message)
-		if err != nil {
-			errChan <- fault.Wrap(err, fmsg.With("cannot send play message"))
-		}
-	})
-}
-
-func PlayOffMessage(nm noteMsg, sendFn seqmidi.SendFunc, errChan chan error) {
-	time.AfterFunc(nm.delay, func() {
-		if notereg.RemoveID(nm) {
-			err := sendFn(nm.GetOffMidi())
-			if err != nil {
-				errChan <- fault.Wrap(err, fmsg.With("cannot send off message"))
-			}
-		}
-	})
 }
 
 func (m *model) EnsureOverlay() {
@@ -1026,19 +935,9 @@ func (m *model) DecreaseCycles() {
 	currentNode.Section.DecreaseCycles()
 }
 
-func (m *model) IncrementPlayCycles() {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	currentNode.Section.IncrementPlayCycles()
-}
-
 func (m *model) SetPlayCycles(keyCycles int) {
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
 	currentNode.Section.SetPlayCycles(keyCycles)
-}
-
-func (m *model) DuringPlayResetPlayCycles() {
-	currentNode := m.arrangement.Cursor.GetCurrentNode()
-	currentNode.Section.DuringPlayReset()
 }
 
 func (m *model) IncreasePartSelector() {
@@ -1205,7 +1104,9 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 		overlayKeyEdit:        overlaykey.InitModel(),
 		arrangement:           arrangement.InitModel(definition.arrangement, definition.parts),
 		definition:            definition,
-		playState:             InitLineStates(len(definition.lines), []linestate{}, 0),
+		playState: playState{
+			lineStates: InitLineStates(len(definition.lines), []linestate{}, 0),
+		},
 	}
 }
 
@@ -1257,7 +1158,7 @@ func (m *model) LogError(err error) {
 
 func (m *model) LogFromBeatTime() {
 	if m.logFileAvailable {
-		_, err := fmt.Fprintf(m.logFile, "%d\n", time.Since(m.beatTime))
+		_, err := fmt.Fprintf(m.logFile, "%d\n", time.Since(m.playState.beatTime))
 		if err != nil {
 			m.logFileAvailable = false
 			panic("could not write to log file")
@@ -1268,14 +1169,17 @@ func (m *model) LogFromBeatTime() {
 func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) *tea.Program {
 	config.Init()
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
+	updateChannel := make(chan modelMsg)
+	model.updateChannel = updateChannel
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
-	model.programSendFn = program.Send
-	SetupMidiEventLoop(model, program.Send)
+	midiLoopChannel := make(chan beatMsg)
+	SetupMidiEventLoop(model, midiLoopChannel, program.Send)
+	StartBeatLoop(updateChannel, midiLoopChannel, program.Send)
 	return program
 }
 
-func SetupMidiEventLoop(model model, sendFn func(tea.Msg)) {
-	err := MidiEventLoop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, sendFn)
+func SetupMidiEventLoop(model model, midiLoopChannel chan beatMsg, sendFn func(tea.Msg)) {
+	err := MidiEventLoop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, midiLoopChannel, sendFn)
 	if err != nil {
 		go func() {
 			sendFn(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
@@ -1374,7 +1278,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.selectionIndicator = operation.SelectGrid
 			return m, cmd
 		case mappings.ConfirmSelectPart:
-			_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator == SectionAfter, IsPlaying: m.playing != PlayStopped})
+			_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator == SectionAfter, IsPlaying: m.playState.playing != PlayStopped})
 			if m.sectionSideIndicator == SectionAfter {
 				m.arrangement.Cursor.MoveNext()
 			} else {
@@ -1499,30 +1403,30 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.PushUndoableDefinitionState()
 			m.Escape()
 		case mappings.PlayStop:
-			if m.playing == PlayStopped {
-				m.loopMode = LoopSong
+			if m.playState.playing == PlayStopped {
+				m.playState.loopMode = LoopSong
 			}
 			m.StartStop(0)
 		case mappings.PlayPart:
-			if m.playing == PlayStopped {
-				m.loopMode = LoopPart
+			if m.playState.playing == PlayStopped {
+				m.playState.loopMode = LoopPart
 			}
 			m.StartStop(0)
 		case mappings.PlayLoop:
-			if m.playing == PlayStopped {
-				m.loopMode = LoopSong
+			if m.playState.playing == PlayStopped {
+				m.playState.loopMode = LoopSong
 			}
 			m.arrangement.Root.SetInfinite()
 			m.StartStop(0)
 		case mappings.PlayOverlayLoop:
-			if m.playing == PlayStopped {
-				m.loopMode = LoopOverlay
+			if m.playState.playing == PlayStopped {
+				m.playState.loopMode = LoopOverlay
 			}
 			m.StartStop(0)
 			m.SetPlayCycles(m.currentOverlay.Key.GetMinimumKeyCycle())
 		case mappings.PlayRecord:
-			if m.playing == PlayStopped {
-				m.recordPreRollBeats = 8
+			if m.playState.playing == PlayStopped {
+				m.playState.recordPreRollBeats = 8
 				err := seqmidi.SendRecordMessage()
 				if err != nil {
 					m.SetCurrentError(err)
@@ -1768,8 +1672,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 					Channel: lastline.Channel,
 					Note:    lastline.Note + 1,
 				})
-				if m.playing != PlayStopped {
-					m.playState = append(m.playState, InitLineState(PlayStatePlay, uint8(len(m.definition.lines)-1), 0))
+				if m.playState.playing != PlayStopped {
+					m.playState.lineStates = append(m.playState.lineStates, InitLineState(PlayStatePlay, uint8(len(m.definition.lines)-1), 0))
 				}
 			}
 		case mappings.NewSectionAfter:
@@ -1796,12 +1700,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			if m.IsRatchetSelector() {
 				m.ToggleRatchetMute()
 			} else {
-				m.playState = Mute(m.playState, m.gridCursor.Line)
-				m.hasSolo = m.HasSolo()
+				m.playState.lineStates = Mute(m.playState.lineStates, m.gridCursor.Line)
+				m.playState.hasSolo = m.HasSolo()
 			}
 		case mappings.Solo:
-			m.playState = Solo(m.playState, m.gridCursor.Line)
-			m.hasSolo = m.HasSolo()
+			m.playState.lineStates = Solo(m.playState.lineStates, m.gridCursor.Line)
+			m.playState.hasSolo = m.HasSolo()
 		case mappings.Enter:
 			m.RecordSpecificValueUndo()
 			m.PushUndoableDefinitionState()
@@ -1820,39 +1724,19 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.selectionIndicator = operation.SelectGrid
 		}
 	case uiStartMsg:
-		if m.playing == PlayStopped {
-			m.playing = PlayReceiver
+		if m.playState.playing == PlayStopped {
+			m.playState.playing = PlayReceiver
 		} else {
 			m.SetCurrentError(errors.New("cannot start when already started"))
 		}
 		m.Start(0)
 	case uiStopMsg:
-		m.playing = PlayStopped
+		m.playState.playing = PlayStopped
 		m.Stop()
 	case uiConnectedMsg:
 		m.connected = true
 	case uiNotConnectedMsg:
 		m.connected = false
-	case beatMsg:
-		m.beatTime = time.Now()
-		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
-		if m.playing != PlayStopped && m.recordPreRollBeats == 0 {
-			if m.started {
-				m.advanceCurrentBeat(playingOverlay)
-				m.advanceKeyCycle()
-			}
-		}
-		if m.playing != PlayStopped {
-			playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
-			gridKeys := make([]grid.GridKey, 0, len(m.playState))
-			m.CurrentBeatGridKeys(&gridKeys)
-			pattern := make(grid.Pattern)
-			playingOverlay.CurrentBeatOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles(), gridKeys)
-			err := m.PlayBeat(msg.interval, pattern)
-			if err != nil {
-				m.SetCurrentError(fault.Wrap(err, fmsg.With("error when playing beat")))
-			}
-		}
 	case arrangement.GiveBackFocus:
 		m.selectionIndicator = operation.SelectGrid
 		m.focus = operation.FocusGrid
@@ -1860,7 +1744,24 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.SetSelectionIndicator(operation.SelectRenamePart)
 	case arrangement.Undo:
 		m.PushArrUndo(msg)
+	case modelPlayedMsg:
+		m.definition = msg.definition
+		m.playState = msg.playState
+		if m.playState.playing == PlayStopped {
+			m.StartStop(0)
+		}
+		m.ResetCurrentOverlay()
+		m.arrangement.ResetDepth()
+		return m, nil
 	}
+	sendFn, err := m.midiConnection.AcquireSendFunc()
+	if err != nil {
+		m.SetCurrentError(err)
+	}
+	go func() {
+		m.updateChannel <- modelMsg{definition: m.definition, playState: m.playState, cursor: m.arrangement.Cursor, midiSendFn: sendFn}
+	}()
+
 	var cmd tea.Cmd
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
@@ -2031,7 +1932,6 @@ func (m *model) Escape() {
 
 func (m model) NewSequence() model {
 	newModel := InitModel("", m.midiConnection, m.definition.template, m.definition.instrument, m.midiLoopMode, m.theme)
-	newModel.programSendFn = m.programSendFn
 	newModel.hasUIFocus = true
 	newModel.midiLoopMode = m.midiLoopMode
 	newModel.lockReceiverChannel = m.lockReceiverChannel
@@ -2083,12 +1983,12 @@ func (m *model) Start(delay time.Duration) {
 		err := m.midiConnection.ConnectAndOpen()
 		if err != nil {
 			m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot open midi connection")))
-			m.playing = PlayStopped
+			m.playState.playing = PlayStopped
 			return
 		}
 	}
 
-	switch m.loopMode {
+	switch m.playState.loopMode {
 	case LoopSong:
 		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement}
 		m.arrangement.Cursor.MoveNext()
@@ -2101,19 +2001,20 @@ func (m *model) Start(delay time.Duration) {
 	m.arrangement.Root.ResetAllPlayCycles()
 	section := m.CurrentSongSection()
 	section.ResetPlayCycles()
-	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(section.StartBeat))
+	m.playState.lineStates = InitLineStates(len(m.definition.lines), m.playState.lineStates, uint8(section.StartBeat))
 
-	if m.playing == PlayStandard {
+	if m.playState.playing == PlayStandard {
 		time.AfterFunc(delay, func() {
+			m.updateChannel <- modelMsg{definition: m.definition, playState: m.playState, cursor: m.arrangement.Cursor}
 			m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 		})
 	}
 }
 
 func (m *model) Stop() {
-	m.started = false
-	m.recordPreRollBeats = 0
-	if m.loopMode == LoopPart {
+	m.playState.started = false
+	m.playState.recordPreRollBeats = 0
+	if m.playState.loopMode == LoopPart {
 		m.arrangement.ResetDepth()
 	}
 	m.arrangement.Root.ResetCycles()
@@ -2136,15 +2037,15 @@ func (m *model) Stop() {
 
 func (m *model) StartStop(delay time.Duration) {
 	m.playEditing = false
-	if m.playing == PlayStopped {
-		m.playing = PlayStandard
+	if m.playState.playing == PlayStopped {
+		m.playState.playing = PlayStandard
 		if m.midiLoopMode == MlmReceiver {
 			// NOTE: When instance is receiver, allow it to play alone and lock out transmitter messages
 			m.lockReceiverChannel <- true
 		}
 		m.Start(delay)
 	} else {
-		if m.playing == PlayStandard {
+		if m.playState.playing == PlayStandard {
 			go func() {
 				m.programChannel <- stopMsg{}
 				if m.midiLoopMode == MlmReceiver {
@@ -2153,38 +2054,9 @@ func (m *model) StartStop(delay time.Duration) {
 				}
 			}()
 		}
-		m.playing = PlayStopped
+		m.playState.playing = PlayStopped
 		m.Stop()
 	}
-}
-
-func (m model) ProcessNoteMsg(msg Delayable) error {
-	// TODO: We don't need the redirection, we know what each type of note is when this function is called
-	sendFn, err := m.midiConnection.AcquireSendFunc()
-	if err != nil {
-		return fault.Wrap(err, fmsg.With("could not acquire send func"))
-	}
-	switch msg := msg.(type) {
-	case noteMsg:
-		switch msg.midiType {
-		case midi.NoteOnMsg:
-			if notereg.Has(msg) {
-				notereg.Remove(msg)
-				PlayMessage(0, msg.OffMessage(), sendFn, m.errChan)
-			}
-			if err := notereg.Add(msg); err != nil {
-				return fault.Wrap(err, fmsg.With("added a note already in registry"))
-			}
-			PlayMessage(msg.delay, msg.GetOnMidi(), sendFn, m.errChan)
-		case midi.NoteOffMsg:
-			PlayOffMessage(msg, sendFn, m.errChan)
-		}
-	case controlChangeMsg:
-		PlayMessage(msg.delay, msg.MidiMessage(), sendFn, m.errChan)
-	case programChangeMsg:
-		PlayMessage(msg.delay, msg.MidiMessage(), sendFn, m.errChan)
-	}
-	return nil
 }
 
 func AdvanceSelectionState(states []operation.Selection, currentSelection operation.Selection) operation.Selection {
@@ -2573,7 +2445,7 @@ func (m model) UpdateDefinition(mapping mappings.Mapping) model {
 
 	deepCopy := overlays.DeepCopy(m.currentOverlay)
 	m.EnsureOverlay()
-	if m.playing != PlayStopped && !m.playEditing {
+	if m.playState.playing != PlayStopped && !m.playEditing {
 		m.playEditing = true
 		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
 		m.currentOverlay = playingOverlay
@@ -2863,7 +2735,7 @@ func Solo(playState []linestate, line uint8) []linestate {
 }
 
 func (m model) HasSolo() bool {
-	for _, state := range m.playState {
+	for _, state := range m.playState.lineStates {
 		if state.groupPlayState == PlayStateSolo {
 			return true
 		}
@@ -2944,139 +2816,12 @@ func (m *model) Paste() {
 	}
 }
 
-func (m *model) advanceCurrentBeat(playingOverlay *overlays.Overlay) {
-	pattern := make(grid.Pattern)
-	playingOverlay.CombineActionPattern(&pattern, m.CurrentSongSection().PlayCycles())
-	for i := range m.playState {
-		doContinue := m.advancePlayState(pattern, i)
-		if !doContinue {
-			break
-		}
-	}
-}
-
 func (m model) CurrentBeatGridKeys(gridKeys *[]grid.GridKey) {
-	for _, linestate := range m.playState {
-		if linestate.IsSolo() || (!linestate.IsMuted() && !m.hasSolo) {
+	for _, linestate := range m.playState.lineStates {
+		if linestate.IsSolo() || (!linestate.IsMuted() && !m.playState.hasSolo) {
 			*gridKeys = append(*gridKeys, linestate.GridKey())
 		}
 	}
-}
-
-func (m *model) advancePlayState(combinedPattern grid.Pattern, lineIndex int) bool {
-	currentState := m.playState[lineIndex]
-	advancedBeat := int8(currentState.currentBeat) + currentState.direction
-
-	if advancedBeat >= int8(m.CurrentPart().Beats) || advancedBeat < 0 {
-		// reset locations should be 1 time use.  Reset back to 0.
-		if m.playState[lineIndex].resetLocation != 0 && combinedPattern[GK(uint8(lineIndex), currentState.resetActionLocation)].Action == currentState.resetAction {
-			m.playState[lineIndex].currentBeat = currentState.resetLocation
-			advancedBeat = int8(currentState.resetLocation)
-		} else {
-			m.playState[lineIndex].currentBeat = 0
-			advancedBeat = int8(0)
-		}
-		m.playState[lineIndex].direction = currentState.resetDirection
-		m.playState[lineIndex].resetLocation = 0
-	} else {
-		m.playState[lineIndex].currentBeat = uint8(advancedBeat)
-	}
-
-	switch combinedPattern[GK(uint8(lineIndex), uint8(advancedBeat))].Action {
-	case grid.ActionNothing:
-		return true
-	case grid.ActionLineReset:
-		m.playState[lineIndex].currentBeat = 0
-	case grid.ActionLineReverse:
-		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-2, 0))
-		m.playState[lineIndex].direction = -1
-		m.playState[lineIndex].resetLocation = uint8(max(advancedBeat-1, 0))
-		m.playState[lineIndex].resetActionLocation = uint8(advancedBeat)
-		m.playState[lineIndex].resetAction = grid.ActionLineReverse
-	case grid.ActionLineBounce:
-		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
-		m.playState[lineIndex].direction = -1
-	case grid.ActionLineSkipBeat:
-		m.advancePlayState(combinedPattern, lineIndex)
-	case grid.ActionLineDelay:
-		m.playState[lineIndex].currentBeat = uint8(max(advancedBeat-1, 0))
-	case grid.ActionLineResetAll:
-		for i := range m.playState {
-			m.playState[i].currentBeat = 0
-			m.playState[i].direction = 1
-			m.playState[i].resetLocation = 0
-			m.playState[i].resetDirection = 1
-		}
-		return false
-	case grid.ActionLineBounceAll:
-		for i := range m.playState {
-			if i <= lineIndex {
-				m.playState[i].currentBeat = uint8(max(m.playState[i].currentBeat-1, 0))
-			}
-			m.playState[i].direction = -1
-		}
-		return false
-	case grid.ActionLineSkipBeatAll:
-		for i := range m.playState {
-			if i <= lineIndex {
-				m.advancePlayState(combinedPattern, i)
-			} else {
-				m.advancePlayState(combinedPattern, i)
-				m.advancePlayState(combinedPattern, i)
-			}
-		}
-		return false
-	}
-
-	return true
-}
-
-func (m *model) advanceKeyCycle() {
-	if m.playState[m.definition.keyline].currentBeat == 0 && m.loopMode != LoopOverlay {
-		m.IncrementPlayCycles()
-		songSection := m.CurrentSongSection()
-
-		if songSection.IsDone() {
-			if m.PlayMove() {
-				m.StartPart()
-			}
-		}
-	}
-}
-
-func (m *model) StartPart() {
-	m.DuringPlayResetPlayCycles()
-	m.playState = InitLineStates(len(m.definition.lines), m.playState, uint8(m.CurrentSongSection().StartBeat))
-	m.ResetCurrentOverlay()
-}
-
-func (m *model) PlayMove() bool {
-	if m.arrangement.Cursor.IsRoot() {
-		m.StartStop(0)
-		m.arrangement.Cursor.MoveNext()
-		m.arrangement.ResetDepth()
-		m.ResetCurrentOverlay()
-		return false
-	} else if m.arrangement.Cursor.IsLastSibling() {
-		m.arrangement.Cursor.GetParentNode().DrawDown()
-		if m.arrangement.Cursor.HasParentIterations() {
-			m.arrangement.Cursor.MoveToFirstSibling()
-			if m.arrangement.Cursor.GetCurrentNode().IsGroup() {
-				m.arrangement.Cursor.MoveNext()
-			}
-			m.arrangement.ResetDepth()
-		} else {
-			m.arrangement.Cursor.ResetIterations()
-			m.arrangement.Cursor.Up()
-			m.arrangement.ResetDepth()
-			return m.PlayMove()
-		}
-	} else {
-		m.arrangement.Cursor.MoveToSibling()
-		m.arrangement.Cursor.ResetIterations()
-		m.arrangement.ResetDepth()
-	}
-	return true
 }
 
 func (m model) PlayingOverlayKeys() []overlayKey {
@@ -3093,7 +2838,7 @@ func (m model) CombinedEditPattern(overlay *overlays.Overlay) grid.Pattern {
 
 func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 	pattern := make(grid.Pattern)
-	gridKeys := make([]grid.GridKey, 0, len(m.playState))
+	gridKeys := make([]grid.GridKey, 0, len(m.playState.lineStates))
 	m.CurrentBeatGridKeys(&gridKeys)
 	overlay.CurrentBeatOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles(), gridKeys)
 	return pattern
@@ -3101,7 +2846,7 @@ func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 
 func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.OverlayPattern {
 	pattern := make(overlays.OverlayPattern)
-	if m.playing != PlayStopped && !m.playEditing {
+	if m.playState.playing != PlayStopped && !m.playEditing {
 		m.CurrentPart().Overlays.CombineOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles())
 	} else {
 		overlay.CombineOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle())
