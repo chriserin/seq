@@ -64,7 +64,7 @@ func Beat(msg beatMsg, playState playState, definition Definition, cursor arrang
 		if playState.allowAdvance {
 			advanceCurrentBeat(*currentSection, playingOverlay, playState.lineStates, currentPart.Beats)
 			advanceKeyCycle(definition.keyline, playState.lineStates, playState.loopMode, currentSection)
-			if currentSection.IsDone() {
+			if currentSection.IsDone() && playState.loopMode != LoopOverlay {
 				if PlayMove(&cursor) {
 					cursor[len(cursor)-1].Section.DuringPlayReset()
 					currentSection = &cursor[len(cursor)-1].Section
