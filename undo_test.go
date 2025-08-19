@@ -10,6 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func initPlayState() playState {
+	return playState{
+		lineStates: InitLineStates(1, []linestate{}, 0),
+	}
+}
+
 func setupTestModel() *model {
 	var parts = InitParts()
 	var arr = InitArrangement(parts)
@@ -25,7 +31,7 @@ func setupTestModel() *model {
 	m := &model{
 		definition:     def,
 		programChannel: make(chan midiEventLoopMsg),
-		playState:      InitLineStates(1, []linestate{}, 0),
+		playState:      initPlayState(),
 		undoStack:      EmptyStack,
 		redoStack:      EmptyStack,
 		arrangement:    arrangement.InitModel(def.arrangement, def.parts),

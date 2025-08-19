@@ -812,32 +812,32 @@ func TestMuteAndSolo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.playState = make([]linestate, len(m.definition.lines))
-					for i := range m.playState {
-						m.playState[i] = InitLineState(PlayStatePlay, uint8(i), 0)
+					m.playState = playState{lineStates: make([]linestate, len(m.definition.lines))}
+					for i := range m.playState.lineStates {
+						m.playState.lineStates[i] = InitLineState(PlayStatePlay, uint8(i), 0)
 					}
 					return *m
 				},
 			)
 
-			assert.Equal(t, PlayStatePlay, m.playState[tt.cursorLine].groupPlayState, "Initial play state should be PlayStatePlay")
-			assert.False(t, m.hasSolo, "Initial hasSolo should be false")
+			assert.Equal(t, PlayStatePlay, m.playState.lineStates[tt.cursorLine].groupPlayState, "Initial play state should be PlayStatePlay")
+			assert.False(t, m.playState.hasSolo, "Initial hasSolo should be false")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, tt.expectedGroupPlayState, m.playState[tt.cursorLine].groupPlayState, tt.description+" - groupPlayState should match")
-			assert.Equal(t, tt.expectedHasSolo, m.hasSolo, tt.description+" - hasSolo should match")
+			assert.Equal(t, tt.expectedGroupPlayState, m.playState.lineStates[tt.cursorLine].groupPlayState, tt.description+" - groupPlayState should match")
+			assert.Equal(t, tt.expectedHasSolo, m.playState.hasSolo, tt.description+" - hasSolo should match")
 
 			switch tt.expectedGroupPlayState {
 			case PlayStateMute:
-				assert.True(t, m.playState[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return true")
-				assert.False(t, m.playState[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return false")
+				assert.True(t, m.playState.lineStates[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return true")
+				assert.False(t, m.playState.lineStates[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return false")
 			case PlayStateSolo:
-				assert.False(t, m.playState[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return false")
-				assert.True(t, m.playState[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return true")
+				assert.False(t, m.playState.lineStates[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return false")
+				assert.True(t, m.playState.lineStates[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return true")
 			default:
-				assert.False(t, m.playState[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return false")
-				assert.False(t, m.playState[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return false")
+				assert.False(t, m.playState.lineStates[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return false")
+				assert.False(t, m.playState.lineStates[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return false")
 			}
 		})
 	}

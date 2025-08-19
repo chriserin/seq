@@ -84,12 +84,15 @@ func Beat(msg beatMsg, playState playState, definition Definition, cursor arrang
 		playingOverlay = currentPart.Overlays.HighestMatchingOverlay(currentSection.PlayCycles())
 		gridKeys := make([]grid.GridKey, 0, len(playState.lineStates))
 		CurrentBeatGridKeys(&gridKeys, playState.lineStates, playState.hasSolo)
+
 		pattern := make(grid.Pattern)
 		playingOverlay.CurrentBeatOverlayPattern(&pattern, currentSection.PlayCycles(), gridKeys)
+
 		if playState.recordPreRollBeats > 0 {
 			playState.recordPreRollBeats--
 			return
 		}
+
 		err := PlayBeat(msg.interval, pattern, definition, midiSendFn, errChan)
 
 		if !playState.allowAdvance {
