@@ -388,7 +388,7 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 
 			note := noteprops(propStr)
 
-			currentOverlay.SetNote(gridKey, note)
+			currentOverlay.AddNote(gridKey, note)
 
 		case "ARRANGEMENT":
 			// This is just the arrangement header section, handled in section detection

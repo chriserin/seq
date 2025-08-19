@@ -316,6 +316,11 @@ func (ol *Overlay) SetChord(gridChord *GridChord) *GridChord {
 	return chordRef
 }
 
+// AddNote adds a note to the overlay at the specified grid key.
+func (ol *Overlay) AddNote(gridKey grid.GridKey, note grid.Note) {
+	(*ol).Notes[gridKey] = note
+}
+
 func (ol *Overlay) RemoveNote(gridKey grid.GridKey) {
 	delete((*ol).Notes, gridKey)
 }
