@@ -198,13 +198,14 @@ func PCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay 
 }
 
 type playState struct {
-	started            bool
-	recordPreRollBeats uint8
-	playing            PlayMode
-	loopMode           LoopMode
-	lineStates         []linestate
-	beatTime           time.Time
+	playing            bool
+	allowAdvance       bool
 	hasSolo            bool
+	recordPreRollBeats uint8
+	playMode           PlayMode
+	loopMode           LoopMode
+	beatTime           time.Time
+	lineStates         []linestate
 }
 
 type model struct {
@@ -314,7 +315,7 @@ func (m *model) SetCurrentViewError(err error) {
 }
 
 func (m *model) ResetCurrentOverlay() {
-	if m.playState.playing != PlayStopped && m.playEditing {
+	if m.playState.playing && m.playEditing {
 		return
 	}
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
@@ -337,8 +338,7 @@ const (
 type PlayMode uint8
 
 const (
-	PlayStopped PlayMode = iota
-	PlayStandard
+	PlayStandard PlayMode = iota
 	PlayReceiver
 )
 
@@ -1278,7 +1278,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.selectionIndicator = operation.SelectGrid
 			return m, cmd
 		case mappings.ConfirmSelectPart:
-			_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator == SectionAfter, IsPlaying: m.playState.playing != PlayStopped})
+			_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator == SectionAfter, IsPlaying: m.playState.playing})
 			if m.sectionSideIndicator == SectionAfter {
 				m.arrangement.Cursor.MoveNext()
 			} else {
@@ -1403,29 +1403,29 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.PushUndoableDefinitionState()
 			m.Escape()
 		case mappings.PlayStop:
-			if m.playState.playing == PlayStopped {
+			if !m.playState.playing {
 				m.playState.loopMode = LoopSong
 			}
 			m.StartStop(0)
 		case mappings.PlayPart:
-			if m.playState.playing == PlayStopped {
+			if !m.playState.playing {
 				m.playState.loopMode = LoopPart
 			}
 			m.StartStop(0)
 		case mappings.PlayLoop:
-			if m.playState.playing == PlayStopped {
+			if !m.playState.playing {
 				m.playState.loopMode = LoopSong
 			}
 			m.arrangement.Root.SetInfinite()
 			m.StartStop(0)
 		case mappings.PlayOverlayLoop:
-			if m.playState.playing == PlayStopped {
+			if !m.playState.playing {
 				m.playState.loopMode = LoopOverlay
 			}
 			m.StartStop(0)
 			m.SetPlayCycles(m.currentOverlay.Key.GetMinimumKeyCycle())
 		case mappings.PlayRecord:
-			if m.playState.playing == PlayStopped {
+			if !m.playState.playing {
 				m.playState.recordPreRollBeats = 8
 				err := seqmidi.SendRecordMessage()
 				if err != nil {
@@ -1672,7 +1672,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 					Channel: lastline.Channel,
 					Note:    lastline.Note + 1,
 				})
-				if m.playState.playing != PlayStopped {
+				if m.playState.playing {
 					m.playState.lineStates = append(m.playState.lineStates, InitLineState(PlayStatePlay, uint8(len(m.definition.lines)-1), 0))
 				}
 			}
@@ -1712,7 +1712,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.Escape()
 			m.SetSelectionIndicator(operation.SelectGrid)
 		default:
+			// NOTE: Assuming that every other mapping updates the definition
 			m = m.UpdateDefinition(mapping)
+			// NOTE: Only sync beat loop on definition changes
+			m.SyncBeatLoop()
 		}
 	case tea.FocusMsg:
 		m.hasUIFocus = true
@@ -1724,14 +1727,17 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.selectionIndicator = operation.SelectGrid
 		}
 	case uiStartMsg:
-		if m.playState.playing == PlayStopped {
-			m.playState.playing = PlayReceiver
+		if !m.playState.playing {
+			m.playState.playing = true
+			// NOTE: Getting a start message from midieventloop means we are in receiver mode
+			m.playState.playMode = PlayReceiver
 		} else {
 			m.SetCurrentError(errors.New("cannot start when already started"))
 		}
 		m.Start(0)
 	case uiStopMsg:
-		m.playState.playing = PlayStopped
+		m.playState.playing = false
+		m.playState.playMode = PlayStandard
 		m.Stop()
 	case uiConnectedMsg:
 		m.connected = true
@@ -1747,25 +1753,31 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	case modelPlayedMsg:
 		m.definition = msg.definition
 		m.playState = msg.playState
-		if m.playState.playing == PlayStopped {
-			m.StartStop(0)
+		m.arrangement.Cursor = msg.cursor
+		if msg.performStop {
+			m.SafeStop()
 		}
 		m.ResetCurrentOverlay()
 		m.arrangement.ResetDepth()
+		m.SyncBeatLoop()
 		return m, nil
 	}
-	sendFn, err := m.midiConnection.AcquireSendFunc()
-	if err != nil {
-		m.SetCurrentError(err)
-	}
-	go func() {
-		m.updateChannel <- modelMsg{definition: m.definition, playState: m.playState, cursor: m.arrangement.Cursor, midiSendFn: sendFn}
-	}()
 
 	var cmd tea.Cmd
 	cursor, cmd := m.cursor.Update(msg)
 	m.cursor = cursor
 	return m, cmd
+}
+
+func (m *model) SyncBeatLoop() {
+	sendFn, err := m.midiConnection.AcquireSendFunc()
+	if err != nil {
+		m.SetCurrentError(err)
+		return
+	}
+	go func() {
+		m.updateChannel <- modelMsg{definition: m.definition, playState: m.playState, cursor: m.arrangement.Cursor, midiSendFn: sendFn}
+	}()
 }
 
 func (m model) Quit() (tea.Model, tea.Cmd) {
@@ -1983,7 +1995,8 @@ func (m *model) Start(delay time.Duration) {
 		err := m.midiConnection.ConnectAndOpen()
 		if err != nil {
 			m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot open midi connection")))
-			m.playState.playing = PlayStopped
+			m.playState.playing = false
+			m.playState.playMode = PlayStandard
 			return
 		}
 	}
@@ -2002,17 +2015,22 @@ func (m *model) Start(delay time.Duration) {
 	section := m.CurrentSongSection()
 	section.ResetPlayCycles()
 	m.playState.lineStates = InitLineStates(len(m.definition.lines), m.playState.lineStates, uint8(section.StartBeat))
-
-	if m.playState.playing == PlayStandard {
+	m.midiConnection.AcquireSendFunc()
+	if m.playState.playing {
+		sendFn, err := m.midiConnection.AcquireSendFunc()
+		if err != nil {
+			m.SetCurrentError(err)
+		}
 		time.AfterFunc(delay, func() {
-			m.updateChannel <- modelMsg{definition: m.definition, playState: m.playState, cursor: m.arrangement.Cursor}
+			// NOTE: Order matters here, modelMsg must be sent before startMsg
+			m.updateChannel <- modelMsg{definition: m.definition, playState: m.playState, cursor: m.arrangement.Cursor, midiSendFn: sendFn}
 			m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 		})
 	}
 }
 
 func (m *model) Stop() {
-	m.playState.started = false
+	m.playState.allowAdvance = false
 	m.playState.recordPreRollBeats = 0
 	if m.playState.loopMode == LoopPart {
 		m.arrangement.ResetDepth()
@@ -2037,26 +2055,35 @@ func (m *model) Stop() {
 
 func (m *model) StartStop(delay time.Duration) {
 	m.playEditing = false
-	if m.playState.playing == PlayStopped {
-		m.playState.playing = PlayStandard
-		if m.midiLoopMode == MlmReceiver {
-			// NOTE: When instance is receiver, allow it to play alone and lock out transmitter messages
-			m.lockReceiverChannel <- true
-		}
-		m.Start(delay)
+	if !m.playState.playing {
+		m.SafeStart(delay)
 	} else {
-		if m.playState.playing == PlayStandard {
-			go func() {
-				m.programChannel <- stopMsg{}
-				if m.midiLoopMode == MlmReceiver {
-					// NOTE: Allow transmitter messages
-					m.unlockReceiverChannel <- true
-				}
-			}()
-		}
-		m.playState.playing = PlayStopped
-		m.Stop()
+		m.SafeStop()
 	}
+}
+
+func (m *model) SafeStart(delay time.Duration) {
+	m.playState.playing = true
+	m.playState.playMode = PlayStandard
+	if m.midiLoopMode == MlmReceiver {
+		// NOTE: When instance is receiver, allow it to play alone and lock out transmitter messages
+		m.lockReceiverChannel <- true
+	}
+	m.Start(delay)
+}
+
+func (m *model) SafeStop() {
+	m.playState.playing = false
+	if m.playState.playMode == PlayStandard {
+		go func() {
+			m.programChannel <- stopMsg{}
+			if m.midiLoopMode == MlmReceiver {
+				// NOTE: Unlock to allow transmitter messages
+				m.unlockReceiverChannel <- true
+			}
+		}()
+	}
+	m.Stop()
 }
 
 func AdvanceSelectionState(states []operation.Selection, currentSelection operation.Selection) operation.Selection {
@@ -2445,7 +2472,7 @@ func (m model) UpdateDefinition(mapping mappings.Mapping) model {
 
 	deepCopy := overlays.DeepCopy(m.currentOverlay)
 	m.EnsureOverlay()
-	if m.playState.playing != PlayStopped && !m.playEditing {
+	if m.playState.playing && !m.playEditing {
 		m.playEditing = true
 		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
 		m.currentOverlay = playingOverlay
@@ -2846,7 +2873,7 @@ func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 
 func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.OverlayPattern {
 	pattern := make(overlays.OverlayPattern)
-	if m.playState.playing != PlayStopped && !m.playEditing {
+	if m.playState.playing && !m.playEditing {
 		m.CurrentPart().Overlays.CombineOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles())
 	} else {
 		overlay.CombineOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle())

@@ -23,9 +23,10 @@ type modelMsg struct {
 }
 
 type modelPlayedMsg struct {
-	playState  playState
-	definition Definition
-	cursor     arrangement.ArrCursor
+	performStop bool
+	playState   playState
+	definition  Definition
+	cursor      arrangement.ArrCursor
 }
 
 func StartBeatLoop(updateChannel chan modelMsg, midiLoopChannel chan beatMsg, sendFn func(tea.Msg)) {
@@ -58,27 +59,27 @@ func Beat(msg beatMsg, playState playState, definition Definition, cursor arrang
 	currentPart := (*definition.parts)[partID]
 	playingOverlay := currentPart.Overlays.HighestMatchingOverlay(currentSection.PlayCycles())
 
-	if playState.playing != PlayStopped && playState.recordPreRollBeats == 0 {
-		if playState.started {
+	if playState.playing && playState.recordPreRollBeats == 0 {
+		// NOTE: Only advance if we've already played the first beat.
+		if playState.allowAdvance {
 			advanceCurrentBeat(currentSection, playingOverlay, playState.lineStates, currentPart.Beats)
 			advanceKeyCycle(definition.keyline, playState.lineStates, playState.loopMode, &currentSection)
+			fmt.Println("Play Cycles:", currentSection.PlayCycles())
 			if currentSection.IsDone() {
 				if PlayMove(cursor) {
 					cursor[len(cursor)-1].Section.DuringPlayReset()
 					currentSection = cursor[len(cursor)-1].Section
 					playState.lineStates = InitLineStates(len(definition.lines), playState.lineStates, uint8(cursor[len(cursor)-1].Section.StartBeat))
 				} else {
-					playState.playing = PlayStopped
-					playState.started = false
 					playState.lineStates = InitLineStates(len(definition.lines), playState.lineStates, 0)
-					sendFn(modelPlayedMsg{playState: playState, definition: definition, cursor: cursor})
+					sendFn(modelPlayedMsg{performStop: true, playState: playState, definition: definition, cursor: cursor})
 					return
 				}
 			}
 		}
 	}
 
-	if playState.playing != PlayStopped {
+	if playState.playing {
 		partID = currentSection.Part
 		currentPart = (*definition.parts)[partID]
 		playingOverlay = currentPart.Overlays.HighestMatchingOverlay(currentSection.PlayCycles())
@@ -92,14 +93,14 @@ func Beat(msg beatMsg, playState playState, definition Definition, cursor arrang
 		}
 		err := PlayBeat(msg.interval, pattern, definition, midiSendFn, errChan)
 
-		if !playState.started {
-			playState.started = true
+		if !playState.allowAdvance {
+			playState.allowAdvance = true
 		}
 
 		if err != nil {
 			fault.Wrap(err, fmsg.With("error when playing beat"))
 		}
-		sendFn(modelPlayedMsg{playState: playState, definition: definition})
+		sendFn(modelPlayedMsg{playState: playState, definition: definition, cursor: cursor})
 	}
 }
 
@@ -194,7 +195,6 @@ func (ls *linestate) advancePlayState(combinedPattern grid.Pattern, lineIndex in
 func advanceKeyCycle(keyline uint8, lineStates []linestate, loopMode LoopMode, section *arrangement.SongSection) {
 	if lineStates[keyline].currentBeat == 0 && loopMode != LoopOverlay {
 		section.IncrementPlayCycles()
-
 	}
 }
 
