@@ -1423,7 +1423,6 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.playState.loopMode = LoopOverlay
 			}
 			m.StartStop(0)
-			m.SetPlayCycles(m.currentOverlay.Key.GetMinimumKeyCycle())
 		case mappings.PlayRecord:
 			if !m.playState.playing {
 				m.playState.recordPreRollBeats = 8
@@ -2013,7 +2012,11 @@ func (m *model) Start(delay time.Duration) {
 
 	m.arrangement.Root.ResetAllPlayCycles()
 	section := m.CurrentSongSection()
-	section.ResetPlayCycles()
+	if m.playState.loopMode == LoopOverlay {
+		m.SetPlayCycles(m.currentOverlay.Key.GetMinimumKeyCycle())
+	} else {
+		section.ResetPlayCycles()
+	}
 	m.playState.lineStates = InitLineStates(len(m.definition.lines), m.playState.lineStates, uint8(section.StartBeat))
 	m.midiConnection.AcquireSendFunc()
 	if m.playState.playing {
