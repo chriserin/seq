@@ -22,6 +22,58 @@
 2. Extract: tar xzvf seq-linux-x86_64.tar.gz
 3. Run ./seq-linux-x86_64/bin/seq
 
+## [v0.1.0-alpha.6](https://github.com/chriserin/seq/compare/v0.1.0-alpha.5...v0.1.0-alpha.6) (2025-08-19)
+
+### Features
+
+* cursor on valid line when hiding lines [ee2de85](https://github.com/chriserin/seq/commit/ee2de85) 
+* nav with hidden lines [452c20e](https://github.com/chriserin/seq/commit/452c20e) 
+* choose midi outport at the command line [4937915](https://github.com/chriserin/seq/commit/4937915) 
+* Start delay for record latency compensation [8c122f3](https://github.com/chriserin/seq/commit/8c122f3) 
+* move key combo view to below side [7bb38d9](https://github.com/chriserin/seq/commit/7bb38d9) 
+* Long gates everywhere [144d6dc](https://github.com/chriserin/seq/commit/144d6dc) 
+* Midi panic (mapping: bp) [a20d298](https://github.com/chriserin/seq/commit/a20d298) 
+
+### Fixes
+
+* Use a no-bizlogic fn for read add note [209d004](https://github.com/chriserin/seq/commit/209d004) 
+* add back new line char in view [9d322d5](https://github.com/chriserin/seq/commit/9d322d5) 
+* Switch to overlay with overlay edit [3d8b034](https://github.com/chriserin/seq/commit/3d8b034) 
+* Accents end allow down to 0 [479164f](https://github.com/chriserin/seq/commit/479164f) 
+* pattern mode - accent on chords [88fa1e2](https://github.com/chriserin/seq/commit/88fa1e2) 
+* New sequence gets new undo state [223cb43](https://github.com/chriserin/seq/commit/223cb43) 
+* error on stop in standalone mode [e8e56c4](https://github.com/chriserin/seq/commit/e8e56c4) 
+* ensure first beat played for record play [ee320fe](https://github.com/chriserin/seq/commit/ee320fe) 
+* Escape selection before focus [cf6c3f2](https://github.com/chriserin/seq/commit/cf6c3f2) 
+* Inc/Dec from arr view [2762db7](https://github.com/chriserin/seq/commit/2762db7) 
+* Play Overlay Loop w/Arr Focus [0045ae7](https://github.com/chriserin/seq/commit/0045ae7) 
+* Reset depth after cursor move on play [d879b0e](https://github.com/chriserin/seq/commit/d879b0e) 
+* Find substring of virtual midi outs for DAW [5cee707](https://github.com/chriserin/seq/commit/5cee707) 
+* Loop Overlays loops correct overlay [d6c054d](https://github.com/chriserin/seq/commit/d6c054d) 
+
+
+## Install
+
+### macOS (x86_64)
+
+1. Download seq-macos-x86_64.tar.gz
+2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf seq-macos-x86_64.tar.gz
+4. Run ./seq-macos-x86_64/bin/seq
+
+### macOS (arm64)
+
+1. Download seq-macos-arm64.tar.gz
+2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf seq-macos-arm64.tar.gz
+4. Run ./seq-macos-arm64/bin/seq
+
+### Linux (x86_64)
+
+1. Download seq-linux-x86_64.tar.gz
+2. Extract: tar xzvf seq-linux-x86_64.tar.gz
+3. Run ./seq-linux-x86_64/bin/seq
+
 ## [v0.1.0-alpha.5](https://github.com/chriserin/seq/compare/v0.1.0-alpha.4...v0.1.0-alpha.5) (2025-08-08)
 
 ### Features
