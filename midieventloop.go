@@ -56,7 +56,7 @@ func MidiEventLoop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel
 			return fault.Wrap(err, fmsg.With("cannot start transmitter loop"))
 		}
 	case MlmReceiver:
-		err := timing.ReceiverLoop(lockReceiverChannel, unlockReceiverChannel, programChannel, sendFn)
+		err := timing.ReceiverLoop(lockReceiverChannel, unlockReceiverChannel, programChannel, beatChannel, sendFn)
 		if err != nil {
 			return fault.Wrap(err, fmsg.With("cannot start receiver loop"))
 		}
@@ -196,7 +196,7 @@ func (t *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, beatChann
 
 type ListenFn func(msg []byte, milliseconds int32)
 
-func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, sendFn func(tea.Msg)) (receiverError error) {
+func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, beatChannel chan beatMsg, sendFn func(tea.Msg)) (receiverError error) {
 
 	go func() {
 		for {
@@ -277,10 +277,10 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 				case pulseTiming := <-tickChannel:
 					timer.Reset(330 * time.Millisecond)
 					if t.started {
-						t.pulseCount++
 						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
-							sendFn(beatMsg{t.BeatInterval()})
+							beatChannel <- beatMsg{t.BeatInterval()}
 						}
+						t.pulseCount++
 					}
 				case isGood := <-activeSenseChannel:
 					timer.Reset(330 * time.Millisecond)

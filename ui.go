@@ -1738,6 +1738,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.playState.playing = false
 		m.playState.playMode = PlayStandard
 		m.Stop()
+		m.SyncBeatLoop()
 	case uiConnectedMsg:
 		m.connected = true
 	case uiNotConnectedMsg:
@@ -2027,7 +2028,9 @@ func (m *model) Start(delay time.Duration) {
 		time.AfterFunc(delay, func() {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
 			m.updateChannel <- modelMsg{definition: m.definition, playState: m.playState, cursor: m.arrangement.Cursor, midiSendFn: sendFn}
-			m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
+			if m.midiLoopMode != MlmReceiver {
+				m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
+			}
 		})
 	}
 }

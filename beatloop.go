@@ -44,7 +44,14 @@ func StartBeatLoop(updateChannel chan modelMsg, midiLoopChannel chan beatMsg, se
 				cursor = modelMsg.cursor
 				midiSendFn = modelMsg.midiSendFn
 			case beatMsg := <-midiLoopChannel:
-				Beat(beatMsg, playState, definition, cursor, midiSendFn, sendFn, errChan)
+				if playState.playing {
+					Beat(beatMsg, playState, definition, cursor, midiSendFn, sendFn, errChan)
+				} else {
+					// NOTE: The playing playState hasn't arrived yet, so loop until it does.
+					time.AfterFunc(10, func() {
+						midiLoopChannel <- beatMsg
+					})
+				}
 			case err := <-errChan:
 				fmt.Println(err)
 			}
