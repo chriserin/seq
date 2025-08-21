@@ -37,23 +37,26 @@ func StartBeatLoop(updateChannel chan modelMsg, midiLoopChannel chan beatMsg, se
 		var midiSendFn seqmidi.SendFunc
 		var errChan chan error
 		for {
-			select {
-			case modelMsg := <-updateChannel:
+			if !playState.playing {
+				// NOTE: Wait for a model update that puts us into a playing state.
+				modelMsg := <-updateChannel
 				playState = modelMsg.playState
 				definition = modelMsg.definition
 				cursor = modelMsg.cursor
 				midiSendFn = modelMsg.midiSendFn
-			case beatMsg := <-midiLoopChannel:
-				if playState.playing {
+			} else {
+				// NOTE: In a plyaing state, respond to beat messages
+				select {
+				case modelMsg := <-updateChannel:
+					playState = modelMsg.playState
+					definition = modelMsg.definition
+					cursor = modelMsg.cursor
+					midiSendFn = modelMsg.midiSendFn
+				case beatMsg := <-midiLoopChannel:
 					Beat(beatMsg, playState, definition, cursor, midiSendFn, sendFn, errChan)
-				} else {
-					// NOTE: The playing playState hasn't arrived yet, so loop until it does.
-					time.AfterFunc(10, func() {
-						midiLoopChannel <- beatMsg
-					})
+				case err := <-errChan:
+					fmt.Println(err)
 				}
-			case err := <-errChan:
-				fmt.Println(err)
 			}
 		}
 	}()

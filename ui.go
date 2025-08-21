@@ -1183,10 +1183,10 @@ func SetupMidiEventLoop(model model, midiLoopChannel chan beatMsg, sendFn func(t
 	if err != nil {
 		go func() {
 			sendFn(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
-			for {
-				// NOTE: Eat the messages sent on the program channel so that we can quit and still send the stopMsg
-				<-model.programChannel
-			}
+			// for {
+			// 	// NOTE: Eat the messages sent on the program channel so that we can quit and still send the stopMsg
+			// 	<-model.programChannel
+			// }
 		}()
 	} else {
 		ErrorLoop(sendFn, model.errChan)
@@ -1255,7 +1255,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
 		case mappings.MidiPanic:
-			m.midiConnection.Panic()
+			err := m.midiConnection.Panic()
+			m.SetCurrentError(err)
 		case mappings.ToggleHideLines:
 			m.hideEmptyLines = !m.hideEmptyLines
 			if m.hideEmptyLines {
@@ -2019,7 +2020,6 @@ func (m *model) Start(delay time.Duration) {
 		section.ResetPlayCycles()
 	}
 	m.playState.lineStates = InitLineStates(len(m.definition.lines), m.playState.lineStates, uint8(section.StartBeat))
-	m.midiConnection.AcquireSendFunc()
 	if m.playState.playing {
 		sendFn, err := m.midiConnection.AcquireSendFunc()
 		if err != nil {
@@ -2028,7 +2028,7 @@ func (m *model) Start(delay time.Duration) {
 		time.AfterFunc(delay, func() {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
 			m.updateChannel <- modelMsg{definition: m.definition, playState: m.playState, cursor: m.arrangement.Cursor, midiSendFn: sendFn}
-			if m.midiLoopMode != MlmReceiver {
+			if m.playState.playMode != PlayReceiver {
 				m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
 			}
 		})
@@ -2045,6 +2045,7 @@ func (m *model) Stop() {
 	m.arrangement.Root.ResetAllPlayCycles()
 	m.arrangement.Root.ResetIterations()
 	m.ResetCurrentOverlay()
+	m.SyncBeatLoop()
 
 	notes := notereg.Clear()
 	sendFn, err := m.midiConnection.AcquireSendFunc()

@@ -57,10 +57,19 @@ func MidiEventLoop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel
 		}
 	case MlmReceiver:
 		err := timing.ReceiverLoop(lockReceiverChannel, unlockReceiverChannel, programChannel, beatChannel, sendFn)
+		timing.StandAloneLoop(programChannel, beatChannel, sendFn)
 		if err != nil {
+			// NOTE: In case the receiver loop was not setup correctly, swallow the lock/unlock messages
+			go func() {
+				for {
+					select {
+					case <-lockReceiverChannel:
+					case <-unlockReceiverChannel:
+					}
+				}
+			}()
 			return fault.Wrap(err, fmsg.With("cannot start receiver loop"))
 		}
-		timing.StandAloneLoop(programChannel, beatChannel, sendFn)
 	}
 	return nil
 }
@@ -197,11 +206,20 @@ func (t *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, beatChann
 type ListenFn func(msg []byte, milliseconds int32)
 
 func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, beatChannel chan beatMsg, sendFn func(tea.Msg)) (receiverError error) {
-
+	transmitPort, err := midi.FindInPort(TransmitterName)
+	if err != nil {
+		receiverError = fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
+		return
+	}
+	err = transmitPort.Open()
+	if err != nil {
+		receiverError = fault.Wrap(err, fmsg.WithDesc("cannot open transmitport", "Could not open a transmitter.  Start a seq program with the --transmit flag before starting a receiver"))
+		return
+	}
 	go func() {
 		for {
 			// NOTE: transmitPort must be redeclared within to loop to avoid memory error
-			transmitPort, err := midi.FindInPort(TransmitterName)
+			transmitPort, err = midi.FindInPort(TransmitterName)
 			if err != nil {
 				receiverError = fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
 				return
