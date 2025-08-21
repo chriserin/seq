@@ -113,13 +113,20 @@ func (mc MidiConnection) IsReady() bool {
 
 var playMutex = sync.Mutex{}
 
+var sendFn SendFunc
+
 func (mc MidiConnection) AcquireSendFunc() (SendFunc, error) {
+	if sendFn != nil {
+		return sendFn, nil
+	}
+
 	err := mc.ConnectAndOpen()
 	if err != nil {
 		return nil, fault.Wrap(err)
 	}
 	//NOTE: midi library checks IsOpen(), tries to open and returns error
-	sendFn, err := midi.SendTo(mc.outport)
+	newSendFn, err := midi.SendTo(mc.outport)
+	sendFn = newSendFn
 	if err != nil {
 		return nil, fault.Wrap(err)
 	}
