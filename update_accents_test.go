@@ -5,6 +5,7 @@ import (
 
 	"github.com/chriserin/seq/internal/mappings"
 	"github.com/chriserin/seq/internal/operation"
+	"github.com/chriserin/seq/internal/sequence"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,10 +39,10 @@ func TestAccentInputSwitchDiffAndData(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, operation.SelectAccentStart, m.selectionIndicator, tt.description+" - selection state")
-			assert.Equal(t, tt.expectedAccentStart, m.definition.accents.Start, tt.description+" - accent End value")
+			assert.Equal(t, tt.expectedAccentStart, m.definition.Accents.Start, tt.description+" - accent End value")
 
 			for i, value := range tt.expectedAccentValues {
-				assert.Equalf(t, value, m.definition.accents.Data[i].Value, "accent values should match expected values - %d == %d", value, m.definition.accents.Data[i].Value)
+				assert.Equalf(t, value, m.definition.Accents.Data[i].Value, "accent values should match expected values - %d == %d", value, m.definition.Accents.Data[i].Value)
 			}
 		})
 	}
@@ -51,25 +52,25 @@ func TestAccentInputSwitchTarget(t *testing.T) {
 	tests := []struct {
 		name                 string
 		commands             []any
-		expectedAccentTarget accentTarget
+		expectedAccentTarget sequence.AccentTarget
 		description          string
 	}{
 		{
 			name:                 "Accent Input Switch with Increase on Target",
 			commands:             []any{mappings.AccentInputSwitch, mappings.Increase},
-			expectedAccentTarget: AccentTargetNote,
+			expectedAccentTarget: sequence.AccentTargetNote,
 			description:          "Should select accent input and increase should set accent target to Note",
 		},
 		{
 			name:                 "Accent Input Switch with Decrease on Target",
 			commands:             []any{mappings.AccentInputSwitch, mappings.Decrease},
-			expectedAccentTarget: AccentTargetNote,
+			expectedAccentTarget: sequence.AccentTargetNote,
 			description:          "Should select accent input and decrease should set accent target to Note",
 		},
 		{
 			name:                 "Accent Input Switch with Decrease on Target Wraparound",
 			commands:             []any{mappings.AccentInputSwitch, mappings.Decrease, mappings.Decrease},
-			expectedAccentTarget: AccentTargetVelocity,
+			expectedAccentTarget: sequence.AccentTargetVelocity,
 			description:          "Should select accent input and decrease should set accent target to Velocity",
 		},
 	}
@@ -80,7 +81,7 @@ func TestAccentInputSwitchTarget(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, operation.SelectAccentTarget, m.selectionIndicator, tt.description+" - selection state")
-			assert.Equal(t, tt.expectedAccentTarget, m.definition.accents.Target, tt.description)
+			assert.Equal(t, tt.expectedAccentTarget, m.definition.Accents.Target, tt.description)
 		})
 	}
 }
@@ -126,9 +127,9 @@ func TestAccentInputSwitchStartValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.accents.Start = tt.initialAccentStart
-					m.definition.accents.End = 1
-					m.definition.accents.ReCalc()
+					m.definition.Accents.Start = tt.initialAccentStart
+					m.definition.Accents.End = 1
+					m.definition.Accents.ReCalc()
 					return *m
 				},
 			)
@@ -136,7 +137,7 @@ func TestAccentInputSwitchStartValue(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, operation.SelectAccentStart, m.selectionIndicator, tt.description+" - selection state")
-			assert.Equal(t, tt.expectedAccentStart, m.definition.accents.Start, tt.description+" - accent start value")
+			assert.Equal(t, tt.expectedAccentStart, m.definition.Accents.Start, tt.description+" - accent start value")
 		})
 	}
 }

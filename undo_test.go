@@ -7,34 +7,37 @@ import (
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/overlays"
+	"github.com/chriserin/seq/internal/playstate"
+	"github.com/chriserin/seq/internal/sequence"
+	"github.com/chriserin/seq/internal/timing"
 	"github.com/stretchr/testify/assert"
 )
 
-func initPlayState() playState {
-	return playState{
-		lineStates: InitLineStates(1, []linestate{}, 0),
+func initPlayState() playstate.PlayState {
+	return playstate.PlayState{
+		LineStates: playstate.InitLineStates(1, []playstate.LineState{}, 0),
 	}
 }
 
 func setupTestModel() *model {
 	var parts = InitParts()
 	var arr = InitArrangement(parts)
-	def := Definition{
-		arrangement:  arr,
-		parts:        &parts,
-		keyline:      0,
-		tempo:        120,
-		subdivisions: 4,
-		lines:        make([]grid.LineDefinition, 1),
+	def := sequence.Sequence{
+		Arrangement:  arr,
+		Parts:        &parts,
+		Keyline:      0,
+		Tempo:        120,
+		Subdivisions: 4,
+		Lines:        make([]grid.LineDefinition, 1),
 	}
 
 	m := &model{
-		definition:     def,
-		programChannel: make(chan midiEventLoopMsg),
-		playState:      initPlayState(),
-		undoStack:      EmptyStack,
-		redoStack:      EmptyStack,
-		arrangement:    arrangement.InitModel(def.arrangement, def.parts),
+		definition:      def,
+		toTimingChannel: make(chan timing.TimingMessage),
+		playState:       initPlayState(),
+		undoStack:       EmptyStack,
+		redoStack:       EmptyStack,
+		arrangement:     arrangement.InitModel(def.Arrangement, def.Parts),
 	}
 
 	m.currentOverlay = parts[0].Overlays
@@ -45,14 +48,14 @@ func TestUndoBeats(t *testing.T) {
 	t.Run("Apply undo for beats change", func(t *testing.T) {
 		m := setupTestModel()
 		// Initial beats value
-		(*m.definition.parts)[0].Beats = 8
+		(*m.definition.Parts)[0].Beats = 8
 
 		// Create and apply undoable
 		undoable := UndoBeats{beats: 4, ArrCursor: m.arrangement.Cursor}
 		undoable.ApplyUndo(m)
 
 		// Verify beats were changed
-		assert.Equal(t, uint8(4), (*m.definition.parts)[0].Beats)
+		assert.Equal(t, uint8(4), (*m.definition.Parts)[0].Beats)
 	})
 }
 
@@ -70,7 +73,7 @@ func TestUndoNewOverlay(t *testing.T) {
 			Below: previousTopOverlay,
 		}
 
-		(*m.definition.parts)[m.CurrentPartID()].Overlays = newTopOverlay
+		(*m.definition.Parts)[m.CurrentPartID()].Overlays = newTopOverlay
 		// Create undoable
 		undoable := UndoNewOverlay{
 			overlayKey:     ok,
@@ -93,6 +96,6 @@ func TestUndoNewOverlay(t *testing.T) {
 		assert.Nil(t, foundOverlay, "Overlay should be removed")
 
 		// Verify the overlay was stored in the part definition
-		assert.Equal(t, previousTopOverlay, (*m.definition.parts)[0].Overlays)
+		assert.Equal(t, previousTopOverlay, (*m.definition.Parts)[0].Overlays)
 	})
 }

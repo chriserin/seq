@@ -1,4 +1,4 @@
-package main
+package sequence
 
 import (
 	"bufio"
@@ -14,28 +14,28 @@ import (
 	"github.com/chriserin/seq/internal/overlays"
 )
 
-// Read loads the model's definition struct from a file
+// Read loads the model's sequence struct from a file
 // The file format should match the format created by the Write function
-func Read(filename string) (Definition, error) {
+func Read(filename string) (Sequence, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Error("Failed to open file", "filename", filename, "error", err)
-		return Definition{}, err
+		return Sequence{}, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 
-	definition := Definition{
-		parts:           &[]arrangement.Part{},
-		lines:           []grid.LineDefinition{},
-		tempo:           120, // Default values
-		subdivisions:    4,
-		keyline:         0,
-		instrument:      "piano",
-		template:        "default",
-		templateUIStyle: "dark",
-		accents: patternAccents{
+	sequence := Sequence{
+		Parts:           &[]arrangement.Part{},
+		Lines:           []grid.LineDefinition{},
+		Tempo:           120, // Default values
+		Subdivisions:    4,
+		Keyline:         0,
+		Instrument:      "piano",
+		Template:        "default",
+		TemplateUIStyle: "dark",
+		Accents: PatternAccents{
 			End:    10,
 			Start:  64,
 			Target: AccentTargetVelocity,
@@ -43,17 +43,17 @@ func Read(filename string) (Definition, error) {
 		},
 	}
 
-	definition = Scan(scanner, definition)
+	sequence = Scan(scanner, sequence)
 	// Check if we got a scanner error
 	if err := scanner.Err(); err != nil {
 		log.Error("Error reading file", "filename", filename, "error", err)
-		return Definition{}, err
+		return Sequence{}, err
 	}
 
-	return definition, nil
+	return sequence, nil
 }
 
-func Scan(scanner *bufio.Scanner, definition Definition) Definition {
+func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 	var currentSection string
 	var currentPart *arrangement.Part
 	var currentOverlay *overlays.Overlay
@@ -94,8 +94,8 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 					Name:  partName,
 					Beats: 16, // Default value, will be overwritten if specified
 				}
-				*definition.parts = append(*definition.parts, newPart)
-				currentPart = &(*definition.parts)[len(*definition.parts)-1]
+				*sequence.Parts = append(*sequence.Parts, newPart)
+				currentPart = &(*sequence.Parts)[len(*sequence.Parts)-1]
 
 			case strings.Contains(sectionLine, "OVERLAY"):
 				currentSection = "OVERLAY"
@@ -146,11 +146,11 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 
 			case strings.Contains(sectionLine, "ROOT NODE"):
 				currentSection = "ARRANGEMENT_NODE"
-				definition.arrangement = &arrangement.Arrangement{
+				sequence.Arrangement = &arrangement.Arrangement{
 					Iterations: 1,
 					Nodes:      []*arrangement.Arrangement{},
 				}
-				ScanArrangement(scanner, definition.arrangement, 0)
+				ScanArrangement(scanner, sequence.Arrangement, 0)
 
 			default:
 				// Unknown section
@@ -173,22 +173,22 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 			switch key {
 			case "Tempo":
 				if tempo, err := strconv.Atoi(value); err == nil {
-					definition.tempo = tempo
+					sequence.Tempo = tempo
 				}
 			case "Subdivisions":
 				if subdiv, err := strconv.Atoi(value); err == nil {
-					definition.subdivisions = subdiv
+					sequence.Subdivisions = subdiv
 				}
 			case "Keyline":
 				if keyline, err := strconv.ParseUint(value, 10, 8); err == nil {
-					definition.keyline = uint8(keyline)
+					sequence.Keyline = uint8(keyline)
 				}
 			case "Instrument":
-				definition.instrument = value
+				sequence.Instrument = value
 			case "Template":
-				definition.template = value
+				sequence.Template = value
 			case "TemplateUIStyle":
-				definition.templateUIStyle = value
+				sequence.TemplateUIStyle = value
 			}
 
 		case "LINES":
@@ -196,7 +196,7 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 				continue
 			}
 
-			// Parse line definition
+			// Parse line sequence
 			// Format: Line X: Channel=Y, Note=Z, MessageType=W
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) != 2 {
@@ -235,7 +235,7 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 				}
 			}
 
-			definition.lines = append(definition.lines, lineDef)
+			sequence.Lines = append(sequence.Lines, lineDef)
 
 		case "ACCENTS":
 			parts := strings.SplitN(line, ":", 2)
@@ -249,18 +249,18 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 			switch key {
 			case "End":
 				if end, err := strconv.ParseUint(value, 10, 8); err == nil {
-					definition.accents.End = uint8(end)
+					sequence.Accents.End = uint8(end)
 				}
 			case "Start":
 				if start, err := strconv.ParseUint(value, 10, 8); err == nil {
-					definition.accents.Start = uint8(start)
+					sequence.Accents.Start = uint8(start)
 				}
 			case "Target":
 				switch value {
 				case "NOTE":
-					definition.accents.Target = AccentTargetNote
+					sequence.Accents.Target = AccentTargetNote
 				case "VELOCITY":
-					definition.accents.Target = AccentTargetVelocity
+					sequence.Accents.Target = AccentTargetVelocity
 				}
 			}
 
@@ -298,7 +298,7 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 				}
 			}
 
-			definition.accents.Data = append(definition.accents.Data, accent)
+			sequence.Accents.Data = append(sequence.Accents.Data, accent)
 
 		case "PART":
 			if currentPart == nil {
@@ -432,7 +432,7 @@ func Scan(scanner *bufio.Scanner, definition Definition) Definition {
 		}
 	}
 
-	return definition
+	return sequence
 }
 
 func ScanArrangement(scanner *bufio.Scanner, currentArrangement *arrangement.Arrangement, indentLevel int) bool {

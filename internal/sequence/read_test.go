@@ -1,4 +1,4 @@
-package main
+package sequence
 
 import (
 	"os"
@@ -22,24 +22,24 @@ func TestReadWrite(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	t.Run("Simple model with basic settings", func(t *testing.T) {
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:  "TestPart",
 					Beats: 16,
 				},
 			},
-			tempo:           140,
-			subdivisions:    4,
-			keyline:         2,
-			instrument:      "synth",
-			template:        "custom",
-			templateUIStyle: "light",
+			Tempo:           140,
+			Subdivisions:    4,
+			Keyline:         2,
+			Instrument:      "synth",
+			Template:        "custom",
+			TemplateUIStyle: "light",
 		}
 
 		// Write it to a file
 		filename := filepath.Join(tempDir, "simple_model.txt")
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read it back
@@ -48,34 +48,34 @@ func TestReadWrite(t *testing.T) {
 		assert.NotNil(t, readDef)
 
 		// Verify settings are preserved
-		assert.Equal(t, 140, readDef.tempo)
-		assert.Equal(t, 4, readDef.subdivisions)
-		assert.Equal(t, uint8(2), readDef.keyline)
-		assert.Equal(t, "synth", readDef.instrument)
-		assert.Equal(t, "custom", readDef.template)
-		assert.Equal(t, "light", readDef.templateUIStyle)
+		assert.Equal(t, 140, readDef.Tempo)
+		assert.Equal(t, 4, readDef.Subdivisions)
+		assert.Equal(t, uint8(2), readDef.Keyline)
+		assert.Equal(t, "synth", readDef.Instrument)
+		assert.Equal(t, "custom", readDef.Template)
+		assert.Equal(t, "light", readDef.TemplateUIStyle)
 
 		// Verify parts
-		assert.NotNil(t, readDef.parts)
-		assert.Len(t, *readDef.parts, 1)
-		assert.Equal(t, "TestPart", (*readDef.parts)[0].Name)
-		assert.Equal(t, uint8(16), (*readDef.parts)[0].Beats)
+		assert.NotNil(t, readDef.Parts)
+		assert.Len(t, *readDef.Parts, 1)
+		assert.Equal(t, "TestPart", (*readDef.Parts)[0].Name)
+		assert.Equal(t, uint8(16), (*readDef.Parts)[0].Beats)
 	})
 
 	t.Run("Model with lines and accents", func(t *testing.T) {
 		// Create a model with lines and accents
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:  "TestPart",
 					Beats: 8,
 				},
 			},
-			lines: []grid.LineDefinition{
+			Lines: []grid.LineDefinition{
 				{Channel: 1, Note: 60, MsgType: 0},
 				{Channel: 2, Note: 67, MsgType: 1},
 			},
-			accents: patternAccents{
+			Accents: PatternAccents{
 				End:    5,
 				Start:  50,
 				Target: AccentTargetVelocity,
@@ -88,7 +88,7 @@ func TestReadWrite(t *testing.T) {
 
 		// Write it to a file
 		filename := filepath.Join(tempDir, "model_with_lines.txt")
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read the file content to verify it's correctly written
@@ -106,25 +106,25 @@ func TestReadWrite(t *testing.T) {
 		assert.NotNil(t, readDef)
 
 		// Verify lines
-		assert.Len(t, readDef.lines, 2)
-		assert.Equal(t, uint8(1), readDef.lines[0].Channel)
-		assert.Equal(t, uint8(60), readDef.lines[0].Note)
-		assert.Equal(t, grid.MessageType(0), readDef.lines[0].MsgType)
-		assert.Equal(t, uint8(2), readDef.lines[1].Channel)
-		assert.Equal(t, uint8(67), readDef.lines[1].Note)
-		assert.Equal(t, grid.MessageType(1), readDef.lines[1].MsgType)
+		assert.Len(t, readDef.Lines, 2)
+		assert.Equal(t, uint8(1), readDef.Lines[0].Channel)
+		assert.Equal(t, uint8(60), readDef.Lines[0].Note)
+		assert.Equal(t, grid.MessageType(0), readDef.Lines[0].MsgType)
+		assert.Equal(t, uint8(2), readDef.Lines[1].Channel)
+		assert.Equal(t, uint8(67), readDef.Lines[1].Note)
+		assert.Equal(t, grid.MessageType(1), readDef.Lines[1].MsgType)
 
 		// Verify accents
-		assert.Equal(t, uint8(5), readDef.accents.End)
-		assert.Equal(t, uint8(50), readDef.accents.Start)
-		assert.Equal(t, AccentTargetVelocity, readDef.accents.Target)
-		assert.Len(t, readDef.accents.Data, 2)
+		assert.Equal(t, uint8(5), readDef.Accents.End)
+		assert.Equal(t, uint8(50), readDef.Accents.Start)
+		assert.Equal(t, AccentTargetVelocity, readDef.Accents.Target)
+		assert.Len(t, readDef.Accents.Data, 2)
 	})
 
 	t.Run("Model with multiple parts", func(t *testing.T) {
 		// Create a model with lines and accents
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:  "TestPart",
 					Beats: 8,
@@ -138,7 +138,7 @@ func TestReadWrite(t *testing.T) {
 
 		// Write it to a file
 		filename := filepath.Join(tempDir, "model_with_parts.txt")
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read it back
@@ -147,7 +147,7 @@ func TestReadWrite(t *testing.T) {
 		assert.NotNil(t, readDef)
 
 		// Verify lines
-		assert.Len(t, *readDef.parts, 2)
+		assert.Len(t, *readDef.Parts, 2)
 	})
 
 	t.Run("Model with overlays and notes", func(t *testing.T) {
@@ -179,8 +179,8 @@ func TestReadWrite(t *testing.T) {
 		overlay.SetNote(gridKey2, note2)
 
 		// Create a model with overlays
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:     "PartWithOverlay",
 					Beats:    8,
@@ -191,7 +191,7 @@ func TestReadWrite(t *testing.T) {
 
 		// Write it to a file
 		filename := filepath.Join(tempDir, "model_with_overlays.txt")
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read it back
@@ -200,8 +200,8 @@ func TestReadWrite(t *testing.T) {
 		assert.NotNil(t, readDef)
 
 		// Verify overlay structure
-		assert.NotNil(t, (*readDef.parts)[0].Overlays)
-		readOverlay := (*readDef.parts)[0].Overlays
+		assert.NotNil(t, (*readDef.Parts)[0].Overlays)
+		readOverlay := (*readDef.Parts)[0].Overlays
 
 		// Verify overlay key
 		assert.Equal(t, uint8(2), readOverlay.Key.Shift)
@@ -233,19 +233,19 @@ func TestReadWrite(t *testing.T) {
 
 	t.Run("Basic arrangement", func(t *testing.T) {
 		// Create a simple model with basic settings
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:  "TestPart",
 					Beats: 16,
 				},
 			},
-			tempo:           140,
-			subdivisions:    4,
-			keyline:         2,
-			instrument:      "synth",
-			template:        "custom",
-			templateUIStyle: "light",
+			Tempo:           140,
+			Subdivisions:    4,
+			Keyline:         2,
+			Instrument:      "synth",
+			Template:        "custom",
+			TemplateUIStyle: "light",
 		}
 
 		// Create arrangement data
@@ -254,14 +254,14 @@ func TestReadWrite(t *testing.T) {
 		section.StartBeat = 1
 
 		// Modify original model to add arrangement
-		definition.arrangement = &arrangement.Arrangement{
+		sequence.Arrangement = &arrangement.Arrangement{
 			Iterations: 1,
 			Section:    section,
 		}
 
 		// Write it to a file
 		filename := filepath.Join(tempDir, "basic_arrangement.txt")
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read it back
@@ -270,11 +270,11 @@ func TestReadWrite(t *testing.T) {
 		assert.NotNil(t, readDef)
 
 		// Verify arrangement data
-		assert.NotNil(t, readDef.arrangement)
-		assert.Equal(t, 1, readDef.arrangement.Iterations)
-		assert.Equal(t, 0, readDef.arrangement.Section.Part)
-		assert.Equal(t, 2, readDef.arrangement.Section.Cycles)
-		assert.Equal(t, 1, readDef.arrangement.Section.StartBeat)
+		assert.NotNil(t, readDef.Arrangement)
+		assert.Equal(t, 1, readDef.Arrangement.Iterations)
+		assert.Equal(t, 0, readDef.Arrangement.Section.Part)
+		assert.Equal(t, 2, readDef.Arrangement.Section.Cycles)
+		assert.Equal(t, 1, readDef.Arrangement.Section.StartBeat)
 	})
 }
 
@@ -285,17 +285,17 @@ func TestReadFileWithChords(t *testing.T) {
 	assert.NotNil(t, readDef)
 
 	// Verify basic settings from checkchord.seq
-	assert.Equal(t, 120, readDef.tempo)
-	assert.Equal(t, 2, readDef.subdivisions)
-	assert.Equal(t, uint8(0), readDef.keyline)
-	assert.Equal(t, "Standard", readDef.instrument)
-	assert.Equal(t, "Piano2", readDef.template)
-	assert.Equal(t, "blackwhite", readDef.templateUIStyle)
+	assert.Equal(t, 120, readDef.Tempo)
+	assert.Equal(t, 2, readDef.Subdivisions)
+	assert.Equal(t, uint8(0), readDef.Keyline)
+	assert.Equal(t, "Standard", readDef.Instrument)
+	assert.Equal(t, "Piano2", readDef.Template)
+	assert.Equal(t, "blackwhite", readDef.TemplateUIStyle)
 
 	// Verify parts exist
-	assert.NotNil(t, readDef.parts)
-	assert.Len(t, *readDef.parts, 1)
-	part := (*readDef.parts)[0]
+	assert.NotNil(t, readDef.Parts)
+	assert.Len(t, *readDef.Parts, 1)
+	part := (*readDef.Parts)[0]
 	assert.Equal(t, "Part 1", part.Name)
 	assert.Equal(t, uint8(32), part.Beats)
 
@@ -336,19 +336,19 @@ func TestReadFileWithChords(t *testing.T) {
 	}
 
 	// Verify lines exist (25 lines from 0-24)
-	assert.Len(t, readDef.lines, 25)
+	assert.Len(t, readDef.Lines, 25)
 
 	// Verify accent configuration
-	assert.Equal(t, AccentTargetVelocity, readDef.accents.Target)
-	assert.Equal(t, uint8(120), readDef.accents.Start)
-	assert.Equal(t, uint8(15), readDef.accents.End)
-	assert.Len(t, readDef.accents.Data, 9)
+	assert.Equal(t, AccentTargetVelocity, readDef.Accents.Target)
+	assert.Equal(t, uint8(120), readDef.Accents.Start)
+	assert.Equal(t, uint8(15), readDef.Accents.End)
+	assert.Len(t, readDef.Accents.Data, 9)
 
 	// Verify arrangement exists
-	assert.NotNil(t, readDef.arrangement)
-	assert.Equal(t, 1, readDef.arrangement.Iterations)
-	assert.Len(t, readDef.arrangement.Nodes, 1)
-	sectionNode := readDef.arrangement.Nodes[0]
+	assert.NotNil(t, readDef.Arrangement)
+	assert.Equal(t, 1, readDef.Arrangement.Iterations)
+	assert.Len(t, readDef.Arrangement.Nodes, 1)
+	sectionNode := readDef.Arrangement.Nodes[0]
 	assert.Equal(t, 1, sectionNode.Iterations)
 	assert.Equal(t, 0, sectionNode.Section.Part)
 	assert.Equal(t, 1, sectionNode.Section.Cycles)

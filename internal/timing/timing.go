@@ -1,4 +1,4 @@
-package main
+package timing
 
 import (
 	"errors"
@@ -7,6 +7,7 @@ import (
 	"github.com/Southclaws/fault"
 	"github.com/Southclaws/fault/fmsg"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/chriserin/seq/internal/beats"
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
 	"gitlab.com/gomidi/midi/v2/drivers/rtmididrv"
@@ -45,7 +46,7 @@ const (
 	MlmReceiver
 )
 
-func MidiEventLoop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, beatChannel chan beatMsg, sendFn func(tea.Msg)) error {
+func Loop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan TimingMessage, beatChannel chan beats.BeatMsg, sendFn func(tea.Msg)) error {
 	timing := Timing{}
 	switch mode {
 	case MlmStandAlone:
@@ -112,7 +113,7 @@ func (tmtr Transmitter) ActiveSense() error {
 
 const TransmitterName string = "seq-transmitter"
 
-func (t *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, beatChannel chan beatMsg, sendFn func(tea.Msg)) error {
+func (t *Timing) TransmitterLoop(programChannel chan TimingMessage, beatChannel chan beats.BeatMsg, sendFn func(tea.Msg)) error {
 	driver, err := rtmididrv.New()
 	if err != nil {
 		return fault.Wrap(err, fmsg.With("midi driver error"))
@@ -129,7 +130,7 @@ func (t *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, beatChann
 
 	tickChannel := make(chan Timing)
 	activeSenseChannel := make(chan bool)
-	var command midiEventLoopMsg
+	var command TimingMessage
 
 	var tickTimer *time.Timer
 	pulse := func(adjustedInterval time.Duration) {
@@ -149,40 +150,40 @@ func (t *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, beatChann
 			select {
 			case command = <-programChannel:
 				switch command := command.(type) {
-				case startMsg:
+				case StartMsg:
 					t.started = true
 					t.playTime = time.Now()
-					t.tempo = command.tempo
-					t.subdivisions = command.subdivisions
+					t.tempo = command.Tempo
+					t.subdivisions = command.Subdivisions
 					t.trackTime = time.Duration(0)
 					t.pulseCount = 0
 					pulse(0)
 					err := transmitter.Start()
 					if err != nil {
-						sendFn(errorMsg{err})
+						sendFn(ErrorMsg{err})
 					}
-				case stopMsg:
+				case StopMsg:
 					t.started = false
 					tickTimer.Stop()
 					err := transmitter.Stop()
 					if err != nil {
-						sendFn(errorMsg{err})
+						sendFn(ErrorMsg{err})
 					}
 					// m.playing should be false now.
-				case tempoMsg:
-					t.tempo = command.tempo
-					t.subdivisions = command.subdivisions
+				case TempoMsg:
+					t.tempo = command.Tempo
+					t.subdivisions = command.Subdivisions
 				}
 			case pulseTiming := <-tickChannel:
 				if t.started {
 					err := transmitter.Pulse()
 					if err != nil {
 						wrappedErr := fault.Wrap(err)
-						sendFn(errorMsg{wrappedErr})
+						sendFn(ErrorMsg{wrappedErr})
 					}
 					pulse(t.PulseInterval())
 					if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
-						beatChannel <- beatMsg{t.BeatInterval()}
+						beatChannel <- beats.BeatMsg{Interval: t.BeatInterval()}
 					}
 					t.pulseCount++
 				}
@@ -191,7 +192,7 @@ func (t *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, beatChann
 					err := transmitter.ActiveSense()
 					if err != nil {
 						wrappedErr := fault.Wrap(err, fmsg.With("activesense interrupted"))
-						sendFn(errorMsg{wrappedErr})
+						sendFn(ErrorMsg{wrappedErr})
 					}
 				}
 				activesense()
@@ -205,7 +206,7 @@ func (t *Timing) TransmitterLoop(programChannel chan midiEventLoopMsg, beatChann
 
 type ListenFn func(msg []byte, milliseconds int32)
 
-func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan midiEventLoopMsg, beatChannel chan beatMsg, sendFn func(tea.Msg)) (receiverError error) {
+func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, programChannel chan TimingMessage, beatChannel chan beats.BeatMsg, sendFn func(tea.Msg)) (receiverError error) {
 	transmitPort, err := midi.FindInPort(TransmitterName)
 	if err != nil {
 		receiverError = fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
@@ -229,16 +230,16 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 				receiverError = fault.Wrap(err, fmsg.WithDesc("cannot open transmitport", "Could not open a transmitter.  Start a seq program with the --transmit flag before starting a receiver"))
 				return
 			}
-			receiverChannel := make(chan midiEventLoopMsg)
+			receiverChannel := make(chan TimingMessage)
 			tickChannel := make(chan Timing)
 			activeSenseChannel := make(chan bool)
 			var ReceiverFunc ListenFn = func(msg []byte, milliseconds int32) {
 				midiMessage := midi.Message(msg)
 				switch midiMessage.Type() {
 				case midi.StartMsg:
-					receiverChannel <- startMsg{}
+					receiverChannel <- StartMsg{}
 				case midi.StopMsg:
-					receiverChannel <- stopMsg{}
+					receiverChannel <- StopMsg{}
 				case midi.TimingClockMsg:
 					tickChannel <- Timing{subdivisions: 24}
 				case midi.ActiveSenseMsg:
@@ -250,13 +251,13 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 			}
 			stopFn, err := transmitPort.Listen(ReceiverFunc, drivers.ListenConfig{TimeCode: true, ActiveSense: true})
 			if err != nil {
-				sendFn(errorMsg{errors.New("error in setting up midi listener for transmitter")})
+				sendFn(ErrorMsg{errors.New("error in setting up midi listener for transmitter")})
 			}
 			timer := time.AfterFunc(330*time.Millisecond, func() {
-				sendFn(uiNotConnectedMsg{})
+				sendFn(TransmitterNotConnectedMsg{})
 				activeSenseChannel <- false
 			})
-			var command midiEventLoopMsg
+			var command TimingMessage
 		inner:
 			for {
 				select {
@@ -265,30 +266,30 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 					err := transmitPort.Close()
 					if err != nil {
 						wrappedErr := fault.Wrap(err, fmsg.With("transmit port not closed"))
-						sendFn(errorMsg{wrappedErr})
+						sendFn(ErrorMsg{wrappedErr})
 					}
 					timer.Stop()
 					<-unlockReceiverChannel
 					break inner
 				case command = <-receiverChannel:
 					switch command.(type) {
-					case startMsg:
+					case StartMsg:
 						t.started = true
 						t.playTime = time.Now()
 						t.trackTime = time.Duration(0)
 						t.pulseCount = 0
-						sendFn(uiStartMsg{})
-					case stopMsg:
+						sendFn(UIStartMsg{})
+					case StopMsg:
 						t.started = false
-						sendFn(uiStopMsg{})
+						sendFn(UIStopMsg{})
 						// m.playing should be false now.
 					}
 				case command = <-programChannel:
 					switch command := command.(type) {
-					case tempoMsg:
-						t.tempo = command.tempo
-						t.subdivisions = command.subdivisions
-					case quitMsg:
+					case TempoMsg:
+						t.tempo = command.Tempo
+						t.subdivisions = command.Subdivisions
+					case QuitMsg:
 						timer.Stop()
 						stopFn()
 					}
@@ -296,16 +297,16 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 					timer.Reset(330 * time.Millisecond)
 					if t.started {
 						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
-							beatChannel <- beatMsg{t.BeatInterval()}
+							beatChannel <- beats.BeatMsg{Interval: t.BeatInterval()}
 						}
 						t.pulseCount++
 					}
 				case isGood := <-activeSenseChannel:
 					timer.Reset(330 * time.Millisecond)
 					if isGood {
-						sendFn(uiConnectedMsg{})
+						sendFn(TransmitterConnectedMsg{})
 					} else {
-						sendFn(uiNotConnectedMsg{})
+						sendFn(TransmitterNotConnectedMsg{})
 					}
 				}
 			}
@@ -314,9 +315,9 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 	return nil
 }
 
-func (t *Timing) StandAloneLoop(programChannel chan midiEventLoopMsg, beatChannel chan beatMsg, sendFn func(tea.Msg)) {
+func (t *Timing) StandAloneLoop(programChannel chan TimingMessage, beatChannel chan beats.BeatMsg, sendFn func(tea.Msg)) {
 	tickChannel := make(chan Timing)
-	var command midiEventLoopMsg
+	var command TimingMessage
 
 	var tickTimer *time.Timer
 	tick := func(adjustedInterval time.Duration) {
@@ -330,42 +331,54 @@ func (t *Timing) StandAloneLoop(programChannel chan midiEventLoopMsg, beatChanne
 			select {
 			case command = <-programChannel:
 				switch command := command.(type) {
-				case startMsg:
+				case StartMsg:
 					t.started = true
 					t.playTime = time.Now()
-					t.tempo = command.tempo
-					t.subdivisions = command.subdivisions
+					t.tempo = command.Tempo
+					t.subdivisions = command.Subdivisions
 					t.trackTime = time.Duration(0)
 					tick(0)
-				case stopMsg:
+				case StopMsg:
 					t.started = false
 					tickTimer.Stop()
-				case tempoMsg:
-					t.tempo = command.tempo
-					t.subdivisions = command.subdivisions
+				case TempoMsg:
+					t.tempo = command.Tempo
+					t.subdivisions = command.Subdivisions
 				}
 			case <-tickChannel:
 				if t.started {
 					adjustedInterval := t.BeatInterval()
 					tick(adjustedInterval)
-					beatChannel <- beatMsg{adjustedInterval}
+					beatChannel <- beats.BeatMsg{Interval: adjustedInterval}
 				}
 			}
 		}
 	}()
 }
 
-type midiEventLoopMsg = any
-type startMsg struct {
-	tempo        int
-	subdivisions int
+type TimingMessage = any
+type StartMsg struct {
+	Tempo        int
+	Subdivisions int
 }
 
-type stopMsg struct {
+type StopMsg struct {
 }
-type quitMsg struct {
+
+type QuitMsg struct {
 }
-type tempoMsg struct {
-	tempo        int
-	subdivisions int
+
+type TempoMsg struct {
+	Tempo        int
+	Subdivisions int
 }
+
+type ErrorMsg struct {
+	error error
+}
+
+type UIStopMsg struct{}
+type UIStartMsg struct{}
+
+type TransmitterConnectedMsg struct{}
+type TransmitterNotConnectedMsg struct{}

@@ -188,7 +188,7 @@ func TestNextOverlay(t *testing.T) {
 			rootKey := overlaykey.OverlayPeriodicity{Shift: 1, Interval: 1, Width: 0, StartCycle: 0}
 
 			for _, key := range tt.addedOverlayKeys {
-				(*m.definition.parts)[0].Overlays = m.CurrentPart().Overlays.Add(key)
+				(*m.definition.Parts)[0].Overlays = m.CurrentPart().Overlays.Add(key)
 			}
 
 			assert.Equal(t, rootKey, m.currentOverlay.Key, "Initial overlay key should be root")

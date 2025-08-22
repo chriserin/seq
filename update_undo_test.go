@@ -8,6 +8,7 @@ import (
 	"github.com/chriserin/seq/internal/mappings"
 	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/seq/internal/sequence"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -247,12 +248,12 @@ func TestUpdateUndoTempo(t *testing.T) {
 			m := createTestModel()
 
 			// Verify initial tempo
-			assert.Equal(t, tt.initialTempo, m.definition.tempo, "Initial tempo should match")
+			assert.Equal(t, tt.initialTempo, m.definition.Tempo, "Initial tempo should match")
 
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify tempo is restored
-			assert.Equal(t, tt.initialTempo, m.definition.tempo, tt.description+" - tempo should be restored")
+			assert.Equal(t, tt.initialTempo, m.definition.Tempo, tt.description+" - tempo should be restored")
 
 			assert.Equal(t, m.selectionIndicator, operation.SelectTempo, tt.description+" - selection should be SelectTempo after undo")
 		})
@@ -299,12 +300,12 @@ func TestUpdateUndoSubdivisions(t *testing.T) {
 			m := createTestModel()
 
 			// Verify initial subdivisions
-			assert.Equal(t, tt.initialSubdivision, m.definition.subdivisions, "Initial subdivisions should match")
+			assert.Equal(t, tt.initialSubdivision, m.definition.Subdivisions, "Initial subdivisions should match")
 
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify subdivisions are restored
-			assert.Equal(t, tt.initialSubdivision, m.definition.subdivisions, tt.description+" - subdivisions should be restored")
+			assert.Equal(t, tt.initialSubdivision, m.definition.Subdivisions, tt.description+" - subdivisions should be restored")
 			assert.Equal(t, m.selectionIndicator, operation.SelectTempoSubdivision, tt.description+" - selection should be SelectTempo after undo")
 		})
 	}
@@ -595,7 +596,7 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 		expectedData   []config.Accent
 		expectedStart  uint8
 		expectedEnd    uint8
-		expectedTarget accentTarget
+		expectedTarget sequence.AccentTarget
 		description    string
 	}{
 		{
@@ -609,7 +610,7 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 			expectedData:   []config.Accent{{Value: 0}, {Value: 120}, {Value: 105}, {Value: 90}, {Value: 75}, {Value: 60}, {Value: 45}, {Value: 30}, {Value: 15}},
 			expectedStart:  120,
 			expectedEnd:    15,
-			expectedTarget: AccentTargetVelocity,
+			expectedTarget: sequence.AccentTargetVelocity,
 			description:    "Should restore original accent target after modification and undo",
 		},
 		{
@@ -625,7 +626,7 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 			expectedData:   []config.Accent{{Value: 0}, {Value: 120}, {Value: 105}, {Value: 90}, {Value: 75}, {Value: 60}, {Value: 45}, {Value: 30}, {Value: 15}},
 			expectedStart:  120,
 			expectedEnd:    15,
-			expectedTarget: AccentTargetVelocity,
+			expectedTarget: sequence.AccentTargetVelocity,
 			description:    "Should restore original accent start after modification and undo",
 		},
 		{
@@ -642,7 +643,7 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 			expectedData:   []config.Accent{{Value: 0}, {Value: 120}, {Value: 105}, {Value: 90}, {Value: 75}, {Value: 60}, {Value: 45}, {Value: 30}, {Value: 15}},
 			expectedStart:  120,
 			expectedEnd:    15,
-			expectedTarget: AccentTargetVelocity,
+			expectedTarget: sequence.AccentTargetVelocity,
 			description:    "Should restore original accent end after modification and undo",
 		},
 		{
@@ -660,7 +661,7 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 			expectedData:   []config.Accent{{Value: 0}, {Value: 120}, {Value: 105}, {Value: 90}, {Value: 75}, {Value: 60}, {Value: 45}, {Value: 30}, {Value: 15}},
 			expectedStart:  120,
 			expectedEnd:    15,
-			expectedTarget: AccentTargetVelocity,
+			expectedTarget: sequence.AccentTargetVelocity,
 			description:    "Should restore original accent values after multiple modifications and undos",
 		},
 	}
@@ -670,18 +671,18 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 			m := createTestModel()
 
 			// Verify initial accent values
-			assert.Equal(t, tt.expectedTarget, m.definition.accents.Target, "Initial accent target should match")
-			assert.Equal(t, tt.expectedStart, m.definition.accents.Start, "Initial accent start should match")
-			assert.Equal(t, tt.expectedEnd, m.definition.accents.End, "Initial accent end should match")
+			assert.Equal(t, tt.expectedTarget, m.definition.Accents.Target, "Initial accent target should match")
+			assert.Equal(t, tt.expectedStart, m.definition.Accents.Start, "Initial accent start should match")
+			assert.Equal(t, tt.expectedEnd, m.definition.Accents.End, "Initial accent end should match")
 
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify accent values are restored
-			assert.Equal(t, tt.expectedData, m.definition.accents.Data, tt.description+" - accent data should be restored")
+			assert.Equal(t, tt.expectedData, m.definition.Accents.Data, tt.description+" - accent data should be restored")
 			assert.Equal(t, m.selectionIndicator, operation.SelectAccentStart, tt.description+" - selection should be SelectAccentStart after undo")
-			assert.Equal(t, tt.expectedTarget, m.definition.accents.Target, tt.description+" - accent target should be restored")
-			assert.Equal(t, tt.expectedStart, m.definition.accents.Start, tt.description+" - accent start should be restored")
-			assert.Equal(t, tt.expectedEnd, m.definition.accents.End, tt.description+" - accent end should be restored")
+			assert.Equal(t, tt.expectedTarget, m.definition.Accents.Target, tt.description+" - accent target should be restored")
+			assert.Equal(t, tt.expectedStart, m.definition.Accents.Start, tt.description+" - accent start should be restored")
+			assert.Equal(t, tt.expectedEnd, m.definition.Accents.End, tt.description+" - accent end should be restored")
 		})
 	}
 }
@@ -763,7 +764,7 @@ func TestUndoSetupInputSwitch(t *testing.T) {
 			m := createTestModel()
 
 			// Verify initial setup values
-			currentLine := m.definition.lines[m.gridCursor.Line]
+			currentLine := m.definition.Lines[m.gridCursor.Line]
 			assert.Equal(t, tt.expectedChannel, currentLine.Channel, "Initial channel should match")
 			assert.Equal(t, tt.expectedNote, currentLine.Note, "Initial note should match")
 			assert.Equal(t, tt.expectedMsgType, currentLine.MsgType, "Initial message type should match")
@@ -771,7 +772,7 @@ func TestUndoSetupInputSwitch(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify setup values are restored
-			restoredLine := m.definition.lines[m.gridCursor.Line]
+			restoredLine := m.definition.Lines[m.gridCursor.Line]
 			assert.Equal(t, tt.expectedChannel, restoredLine.Channel, tt.description+" - channel should be restored")
 			assert.Equal(t, tt.expectedNote, restoredLine.Note, tt.description+" - note should be restored")
 			assert.Equal(t, tt.expectedMsgType, restoredLine.MsgType, tt.description+" - message type should be restored")

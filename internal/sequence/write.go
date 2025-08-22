@@ -1,4 +1,4 @@
-package main
+package sequence
 
 import (
 	"fmt"
@@ -14,9 +14,9 @@ import (
 	"github.com/chriserin/seq/internal/overlays"
 )
 
-// Write saves all attributes of the model's definition struct to a file
+// Write saves all attributes of the model's sequence struct to a file
 // using a custom format that is easy to diff with tools like git diff
-func Write(definition Definition, filename string) error {
+func Write(sequence Sequence, filename string) error {
 
 	log.SetLevel(log.FatalLevel)
 
@@ -27,34 +27,34 @@ func Write(definition Definition, filename string) error {
 	}
 	defer f.Close()
 
-	if definition.parts == nil || len(*definition.parts) == 0 {
+	if sequence.Parts == nil || len(*sequence.Parts) == 0 {
 		log.Warn("No parts to write", "filename", filename)
 		return nil
 	}
 
 	// Write global sequencer settings
-	if err := writeSettings(f, &definition); err != nil {
+	if err := writeSettings(f, &sequence); err != nil {
 		return err
 	}
 
-	// Write line definitions
-	if err := writeLineDefinitions(f, definition.lines); err != nil {
+	// Write line sequences
+	if err := writeLineSequences(f, sequence.Lines); err != nil {
 		return err
 	}
 
 	// Write accents
-	if err := writeAccents(f, definition.accents); err != nil {
+	if err := writeAccents(f, sequence.Accents); err != nil {
 		return err
 	}
 
 	// Write parts
-	if err := writeParts(f, *definition.parts); err != nil {
+	if err := writeParts(f, *sequence.Parts); err != nil {
 		return err
 	}
 
 	// Write arrangement
-	if definition.arrangement != nil {
-		if err := writeArrangement(f, definition.arrangement); err != nil {
+	if sequence.Arrangement != nil {
+		if err := writeArrangement(f, sequence.Arrangement); err != nil {
 			return err
 		}
 	}
@@ -63,21 +63,21 @@ func Write(definition Definition, filename string) error {
 }
 
 // writeSettings writes global sequencer settings
-func writeSettings(w io.Writer, def *Definition) error {
+func writeSettings(w io.Writer, def *Sequence) error {
 	fmt.Fprintln(w, "------------------------ GLOBAL SETTINGS ------------------------")
-	fmt.Fprintf(w, "Tempo: %d\n", def.tempo)
-	fmt.Fprintf(w, "Subdivisions: %d\n", def.subdivisions)
-	fmt.Fprintf(w, "Keyline: %d\n", def.keyline)
-	fmt.Fprintf(w, "Instrument: %s\n", def.instrument)
-	fmt.Fprintf(w, "Template: %s\n", def.template)
-	fmt.Fprintf(w, "TemplateUIStyle: %s\n", def.templateUIStyle)
+	fmt.Fprintf(w, "Tempo: %d\n", def.Tempo)
+	fmt.Fprintf(w, "Subdivisions: %d\n", def.Subdivisions)
+	fmt.Fprintf(w, "Keyline: %d\n", def.Keyline)
+	fmt.Fprintf(w, "Instrument: %s\n", def.Instrument)
+	fmt.Fprintf(w, "Template: %s\n", def.Template)
+	fmt.Fprintf(w, "TemplateUIStyle: %s\n", def.TemplateUIStyle)
 	fmt.Fprintln(w, "")
 
 	return nil
 }
 
-// writeLineDefinitions writes all line definitions
-func writeLineDefinitions(w io.Writer, lines []grid.LineDefinition) error {
+// writeLineSequences writes all line sequences
+func writeLineSequences(w io.Writer, lines []grid.LineDefinition) error {
 	if len(lines) == 0 {
 		return nil
 	}
@@ -93,7 +93,7 @@ func writeLineDefinitions(w io.Writer, lines []grid.LineDefinition) error {
 }
 
 // writeAccents writes the accents configuration
-func writeAccents(w io.Writer, accents patternAccents) error {
+func writeAccents(w io.Writer, accents PatternAccents) error {
 	fmt.Fprintln(w, "------------------------- ACCENTS -------------------------")
 
 	// Convert accentTarget to string for better readability

@@ -1,4 +1,4 @@
-package main
+package sequence
 
 import (
 	"os"
@@ -19,7 +19,7 @@ func TestWriteAdditionalProperties(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	t.Run("Write with full definition", func(t *testing.T) {
+	t.Run("Write with full sequence", func(t *testing.T) {
 		// Create line definitions
 		lines := []grid.LineDefinition{
 			{Channel: 1, Note: 60, MsgType: 0}, // C4 on channel 1
@@ -27,7 +27,7 @@ func TestWriteAdditionalProperties(t *testing.T) {
 		}
 
 		// Create accents
-		accents := patternAccents{
+		accents := PatternAccents{
 			Target: AccentTargetVelocity,
 			Start:  10,
 			End:    5,
@@ -37,29 +37,29 @@ func TestWriteAdditionalProperties(t *testing.T) {
 			},
 		}
 
-		// Create a model with all definition fields populated
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		// Create a model with all sequence fields populated
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:  "TestPart",
 					Beats: 16,
 				},
 			},
-			lines:           lines,
-			tempo:           120,
-			subdivisions:    4,
-			keyline:         2,
-			accents:         accents,
-			instrument:      "piano",
-			template:        "default",
-			templateUIStyle: "dark",
+			Lines:           lines,
+			Tempo:           120,
+			Subdivisions:    4,
+			Keyline:         2,
+			Accents:         accents,
+			Instrument:      "piano",
+			Template:        "default",
+			TemplateUIStyle: "dark",
 		}
 
 		// Create test file path
-		filename := filepath.Join(tempDir, "full_definition.txt")
+		filename := filepath.Join(tempDir, "full_sequence.txt")
 
 		// Call Write function
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read file content

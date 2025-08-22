@@ -132,8 +132,8 @@ func TestSectionNavigationResetOverlay(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
 					nonRootKey := overlaykey.OverlayPeriodicity{Shift: 1, Interval: 2, Width: 0, StartCycle: 0}
-					(*m.definition.parts)[0].Overlays = m.CurrentPart().Overlays.Add(nonRootKey)
-					m.currentOverlay = (*m.definition.parts)[0].Overlays.FindOverlay(nonRootKey)
+					(*m.definition.Parts)[0].Overlays = m.CurrentPart().Overlays.Add(nonRootKey)
+					m.currentOverlay = (*m.definition.Parts)[0].Overlays.FindOverlay(nonRootKey)
 					return *m
 				},
 			)
@@ -204,7 +204,7 @@ func TestChangePartAfterNewSectionAfter(t *testing.T) {
 			initialPartCount := 1
 			if tt.expectedPartIndex >= initialPartCount {
 				expectedPartCount := tt.expectedPartIndex + 1
-				assert.Equal(t, expectedPartCount, len(*m.definition.parts), tt.description+" - new parts should be created")
+				assert.Equal(t, expectedPartCount, len(*m.definition.Parts), tt.description+" - new parts should be created")
 			}
 		})
 	}

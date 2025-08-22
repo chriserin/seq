@@ -6,6 +6,7 @@ import (
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/mappings"
 	"github.com/chriserin/seq/internal/operation"
+	"github.com/chriserin/seq/internal/playstate"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -93,13 +94,13 @@ func TestTempoChanges(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.tempo = tt.initialTempo
+					m.definition.Tempo = tt.initialTempo
 					return *m
 				},
 			)
-			assert.Equal(t, tt.initialTempo, m.definition.tempo, tt.description)
+			assert.Equal(t, tt.initialTempo, m.definition.Tempo, tt.description)
 			m, _ = processCommands(tt.commands, m)
-			assert.Equal(t, tt.expectedTempo, m.definition.tempo, tt.description)
+			assert.Equal(t, tt.expectedTempo, m.definition.Tempo, tt.description)
 		})
 	}
 }
@@ -201,13 +202,13 @@ func TestSubdivisionChanges(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.subdivisions = tt.initialSubdivisions
+					m.definition.Subdivisions = tt.initialSubdivisions
 					return *m
 				},
 			)
-			assert.Equal(t, tt.initialSubdivisions, m.definition.subdivisions, tt.description)
+			assert.Equal(t, tt.initialSubdivisions, m.definition.Subdivisions, tt.description)
 			m, _ = processCommands(tt.commands, m)
-			assert.Equal(t, tt.expectedSubdivisions, m.definition.subdivisions, tt.description)
+			assert.Equal(t, tt.expectedSubdivisions, m.definition.Subdivisions, tt.description)
 		})
 	}
 }
@@ -254,18 +255,18 @@ func TestSetupInputSwitchWithIncrease(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.lines[m.gridCursor.Line].Channel = tt.initialSetupChannel
+					m.definition.Lines[m.gridCursor.Line].Channel = tt.initialSetupChannel
 					return *m
 				},
 			)
 
-			assert.Equal(t, tt.initialSetupChannel, m.definition.lines[m.gridCursor.Line].Channel, "Initial setup channel should match")
+			assert.Equal(t, tt.initialSetupChannel, m.definition.Lines[m.gridCursor.Line].Channel, "Initial setup channel should match")
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, operation.SelectSetupChannel, m.selectionIndicator, tt.description+" - selection state")
-			assert.Equal(t, tt.expectedSetupChannel, m.definition.lines[m.gridCursor.Line].Channel, tt.description+" - channel value")
+			assert.Equal(t, tt.expectedSetupChannel, m.definition.Lines[m.gridCursor.Line].Channel, tt.description+" - channel value")
 		})
 	}
 }
@@ -326,18 +327,18 @@ func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.lines[m.gridCursor.Line].MsgType = tt.initialMessageType
+					m.definition.Lines[m.gridCursor.Line].MsgType = tt.initialMessageType
 					return *m
 				},
 			)
 
-			assert.Equal(t, tt.initialMessageType, m.definition.lines[m.gridCursor.Line].MsgType, "Initial message type should match")
+			assert.Equal(t, tt.initialMessageType, m.definition.Lines[m.gridCursor.Line].MsgType, "Initial message type should match")
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, operation.SelectSetupMessageType, m.selectionIndicator, tt.description+" - selection state")
-			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.gridCursor.Line].MsgType, tt.description+" - message type value")
+			assert.Equal(t, tt.expectedMessageType, m.definition.Lines[m.gridCursor.Line].MsgType, tt.description+" - message type value")
 		})
 	}
 }
@@ -372,7 +373,7 @@ func TestSetupInputSwitchMessageTypeBackToGrid(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Should select back to nothing")
-			assert.Equal(t, tt.expectedMessageType, m.definition.lines[m.gridCursor.Line].MsgType, tt.description+" - message type value")
+			assert.Equal(t, tt.expectedMessageType, m.definition.Lines[m.gridCursor.Line].MsgType, tt.description+" - message type value")
 		})
 	}
 }
@@ -426,14 +427,14 @@ func TestSetupNoteChange(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.lines[m.gridCursor.Line].Note = tt.initialNote
+					m.definition.Lines[m.gridCursor.Line].Note = tt.initialNote
 					return *m
 				},
 			)
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, tt.expectedNote, m.definition.lines[m.gridCursor.Line].Note, tt.description)
+			assert.Equal(t, tt.expectedNote, m.definition.Lines[m.gridCursor.Line].Note, tt.description)
 		})
 	}
 }
@@ -480,14 +481,14 @@ func TestSetupCCChange(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.lines[m.gridCursor.Line].Note = tt.initialCc
+					m.definition.Lines[m.gridCursor.Line].Note = tt.initialCc
 					return *m
 				},
 			)
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, tt.expectedCc, m.definition.lines[m.gridCursor.Line].Note, tt.description)
+			assert.Equal(t, tt.expectedCc, m.definition.Lines[m.gridCursor.Line].Note, tt.description)
 		})
 	}
 }
@@ -534,7 +535,7 @@ func TestBeatInputSwitch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					(*m.definition.parts)[m.CurrentPartID()].Beats = tt.initialBeats
+					(*m.definition.Parts)[m.CurrentPartID()].Beats = tt.initialBeats
 					return *m
 				},
 			)
@@ -773,25 +774,25 @@ func TestNewLine(t *testing.T) {
 				func(m *model) model {
 					// Set up the last line with specific values for the second test
 					if tt.name == "Add new line with custom last line values" {
-						m.definition.lines[len(m.definition.lines)-1].Channel = 5
-						m.definition.lines[len(m.definition.lines)-1].Note = 72
+						m.definition.Lines[len(m.definition.Lines)-1].Channel = 5
+						m.definition.Lines[len(m.definition.Lines)-1].Note = 72
 					}
 					return *m
 				},
 			)
 
 			// Verify initial state
-			assert.Equal(t, tt.initialLineCount, len(m.definition.lines), "Initial line count should match")
+			assert.Equal(t, tt.initialLineCount, len(m.definition.Lines), "Initial line count should match")
 
 			// Execute commands
 			m, _ = processCommands(tt.commands, m)
 
 			// Verify final state
-			assert.Equal(t, tt.expectedLineCount, len(m.definition.lines), tt.description+" - line count")
+			assert.Equal(t, tt.expectedLineCount, len(m.definition.Lines), tt.description+" - line count")
 
 			if tt.expectedLineCount > tt.initialLineCount {
 				// Check the last line properties
-				lastLine := m.definition.lines[len(m.definition.lines)-1]
+				lastLine := m.definition.Lines[len(m.definition.Lines)-1]
 				assert.Equal(t, tt.expectedLastChannel, lastLine.Channel, tt.description+" - last line channel")
 				assert.Equal(t, tt.expectedLastNote, lastLine.Note, tt.description+" - last line note")
 
@@ -807,7 +808,7 @@ func TestMuteAndSolo(t *testing.T) {
 		name                   string
 		commands               []any
 		cursorLine             uint8
-		expectedGroupPlayState groupPlayState
+		expectedGroupPlayState playstate.GroupPlayState
 		expectedHasSolo        bool
 		description            string
 	}{
@@ -815,7 +816,7 @@ func TestMuteAndSolo(t *testing.T) {
 			name:                   "Mute line from play state",
 			commands:               []any{mappings.Mute},
 			cursorLine:             0,
-			expectedGroupPlayState: PlayStateMute,
+			expectedGroupPlayState: playstate.PlayStateMute,
 			expectedHasSolo:        false,
 			description:            "Should mute line 0 from play state",
 		},
@@ -823,7 +824,7 @@ func TestMuteAndSolo(t *testing.T) {
 			name:                   "Unmute line back to play state",
 			commands:               []any{mappings.Mute, mappings.Mute},
 			cursorLine:             0,
-			expectedGroupPlayState: PlayStatePlay,
+			expectedGroupPlayState: playstate.PlayStatePlay,
 			expectedHasSolo:        false,
 			description:            "Should unmute line 0 back to play state",
 		},
@@ -831,7 +832,7 @@ func TestMuteAndSolo(t *testing.T) {
 			name:                   "Solo line from play state",
 			commands:               []any{mappings.Solo},
 			cursorLine:             0,
-			expectedGroupPlayState: PlayStateSolo,
+			expectedGroupPlayState: playstate.PlayStateSolo,
 			expectedHasSolo:        true,
 			description:            "Should solo line 0 from play state",
 		},
@@ -839,7 +840,7 @@ func TestMuteAndSolo(t *testing.T) {
 			name:                   "Unsolo line back to play state",
 			commands:               []any{mappings.Solo, mappings.Solo},
 			cursorLine:             0,
-			expectedGroupPlayState: PlayStatePlay,
+			expectedGroupPlayState: playstate.PlayStatePlay,
 			expectedHasSolo:        false,
 			description:            "Should unsolo line 0 back to play state",
 		},
@@ -847,7 +848,7 @@ func TestMuteAndSolo(t *testing.T) {
 			name:                   "Solo line from muted state",
 			commands:               []any{mappings.Mute, mappings.Solo},
 			cursorLine:             0,
-			expectedGroupPlayState: PlayStateSolo,
+			expectedGroupPlayState: playstate.PlayStateSolo,
 			expectedHasSolo:        true,
 			description:            "Should solo line 0 from muted state",
 		},
@@ -855,7 +856,7 @@ func TestMuteAndSolo(t *testing.T) {
 			name:                   "Mute line from solo state",
 			commands:               []any{mappings.Solo, mappings.Mute},
 			cursorLine:             0,
-			expectedGroupPlayState: PlayStateMute,
+			expectedGroupPlayState: playstate.PlayStateMute,
 			expectedHasSolo:        false,
 			description:            "Should mute line 0 from solo state",
 		},
@@ -863,7 +864,7 @@ func TestMuteAndSolo(t *testing.T) {
 			name:                   "Mute different line",
 			commands:               []any{mappings.CursorDown, mappings.Mute},
 			cursorLine:             1,
-			expectedGroupPlayState: PlayStateMute,
+			expectedGroupPlayState: playstate.PlayStateMute,
 			expectedHasSolo:        false,
 			description:            "Should mute line 1 after moving cursor down",
 		},
@@ -871,7 +872,7 @@ func TestMuteAndSolo(t *testing.T) {
 			name:                   "Solo different line",
 			commands:               []any{mappings.CursorDown, mappings.CursorDown, mappings.Solo},
 			cursorLine:             2,
-			expectedGroupPlayState: PlayStateSolo,
+			expectedGroupPlayState: playstate.PlayStateSolo,
 			expectedHasSolo:        true,
 			description:            "Should solo line 2 after moving cursor down twice",
 		},
@@ -881,32 +882,32 @@ func TestMuteAndSolo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.playState = playState{lineStates: make([]linestate, len(m.definition.lines))}
-					for i := range m.playState.lineStates {
-						m.playState.lineStates[i] = InitLineState(PlayStatePlay, uint8(i), 0)
+					m.playState = playstate.PlayState{LineStates: make([]playstate.LineState, len(m.definition.Lines))}
+					for i := range m.playState.LineStates {
+						m.playState.LineStates[i] = playstate.InitLineState(playstate.PlayStatePlay, uint8(i), 0)
 					}
 					return *m
 				},
 			)
 
-			assert.Equal(t, PlayStatePlay, m.playState.lineStates[tt.cursorLine].groupPlayState, "Initial play state should be PlayStatePlay")
-			assert.False(t, m.playState.hasSolo, "Initial hasSolo should be false")
+			assert.Equal(t, playstate.PlayStatePlay, m.playState.LineStates[tt.cursorLine].GroupPlayState, "Initial play state should be PlayStatePlay")
+			assert.False(t, m.playState.HasSolo, "Initial hasSolo should be false")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, tt.expectedGroupPlayState, m.playState.lineStates[tt.cursorLine].groupPlayState, tt.description+" - groupPlayState should match")
-			assert.Equal(t, tt.expectedHasSolo, m.playState.hasSolo, tt.description+" - hasSolo should match")
+			assert.Equal(t, tt.expectedGroupPlayState, m.playState.LineStates[tt.cursorLine].GroupPlayState, tt.description+" - groupPlayState should match")
+			assert.Equal(t, tt.expectedHasSolo, m.playState.HasSolo, tt.description+" - hasSolo should match")
 
 			switch tt.expectedGroupPlayState {
-			case PlayStateMute:
-				assert.True(t, m.playState.lineStates[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return true")
-				assert.False(t, m.playState.lineStates[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return false")
-			case PlayStateSolo:
-				assert.False(t, m.playState.lineStates[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return false")
-				assert.True(t, m.playState.lineStates[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return true")
+			case playstate.PlayStateMute:
+				assert.True(t, m.playState.LineStates[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return true")
+				assert.False(t, m.playState.LineStates[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return false")
+			case playstate.PlayStateSolo:
+				assert.False(t, m.playState.LineStates[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return false")
+				assert.True(t, m.playState.LineStates[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return true")
 			default:
-				assert.False(t, m.playState.lineStates[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return false")
-				assert.False(t, m.playState.lineStates[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return false")
+				assert.False(t, m.playState.LineStates[tt.cursorLine].IsMuted(), tt.description+" - IsMuted() should return false")
+				assert.False(t, m.playState.LineStates[tt.cursorLine].IsSolo(), tt.description+" - IsSolo() should return false")
 			}
 		})
 	}

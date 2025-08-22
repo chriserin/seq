@@ -50,16 +50,16 @@ func TestToggleChordMode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					m.definition.templateSequencerType = tt.initialSequencerType
+					m.definition.TemplateSequencerType = tt.initialSequencerType
 					return *m
 				},
 			)
 
-			assert.Equal(t, tt.initialSequencerType, m.definition.templateSequencerType, "Initial sequencer type should match")
+			assert.Equal(t, tt.initialSequencerType, m.definition.TemplateSequencerType, "Initial sequencer type should match")
 
 			m, _ = processCommands(tt.commands, m)
 
-			assert.Equal(t, tt.expectedSequencerType, m.definition.templateSequencerType, tt.description+" - sequencer type should match expected value")
+			assert.Equal(t, tt.expectedSequencerType, m.definition.TemplateSequencerType, tt.description+" - sequencer type should match expected value")
 		})
 	}
 }

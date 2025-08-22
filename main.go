@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/chriserin/seq/internal/seqmidi"
+	"github.com/chriserin/seq/internal/timing"
 	"github.com/spf13/cobra"
 	midi "gitlab.com/gomidi/midi/v2"
 )
@@ -43,11 +44,11 @@ func main() {
 				return
 			}
 			defer midiConnection.Close()
-			midiLoopMode := MlmStandAlone
+			midiLoopMode := timing.MlmStandAlone
 			if transmitter {
-				midiLoopMode = MlmTransmitter
+				midiLoopMode = timing.MlmTransmitter
 			} else if receiver {
-				midiLoopMode = MlmReceiver
+				midiLoopMode = timing.MlmReceiver
 			}
 			var filename string
 			if len(args) > 0 {

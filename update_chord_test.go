@@ -274,7 +274,7 @@ func TestChordTriads(t *testing.T) {
 
 			m, _ = processCommands(tt.commands, m)
 
-			for currentInterval, line := uint8(0), uint8(len(m.definition.lines))-1; line != 255; line, currentInterval = line-1, currentInterval+1 {
+			for currentInterval, line := uint8(0), uint8(len(m.definition.Lines))-1; line != 255; line, currentInterval = line-1, currentInterval+1 {
 				key := grid.GridKey{Line: line, Beat: 0}
 				overlayChord, exists := m.currentOverlay.FindChord(key)
 				if slices.Contains(tt.expectedIntervals, currentInterval) {

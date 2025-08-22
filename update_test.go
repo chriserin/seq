@@ -13,6 +13,7 @@ import (
 	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/seqmidi"
+	"github.com/chriserin/seq/internal/timing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -98,7 +99,7 @@ type modelFunc func(m *model) model
 
 func createTestModel(modelFns ...modelFunc) model {
 
-	m := InitModel("", seqmidi.MidiConnection{}, "", "", MlmStandAlone, "default")
+	m := InitModel("", seqmidi.MidiConnection{}, "", "", timing.MlmStandAlone, "default")
 
 	for _, fn := range modelFns {
 		m = fn(&m)
@@ -116,7 +117,7 @@ func WithGridCursor(pos grid.GridKey) modelFunc {
 
 func WithNonRootOverlay(overlayKey overlaykey.OverlayPeriodicity) modelFunc {
 	return func(m *model) model {
-		(*m.definition.parts)[0].Overlays = m.CurrentPart().Overlays.Add(overlayKey)
+		(*m.definition.Parts)[0].Overlays = m.CurrentPart().Overlays.Add(overlayKey)
 		m.currentOverlay = m.CurrentPart().Overlays.FindAboveOverlay(overlayKey)
 		m.overlayKeyEdit.SetOverlayKey(overlayKey)
 		return *m
@@ -125,10 +126,10 @@ func WithNonRootOverlay(overlayKey overlaykey.OverlayPeriodicity) modelFunc {
 
 func WithPolyphony() modelFunc {
 	return func(m *model) model {
-		m.definition.templateSequencerType = operation.SeqModeChord
-		m.definition.lines = make([]grid.LineDefinition, 24)
-		for i := range m.definition.lines {
-			m.definition.lines[i] = grid.LineDefinition{
+		m.definition.TemplateSequencerType = operation.SeqModeChord
+		m.definition.Lines = make([]grid.LineDefinition, 24)
+		for i := range m.definition.Lines {
+			m.definition.Lines[i] = grid.LineDefinition{
 				Channel: 1,
 				Note:    uint8(i),
 				MsgType: grid.MessageTypeNote,
@@ -584,7 +585,7 @@ func TestSelectKeyLine(t *testing.T) {
 
 			m, _ = processCommands([]any{mappings.SelectKeyLine}, m)
 
-			assert.Equal(t, tt.expectedKeyline, m.definition.keyline, tt.description+" - keyline should match cursor line")
+			assert.Equal(t, tt.expectedKeyline, m.definition.Keyline, tt.description+" - keyline should match cursor line")
 		})
 	}
 }

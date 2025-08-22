@@ -25,6 +25,13 @@ const (
 	ActionSpecificValue
 )
 
+func GK(line uint8, beat uint8) GridKey {
+	return GridKey{
+		Line: line,
+		Beat: beat,
+	}
+}
+
 type GridKey struct {
 	Line uint8
 	Beat uint8
@@ -49,6 +56,8 @@ type Note struct {
 	GateIndex   uint8
 	WaitIndex   uint8
 }
+
+var ZeroNote = Note{}
 
 func InitNote() Note {
 	return Note{5, InitRatchet(), ActionNothing, 0, 0}

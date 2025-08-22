@@ -7,6 +7,9 @@ import (
 	"github.com/chriserin/seq/internal/arrangement"
 	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/seq/internal/playstate"
+	"github.com/chriserin/seq/internal/sequence"
+	"github.com/chriserin/seq/internal/timing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,18 +20,18 @@ func TestUpdateArrangementFocus(t *testing.T) {
 		// Setup a model with a basic arrangement
 		var parts = InitParts()
 		var arr = InitArrangement(parts)
-		def := Definition{
-			arrangement: arr,
-			parts:       &parts,
-			keyline:     0,
+		def := sequence.Sequence{
+			Arrangement: arr,
+			Parts:       &parts,
+			Keyline:     0,
 		}
 
 		m := model{
-			arrangement:    arrangement.InitModel(def.arrangement, def.parts),
-			definition:     def,
-			programChannel: make(chan midiEventLoopMsg),
-			playState: playState{
-				lineStates: InitLineStates(1, []linestate{}, 0),
+			arrangement:     arrangement.InitModel(def.Arrangement, def.Parts),
+			definition:      def,
+			toTimingChannel: make(chan timing.TimingMessage),
+			playState: playstate.PlayState{
+				LineStates: playstate.InitLineStates(1, []playstate.LineState{}, 0),
 			},
 			focus: operation.FocusGrid, // Start with grid focus
 		}
@@ -60,22 +63,22 @@ func TestUpdateArrangementFocus(t *testing.T) {
 
 func TestSolo(t *testing.T) {
 	t.Run("First Solo", func(t *testing.T) {
-		playStates := []linestate{
-			{groupPlayState: PlayStatePlay},
-			{groupPlayState: PlayStatePlay},
+		playStates := []playstate.LineState{
+			{GroupPlayState: playstate.PlayStatePlay},
+			{GroupPlayState: playstate.PlayStatePlay},
 		}
 		newPlayStates := Solo(playStates, 0)
-		assert.Equal(t, newPlayStates[0].groupPlayState, PlayStateSolo)
-		assert.Equal(t, newPlayStates[1].groupPlayState, PlayStatePlay)
+		assert.Equal(t, newPlayStates[0].GroupPlayState, playstate.PlayStateSolo)
+		assert.Equal(t, newPlayStates[1].GroupPlayState, playstate.PlayStatePlay)
 	})
 
 	t.Run("First UnSolo", func(t *testing.T) {
-		playStates := []linestate{
-			{groupPlayState: PlayStateSolo},
-			{groupPlayState: PlayStatePlay},
+		playStates := []playstate.LineState{
+			{GroupPlayState: playstate.PlayStateSolo},
+			{GroupPlayState: playstate.PlayStatePlay},
 		}
 		newPlayStates := Solo(playStates, 0)
-		assert.Equal(t, newPlayStates[0].groupPlayState, PlayStatePlay)
-		assert.Equal(t, newPlayStates[1].groupPlayState, PlayStatePlay)
+		assert.Equal(t, newPlayStates[0].GroupPlayState, playstate.PlayStatePlay)
+		assert.Equal(t, newPlayStates[1].GroupPlayState, playstate.PlayStatePlay)
 	})
 }

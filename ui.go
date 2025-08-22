@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"math"
 	"math/rand"
 	"os"
 	"runtime"
@@ -22,6 +21,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/chriserin/seq/internal/arrangement"
+	"github.com/chriserin/seq/internal/beats"
 	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/mappings"
@@ -29,45 +29,16 @@ import (
 	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/overlays"
+	"github.com/chriserin/seq/internal/playstate"
 	"github.com/chriserin/seq/internal/seqmidi"
+	"github.com/chriserin/seq/internal/sequence"
 	themes "github.com/chriserin/seq/internal/themes"
 	"github.com/chriserin/seq/internal/theory"
-	midi "gitlab.com/gomidi/midi/v2"
+	"github.com/chriserin/seq/internal/timing"
 )
 
 func Key(help string, keyboardKey ...string) key.Binding {
 	return key.NewBinding(key.WithKeys(keyboardKey...), key.WithHelp(keyboardKey[0], help))
-}
-
-type groupPlayState uint8
-
-const (
-	PlayStatePlay groupPlayState = iota
-	PlayStateMute
-	PlayStateSolo
-)
-
-type linestate struct {
-	index               uint8
-	currentBeat         uint8
-	resetLocation       uint8
-	resetActionLocation uint8
-	resetAction         action
-	groupPlayState      groupPlayState
-	direction           int8
-	resetDirection      int8
-}
-
-func (ls linestate) IsMuted() bool {
-	return ls.groupPlayState == PlayStateMute
-}
-
-func (ls linestate) IsSolo() bool {
-	return ls.groupPlayState == PlayStateSolo
-}
-
-func (ls linestate) GridKey() grid.GridKey {
-	return grid.GridKey{Line: ls.index, Beat: ls.currentBeat}
 }
 
 type overlayKey = overlaykey.OverlayPeriodicity
@@ -86,128 +57,6 @@ type action = grid.Action
 
 var zeronote note
 
-type Delayable interface {
-	Delay() time.Duration
-}
-
-type noteMsg struct {
-	channel   uint8
-	noteValue uint8
-	velocity  uint8
-	midiType  midi.Type
-	delay     time.Duration
-	id        int
-}
-
-func (nm noteMsg) Delay() time.Duration {
-	return nm.delay
-}
-
-type programChangeMsg struct {
-	channel uint8
-	pcValue uint8
-	delay   time.Duration
-}
-
-func (pcm programChangeMsg) MidiMessage() midi.Message {
-	return midi.ProgramChange(pcm.channel, pcm.pcValue)
-}
-
-func (pcm programChangeMsg) Delay() time.Duration {
-	return pcm.delay
-}
-
-type controlChangeMsg struct {
-	channel uint8
-	control uint8
-	ccValue uint8
-	delay   time.Duration
-}
-
-func (ccm controlChangeMsg) MidiMessage() midi.Message {
-	return midi.ControlChange(ccm.channel, ccm.control, ccm.ccValue)
-}
-
-func (ccm controlChangeMsg) Delay() time.Duration {
-	return ccm.delay
-}
-
-func (nm noteMsg) GetKey() notereg.NoteRegKey {
-	return notereg.NoteRegKey{
-		Channel: nm.channel,
-		Note:    nm.noteValue,
-	}
-}
-
-func (nm noteMsg) GetID() int {
-	return nm.id
-}
-
-func (nm noteMsg) GetOnMidi() midi.Message {
-	return midi.NoteOn(nm.channel, nm.noteValue, nm.velocity)
-}
-
-func (nm noteMsg) GetOffMidi() midi.Message {
-	return midi.NoteOff(nm.channel, nm.noteValue)
-}
-
-func (nm noteMsg) OffMessage() midi.Message {
-	return midi.NoteOff(nm.channel, nm.noteValue)
-}
-
-func NoteMessages(l grid.LineDefinition, accentValue uint8, gateLength time.Duration, accentTarget accentTarget, delay time.Duration) (noteMsg, noteMsg) {
-	var noteValue uint8
-	var velocityValue uint8
-
-	switch accentTarget {
-	case AccentTargetNote:
-		noteValue = l.Note + accentValue
-		velocityValue = 96
-	case AccentTargetVelocity:
-		noteValue = l.Note
-		velocityValue = accentValue
-	}
-
-	id := rand.Int()
-	onMsg := noteMsg{id: id, midiType: midi.NoteOnMsg, channel: l.Channel - 1, noteValue: noteValue, velocity: velocityValue, delay: delay}
-	offMsg := noteMsg{id: id, midiType: midi.NoteOffMsg, channel: l.Channel - 1, noteValue: noteValue, velocity: 0, delay: delay + gateLength}
-
-	return onMsg, offMsg
-}
-
-func CCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) controlChangeMsg {
-	if note.Action == grid.ActionSpecificValue {
-		return controlChangeMsg{l.Channel - 1, l.Note, note.AccentIndex, delay}
-	} else {
-		cc, _ := config.FindCC(l.Note, instrument)
-		ccValue := uint8((float32((len(accents))-int(note.AccentIndex)) / float32(len(accents)-1)) * float32(cc.UpperLimit))
-		if cc.UpperLimit == 1 && note.AccentIndex > 4 {
-			ccValue = uint8(1)
-		}
-
-		return controlChangeMsg{l.Channel - 1, l.Note, ccValue, delay}
-	}
-}
-
-func PCMessage(l grid.LineDefinition, note note, accents []config.Accent, delay time.Duration, includeDelay bool, instrument string) programChangeMsg {
-	if note.Action == grid.ActionSpecificValue {
-		return programChangeMsg{l.Channel - 1, note.AccentIndex, delay}
-	} else {
-		return programChangeMsg{l.Channel - 1, l.Note - 1, delay}
-	}
-}
-
-type playState struct {
-	playing            bool
-	allowAdvance       bool
-	hasSolo            bool
-	recordPreRollBeats uint8
-	playMode           PlayMode
-	loopMode           LoopMode
-	beatTime           time.Time
-	lineStates         []linestate
-}
-
 type model struct {
 	hasUIFocus            bool
 	connected             bool
@@ -222,7 +71,7 @@ type model struct {
 	sectionSideIndicator  SectionSide
 	selectionIndicator    operation.Selection
 	patternMode           operation.PatternMode
-	midiLoopMode          MidiLoopMode
+	midiLoopMode          timing.MidiLoopMode
 	gridCursor            gridKey
 	visualAnchorCursor    gridKey
 	partSelectorIndex     int
@@ -232,8 +81,8 @@ type model struct {
 	undoStack             UndoStack
 	redoStack             UndoStack
 	yankBuffer            Buffer
-	programChannel        chan midiEventLoopMsg
-	updateChannel         chan modelMsg
+	toTimingChannel       chan timing.TimingMessage
+	updateChannel         chan beats.ModelMsg
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
 	errChan               chan error
@@ -250,9 +99,9 @@ type model struct {
 	activeChord           overlays.OverlayChord
 	temporaryState        temporaryState
 	// play state
-	playState playState
+	playState playstate.PlayState
 	// save everything below here
-	definition Definition
+	definition sequence.Sequence
 }
 
 func (m *model) SetGridCursor(key gridKey) {
@@ -315,14 +164,14 @@ func (m *model) SetCurrentViewError(err error) {
 }
 
 func (m *model) ResetCurrentOverlay() {
-	if m.playState.playing && m.playEditing {
+	if m.playState.Playing && m.playEditing {
 		return
 	}
 	currentNode := m.arrangement.Cursor.GetCurrentNode()
 	if currentNode != nil && currentNode.IsEndNode() {
 		partID := currentNode.Section.Part
-		if len(*m.definition.parts) > partID {
-			m.currentOverlay = (*m.definition.parts)[partID].Overlays
+		if len(*m.definition.Parts) > partID {
+			m.currentOverlay = (*m.definition.Parts)[partID].Overlays
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 		}
 	}
@@ -333,21 +182,6 @@ type SectionSide uint8
 const (
 	SectionAfter SectionSide = iota
 	SectionBefore
-)
-
-type PlayMode uint8
-
-const (
-	PlayStandard PlayMode = iota
-	PlayReceiver
-)
-
-type LoopMode uint8
-
-const (
-	LoopSong LoopMode = iota
-	LoopPart
-	LoopOverlay
 )
 
 type GridNote struct {
@@ -460,72 +294,13 @@ func (m *model) ApplyLocation(location Location) {
 	m.arrangement.Focus = false
 }
 
-type Definition struct {
-	parts                 *[]arrangement.Part
-	arrangement           *arrangement.Arrangement
-	lines                 []grid.LineDefinition
-	tempo                 int
-	subdivisions          int
-	keyline               uint8
-	accents               patternAccents
-	instrument            string
-	template              string
-	templateUIStyle       string
-	templateSequencerType operation.SequencerMode
-}
-
 type temporaryState struct {
 	lines        []grid.LineDefinition
 	tempo        int
 	subdivisions int
-	accents      patternAccents
+	accents      sequence.PatternAccents
 	beats        uint8
 	active       bool
-}
-
-type patternAccents struct {
-	Data   []config.Accent
-	Start  uint8
-	End    uint8
-	Target accentTarget
-}
-
-type accentTarget uint8
-
-const (
-	AccentTargetNote accentTarget = iota
-	AccentTargetVelocity
-)
-
-func (pa *patternAccents) ReCalc() {
-	accents := make([]config.Accent, 9)
-
-	interval := float64(pa.Start-pa.End) / float64(len(pa.Data)-2)
-
-	for i, a := range pa.Data[1:] {
-		calculatedValue := float64(pa.Start) - (interval * float64(i))
-		roundedValue := math.Round(calculatedValue)
-		a.Value = uint8(roundedValue)
-		accents[i+1] = a
-	}
-
-	pa.Data = accents
-}
-
-func (pa *patternAccents) Equal(other *patternAccents) bool {
-	if pa.Target != other.Target {
-		return false
-	}
-	if pa.Start != other.Start {
-		return false
-	}
-	if pa.End != other.End {
-		return false
-	}
-	if !slices.Equal(pa.Data, other.Data) {
-		return false
-	}
-	return true
 }
 
 type StateDiff struct {
@@ -537,8 +312,8 @@ type StateDiff struct {
 	NewTempo            int
 	OldSubdivisions     int
 	NewSubdivisions     int
-	OldAccents          patternAccents
-	NewAccents          patternAccents
+	OldAccents          sequence.PatternAccents
+	NewAccents          sequence.PatternAccents
 	OldLines            []grid.LineDefinition
 	NewLines            []grid.LineDefinition
 }
@@ -566,53 +341,50 @@ func (s StateDiff) Reverse() StateDiff {
 
 func (s StateDiff) Apply(m *model) {
 	if s.AccentsChanged {
-		m.definition.accents = s.NewAccents
+		m.definition.Accents = s.NewAccents
 	}
 	if s.LinesChanged {
-		m.definition.lines = s.NewLines
+		m.definition.Lines = s.NewLines
 	}
 	if s.TempoChanged {
-		m.definition.tempo = s.NewTempo
+		m.definition.Tempo = s.NewTempo
 		m.SyncTempo()
 	}
 	if s.SubdivisionsChanged {
-		m.definition.subdivisions = s.NewSubdivisions
+		m.definition.Subdivisions = s.NewSubdivisions
 	}
 }
 
-func createStateDiff(definition *Definition, temporary *temporaryState) StateDiff {
+func createStateDiff(definition *sequence.Sequence, temporary *temporaryState) StateDiff {
 	diff := StateDiff{}
 
-	if !slices.Equal(definition.lines, temporary.lines) {
+	if !slices.Equal(definition.Lines, temporary.lines) {
 		diff.LinesChanged = true
-		diff.OldLines = definition.lines
+		diff.OldLines = definition.Lines
 		diff.NewLines = temporary.lines
 	}
 
-	if definition.tempo != temporary.tempo {
+	if definition.Tempo != temporary.tempo {
 		diff.TempoChanged = true
-		diff.OldTempo = definition.tempo
+		diff.OldTempo = definition.Tempo
 		diff.NewTempo = temporary.tempo
 	}
 
-	if definition.subdivisions != temporary.subdivisions {
+	if definition.Subdivisions != temporary.subdivisions {
 		diff.SubdivisionsChanged = true
-		diff.OldSubdivisions = definition.subdivisions
+		diff.OldSubdivisions = definition.Subdivisions
 		diff.NewSubdivisions = temporary.subdivisions
 	}
 
-	if !definition.accents.Equal(&temporary.accents) {
+	if !definition.Accents.Equal(&temporary.accents) {
 		diff.AccentsChanged = true
-		diff.OldAccents = definition.accents
+		diff.OldAccents = definition.Accents
 		diff.NewAccents = temporary.accents
 	}
 
 	return diff
 }
 
-type beatMsg struct {
-	interval time.Duration
-}
 type uiStartMsg struct{}
 type uiStopMsg struct{}
 type uiConnectedMsg struct{}
@@ -624,44 +396,13 @@ type viewPanicMsg struct {
 	error error
 }
 
-func (m model) TickInterval() time.Duration {
-	return time.Minute / time.Duration(m.definition.tempo*m.definition.subdivisions)
-}
-
 func (m model) SyncTempo() {
 	go func() {
-		m.programChannel <- tempoMsg{
-			tempo:        m.definition.tempo,
-			subdivisions: m.definition.subdivisions,
+		m.toTimingChannel <- timing.TempoMsg{
+			Tempo:        m.definition.Tempo,
+			Subdivisions: m.definition.Subdivisions,
 		}
 	}()
-}
-
-func Delay(waitIndex uint8, beatInterval time.Duration) time.Duration {
-	var delay time.Duration
-	if waitIndex != 0 {
-		delay = time.Duration((float64(config.WaitPercentages[waitIndex])) / float64(100) * float64(beatInterval))
-	} else {
-		delay = 0
-	}
-	return delay
-}
-
-func GateLength(gateIndex uint8, beatInterval time.Duration) time.Duration {
-	var delay time.Duration
-	if gateIndex < 8 {
-		var delay time.Duration
-		var value = config.ShortGates[gateIndex].Value
-		if value > 1 {
-			delay = time.Duration(config.ShortGates[gateIndex].Value) * time.Millisecond
-		} else {
-			delay = time.Duration(config.ShortGates[gateIndex].Value * float32(beatInterval))
-		}
-		return delay
-	} else if gateIndex >= 8 {
-		return time.Duration(float64(config.LongGates[gateIndex].Value) * float64(beatInterval))
-	}
-	return delay
 }
 
 func (m *model) EnsureOverlay() {
@@ -677,7 +418,7 @@ func (m *model) EnsureOverlayWithKey(key overlayKey) {
 	overlay := m.FindOverlay(key)
 	if overlay == nil {
 		var newOverlay = m.CurrentPart().Overlays.Add(key)
-		(*m.definition.parts)[partID].Overlays = newOverlay
+		(*m.definition.Parts)[partID].Overlays = newOverlay
 		m.currentOverlay = newOverlay.FindOverlay(key)
 	} else {
 		m.currentOverlay = overlay
@@ -701,7 +442,7 @@ func (m model) PatternBounds() grid.Bounds {
 	return grid.Bounds{
 		Top:    0,
 		Right:  m.CurrentPart().Beats - 1,
-		Bottom: uint8(len(m.definition.lines)),
+		Bottom: uint8(len(m.definition.Lines)),
 		Left:   0,
 	}
 }
@@ -777,22 +518,22 @@ func (m *model) EnsureRatchetCursorVisible() {
 }
 
 func (m *model) IncrementCC() {
-	note := m.definition.lines[m.gridCursor.Line].Note
+	note := m.definition.Lines[m.gridCursor.Line].Note
 	for i := note + 1; i <= 127; i++ {
-		_, exists := config.FindCC(i, m.definition.instrument)
+		_, exists := config.FindCC(i, m.definition.Instrument)
 		if exists {
-			m.definition.lines[m.gridCursor.Line].Note = i
+			m.definition.Lines[m.gridCursor.Line].Note = i
 			return
 		}
 	}
 }
 
 func (m *model) DecrementCC() {
-	note := m.definition.lines[m.gridCursor.Line].Note
+	note := m.definition.Lines[m.gridCursor.Line].Note
 	for i := note - 1; i != 255; i-- {
-		_, exists := config.FindCC(i, m.definition.instrument)
+		_, exists := config.FindCC(i, m.definition.Instrument)
 		if exists {
-			m.definition.lines[m.gridCursor.Line].Note = i
+			m.definition.Lines[m.gridCursor.Line].Note = i
 			return
 		}
 	}
@@ -821,65 +562,65 @@ func (m *model) DecreaseSpan() {
 }
 
 func (m *model) IncreaseAccentEnd() {
-	end := m.definition.accents.End
+	end := m.definition.Accents.End
 
-	if end < 127 && end < m.definition.accents.Start-1 {
-		m.definition.accents.End = m.definition.accents.End + 1
-		m.definition.accents.ReCalc()
+	if end < 127 && end < m.definition.Accents.Start-1 {
+		m.definition.Accents.End = m.definition.Accents.End + 1
+		m.definition.Accents.ReCalc()
 	}
 }
 
 func (m *model) DecreaseAccentEnd() {
-	end := m.definition.accents.End
+	end := m.definition.Accents.End
 
 	if end > 0 {
-		m.definition.accents.End = m.definition.accents.End - 1
-		m.definition.accents.ReCalc()
+		m.definition.Accents.End = m.definition.Accents.End - 1
+		m.definition.Accents.ReCalc()
 	}
 }
 
 func (m *model) IncreaseAccentStart() {
-	if m.definition.accents.Start < 127 {
-		m.definition.accents.Start = m.definition.accents.Start + 1
-		m.definition.accents.ReCalc()
+	if m.definition.Accents.Start < 127 {
+		m.definition.Accents.Start = m.definition.Accents.Start + 1
+		m.definition.Accents.ReCalc()
 	}
 }
 
 func (m *model) DecreaseAccentStart() {
-	start := m.definition.accents.Start
+	start := m.definition.Accents.Start
 
-	if start > 2 && start > m.definition.accents.End+1 {
-		m.definition.accents.Start = m.definition.accents.Start - 1
-		m.definition.accents.ReCalc()
+	if start > 2 && start > m.definition.Accents.End+1 {
+		m.definition.Accents.Start = m.definition.Accents.Start - 1
+		m.definition.Accents.ReCalc()
 	}
 }
 
 func (m *model) DecreaseAccentTarget() {
-	m.definition.accents.Target = (m.definition.accents.Target + 1) % 2
+	m.definition.Accents.Target = (m.definition.Accents.Target + 1) % 2
 }
 
 func (m *model) IncreaseTempo(amount int) {
-	newAmount := m.definition.tempo + amount
+	newAmount := m.definition.Tempo + amount
 	if newAmount <= 300 {
-		m.definition.tempo = newAmount
+		m.definition.Tempo = newAmount
 		m.SyncTempo()
-	} else if m.definition.tempo == 300 {
+	} else if m.definition.Tempo == 300 {
 		// do nothing if already at 300
 	} else if newAmount > 300 {
-		m.definition.tempo = 300
+		m.definition.Tempo = 300
 		m.SyncTempo()
 	}
 }
 
 func (m *model) DecreaseTempo(amount int) {
-	newAmount := m.definition.tempo - amount
+	newAmount := m.definition.Tempo - amount
 	if newAmount > 30 {
-		m.definition.tempo = newAmount
+		m.definition.Tempo = newAmount
 		m.SyncTempo()
-	} else if m.definition.tempo == 30 {
+	} else if m.definition.Tempo == 30 {
 		// do nothing if already at 30
 	} else if newAmount < 30 {
-		m.definition.tempo = 30
+		m.definition.Tempo = 30
 		m.SyncTempo()
 	}
 }
@@ -887,14 +628,14 @@ func (m *model) DecreaseTempo(amount int) {
 func (m *model) IncreaseBeats() {
 	newBeats := m.CurrentPart().Beats + 1
 	if newBeats < 128 {
-		(*m.definition.parts)[m.CurrentPartID()].Beats = newBeats
+		(*m.definition.Parts)[m.CurrentPartID()].Beats = newBeats
 	}
 }
 
 func (m *model) DecreaseBeats() {
 	newBeats := int(m.CurrentPart().Beats) - 1
 	if newBeats >= 1 {
-		(*m.definition.parts)[m.CurrentPartID()].Beats = uint8(newBeats)
+		(*m.definition.Parts)[m.CurrentPartID()].Beats = uint8(newBeats)
 		if m.gridCursor.Beat >= uint8(newBeats) {
 			m.SetGridCursor(gridKey{
 				Line: m.gridCursor.Line,
@@ -942,7 +683,7 @@ func (m *model) SetPlayCycles(keyCycles int) {
 
 func (m *model) IncreasePartSelector() {
 	newIndex := m.partSelectorIndex + 1
-	if newIndex < len(*m.definition.parts) {
+	if newIndex < len(*m.definition.Parts) {
 		m.partSelectorIndex = newIndex
 	}
 }
@@ -960,35 +701,7 @@ func (m *model) ToggleRatchetMute() {
 	m.currentOverlay.SetNote(m.gridCursor, currentNote)
 }
 
-func InitLineStates(lines int, previousPlayState []linestate, startBeat uint8) []linestate {
-	linestates := make([]linestate, 0, lines)
-
-	for i := range uint8(lines) {
-		var previousGroupPlayState = PlayStatePlay
-		if len(previousPlayState) > int(i) {
-			previousState := previousPlayState[i]
-			previousGroupPlayState = previousState.groupPlayState
-		}
-
-		linestates = append(linestates, InitLineState(previousGroupPlayState, i, startBeat))
-	}
-	return linestates
-}
-
-func InitLineState(previousGroupPlayState groupPlayState, index uint8, startBeat uint8) linestate {
-	return linestate{
-		index:               index,
-		currentBeat:         startBeat,
-		direction:           1,
-		resetDirection:      1,
-		resetLocation:       0,
-		resetActionLocation: 0,
-		resetAction:         0,
-		groupPlayState:      previousGroupPlayState,
-	}
-}
-
-func InitDefinition(template string, instrument string) Definition {
+func InitDefinition(template string, instrument string) sequence.Sequence {
 	gridTemplate, exists := config.GetTemplate(template)
 	if !exists {
 		gridTemplate = config.GetDefaultTemplate()
@@ -998,18 +711,18 @@ func InitDefinition(template string, instrument string) Definition {
 	copy(newLines, gridTemplate.Lines)
 
 	parts := InitParts()
-	return Definition{
-		parts:                 &parts,
-		arrangement:           InitArrangement(parts),
-		tempo:                 120,
-		keyline:               0,
-		subdivisions:          2,
-		lines:                 newLines,
-		accents:               patternAccents{End: 15, Data: config.Accents, Start: 120, Target: AccentTargetVelocity},
-		template:              gridTemplate.Name,
-		instrument:            instrument,
-		templateUIStyle:       gridTemplate.UIStyle,
-		templateSequencerType: gridTemplate.SequencerType,
+	return sequence.Sequence{
+		Parts:                 &parts,
+		Arrangement:           InitArrangement(parts),
+		Tempo:                 120,
+		Keyline:               0,
+		Subdivisions:          2,
+		Lines:                 newLines,
+		Accents:               sequence.PatternAccents{End: 15, Data: config.Accents, Start: 120, Target: sequence.AccentTargetVelocity},
+		Template:              gridTemplate.Name,
+		Instrument:            instrument,
+		TemplateUIStyle:       gridTemplate.UIStyle,
+		TemplateSequencerType: gridTemplate.SequencerType,
 	}
 }
 
@@ -1035,13 +748,13 @@ func InitParts() []arrangement.Part {
 	return []arrangement.Part{firstPart}
 }
 
-func LoadFile(filename string, template string) (Definition, error) {
-	var definition Definition
+func LoadFile(filename string, template string) (sequence.Sequence, error) {
+	var definition sequence.Sequence
 	var fileErr error
 	if filename != "" {
-		definition, fileErr = Read(filename)
-		gridTemplate, exists := config.GetTemplate(definition.template)
-		definition.templateSequencerType = gridTemplate.SequencerType
+		definition, fileErr = sequence.Read(filename)
+		gridTemplate, exists := config.GetTemplate(definition.Template)
+		definition.TemplateSequencerType = gridTemplate.SequencerType
 		// TODO: Give these hardcoded values a run for a bit before consolidating
 		if exists {
 			config.LongGates = config.GetGateLengths(32)
@@ -1059,7 +772,7 @@ func LoadFile(filename string, template string) (Definition, error) {
 	return definition, fileErr
 }
 
-func InitModel(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) model {
+func InitModel(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode timing.MidiLoopMode, theme string) model {
 	logFile, logFileErr := tea.LogToFile("debug.log", "debug")
 
 	newCursor := cursor.New()
@@ -1068,7 +781,7 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 
 	definition, err := LoadFile(filename, template)
 
-	programChannel := make(chan midiEventLoopMsg)
+	timingChannel := make(chan timing.TimingMessage)
 	lockReceiverChannel := make(chan bool)
 	unlockReceiverChannel := make(chan bool)
 	errorChannel := make(chan error)
@@ -1087,7 +800,7 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 		textInput:             InitTextInput(),
 		partSelectorIndex:     -1,
 		midiLoopMode:          midiLoopMode,
-		programChannel:        programChannel,
+		toTimingChannel:       timingChannel,
 		lockReceiverChannel:   lockReceiverChannel,
 		unlockReceiverChannel: unlockReceiverChannel,
 		errChan:               errorChannel,
@@ -1100,12 +813,12 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 		patternMode:           operation.PatternFill,
 		logFileAvailable:      logFileErr == nil,
 		gridCursor:            GK(0, 0),
-		currentOverlay:        (*definition.parts)[0].Overlays,
+		currentOverlay:        (*definition.Parts)[0].Overlays,
 		overlayKeyEdit:        overlaykey.InitModel(),
-		arrangement:           arrangement.InitModel(definition.arrangement, definition.parts),
+		arrangement:           arrangement.InitModel(definition.Arrangement, definition.Parts),
 		definition:            definition,
-		playState: playState{
-			lineStates: InitLineStates(len(definition.lines), []linestate{}, 0),
+		playState: playstate.PlayState{
+			LineStates: playstate.InitLineStates(len(definition.Lines), []playstate.LineState{}, 0),
 		},
 	}
 }
@@ -1122,8 +835,8 @@ func InitTextInput() textinput.Model {
 
 func (m model) LogTeaMsg(msg tea.Msg) {
 	switch msg := msg.(type) {
-	case beatMsg:
-		m.LogString(fmt.Sprintf("beatMsg %d %d\n", msg.interval, m.definition.tempo))
+	case beats.BeatMsg:
+		m.LogString(fmt.Sprintf("beatMsg %d %d\n", msg.Interval, m.definition.Tempo))
 	case tea.KeyMsg:
 		m.LogString(fmt.Sprintf("keyMsg %s\n", msg.String()))
 	case cursor.BlinkMsg:
@@ -1158,7 +871,7 @@ func (m *model) LogError(err error) {
 
 func (m *model) LogFromBeatTime() {
 	if m.logFileAvailable {
-		_, err := fmt.Fprintf(m.logFile, "%d\n", time.Since(m.playState.beatTime))
+		_, err := fmt.Fprintf(m.logFile, "%d\n", time.Since(m.playState.BeatTime))
 		if err != nil {
 			m.logFileAvailable = false
 			panic("could not write to log file")
@@ -1166,20 +879,20 @@ func (m *model) LogFromBeatTime() {
 	}
 }
 
-func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode MidiLoopMode, theme string) *tea.Program {
+func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode timing.MidiLoopMode, theme string) *tea.Program {
 	config.Init()
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
-	updateChannel := make(chan modelMsg)
+	updateChannel := make(chan beats.ModelMsg)
 	model.updateChannel = updateChannel
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
-	midiLoopChannel := make(chan beatMsg)
-	SetupMidiEventLoop(model, midiLoopChannel, program.Send)
-	StartBeatLoop(updateChannel, midiLoopChannel, program.Send)
+	midiLoopChannel := make(chan beats.BeatMsg)
+	SetupTimingLoop(model, midiLoopChannel, program.Send)
+	beats.Loop(updateChannel, midiLoopChannel, program.Send)
 	return program
 }
 
-func SetupMidiEventLoop(model model, midiLoopChannel chan beatMsg, sendFn func(tea.Msg)) {
-	err := MidiEventLoop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.programChannel, midiLoopChannel, sendFn)
+func SetupTimingLoop(model model, midiLoopChannel chan beats.BeatMsg, sendFn func(tea.Msg)) {
+	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.toTimingChannel, midiLoopChannel, sendFn)
 	if err != nil {
 		go func() {
 			sendFn(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
@@ -1250,7 +963,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.LogString(fmt.Sprintf(" ------ Stacktrace ---------- \n%s\n", msg.stacktrace))
 	case tea.KeyMsg:
 
-		mapping := mappings.ProcessKey(msg, m.focus, m.selectionIndicator, m.definition.templateSequencerType, m.patternMode)
+		mapping := mappings.ProcessKey(msg, m.focus, m.selectionIndicator, m.definition.TemplateSequencerType, m.patternMode)
 
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
@@ -1279,7 +992,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.selectionIndicator = operation.SelectGrid
 			return m, cmd
 		case mappings.ConfirmSelectPart:
-			_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator == SectionAfter, IsPlaying: m.playState.playing})
+			_, cmd := m.arrangement.Update(arrangement.NewPart{Index: m.partSelectorIndex, After: m.sectionSideIndicator == SectionAfter, IsPlaying: m.playState.Playing})
 			if m.sectionSideIndicator == SectionAfter {
 				m.arrangement.Cursor.MoveNext()
 			} else {
@@ -1378,10 +1091,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			var newLine uint8
 			if m.hideEmptyLines {
 				pattern := m.CombinedOverlayPattern(m.currentOverlay)
-				showLines := GetShowLines(len(m.definition.lines), pattern, m.CurrentPart().Beats)
+				showLines := GetShowLines(len(m.definition.Lines), pattern, m.CurrentPart().Beats)
 				newLine = showLines[len(showLines)-1]
 			} else {
-				newLine = uint8(len(m.definition.lines) - 1)
+				newLine = uint8(len(m.definition.Lines) - 1)
 			}
 			m.SetGridCursor(gridKey{
 				Line: newLine,
@@ -1391,7 +1104,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			var newLine uint8
 			if m.hideEmptyLines {
 				pattern := m.CombinedOverlayPattern(m.currentOverlay)
-				showLines := GetShowLines(len(m.definition.lines), pattern, m.CurrentPart().Beats)
+				showLines := GetShowLines(len(m.definition.Lines), pattern, m.CurrentPart().Beats)
 				newLine = showLines[0]
 			} else {
 				newLine = 0
@@ -1404,29 +1117,29 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.PushUndoableDefinitionState()
 			m.Escape()
 		case mappings.PlayStop:
-			if !m.playState.playing {
-				m.playState.loopMode = LoopSong
+			if !m.playState.Playing {
+				m.playState.LoopMode = playstate.LoopSong
 			}
 			m.StartStop(0)
 		case mappings.PlayPart:
-			if !m.playState.playing {
-				m.playState.loopMode = LoopPart
+			if !m.playState.Playing {
+				m.playState.LoopMode = playstate.LoopPart
 			}
 			m.StartStop(0)
 		case mappings.PlayLoop:
-			if !m.playState.playing {
-				m.playState.loopMode = LoopSong
+			if !m.playState.Playing {
+				m.playState.LoopMode = playstate.LoopSong
 			}
 			m.arrangement.Root.SetInfinite()
 			m.StartStop(0)
 		case mappings.PlayOverlayLoop:
-			if !m.playState.playing {
-				m.playState.loopMode = LoopOverlay
+			if !m.playState.Playing {
+				m.playState.LoopMode = playstate.LoopOverlay
 			}
 			m.StartStop(0)
 		case mappings.PlayRecord:
-			if !m.playState.playing {
-				m.playState.recordPreRollBeats = 8
+			if !m.playState.Playing {
+				m.playState.RecordPreRollBeats = 8
 				err := seqmidi.SendRecordMessage()
 				if err != nil {
 					m.SetCurrentError(err)
@@ -1459,7 +1172,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.SetupInputSwitch:
 			var states []operation.Selection
-			if m.definition.lines[m.gridCursor.Line].MsgType == grid.MessageTypeProgramChange {
+			if m.definition.Lines[m.gridCursor.Line].MsgType == grid.MessageTypeProgramChange {
 				states = []operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType}
 			} else {
 				states = []operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue}
@@ -1525,18 +1238,18 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			case operation.SelectTempo:
 				m.IncreaseTempo(1)
 			case operation.SelectTempoSubdivision:
-				if m.definition.subdivisions < 8 {
-					m.definition.subdivisions++
+				if m.definition.Subdivisions < 8 {
+					m.definition.Subdivisions++
 				}
 				m.SyncTempo()
 			case operation.SelectSetupChannel:
-				m.definition.lines[m.gridCursor.Line].IncrementChannel()
+				m.definition.Lines[m.gridCursor.Line].IncrementChannel()
 			case operation.SelectSetupMessageType:
-				m.definition.lines[m.gridCursor.Line].IncrementMessageType()
+				m.definition.Lines[m.gridCursor.Line].IncrementMessageType()
 			case operation.SelectSetupValue:
-				switch m.definition.lines[m.gridCursor.Line].MsgType {
+				switch m.definition.Lines[m.gridCursor.Line].MsgType {
 				case grid.MessageTypeNote:
-					m.definition.lines[m.gridCursor.Line].IncrementNote()
+					m.definition.Lines[m.gridCursor.Line].IncrementNote()
 				case grid.MessageTypeCc:
 					m.IncrementCC()
 				}
@@ -1573,18 +1286,18 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			case operation.SelectTempo:
 				m.DecreaseTempo(1)
 			case operation.SelectTempoSubdivision:
-				if m.definition.subdivisions > 1 {
-					m.definition.subdivisions--
+				if m.definition.Subdivisions > 1 {
+					m.definition.Subdivisions--
 				}
 				m.SyncTempo()
 			case operation.SelectSetupChannel:
-				m.definition.lines[m.gridCursor.Line].DecrementChannel()
+				m.definition.Lines[m.gridCursor.Line].DecrementChannel()
 			case operation.SelectSetupMessageType:
-				m.definition.lines[m.gridCursor.Line].DecrementMessageType()
+				m.definition.Lines[m.gridCursor.Line].DecrementMessageType()
 			case operation.SelectSetupValue:
-				switch m.definition.lines[m.gridCursor.Line].MsgType {
+				switch m.definition.Lines[m.gridCursor.Line].MsgType {
 				case grid.MessageTypeNote:
-					m.definition.lines[m.gridCursor.Line].DecrementNote()
+					m.definition.Lines[m.gridCursor.Line].DecrementNote()
 				case grid.MessageTypeCc:
 					m.DecrementCC()
 				}
@@ -1623,10 +1336,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.ToggleRatchetMode:
 			m.SetPatternMode(operation.PatternRatchet)
 		case mappings.ToggleChordMode:
-			if m.definition.templateSequencerType == operation.SeqModeChord {
-				m.definition.templateSequencerType = operation.SeqModeLine
+			if m.definition.TemplateSequencerType == operation.SeqModeChord {
+				m.definition.TemplateSequencerType = operation.SeqModeLine
 			} else {
-				m.definition.templateSequencerType = operation.SeqModeChord
+				m.definition.TemplateSequencerType = operation.SeqModeChord
 			}
 		case mappings.PrevOverlay:
 			m.NextOverlay(-1)
@@ -1641,21 +1354,21 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.Save()
 			}
 		case mappings.Undo:
-			tempo, subdiv := m.definition.tempo, m.definition.subdivisions
+			tempo, subdiv := m.definition.Tempo, m.definition.Subdivisions
 			undoStack := m.Undo()
 			if undoStack != EmptyStack {
 				m.PushRedo(undoStack)
 			}
-			if tempo != m.definition.tempo || subdiv != m.definition.subdivisions {
+			if tempo != m.definition.Tempo || subdiv != m.definition.Subdivisions {
 				m.SyncTempo()
 			}
 		case mappings.Redo:
-			tempo, subdiv := m.definition.tempo, m.definition.subdivisions
+			tempo, subdiv := m.definition.Tempo, m.definition.Subdivisions
 			undoStack := m.Redo()
 			if undoStack != EmptyStack {
 				m.PushUndo(undoStack)
 			}
-			if tempo != m.definition.tempo || subdiv != m.definition.subdivisions {
+			if tempo != m.definition.Tempo || subdiv != m.definition.Subdivisions {
 				m.SyncTempo()
 			}
 		case mappings.New:
@@ -1666,14 +1379,14 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.TogglePlayEdit:
 			m.playEditing = !m.playEditing
 		case mappings.NewLine:
-			if len(m.definition.lines) < 100 {
-				lastline := m.definition.lines[len(m.definition.lines)-1]
-				m.definition.lines = append(m.definition.lines, grid.LineDefinition{
+			if len(m.definition.Lines) < 100 {
+				lastline := m.definition.Lines[len(m.definition.Lines)-1]
+				m.definition.Lines = append(m.definition.Lines, grid.LineDefinition{
 					Channel: lastline.Channel,
 					Note:    lastline.Note + 1,
 				})
-				if m.playState.playing {
-					m.playState.lineStates = append(m.playState.lineStates, InitLineState(PlayStatePlay, uint8(len(m.definition.lines)-1), 0))
+				if m.playState.Playing {
+					m.playState.LineStates = append(m.playState.LineStates, playstate.InitLineState(playstate.PlayStatePlay, uint8(len(m.definition.Lines)-1), 0))
 				}
 			}
 		case mappings.NewSectionAfter:
@@ -1700,12 +1413,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			if m.IsRatchetSelector() {
 				m.ToggleRatchetMute()
 			} else {
-				m.playState.lineStates = Mute(m.playState.lineStates, m.gridCursor.Line)
-				m.playState.hasSolo = m.HasSolo()
+				m.playState.LineStates = Mute(m.playState.LineStates, m.gridCursor.Line)
+				m.playState.HasSolo = m.HasSolo()
 			}
 		case mappings.Solo:
-			m.playState.lineStates = Solo(m.playState.lineStates, m.gridCursor.Line)
-			m.playState.hasSolo = m.HasSolo()
+			m.playState.LineStates = Solo(m.playState.LineStates, m.gridCursor.Line)
+			m.playState.HasSolo = m.HasSolo()
 		case mappings.Enter:
 			m.RecordSpecificValueUndo()
 			m.PushUndoableDefinitionState()
@@ -1727,17 +1440,17 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.selectionIndicator = operation.SelectGrid
 		}
 	case uiStartMsg:
-		if !m.playState.playing {
-			m.playState.playing = true
+		if !m.playState.Playing {
+			m.playState.Playing = true
 			// NOTE: Getting a start message from midieventloop means we are in receiver mode
-			m.playState.playMode = PlayReceiver
+			m.playState.PlayMode = playstate.PlayReceiver
 		} else {
 			m.SetCurrentError(errors.New("cannot start when already started"))
 		}
 		m.Start(0)
 	case uiStopMsg:
-		m.playState.playing = false
-		m.playState.playMode = PlayStandard
+		m.playState.Playing = false
+		m.playState.PlayMode = playstate.PlayStandard
 		m.Stop()
 		m.SyncBeatLoop()
 	case uiConnectedMsg:
@@ -1751,11 +1464,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.SetSelectionIndicator(operation.SelectRenamePart)
 	case arrangement.Undo:
 		m.PushArrUndo(msg)
-	case modelPlayedMsg:
-		m.definition = msg.definition
-		m.playState = msg.playState
-		m.arrangement.Cursor = msg.cursor
-		if msg.performStop {
+	case beats.ModelPlayedMsg:
+		m.definition = msg.Definition
+		m.playState = msg.PlayState
+		m.arrangement.Cursor = msg.Cursor
+		if msg.PerformStop {
 			m.SafeStop()
 		}
 		m.ResetCurrentOverlay()
@@ -1777,12 +1490,12 @@ func (m *model) SyncBeatLoop() {
 		return
 	}
 	go func() {
-		m.updateChannel <- modelMsg{definition: m.definition, playState: m.playState, cursor: m.arrangement.Cursor, midiSendFn: sendFn}
+		m.updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiSendFn: sendFn}
 	}()
 }
 
 func (m model) Quit() (tea.Model, tea.Cmd) {
-	m.programChannel <- quitMsg{}
+	m.toTimingChannel <- timing.QuitMsg{}
 	err := m.logFile.Close()
 	if err != nil {
 		// NOTE: no good way to display this error when quitting, just panic
@@ -1793,8 +1506,8 @@ func (m model) Quit() (tea.Model, tea.Cmd) {
 
 func (m *model) CursorDown() {
 	pattern := m.CombinedOverlayPattern(m.currentOverlay)
-	showLines := GetShowLines(len(m.definition.lines), pattern, m.CurrentPart().Beats)
-	if m.gridCursor.Line < uint8(len(m.definition.lines)-1) {
+	showLines := GetShowLines(len(m.definition.Lines), pattern, m.CurrentPart().Beats)
+	if m.gridCursor.Line < uint8(len(m.definition.Lines)-1) {
 		for i := range m.gridCursor.Line + 1 {
 			newLine := m.gridCursor.Line + (1 + i)
 			if slices.Contains(showLines, newLine) || !m.hideEmptyLines {
@@ -1810,7 +1523,7 @@ func (m *model) CursorDown() {
 
 func (m *model) CursorUp() {
 	pattern := m.CombinedOverlayPattern(m.currentOverlay)
-	showLines := GetShowLines(len(m.definition.lines), pattern, m.CurrentPart().Beats)
+	showLines := GetShowLines(len(m.definition.Lines), pattern, m.CurrentPart().Beats)
 	if m.gridCursor.Line > 0 {
 		for i := range m.gridCursor.Line + 1 {
 			newLine := m.gridCursor.Line - (1 + i)
@@ -1827,10 +1540,10 @@ func (m *model) CursorUp() {
 
 func (m *model) CursorValid() {
 	pattern := m.CombinedOverlayPattern(m.currentOverlay)
-	showLines := GetShowLines(len(m.definition.lines), pattern, m.CurrentPart().Beats)
+	showLines := GetShowLines(len(m.definition.Lines), pattern, m.CurrentPart().Beats)
 	if !slices.Contains(showLines, m.gridCursor.Line) {
 		keeper := int(m.gridCursor.Line)
-		for i := range len(m.definition.lines) + 1 {
+		for i := range len(m.definition.Lines) + 1 {
 			var direction int
 			if i%2 == 0 {
 				direction = 1
@@ -1893,8 +1606,8 @@ func (m *model) PushUndoableDefinitionState() {
 }
 
 func (m *model) CaptureTemporaryState() {
-	linesCopy := make([]grid.LineDefinition, len(m.definition.lines))
-	for i, defLine := range m.definition.lines {
+	linesCopy := make([]grid.LineDefinition, len(m.definition.Lines))
+	for i, defLine := range m.definition.Lines {
 		newLine := grid.LineDefinition{
 			Channel: defLine.Channel,
 			Note:    defLine.Note,
@@ -1903,17 +1616,17 @@ func (m *model) CaptureTemporaryState() {
 		}
 		linesCopy[i] = newLine
 	}
-	accentDataCopy := make([]config.Accent, len(m.definition.accents.Data))
-	copy(accentDataCopy, m.definition.accents.Data)
+	accentDataCopy := make([]config.Accent, len(m.definition.Accents.Data))
+	copy(accentDataCopy, m.definition.Accents.Data)
 
 	m.temporaryState = temporaryState{
 		lines:        linesCopy,
-		tempo:        m.definition.tempo,
-		subdivisions: m.definition.subdivisions,
-		accents: patternAccents{
-			End:    m.definition.accents.End,
-			Start:  m.definition.accents.Start,
-			Target: m.definition.accents.Target,
+		tempo:        m.definition.Tempo,
+		subdivisions: m.definition.Subdivisions,
+		accents: sequence.PatternAccents{
+			End:    m.definition.Accents.End,
+			Start:  m.definition.Accents.Start,
+			Target: m.definition.Accents.Target,
 			Data:   accentDataCopy,
 		},
 		beats:  m.CurrentPart().Beats,
@@ -1944,12 +1657,12 @@ func (m *model) Escape() {
 }
 
 func (m model) NewSequence() model {
-	newModel := InitModel("", m.midiConnection, m.definition.template, m.definition.instrument, m.midiLoopMode, m.theme)
+	newModel := InitModel("", m.midiConnection, m.definition.Template, m.definition.Instrument, m.midiLoopMode, m.theme)
 	newModel.hasUIFocus = true
 	newModel.midiLoopMode = m.midiLoopMode
 	newModel.lockReceiverChannel = m.lockReceiverChannel
 	newModel.unlockReceiverChannel = m.unlockReceiverChannel
-	newModel.programChannel = m.programChannel
+	newModel.toTimingChannel = m.toTimingChannel
 	return newModel
 }
 
@@ -1996,49 +1709,49 @@ func (m *model) Start(delay time.Duration) {
 		err := m.midiConnection.ConnectAndOpen()
 		if err != nil {
 			m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot open midi connection")))
-			m.playState.playing = false
-			m.playState.playMode = PlayStandard
+			m.playState.Playing = false
+			m.playState.PlayMode = playstate.PlayStandard
 			return
 		}
 	}
 
-	switch m.playState.loopMode {
-	case LoopSong:
-		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.arrangement}
+	switch m.playState.LoopMode {
+	case playstate.LoopSong:
+		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.Arrangement}
 		m.arrangement.Cursor.MoveNext()
 		m.arrangement.Cursor.ResetIterations()
-	case LoopPart:
+	case playstate.LoopPart:
 		m.arrangement.SetCurrentNodeInfinite()
 	}
 	m.arrangement.ResetDepth()
 
 	m.arrangement.Root.ResetAllPlayCycles()
 	section := m.CurrentSongSection()
-	if m.playState.loopMode == LoopOverlay {
+	if m.playState.LoopMode == playstate.LoopOverlay {
 		m.SetPlayCycles(m.currentOverlay.Key.GetMinimumKeyCycle())
 	} else {
 		section.ResetPlayCycles()
 	}
-	m.playState.lineStates = InitLineStates(len(m.definition.lines), m.playState.lineStates, uint8(section.StartBeat))
-	if m.playState.playing {
+	m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, uint8(section.StartBeat))
+	if m.playState.Playing {
 		sendFn, err := m.midiConnection.AcquireSendFunc()
 		if err != nil {
 			m.SetCurrentError(err)
 		}
 		time.AfterFunc(delay, func() {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
-			m.updateChannel <- modelMsg{definition: m.definition, playState: m.playState, cursor: m.arrangement.Cursor, midiSendFn: sendFn}
-			if m.playState.playMode != PlayReceiver {
-				m.programChannel <- startMsg{tempo: m.definition.tempo, subdivisions: m.definition.subdivisions}
+			m.updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiSendFn: sendFn}
+			if m.playState.PlayMode != playstate.PlayReceiver {
+				m.toTimingChannel <- timing.StartMsg{Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions}
 			}
 		})
 	}
 }
 
 func (m *model) Stop() {
-	m.playState.allowAdvance = false
-	m.playState.recordPreRollBeats = 0
-	if m.playState.loopMode == LoopPart {
+	m.playState.AllowAdvance = false
+	m.playState.RecordPreRollBeats = 0
+	if m.playState.LoopMode == playstate.LoopPart {
 		m.arrangement.ResetDepth()
 	}
 	m.arrangement.Root.ResetCycles()
@@ -2054,15 +1767,15 @@ func (m *model) Stop() {
 	}
 	for _, n := range notes {
 		switch n := n.(type) {
-		case noteMsg:
-			PlayMessage(time.Duration(0), n.OffMessage(), sendFn, m.errChan)
+		case beats.NoteMsg:
+			beats.PlayMessage(time.Duration(0), n.OffMessage(), sendFn, m.errChan)
 		}
 	}
 }
 
 func (m *model) StartStop(delay time.Duration) {
 	m.playEditing = false
-	if !m.playState.playing {
+	if !m.playState.Playing {
 		m.SafeStart(delay)
 	} else {
 		m.SafeStop()
@@ -2070,9 +1783,9 @@ func (m *model) StartStop(delay time.Duration) {
 }
 
 func (m *model) SafeStart(delay time.Duration) {
-	m.playState.playing = true
-	m.playState.playMode = PlayStandard
-	if m.midiLoopMode == MlmReceiver {
+	m.playState.Playing = true
+	m.playState.PlayMode = playstate.PlayStandard
+	if m.midiLoopMode == timing.MlmReceiver {
 		// NOTE: When instance is receiver, allow it to play alone and lock out transmitter messages
 		m.lockReceiverChannel <- true
 	}
@@ -2080,11 +1793,11 @@ func (m *model) SafeStart(delay time.Duration) {
 }
 
 func (m *model) SafeStop() {
-	m.playState.playing = false
-	if m.playState.playMode == PlayStandard {
+	m.playState.Playing = false
+	if m.playState.PlayMode == playstate.PlayStandard {
 		go func() {
-			m.programChannel <- stopMsg{}
-			if m.midiLoopMode == MlmReceiver {
+			m.toTimingChannel <- timing.StopMsg{}
+			if m.midiLoopMode == timing.MlmReceiver {
 				// NOTE: Unlock to allow transmitter messages
 				m.unlockReceiverChannel <- true
 			}
@@ -2165,18 +1878,18 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.ActionAddLineDelay:
 		m.AddAction(grid.ActionLineDelay)
 	case mappings.ActionAddSpecificValue:
-		if m.definition.lines[m.gridCursor.Line].MsgType != grid.MessageTypeNote {
+		if m.definition.Lines[m.gridCursor.Line].MsgType != grid.MessageTypeNote {
 			m.AddAction(grid.ActionSpecificValue)
 			m.SetSelectionIndicator(operation.SelectSpecificValue)
 		}
 	case mappings.SelectKeyLine:
-		m.definition.keyline = m.gridCursor.Line
+		m.definition.Keyline = m.gridCursor.Line
 	case mappings.OverlayStackToggle:
 		m.currentOverlay.ToggleOverlayStackOptions()
 	case mappings.ClearOverlay:
 		m.ClearOverlay()
 	case mappings.RotateRight:
-		switch m.definition.templateSequencerType {
+		switch m.definition.TemplateSequencerType {
 		case operation.SeqModeLine:
 			m.RotateRight()
 		case operation.SeqModeChord:
@@ -2185,7 +1898,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 			m.CursorRight()
 		}
 	case mappings.RotateLeft:
-		switch m.definition.templateSequencerType {
+		switch m.definition.TemplateSequencerType {
 		case operation.SeqModeLine:
 			m.RotateLeft()
 		case operation.SeqModeChord:
@@ -2194,7 +1907,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 			m.CursorLeft()
 		}
 	case mappings.RotateUp:
-		switch m.definition.templateSequencerType {
+		switch m.definition.TemplateSequencerType {
 		case operation.SeqModeLine:
 			m.RotateUp()
 		case operation.SeqModeChord:
@@ -2203,7 +1916,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 			m.CursorUp()
 		}
 	case mappings.RotateDown:
-		switch m.definition.templateSequencerType {
+		switch m.definition.TemplateSequencerType {
 		case operation.SeqModeLine:
 			m.RotateDown()
 		case operation.SeqModeChord:
@@ -2364,7 +2077,7 @@ func (m *model) EnsureChord() {
 }
 
 func (m model) CurrentChord() overlays.OverlayChord {
-	if m.definition.templateSequencerType == operation.SeqModeLine {
+	if m.definition.TemplateSequencerType == operation.SeqModeLine {
 		return overlays.OverlayChord{}
 	}
 	overlayChord, exists := m.currentOverlay.FindChord(m.gridCursor)
@@ -2479,7 +2192,7 @@ func (m model) UpdateDefinition(mapping mappings.Mapping) model {
 
 	deepCopy := overlays.DeepCopy(m.currentOverlay)
 	m.EnsureOverlay()
-	if m.playState.playing && !m.playEditing {
+	if m.playState.Playing && !m.playEditing {
 		m.playEditing = true
 		playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles())
 		m.currentOverlay = playingOverlay
@@ -2503,7 +2216,7 @@ func (m model) UndoableOverlay(overlayA, overlayB *overlays.Overlay) UndoOverlay
 }
 
 func (m *model) Save() {
-	err := Write(m.definition, m.filename)
+	err := sequence.Write(m.definition, m.filename)
 	if err != nil {
 		m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot write file")))
 	}
@@ -2513,13 +2226,13 @@ func (m *model) Save() {
 func (m model) CurrentPart() arrangement.Part {
 	section := m.CurrentSongSection()
 	partID := section.Part
-	return (*m.definition.parts)[partID]
+	return (*m.definition.Parts)[partID]
 }
 
 func (m model) RenamePart(value string) {
 	section := m.CurrentSongSection()
 	partID := section.Part
-	(*m.definition.parts)[partID].Name = value
+	(*m.definition.Parts)[partID].Name = value
 }
 
 func (m model) CurrentPartID() int {
@@ -2562,10 +2275,10 @@ func (m *model) ClearOverlayLine() {
 }
 
 func (m *model) ClearOverlay() {
-	newOverlay := (*m.definition.parts)[m.CurrentPartID()].Overlays.Remove(m.currentOverlay.Key)
+	newOverlay := (*m.definition.Parts)[m.CurrentPartID()].Overlays.Remove(m.currentOverlay.Key)
 	if newOverlay != nil {
-		(*m.definition.parts)[m.CurrentPartID()].Overlays = newOverlay
-		m.currentOverlay = (*m.definition.parts)[m.CurrentPartID()].Overlays
+		(*m.definition.Parts)[m.CurrentPartID()].Overlays = newOverlay
+		m.currentOverlay = (*m.definition.Parts)[m.CurrentPartID()].Overlays
 		m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 	}
 }
@@ -2664,7 +2377,7 @@ func (m *model) RotateLeft() {
 func (m *model) RotateUp() {
 	pattern := m.CombinedEditPattern(m.currentOverlay)
 	beat := m.gridCursor.Beat
-	for l := 0; l < len(m.definition.lines); l++ {
+	for l := 0; l < len(m.definition.Lines); l++ {
 		key := GK(uint8(l), beat)
 		_, exists := pattern[key]
 		if exists {
@@ -2677,7 +2390,7 @@ func (m *model) RotateUp() {
 				m.currentOverlay.SetNote(newKey, note)
 			}
 		} else {
-			newKey := GK(uint8(len(m.definition.lines)-1), beat)
+			newKey := GK(uint8(len(m.definition.Lines)-1), beat)
 			note, exists := pattern[key]
 			if exists {
 				m.currentOverlay.SetNote(newKey, note)
@@ -2689,14 +2402,14 @@ func (m *model) RotateUp() {
 func (m *model) RotateDown() {
 	pattern := m.CombinedEditPattern(m.currentOverlay)
 	beat := m.gridCursor.Beat
-	for l := len(m.definition.lines); l >= 0; l-- {
+	for l := len(m.definition.Lines); l >= 0; l-- {
 		key := GK(uint8(l), beat)
 		_, exists := pattern[key]
 		if exists {
 			m.currentOverlay.RemoveNote(key)
 		}
 		index := l + 1
-		if int(index) < len(m.definition.lines) {
+		if int(index) < len(m.definition.Lines) {
 			newKey := GK(uint8(index), beat)
 			note, exists := pattern[key]
 			if exists {
@@ -2744,33 +2457,33 @@ func (m *model) MoveChordDown() {
 	}
 }
 
-func Mute(playState []linestate, line uint8) []linestate {
-	switch playState[line].groupPlayState {
-	case PlayStatePlay:
-		playState[line].groupPlayState = PlayStateMute
-	case PlayStateMute:
-		playState[line].groupPlayState = PlayStatePlay
-	case PlayStateSolo:
-		playState[line].groupPlayState = PlayStateMute
+func Mute(playState []playstate.LineState, line uint8) []playstate.LineState {
+	switch playState[line].GroupPlayState {
+	case playstate.PlayStatePlay:
+		playState[line].GroupPlayState = playstate.PlayStateMute
+	case playstate.PlayStateMute:
+		playState[line].GroupPlayState = playstate.PlayStatePlay
+	case playstate.PlayStateSolo:
+		playState[line].GroupPlayState = playstate.PlayStateMute
 	}
 	return playState
 }
 
-func Solo(playState []linestate, line uint8) []linestate {
-	switch playState[line].groupPlayState {
-	case PlayStatePlay:
-		playState[line].groupPlayState = PlayStateSolo
-	case PlayStateMute:
-		playState[line].groupPlayState = PlayStateSolo
-	case PlayStateSolo:
-		playState[line].groupPlayState = PlayStatePlay
+func Solo(playState []playstate.LineState, line uint8) []playstate.LineState {
+	switch playState[line].GroupPlayState {
+	case playstate.PlayStatePlay:
+		playState[line].GroupPlayState = playstate.PlayStateSolo
+	case playstate.PlayStateMute:
+		playState[line].GroupPlayState = playstate.PlayStateSolo
+	case playstate.PlayStateSolo:
+		playState[line].GroupPlayState = playstate.PlayStatePlay
 	}
 	return playState
 }
 
 func (m model) HasSolo() bool {
-	for _, state := range m.playState.lineStates {
-		if state.groupPlayState == PlayStateSolo {
+	for _, state := range m.playState.LineStates {
+		if state.GroupPlayState == playstate.PlayStateSolo {
 			return true
 		}
 	}
@@ -2851,8 +2564,8 @@ func (m *model) Paste() {
 }
 
 func (m model) CurrentBeatGridKeys(gridKeys *[]grid.GridKey) {
-	for _, linestate := range m.playState.lineStates {
-		if linestate.IsSolo() || (!linestate.IsMuted() && !m.playState.hasSolo) {
+	for _, linestate := range m.playState.LineStates {
+		if linestate.IsSolo() || (!linestate.IsMuted() && !m.playState.HasSolo) {
 			*gridKeys = append(*gridKeys, linestate.GridKey())
 		}
 	}
@@ -2872,7 +2585,7 @@ func (m model) CombinedEditPattern(overlay *overlays.Overlay) grid.Pattern {
 
 func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 	pattern := make(grid.Pattern)
-	gridKeys := make([]grid.GridKey, 0, len(m.playState.lineStates))
+	gridKeys := make([]grid.GridKey, 0, len(m.playState.LineStates))
 	m.CurrentBeatGridKeys(&gridKeys)
 	overlay.CurrentBeatOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles(), gridKeys)
 	return pattern
@@ -2880,7 +2593,7 @@ func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
 
 func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.OverlayPattern {
 	pattern := make(overlays.OverlayPattern)
-	if m.playState.playing && !m.playEditing {
+	if m.playState.Playing && !m.playEditing {
 		m.CurrentPart().Overlays.CombineOverlayPattern(&pattern, m.CurrentSongSection().PlayCycles())
 	} else {
 		overlay.CombineOverlayPattern(&pattern, overlay.Key.GetMinimumKeyCycle())
@@ -2889,7 +2602,7 @@ func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.Overla
 }
 
 func (m *model) Every(every uint8, everyFn func(gridKey)) {
-	if m.definition.templateSequencerType == operation.SeqModeChord {
+	if m.definition.TemplateSequencerType == operation.SeqModeChord {
 		bounds := m.PasteBounds()
 		combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 		keys := slices.Collect(maps.Keys(combinedOverlay))
@@ -3076,7 +2789,7 @@ func (m model) PatternActionLineBoundaries() (uint8, uint8) {
 func (m *model) ReloadFile() {
 	if m.filename != "" {
 		var err error
-		m.definition, err = LoadFile(m.filename, m.definition.template)
+		m.definition, err = LoadFile(m.filename, m.definition.Template)
 		if err != nil {
 			m.SetCurrentError(fault.Wrap(err, fmsg.WithDesc("could not reload file", fmt.Sprintf("Could not reload file %s", m.filename))))
 		}

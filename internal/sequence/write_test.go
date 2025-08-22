@@ -1,4 +1,4 @@
-package main
+package sequence
 
 import (
 	"os"
@@ -23,15 +23,15 @@ func TestWrite(t *testing.T) {
 
 	t.Run("Write empty parts", func(t *testing.T) {
 		// Create a model with empty parts
-		definition := Definition{
-			parts: &[]arrangement.Part{},
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{},
 		}
 
 		// Create test file path
 		filename := filepath.Join(tempDir, "empty_parts.txt")
 
 		// Call Write function
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -44,15 +44,15 @@ func TestWrite(t *testing.T) {
 
 	t.Run("Write nil parts", func(t *testing.T) {
 		// Create a model with nil parts
-		definition := Definition{
-			parts: nil,
+		sequence := Sequence{
+			Parts: nil,
 		}
 
 		// Create test file path
 		filename := filepath.Join(tempDir, "nil_parts.txt")
 
 		// Call Write function
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Check if file exists - it should be created but empty
@@ -67,8 +67,8 @@ func TestWrite(t *testing.T) {
 
 	t.Run("Write with one part and no overlays", func(t *testing.T) {
 		// Create a model with one part
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:     "TestPart",
 					Beats:    16,
@@ -81,7 +81,7 @@ func TestWrite(t *testing.T) {
 		filename := filepath.Join(tempDir, "one_part.txt")
 
 		// Call Write function
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -118,8 +118,8 @@ func TestWrite(t *testing.T) {
 		gridKey := grid.GridKey{Line: 1, Beat: 2}
 		overlay.SetNote(gridKey, note)
 
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:     "PartWithOverlay",
 					Beats:    8,
@@ -132,7 +132,7 @@ func TestWrite(t *testing.T) {
 		filename := filepath.Join(tempDir, "part_with_overlay.txt")
 
 		// Call Write function
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -187,8 +187,8 @@ func TestWrite(t *testing.T) {
 		overlay1.SetNote(gridKey1, note1)
 
 		// Create a model with multiple parts
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:     "Part1",
 					Beats:    8,
@@ -206,7 +206,7 @@ func TestWrite(t *testing.T) {
 		filename := filepath.Join(tempDir, "multiple_parts.txt")
 
 		// Call Write function
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -265,22 +265,22 @@ func TestWrite(t *testing.T) {
 			Iterations: 1,
 		}
 
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:     "TestPart",
 					Beats:    16,
 					Overlays: nil,
 				},
 			},
-			arrangement: root,
+			Arrangement: root,
 		}
 
 		// Create test file path
 		filename := filepath.Join(tempDir, "with_arrangement.txt")
 
 		// Call Write function
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -354,8 +354,8 @@ func TestWrite(t *testing.T) {
 			Iterations: 1,
 		}
 
-		definition := Definition{
-			parts: &[]arrangement.Part{
+		sequence := Sequence{
+			Parts: &[]arrangement.Part{
 				{
 					Name:  "Part1",
 					Beats: 16,
@@ -365,14 +365,14 @@ func TestWrite(t *testing.T) {
 					Beats: 8,
 				},
 			},
-			arrangement: root,
+			Arrangement: root,
 		}
 
 		// Create test file path
 		filename := filepath.Join(tempDir, "complex_arrangement.txt")
 
 		// Call Write function
-		err := Write(definition, filename)
+		err := Write(sequence, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -409,10 +409,10 @@ func TestWrite(t *testing.T) {
 		assert.Contains(t, contentStr, "KeepCycles: true")
 		assert.Contains(t, contentStr, "KeepCycles: false")
 
-		newDefinition, err := Read(filename)
+		newSequence, err := Read(filename)
 		if err == nil {
-			assert.Equal(t, 1, len(newDefinition.arrangement.Nodes))
-			currentNode := newDefinition.arrangement.Nodes[0]
+			assert.Equal(t, 1, len(newSequence.Arrangement.Nodes))
+			currentNode := newSequence.Arrangement.Nodes[0]
 			assert.Equal(t, 2, len(currentNode.Nodes))
 			currentNode = currentNode.Nodes[0]
 			assert.Equal(t, 2, len(currentNode.Nodes))
@@ -425,8 +425,8 @@ func TestWrite(t *testing.T) {
 // TestWriteFileError tests error handling when file creation fails
 func TestWriteFileError(t *testing.T) {
 	// Create a model
-	definition := Definition{
-		parts: &[]arrangement.Part{
+	sequence := Sequence{
+		Parts: &[]arrangement.Part{
 			{
 				Name:  "TestPart",
 				Beats: 4,
@@ -438,6 +438,6 @@ func TestWriteFileError(t *testing.T) {
 	filename := "/invalid/path/that/does/not/exist/file.txt"
 
 	// Call Write function and expect an error
-	err := Write(definition, filename)
+	err := Write(sequence, filename)
 	assert.Error(t, err, "Write should return an error for invalid file path")
 }

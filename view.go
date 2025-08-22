@@ -18,6 +18,8 @@ import (
 	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/overlays"
+	"github.com/chriserin/seq/internal/playstate"
+	"github.com/chriserin/seq/internal/sequence"
 	themes "github.com/chriserin/seq/internal/themes"
 	midi "gitlab.com/gomidi/midi/v2"
 )
@@ -49,11 +51,11 @@ func (m model) View() (output string) {
 
 	visualCombinedPattern := m.CombinedOverlayPattern(m.currentOverlay)
 
-	showLines := GetShowLines(len(m.definition.lines), visualCombinedPattern, m.CurrentPart().Beats)
+	showLines := GetShowLines(len(m.definition.Lines), visualCombinedPattern, m.CurrentPart().Beats)
 
 	if m.patternMode == operation.PatternAccent || m.IsAccentSelector() {
 		sideView = m.AccentKeyView()
-	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && m.CurrentPart().Overlays.IsFresh() && len(*m.definition.parts) == 1 && m.CurrentPartID() == 0) ||
+	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && m.CurrentPart().Overlays.IsFresh() && len(*m.definition.Parts) == 1 && m.CurrentPartID() == 0) ||
 		slices.Contains([]operation.Selection{operation.SelectSetupValue, operation.SelectSetupMessageType, operation.SelectSetupChannel}, m.selectionIndicator) {
 		// NOTE: We want to show the setupView on the very initial screen, before any sequencing has begun OR a setup value is selected
 		sideView = m.SetupView(showLines)
@@ -61,7 +63,7 @@ func (m model) View() (output string) {
 		sideView = m.OverlaysView()
 
 		var chordView string
-		if m.definition.templateSequencerType == operation.SeqModeChord {
+		if m.definition.TemplateSequencerType == operation.SeqModeChord {
 			currentChord := m.CurrentChord()
 			chordView = m.ChordView(currentChord.GridChord)
 		}
@@ -161,13 +163,13 @@ func (m model) BeatsEditView() string {
 
 func (m model) TempoEditView() string {
 	var tempo, division string
-	tempo = themes.NumberStyle.Render(strconv.Itoa(m.definition.tempo))
-	division = themes.NumberStyle.Render(strconv.Itoa(m.definition.subdivisions))
+	tempo = themes.NumberStyle.Render(strconv.Itoa(m.definition.Tempo))
+	division = themes.NumberStyle.Render(strconv.Itoa(m.definition.Subdivisions))
 	switch m.selectionIndicator {
 	case operation.SelectTempo:
-		tempo = themes.SelectedStyle.Render(strconv.Itoa(m.definition.tempo))
+		tempo = themes.SelectedStyle.Render(strconv.Itoa(m.definition.Tempo))
 	case operation.SelectTempoSubdivision:
-		division = themes.SelectedStyle.Render(strconv.Itoa(m.definition.subdivisions))
+		division = themes.SelectedStyle.Render(strconv.Itoa(m.definition.Subdivisions))
 	}
 	var buf strings.Builder
 	buf.WriteString(themes.AltArtStyle.Render(" Tempo "))
@@ -207,14 +209,14 @@ func (m model) IsRatchetSelector() bool {
 
 func (m model) AccentKeyView() string {
 	var buf strings.Builder
-	var accentEnd = m.definition.accents.End
-	var accentStart = m.definition.accents.Start
+	var accentEnd = m.definition.Accents.End
+	var accentStart = m.definition.Accents.Start
 
 	var accentTarget string
-	switch m.definition.accents.Target {
-	case AccentTargetNote:
+	switch m.definition.Accents.Target {
+	case sequence.AccentTargetNote:
 		accentTarget = "N"
-	case AccentTargetVelocity:
+	case sequence.AccentTargetVelocity:
 		accentTarget = "V"
 	}
 
@@ -246,7 +248,7 @@ func (m model) AccentKeyView() string {
 
 	style := lipgloss.NewStyle().Foreground(lipgloss.Color(themes.AccentColors[1]))
 	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(themes.AccentIcons[1])), accentStartString))
-	for i, accent := range m.definition.accents.Data[2 : len(m.definition.accents.Data)-1] {
+	for i, accent := range m.definition.Accents.Data[2 : len(m.definition.Accents.Data)-1] {
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(themes.AccentColors[i+2]))
 		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(themes.AccentIcons[i+2])), accent.Value))
 	}
@@ -261,7 +263,7 @@ func (m model) SetupView(showLines []uint8) string {
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
-	for i, line := range m.definition.lines {
+	for i, line := range m.definition.Lines {
 		if m.hideEmptyLines && !slices.Contains(showLines, uint8(i)) {
 			continue
 		}
@@ -300,7 +302,7 @@ func (m model) SetupView(showLines []uint8) string {
 				buf.WriteString(themes.NumberStyle.Render(strconv.Itoa(int(line.Note))))
 			}
 		}
-		buf.WriteString(fmt.Sprintf(" %s\n", LineValueName(line, m.definition.instrument)))
+		buf.WriteString(fmt.Sprintf(" %s\n", LineValueName(line, m.definition.Instrument)))
 	}
 	return buf.String()
 }
@@ -333,7 +335,7 @@ func (m model) ChordView(gridChord *overlays.GridChord) string {
 	chord := gridChord.Chord
 	pattern := make(grid.Pattern)
 	gridChord.ChordNotes(&pattern)
-	baseNote := m.definition.lines[0].Note
+	baseNote := m.definition.Lines[0].Note
 	buf.WriteString(NoteName(baseNote - gridChord.Root.Line))
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
@@ -365,11 +367,11 @@ func (m model) OverlaysView() string {
 	for currentOverlay := m.CurrentPart().Overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
 		var playing = ""
-		if m.playState.playing && playingOverlayKeys[0] == currentOverlay.Key {
+		if m.playState.Playing && playingOverlayKeys[0] == currentOverlay.Key {
 			playing = themes.OverlayCurrentlyPlayingSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""
-		} else if m.playState.playing && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
+		} else if m.playState.Playing && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
 			playing = themes.ActiveSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""
@@ -388,7 +390,7 @@ func (m model) OverlaysView() string {
 		overlayLine := fmt.Sprintf("%s%2s%2s", overlaykey.View(currentOverlay.Key), stackModifier, editing)
 
 		buf.WriteString(playingSpacer)
-		if m.playState.playing && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
+		if m.playState.Playing && slices.Contains(playingOverlayKeys, currentOverlay.Key) {
 			buf.WriteString(playingStyle.Render(overlayLine))
 		} else {
 			buf.WriteString(notPlayingStyle.Render(overlayLine))
@@ -444,9 +446,9 @@ func (m model) SeqView(showLines []uint8) string {
 		buf.WriteString(m.ConfirmReloadView())
 	} else if m.selectionIndicator == operation.SelectSpecificValue {
 		buf.WriteString(m.SpecificValueEditView(currentNote.Note))
-	} else if m.playState.playing {
+	} else if m.playState.Playing {
 		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
-	} else if len(*m.definition.parts) > 1 {
+	} else if len(*m.definition.Parts) > 1 {
 		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
 		buf.WriteString(themes.AppDescriptorStyle.Render(fmt.Sprintf("- %s", m.CurrentPart().GetName())))
 		buf.WriteString("\n")
@@ -462,7 +464,7 @@ func (m model) SeqView(showLines []uint8) string {
 	buf.WriteString(themes.SeqBorderStyle.Render(fmt.Sprintf(" ┌%s", topLine)))
 	buf.WriteString("\n")
 
-	for i := uint8(0); i < uint8(len(m.definition.lines)); i++ {
+	for i := uint8(0); i < uint8(len(m.definition.Lines)); i++ {
 		if m.hideEmptyLines && !slices.Contains(showLines, i) {
 			continue
 		}
@@ -495,7 +497,7 @@ func (m model) ChoosePartView() string {
 	if m.partSelectorIndex < 0 {
 		name = "New Part"
 	} else {
-		name = (*m.definition.parts)[m.partSelectorIndex].GetName()
+		name = (*m.definition.Parts)[m.partSelectorIndex].GetName()
 	}
 	buf.WriteString(themes.SelectedStyle.Render(name))
 	buf.WriteString("\n")
@@ -566,7 +568,7 @@ func (m model) ViewOverlay() string {
 
 func (m model) CurrentOverlayView() string {
 	var matchedKey overlayKey
-	if m.playState.playing {
+	if m.playState.Playing {
 		matchedKey = m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles()).Key
 	} else {
 		matchedKey = overlaykey.ROOT
@@ -610,19 +612,19 @@ func (m model) LineIndicator(lineNumber uint8) string {
 	if lineNumber == m.gridCursor.Line {
 		indicator = themes.LineCursorStyle.Render("┤")
 	}
-	if len(m.playState.lineStates) > int(lineNumber) && m.playState.lineStates[lineNumber].groupPlayState == PlayStateMute {
+	if len(m.playState.LineStates) > int(lineNumber) && m.playState.LineStates[lineNumber].GroupPlayState == playstate.PlayStateMute {
 		indicator = "M"
 	}
-	if len(m.playState.lineStates) > int(lineNumber) && m.playState.lineStates[lineNumber].groupPlayState == PlayStateSolo {
+	if len(m.playState.LineStates) > int(lineNumber) && m.playState.LineStates[lineNumber].GroupPlayState == playstate.PlayStateSolo {
 		indicator = "S"
 	}
 
 	var lineName string
-	if m.definition.lines[lineNumber].Name != "" {
-		lineName = themes.LineNumberStyle.Render(m.definition.lines[lineNumber].Name)
-	} else if m.definition.templateUIStyle == "blackwhite" {
-		notename := NoteName(m.definition.lines[lineNumber].Note)
-		if slices.Contains(blackNotes, m.definition.lines[lineNumber].Note%12) {
+	if m.definition.Lines[lineNumber].Name != "" {
+		lineName = themes.LineNumberStyle.Render(m.definition.Lines[lineNumber].Name)
+	} else if m.definition.TemplateUIStyle == "blackwhite" {
+		notename := NoteName(m.definition.Lines[lineNumber].Note)
+		if slices.Contains(blackNotes, m.definition.Lines[lineNumber].Note%12) {
 			lineName = themes.BlackKeyStyle.Render(notename[0:4])
 		} else {
 			lineName = themes.WhiteKeyStyle.Render(notename)
@@ -631,7 +633,7 @@ func (m model) LineIndicator(lineNumber uint8) string {
 		lineName = themes.LineNumberStyle.Render(fmt.Sprintf("%2d", lineNumber))
 	}
 
-	return fmt.Sprintf("%3s%s%s", ensureStringLengthWc(lineName, 3), KeyLineIndicator(m.definition.keyline, lineNumber), indicator)
+	return fmt.Sprintf("%3s%s%s", ensureStringLengthWc(lineName, 3), KeyLineIndicator(m.definition.Keyline, lineNumber), indicator)
 
 }
 
@@ -668,7 +670,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
 
 		var backgroundSeqColor lipgloss.Color
-		if m.playState.playing && m.playState.lineStates[lineNumber].currentBeat == i {
+		if m.playState.Playing && m.playState.LineStates[lineNumber].CurrentBeat == i {
 			backgroundSeqColor = themes.SeqCursorColor
 		} else if m.visualMode && m.InVisualSelection(currentGridKey) {
 			backgroundSeqColor = themes.SeqVisualColor
