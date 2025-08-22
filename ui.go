@@ -37,6 +37,14 @@ import (
 	"github.com/chriserin/seq/internal/timing"
 )
 
+var timingChannel chan timing.TimingMsg
+var updateChannel chan beats.ModelMsg
+
+func init() {
+	timingChannel = timing.GetTimingChannel()
+	updateChannel = beats.GetUpdateChannel()
+}
+
 func Key(help string, keyboardKey ...string) key.Binding {
 	return key.NewBinding(key.WithKeys(keyboardKey...), key.WithHelp(keyboardKey[0], help))
 }
@@ -81,8 +89,6 @@ type model struct {
 	undoStack             UndoStack
 	redoStack             UndoStack
 	yankBuffer            Buffer
-	toTimingChannel       chan timing.TimingMessage
-	updateChannel         chan beats.ModelMsg
 	lockReceiverChannel   chan bool
 	unlockReceiverChannel chan bool
 	errChan               chan error
@@ -398,7 +404,7 @@ type viewPanicMsg struct {
 
 func (m model) SyncTempo() {
 	go func() {
-		m.toTimingChannel <- timing.TempoMsg{
+		timingChannel <- timing.TempoMsg{
 			Tempo:        m.definition.Tempo,
 			Subdivisions: m.definition.Subdivisions,
 		}
@@ -781,7 +787,6 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 
 	definition, err := LoadFile(filename, template)
 
-	timingChannel := make(chan timing.TimingMessage)
 	lockReceiverChannel := make(chan bool)
 	unlockReceiverChannel := make(chan bool)
 	errorChannel := make(chan error)
@@ -800,7 +805,6 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 		textInput:             InitTextInput(),
 		partSelectorIndex:     -1,
 		midiLoopMode:          midiLoopMode,
-		toTimingChannel:       timingChannel,
 		lockReceiverChannel:   lockReceiverChannel,
 		unlockReceiverChannel: unlockReceiverChannel,
 		errChan:               errorChannel,
@@ -882,17 +886,14 @@ func (m *model) LogFromBeatTime() {
 func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode timing.MidiLoopMode, theme string) *tea.Program {
 	config.Init()
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
-	updateChannel := make(chan beats.ModelMsg)
-	model.updateChannel = updateChannel
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
-	midiLoopChannel := make(chan beats.BeatMsg)
-	SetupTimingLoop(model, midiLoopChannel, program.Send)
-	beats.Loop(updateChannel, midiLoopChannel, program.Send)
+	SetupTimingLoop(model, program.Send)
+	beats.Loop(program.Send)
 	return program
 }
 
-func SetupTimingLoop(model model, midiLoopChannel chan beats.BeatMsg, sendFn func(tea.Msg)) {
-	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.toTimingChannel, midiLoopChannel, sendFn)
+func SetupTimingLoop(model model, sendFn func(tea.Msg)) {
+	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, sendFn)
 	if err != nil {
 		go func() {
 			sendFn(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
@@ -1490,12 +1491,13 @@ func (m *model) SyncBeatLoop() {
 		return
 	}
 	go func() {
-		m.updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiSendFn: sendFn}
+		updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiSendFn: sendFn}
 	}()
 }
 
 func (m model) Quit() (tea.Model, tea.Cmd) {
-	m.toTimingChannel <- timing.QuitMsg{}
+
+	timingChannel <- timing.QuitMsg{}
 	err := m.logFile.Close()
 	if err != nil {
 		// NOTE: no good way to display this error when quitting, just panic
@@ -1662,7 +1664,6 @@ func (m model) NewSequence() model {
 	newModel.midiLoopMode = m.midiLoopMode
 	newModel.lockReceiverChannel = m.lockReceiverChannel
 	newModel.unlockReceiverChannel = m.unlockReceiverChannel
-	newModel.toTimingChannel = m.toTimingChannel
 	return newModel
 }
 
@@ -1740,9 +1741,9 @@ func (m *model) Start(delay time.Duration) {
 		}
 		time.AfterFunc(delay, func() {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
-			m.updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiSendFn: sendFn}
+			updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiSendFn: sendFn}
 			if m.playState.PlayMode != playstate.PlayReceiver {
-				m.toTimingChannel <- timing.StartMsg{Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions}
+				timingChannel <- timing.StartMsg{Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions}
 			}
 		})
 	}
@@ -1796,7 +1797,7 @@ func (m *model) SafeStop() {
 	m.playState.Playing = false
 	if m.playState.PlayMode == playstate.PlayStandard {
 		go func() {
-			m.toTimingChannel <- timing.StopMsg{}
+			timingChannel <- timing.StopMsg{}
 			if m.midiLoopMode == timing.MlmReceiver {
 				// NOTE: Unlock to allow transmitter messages
 				m.unlockReceiverChannel <- true

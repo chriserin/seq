@@ -33,7 +33,23 @@ type ModelPlayedMsg struct {
 	Cursor      arrangement.ArrCursor
 }
 
-func Loop(updateChannel chan ModelMsg, midiLoopChannel chan BeatMsg, sendFn func(tea.Msg)) {
+var beatChannel chan BeatMsg
+var updateChannel chan ModelMsg
+
+func init() {
+	beatChannel = make(chan BeatMsg)
+	updateChannel = make(chan ModelMsg)
+}
+
+func GetBeatChannel() chan BeatMsg {
+	return beatChannel
+}
+
+func GetUpdateChannel() chan ModelMsg {
+	return updateChannel
+}
+
+func Loop(sendFn func(tea.Msg)) {
 	go func() {
 		var playState playstate.PlayState
 		var definition sequence.Sequence
@@ -56,7 +72,7 @@ func Loop(updateChannel chan ModelMsg, midiLoopChannel chan BeatMsg, sendFn func
 					definition = modelMsg.Definition
 					cursor = modelMsg.Cursor
 					midiSendFn = modelMsg.MidiSendFn
-				case BeatMsg := <-midiLoopChannel:
+				case BeatMsg := <-beatChannel:
 					Beat(BeatMsg, playState, definition, cursor, midiSendFn, sendFn, errChan)
 				case err := <-errChan:
 					fmt.Println(err)

@@ -9,7 +9,6 @@ import (
 	"github.com/chriserin/seq/internal/overlays"
 	"github.com/chriserin/seq/internal/playstate"
 	"github.com/chriserin/seq/internal/sequence"
-	"github.com/chriserin/seq/internal/timing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,12 +31,11 @@ func setupTestModel() *model {
 	}
 
 	m := &model{
-		definition:      def,
-		toTimingChannel: make(chan timing.TimingMessage),
-		playState:       initPlayState(),
-		undoStack:       EmptyStack,
-		redoStack:       EmptyStack,
-		arrangement:     arrangement.InitModel(def.Arrangement, def.Parts),
+		definition:  def,
+		playState:   initPlayState(),
+		undoStack:   EmptyStack,
+		redoStack:   EmptyStack,
+		arrangement: arrangement.InitModel(def.Arrangement, def.Parts),
 	}
 
 	m.currentOverlay = parts[0].Overlays

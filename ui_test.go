@@ -9,7 +9,6 @@ import (
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/playstate"
 	"github.com/chriserin/seq/internal/sequence"
-	"github.com/chriserin/seq/internal/timing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,9 +26,8 @@ func TestUpdateArrangementFocus(t *testing.T) {
 		}
 
 		m := model{
-			arrangement:     arrangement.InitModel(def.Arrangement, def.Parts),
-			definition:      def,
-			toTimingChannel: make(chan timing.TimingMessage),
+			arrangement: arrangement.InitModel(def.Arrangement, def.Parts),
+			definition:  def,
 			playState: playstate.PlayState{
 				LineStates: playstate.InitLineStates(1, []playstate.LineState{}, 0),
 			},
