@@ -16,7 +16,7 @@ import (
 
 // Write saves all attributes of the model's definition struct to a file
 // using a custom format that is easy to diff with tools like git diff
-func Write(m *model, filename string) error {
+func Write(definition Definition, filename string) error {
 
 	log.SetLevel(log.FatalLevel)
 
@@ -27,34 +27,34 @@ func Write(m *model, filename string) error {
 	}
 	defer f.Close()
 
-	if m.definition.parts == nil || len(*m.definition.parts) == 0 {
+	if definition.parts == nil || len(*definition.parts) == 0 {
 		log.Warn("No parts to write", "filename", filename)
 		return nil
 	}
 
 	// Write global sequencer settings
-	if err := writeSettings(f, &m.definition); err != nil {
+	if err := writeSettings(f, &definition); err != nil {
 		return err
 	}
 
 	// Write line definitions
-	if err := writeLineDefinitions(f, m.definition.lines); err != nil {
+	if err := writeLineDefinitions(f, definition.lines); err != nil {
 		return err
 	}
 
 	// Write accents
-	if err := writeAccents(f, m.definition.accents); err != nil {
+	if err := writeAccents(f, definition.accents); err != nil {
 		return err
 	}
 
 	// Write parts
-	if err := writeParts(f, *m.definition.parts); err != nil {
+	if err := writeParts(f, *definition.parts); err != nil {
 		return err
 	}
 
 	// Write arrangement
-	if m.definition.arrangement != nil {
-		if err := writeArrangement(f, m.definition.arrangement); err != nil {
+	if definition.arrangement != nil {
+		if err := writeArrangement(f, definition.arrangement); err != nil {
 			return err
 		}
 	}

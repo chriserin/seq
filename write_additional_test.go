@@ -38,30 +38,28 @@ func TestWriteAdditionalProperties(t *testing.T) {
 		}
 
 		// Create a model with all definition fields populated
-		m := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:  "TestPart",
-						Beats: 16,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:  "TestPart",
+					Beats: 16,
 				},
-				lines:           lines,
-				tempo:           120,
-				subdivisions:    4,
-				keyline:         2,
-				accents:         accents,
-				instrument:      "piano",
-				template:        "default",
-				templateUIStyle: "dark",
 			},
+			lines:           lines,
+			tempo:           120,
+			subdivisions:    4,
+			keyline:         2,
+			accents:         accents,
+			instrument:      "piano",
+			template:        "default",
+			templateUIStyle: "dark",
 		}
 
 		// Create test file path
 		filename := filepath.Join(tempDir, "full_definition.txt")
 
 		// Call Write function
-		err := Write(m, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read file content

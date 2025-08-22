@@ -22,27 +22,24 @@ func TestReadWrite(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	t.Run("Simple model with basic settings", func(t *testing.T) {
-		// Create a model with basic settings
-		originalModel := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:  "TestPart",
-						Beats: 16,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:  "TestPart",
+					Beats: 16,
 				},
-				tempo:           140,
-				subdivisions:    4,
-				keyline:         2,
-				instrument:      "synth",
-				template:        "custom",
-				templateUIStyle: "light",
 			},
+			tempo:           140,
+			subdivisions:    4,
+			keyline:         2,
+			instrument:      "synth",
+			template:        "custom",
+			templateUIStyle: "light",
 		}
 
 		// Write it to a file
 		filename := filepath.Join(tempDir, "simple_model.txt")
-		err := Write(originalModel, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read it back
@@ -67,33 +64,31 @@ func TestReadWrite(t *testing.T) {
 
 	t.Run("Model with lines and accents", func(t *testing.T) {
 		// Create a model with lines and accents
-		originalModel := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:  "TestPart",
-						Beats: 8,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:  "TestPart",
+					Beats: 8,
 				},
-				lines: []grid.LineDefinition{
-					{Channel: 1, Note: 60, MsgType: 0},
-					{Channel: 2, Note: 67, MsgType: 1},
-				},
-				accents: patternAccents{
-					End:    5,
-					Start:  50,
-					Target: AccentTargetVelocity,
-					Data: []config.Accent{
-						{Value: 100},
-						{Value: 80},
-					},
+			},
+			lines: []grid.LineDefinition{
+				{Channel: 1, Note: 60, MsgType: 0},
+				{Channel: 2, Note: 67, MsgType: 1},
+			},
+			accents: patternAccents{
+				End:    5,
+				Start:  50,
+				Target: AccentTargetVelocity,
+				Data: []config.Accent{
+					{Value: 100},
+					{Value: 80},
 				},
 			},
 		}
 
 		// Write it to a file
 		filename := filepath.Join(tempDir, "model_with_lines.txt")
-		err := Write(originalModel, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read the file content to verify it's correctly written
@@ -128,24 +123,22 @@ func TestReadWrite(t *testing.T) {
 
 	t.Run("Model with multiple parts", func(t *testing.T) {
 		// Create a model with lines and accents
-		originalModel := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:  "TestPart",
-						Beats: 8,
-					},
-					{
-						Name:  "TestPart2",
-						Beats: 8,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:  "TestPart",
+					Beats: 8,
+				},
+				{
+					Name:  "TestPart2",
+					Beats: 8,
 				},
 			},
 		}
 
 		// Write it to a file
 		filename := filepath.Join(tempDir, "model_with_parts.txt")
-		err := Write(originalModel, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read it back
@@ -186,21 +179,19 @@ func TestReadWrite(t *testing.T) {
 		overlay.SetNote(gridKey2, note2)
 
 		// Create a model with overlays
-		originalModel := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:     "PartWithOverlay",
-						Beats:    8,
-						Overlays: overlay,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:     "PartWithOverlay",
+					Beats:    8,
+					Overlays: overlay,
 				},
 			},
 		}
 
 		// Write it to a file
 		filename := filepath.Join(tempDir, "model_with_overlays.txt")
-		err := Write(originalModel, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read it back
@@ -242,21 +233,19 @@ func TestReadWrite(t *testing.T) {
 
 	t.Run("Basic arrangement", func(t *testing.T) {
 		// Create a simple model with basic settings
-		originalModel := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:  "TestPart",
-						Beats: 16,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:  "TestPart",
+					Beats: 16,
 				},
-				tempo:           140,
-				subdivisions:    4,
-				keyline:         2,
-				instrument:      "synth",
-				template:        "custom",
-				templateUIStyle: "light",
 			},
+			tempo:           140,
+			subdivisions:    4,
+			keyline:         2,
+			instrument:      "synth",
+			template:        "custom",
+			templateUIStyle: "light",
 		}
 
 		// Create arrangement data
@@ -265,14 +254,14 @@ func TestReadWrite(t *testing.T) {
 		section.StartBeat = 1
 
 		// Modify original model to add arrangement
-		originalModel.definition.arrangement = &arrangement.Arrangement{
+		definition.arrangement = &arrangement.Arrangement{
 			Iterations: 1,
 			Section:    section,
 		}
 
 		// Write it to a file
 		filename := filepath.Join(tempDir, "basic_arrangement.txt")
-		err := Write(originalModel, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read it back

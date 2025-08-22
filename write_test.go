@@ -23,17 +23,15 @@ func TestWrite(t *testing.T) {
 
 	t.Run("Write empty parts", func(t *testing.T) {
 		// Create a model with empty parts
-		m := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{},
-			},
+		definition := Definition{
+			parts: &[]arrangement.Part{},
 		}
 
 		// Create test file path
 		filename := filepath.Join(tempDir, "empty_parts.txt")
 
 		// Call Write function
-		err := Write(m, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -46,17 +44,15 @@ func TestWrite(t *testing.T) {
 
 	t.Run("Write nil parts", func(t *testing.T) {
 		// Create a model with nil parts
-		m := &model{
-			definition: Definition{
-				parts: nil,
-			},
+		definition := Definition{
+			parts: nil,
 		}
 
 		// Create test file path
 		filename := filepath.Join(tempDir, "nil_parts.txt")
 
 		// Call Write function
-		err := Write(m, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Check if file exists - it should be created but empty
@@ -71,14 +67,12 @@ func TestWrite(t *testing.T) {
 
 	t.Run("Write with one part and no overlays", func(t *testing.T) {
 		// Create a model with one part
-		m := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:     "TestPart",
-						Beats:    16,
-						Overlays: nil,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:     "TestPart",
+					Beats:    16,
+					Overlays: nil,
 				},
 			},
 		}
@@ -87,7 +81,7 @@ func TestWrite(t *testing.T) {
 		filename := filepath.Join(tempDir, "one_part.txt")
 
 		// Call Write function
-		err := Write(m, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -124,15 +118,12 @@ func TestWrite(t *testing.T) {
 		gridKey := grid.GridKey{Line: 1, Beat: 2}
 		overlay.SetNote(gridKey, note)
 
-		// Create a model with part containing overlay
-		m := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:     "PartWithOverlay",
-						Beats:    8,
-						Overlays: overlay,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:     "PartWithOverlay",
+					Beats:    8,
+					Overlays: overlay,
 				},
 			},
 		}
@@ -141,7 +132,7 @@ func TestWrite(t *testing.T) {
 		filename := filepath.Join(tempDir, "part_with_overlay.txt")
 
 		// Call Write function
-		err := Write(m, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -196,19 +187,17 @@ func TestWrite(t *testing.T) {
 		overlay1.SetNote(gridKey1, note1)
 
 		// Create a model with multiple parts
-		m := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:     "Part1",
-						Beats:    8,
-						Overlays: overlay1,
-					},
-					{
-						Name:     "Part2",
-						Beats:    4,
-						Overlays: nil,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:     "Part1",
+					Beats:    8,
+					Overlays: overlay1,
+				},
+				{
+					Name:     "Part2",
+					Beats:    4,
+					Overlays: nil,
 				},
 			},
 		}
@@ -217,7 +206,7 @@ func TestWrite(t *testing.T) {
 		filename := filepath.Join(tempDir, "multiple_parts.txt")
 
 		// Call Write function
-		err := Write(m, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -276,25 +265,22 @@ func TestWrite(t *testing.T) {
 			Iterations: 1,
 		}
 
-		// Create a model with parts and arrangement
-		m := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:     "TestPart",
-						Beats:    16,
-						Overlays: nil,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:     "TestPart",
+					Beats:    16,
+					Overlays: nil,
 				},
-				arrangement: root,
 			},
+			arrangement: root,
 		}
 
 		// Create test file path
 		filename := filepath.Join(tempDir, "with_arrangement.txt")
 
 		// Call Write function
-		err := Write(m, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -368,28 +354,25 @@ func TestWrite(t *testing.T) {
 			Iterations: 1,
 		}
 
-		// Create a model with parts and arrangement
-		m := &model{
-			definition: Definition{
-				parts: &[]arrangement.Part{
-					{
-						Name:  "Part1",
-						Beats: 16,
-					},
-					{
-						Name:  "Part2",
-						Beats: 8,
-					},
+		definition := Definition{
+			parts: &[]arrangement.Part{
+				{
+					Name:  "Part1",
+					Beats: 16,
 				},
-				arrangement: root,
+				{
+					Name:  "Part2",
+					Beats: 8,
+				},
 			},
+			arrangement: root,
 		}
 
 		// Create test file path
 		filename := filepath.Join(tempDir, "complex_arrangement.txt")
 
 		// Call Write function
-		err := Write(m, filename)
+		err := Write(definition, filename)
 		assert.NoError(t, err)
 
 		// Read file content
@@ -426,10 +409,10 @@ func TestWrite(t *testing.T) {
 		assert.Contains(t, contentStr, "KeepCycles: true")
 		assert.Contains(t, contentStr, "KeepCycles: false")
 
-		definition, err := Read(filename)
+		newDefinition, err := Read(filename)
 		if err == nil {
-			assert.Equal(t, 1, len(definition.arrangement.Nodes))
-			currentNode := definition.arrangement.Nodes[0]
+			assert.Equal(t, 1, len(newDefinition.arrangement.Nodes))
+			currentNode := newDefinition.arrangement.Nodes[0]
 			assert.Equal(t, 2, len(currentNode.Nodes))
 			currentNode = currentNode.Nodes[0]
 			assert.Equal(t, 2, len(currentNode.Nodes))
@@ -442,13 +425,11 @@ func TestWrite(t *testing.T) {
 // TestWriteFileError tests error handling when file creation fails
 func TestWriteFileError(t *testing.T) {
 	// Create a model
-	m := &model{
-		definition: Definition{
-			parts: &[]arrangement.Part{
-				{
-					Name:  "TestPart",
-					Beats: 4,
-				},
+	definition := Definition{
+		parts: &[]arrangement.Part{
+			{
+				Name:  "TestPart",
+				Beats: 4,
 			},
 		},
 	}
@@ -457,6 +438,6 @@ func TestWriteFileError(t *testing.T) {
 	filename := "/invalid/path/that/does/not/exist/file.txt"
 
 	// Call Write function and expect an error
-	err := Write(m, filename)
+	err := Write(definition, filename)
 	assert.Error(t, err, "Write should return an error for invalid file path")
 }

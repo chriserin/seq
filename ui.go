@@ -2503,7 +2503,7 @@ func (m model) UndoableOverlay(overlayA, overlayB *overlays.Overlay) UndoOverlay
 }
 
 func (m *model) Save() {
-	err := Write(m, m.filename)
+	err := Write(m.definition, m.filename)
 	if err != nil {
 		m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot write file")))
 	}
