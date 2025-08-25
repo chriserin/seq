@@ -20,10 +20,10 @@ import (
 )
 
 type ModelMsg struct {
-	PlayState  playstate.PlayState
-	Definition sequence.Sequence
-	Cursor     arrangement.ArrCursor
-	MidiSendFn seqmidi.SendFunc
+	PlayState      playstate.PlayState
+	Definition     sequence.Sequence
+	Cursor         arrangement.ArrCursor
+	MidiConnection seqmidi.MidiConnection
 }
 
 type ModelPlayedMsg struct {
@@ -54,8 +54,8 @@ func Loop(sendFn func(tea.Msg)) {
 		var playState playstate.PlayState
 		var definition sequence.Sequence
 		var cursor arrangement.ArrCursor
-		var midiSendFn seqmidi.SendFunc
-		var errChan chan error
+		var midiConn seqmidi.MidiConnection
+		var errChan = make(chan error)
 		for {
 			if !playState.Playing {
 				// NOTE: Wait for a model update that puts us into a playing state.
@@ -63,7 +63,7 @@ func Loop(sendFn func(tea.Msg)) {
 				playState = modelMsg.PlayState
 				definition = modelMsg.Definition
 				cursor = modelMsg.Cursor
-				midiSendFn = modelMsg.MidiSendFn
+				midiConn = modelMsg.MidiConnection
 			} else {
 				// NOTE: In a plyaing state, respond to beat messages
 				select {
@@ -71,9 +71,14 @@ func Loop(sendFn func(tea.Msg)) {
 					playState = modelMsg.PlayState
 					definition = modelMsg.Definition
 					cursor = modelMsg.Cursor
-					midiSendFn = modelMsg.MidiSendFn
+					midiConn = modelMsg.MidiConnection
 				case BeatMsg := <-beatChannel:
-					Beat(BeatMsg, playState, definition, cursor, midiSendFn, sendFn, errChan)
+					midiSendFn, err := midiConn.AcquireSendFunc()
+					if err != nil {
+						errChan <- err
+					} else {
+						Beat(BeatMsg, playState, definition, cursor, midiSendFn, sendFn, errChan)
+					}
 				case err := <-errChan:
 					fmt.Println(err)
 				}
@@ -130,7 +135,7 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 		}
 
 		if err != nil {
-			fault.Wrap(err, fmsg.With("error when playing beat"))
+			errChan <- fault.Wrap(err, fmsg.With("error when playing beat"))
 		}
 		sendFn(ModelPlayedMsg{PlayState: playState, Definition: definition, Cursor: cursor})
 	}

@@ -1485,13 +1485,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 }
 
 func (m *model) SyncBeatLoop() {
-	sendFn, err := m.midiConnection.AcquireSendFunc()
-	if err != nil {
-		m.SetCurrentError(err)
-		return
-	}
 	go func() {
-		updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiSendFn: sendFn}
+		updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiConnection: m.midiConnection}
 	}()
 }
 
@@ -1735,13 +1730,9 @@ func (m *model) Start(delay time.Duration) {
 	}
 	m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, uint8(section.StartBeat))
 	if m.playState.Playing {
-		sendFn, err := m.midiConnection.AcquireSendFunc()
-		if err != nil {
-			m.SetCurrentError(err)
-		}
 		time.AfterFunc(delay, func() {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
-			updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiSendFn: sendFn}
+			updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiConnection: m.midiConnection}
 			if m.playState.PlayMode != playstate.PlayReceiver {
 				timingChannel <- timing.StartMsg{Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions}
 			}
