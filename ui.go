@@ -707,53 +707,6 @@ func (m *model) ToggleRatchetMute() {
 	m.currentOverlay.SetNote(m.gridCursor, currentNote)
 }
 
-func InitDefinition(template string, instrument string) sequence.Sequence {
-	gridTemplate, exists := config.GetTemplate(template)
-	if !exists {
-		gridTemplate = config.GetDefaultTemplate()
-	}
-	config.LongGates = config.GetGateLengths(32)
-	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
-	copy(newLines, gridTemplate.Lines)
-
-	parts := InitParts()
-	return sequence.Sequence{
-		Parts:                 &parts,
-		Arrangement:           InitArrangement(parts),
-		Tempo:                 120,
-		Keyline:               0,
-		Subdivisions:          2,
-		Lines:                 newLines,
-		Accents:               sequence.PatternAccents{End: 15, Data: config.Accents, Start: 120, Target: sequence.AccentTargetVelocity},
-		Template:              gridTemplate.Name,
-		Instrument:            instrument,
-		TemplateUIStyle:       gridTemplate.UIStyle,
-		TemplateSequencerType: gridTemplate.SequencerType,
-	}
-}
-
-func InitArrangement(parts []arrangement.Part) *arrangement.Arrangement {
-	root := arrangement.InitRoot(parts)
-
-	for i := range parts {
-		section := arrangement.InitSongSection(i)
-
-		node := &arrangement.Arrangement{
-			Section:    section,
-			Iterations: 1,
-		}
-
-		root.Nodes = append(root.Nodes, node)
-	}
-
-	return root
-}
-
-func InitParts() []arrangement.Part {
-	firstPart := arrangement.InitPart("Part 1")
-	return []arrangement.Part{firstPart}
-}
-
 func LoadFile(filename string, template string) (sequence.Sequence, error) {
 	var definition sequence.Sequence
 	var fileErr error
@@ -771,7 +724,7 @@ func LoadFile(filename string, template string) (sequence.Sequence, error) {
 	}
 
 	if filename == "" || fileErr != nil {
-		newDefinition := InitDefinition(template, instrument)
+		newDefinition := sequence.InitSequence(template, instrument)
 		definition = newDefinition
 	}
 
@@ -1486,7 +1439,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 
 func (m *model) SyncBeatLoop() {
 	go func() {
-		updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiConnection: m.midiConnection}
+		updateChannel <- beats.ModelMsg{Sequence: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiConnection: m.midiConnection}
 	}()
 }
 
@@ -1732,7 +1685,7 @@ func (m *model) Start(delay time.Duration) {
 	if m.playState.Playing {
 		time.AfterFunc(delay, func() {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
-			updateChannel <- beats.ModelMsg{Definition: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiConnection: m.midiConnection}
+			updateChannel <- beats.ModelMsg{Sequence: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiConnection: m.midiConnection}
 			if m.playState.PlayMode != playstate.PlayReceiver {
 				timingChannel <- timing.StartMsg{Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions}
 			}

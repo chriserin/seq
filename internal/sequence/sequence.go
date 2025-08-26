@@ -68,3 +68,50 @@ func (pa *PatternAccents) Equal(other *PatternAccents) bool {
 	}
 	return true
 }
+
+func InitParts() []arrangement.Part {
+	firstPart := arrangement.InitPart("Part 1")
+	return []arrangement.Part{firstPart}
+}
+
+func InitSequence(template string, instrument string) Sequence {
+	gridTemplate, exists := config.GetTemplate(template)
+	if !exists {
+		gridTemplate = config.GetDefaultTemplate()
+	}
+	config.LongGates = config.GetGateLengths(32)
+	newLines := make([]grid.LineDefinition, len(gridTemplate.Lines))
+	copy(newLines, gridTemplate.Lines)
+
+	parts := InitParts()
+	return Sequence{
+		Parts:                 &parts,
+		Arrangement:           InitArrangement(parts),
+		Tempo:                 120,
+		Keyline:               0,
+		Subdivisions:          2,
+		Lines:                 newLines,
+		Accents:               PatternAccents{End: 15, Data: config.Accents, Start: 120, Target: AccentTargetVelocity},
+		Template:              gridTemplate.Name,
+		Instrument:            instrument,
+		TemplateUIStyle:       gridTemplate.UIStyle,
+		TemplateSequencerType: gridTemplate.SequencerType,
+	}
+}
+
+func InitArrangement(parts []arrangement.Part) *arrangement.Arrangement {
+	root := arrangement.InitRoot(parts)
+
+	for i := range parts {
+		section := arrangement.InitSongSection(i)
+
+		node := &arrangement.Arrangement{
+			Section:    section,
+			Iterations: 1,
+		}
+
+		root.Nodes = append(root.Nodes, node)
+	}
+
+	return root
+}

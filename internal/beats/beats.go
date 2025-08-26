@@ -21,7 +21,7 @@ import (
 
 type ModelMsg struct {
 	PlayState      playstate.PlayState
-	Definition     sequence.Sequence
+	Sequence       sequence.Sequence
 	Cursor         arrangement.ArrCursor
 	MidiConnection seqmidi.MidiConnection
 }
@@ -35,10 +35,12 @@ type ModelPlayedMsg struct {
 
 var beatChannel chan BeatMsg
 var updateChannel chan ModelMsg
+var doneChannel chan struct{}
 
 func init() {
 	beatChannel = make(chan BeatMsg)
 	updateChannel = make(chan ModelMsg)
+	doneChannel = make(chan struct{})
 }
 
 func GetBeatChannel() chan BeatMsg {
@@ -47,6 +49,10 @@ func GetBeatChannel() chan BeatMsg {
 
 func GetUpdateChannel() chan ModelMsg {
 	return updateChannel
+}
+
+func GetDoneChannel() chan struct{} {
+	return doneChannel
 }
 
 func Loop(sendFn func(tea.Msg)) {
@@ -59,17 +65,21 @@ func Loop(sendFn func(tea.Msg)) {
 		for {
 			if !playState.Playing {
 				// NOTE: Wait for a model update that puts us into a playing state.
-				modelMsg := <-updateChannel
-				playState = modelMsg.PlayState
-				definition = modelMsg.Definition
-				cursor = modelMsg.Cursor
-				midiConn = modelMsg.MidiConnection
+				select {
+				case modelMsg := <-updateChannel:
+					playState = modelMsg.PlayState
+					definition = modelMsg.Sequence
+					cursor = modelMsg.Cursor
+					midiConn = modelMsg.MidiConnection
+				case <-doneChannel:
+					return
+				}
 			} else {
 				// NOTE: In a plyaing state, respond to beat messages
 				select {
 				case modelMsg := <-updateChannel:
 					playState = modelMsg.PlayState
-					definition = modelMsg.Definition
+					definition = modelMsg.Sequence
 					cursor = modelMsg.Cursor
 					midiConn = modelMsg.MidiConnection
 				case BeatMsg := <-beatChannel:
@@ -79,6 +89,8 @@ func Loop(sendFn func(tea.Msg)) {
 					} else {
 						Beat(BeatMsg, playState, definition, cursor, midiSendFn, sendFn, errChan)
 					}
+				case <-doneChannel:
+					return
 				case err := <-errChan:
 					fmt.Println(err)
 				}

@@ -17,8 +17,8 @@ var OK = overlaykey.InitOverlayKey
 func TestUpdateArrangementFocus(t *testing.T) {
 	t.Run("switch to arrangement view and create part", func(t *testing.T) {
 		// Setup a model with a basic arrangement
-		var parts = InitParts()
-		var arr = InitArrangement(parts)
+		var parts = sequence.InitParts()
+		var arr = sequence.InitArrangement(parts)
 		def := sequence.Sequence{
 			Arrangement: arr,
 			Parts:       &parts,

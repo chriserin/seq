@@ -19,8 +19,8 @@ func initPlayState() playstate.PlayState {
 }
 
 func setupTestModel() *model {
-	var parts = InitParts()
-	var arr = InitArrangement(parts)
+	var parts = sequence.InitParts()
+	var arr = sequence.InitArrangement(parts)
 	def := sequence.Sequence{
 		Arrangement:  arr,
 		Parts:        &parts,
