@@ -20,6 +20,7 @@ type MidiConnection struct {
 	outportName string
 	outport     drivers.Out
 	connected   bool
+	Test        bool
 }
 
 type SendFunc func(msg midi.Message) error
@@ -116,6 +117,12 @@ var playMutex = sync.Mutex{}
 var sendFn SendFunc
 
 func (mc MidiConnection) AcquireSendFunc() (SendFunc, error) {
+	if mc.Test {
+		return func(msg midi.Message) error {
+			return nil
+		}, nil
+	}
+
 	if sendFn != nil {
 		return sendFn, nil
 	}

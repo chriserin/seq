@@ -7,6 +7,7 @@ import (
 	"github.com/chriserin/seq/internal/arrangement"
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/playstate"
+	"github.com/chriserin/seq/internal/seqmidi"
 	"github.com/chriserin/seq/internal/sequence"
 	"github.com/stretchr/testify/assert"
 )
@@ -196,9 +197,10 @@ func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit i
 	Loop(sendFn)
 
 	updateChannel <- ModelMsg{
-		PlayState: playstate.PlayState{Playing: true, LineStates: playstate.InitLineStates(1, []playstate.LineState{}, 0)},
-		Sequence:  sequence,
-		Cursor:    cursor,
+		PlayState:      playstate.PlayState{Playing: true, LineStates: playstate.InitLineStates(1, []playstate.LineState{}, 0)},
+		Sequence:       sequence,
+		Cursor:         cursor,
+		MidiConnection: seqmidi.MidiConnection{Test: true},
 	}
 
 	for update.PlayState.Playing && beatsPlayedCounter < limit {
@@ -209,7 +211,7 @@ func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit i
 		} else {
 			beatsPlayedCounter++
 		}
-		updateChannel <- ModelMsg{PlayState: update.PlayState, Sequence: update.Definition, Cursor: update.Cursor}
+		updateChannel <- ModelMsg{PlayState: update.PlayState, Sequence: update.Definition, Cursor: update.Cursor, MidiConnection: seqmidi.MidiConnection{Test: true}}
 	}
 	doneChannel := GetDoneChannel()
 	doneChannel <- struct{}{}
