@@ -112,7 +112,7 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 			advanceCurrentBeat(*currentSection, playingOverlay, playState.LineStates, currentPart.Beats)
 			advanceKeyCycle(definition.Keyline, playState.LineStates, playState.LoopMode, currentSection)
 			if currentSection.IsDone() && playState.LoopMode != playstate.LoopOverlay {
-				if PlayMove(&cursor) {
+				if PlayMove(&cursor) || playState.PlayMode == playstate.PlayReceiver {
 					cursor[len(cursor)-1].Section.DuringPlayReset()
 					currentSection = &cursor[len(cursor)-1].Section
 					playState.LineStates = playstate.InitLineStates(len(definition.Lines), playState.LineStates, uint8(cursor[len(cursor)-1].Section.StartBeat))
