@@ -391,10 +391,6 @@ func createStateDiff(definition *sequence.Sequence, temporary *temporaryState) S
 	return diff
 }
 
-type uiStartMsg struct{}
-type uiStopMsg struct{}
-type uiConnectedMsg struct{}
-type uiNotConnectedMsg struct{}
 type errorMsg struct {
 	error error
 }
@@ -1393,7 +1389,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.focus = operation.FocusGrid
 			m.selectionIndicator = operation.SelectGrid
 		}
-	case uiStartMsg:
+	case timing.UIStartMsg:
 		if !m.playState.Playing {
 			m.playState.Playing = true
 			// NOTE: Getting a start message from midieventloop means we are in receiver mode
@@ -1402,14 +1398,14 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.SetCurrentError(errors.New("cannot start when already started"))
 		}
 		m.Start(0)
-	case uiStopMsg:
+	case timing.UIStopMsg:
 		m.playState.Playing = false
 		m.playState.PlayMode = playstate.PlayStandard
 		m.Stop()
 		m.SyncBeatLoop()
-	case uiConnectedMsg:
+	case timing.TransmitterConnectedMsg:
 		m.connected = true
-	case uiNotConnectedMsg:
+	case timing.TransmitterNotConnectedMsg:
 		m.connected = false
 	case arrangement.GiveBackFocus:
 		m.selectionIndicator = operation.SelectGrid
