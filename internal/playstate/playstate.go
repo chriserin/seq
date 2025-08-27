@@ -27,7 +27,8 @@ const (
 type LoopMode uint8
 
 const (
-	LoopSong LoopMode = iota
+	OneTimeWholeSequence LoopMode = iota
+	LoopWholeSequence
 	LoopPart
 	LoopOverlay
 )

@@ -8,6 +8,7 @@ import (
 	"github.com/Southclaws/fault/fmsg"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/chriserin/seq/internal/beats"
+	"github.com/chriserin/seq/internal/playstate"
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
 	"gitlab.com/gomidi/midi/v2/drivers/rtmididrv"
@@ -89,8 +90,14 @@ type Transmitter struct {
 	out drivers.Out
 }
 
-func (tmtr Transmitter) Start() error {
-	err := tmtr.out.Send(midi.Start())
+func (tmtr Transmitter) Start(loopMode playstate.LoopMode) error {
+	message := midi.SPP(uint16(loopMode))
+	err := tmtr.out.Send(message)
+	if err != nil {
+		return fault.Wrap(err, fmsg.With("cannot send midi spp pre-start"))
+	}
+	message = midi.Start()
+	err = tmtr.out.Send(message)
 	if err != nil {
 		return fault.Wrap(err, fmsg.With("cannot send midi start"))
 	}
@@ -169,7 +176,7 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 					t.trackTime = time.Duration(0)
 					t.pulseCount = 0
 					pulse(0)
-					err := transmitter.Start()
+					err := transmitter.Start(command.LoopMode)
 					if err != nil {
 						sendFn(ErrorMsg{err})
 					}
@@ -246,11 +253,16 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 			receiverChannel := make(chan TimingMsg)
 			tickChannel := make(chan Timing)
 			activeSenseChannel := make(chan bool)
+			var loopMode playstate.LoopMode
 			var ReceiverFunc ListenFn = func(msg []byte, milliseconds int32) {
 				midiMessage := midi.Message(msg)
 				switch midiMessage.Type() {
+				case midi.SPPMsg:
+					var ref uint16
+					midiMessage.GetSPP(&ref)
+					loopMode = playstate.LoopMode(ref)
 				case midi.StartMsg:
-					receiverChannel <- StartMsg{}
+					receiverChannel <- StartMsg{LoopMode: loopMode}
 				case midi.StopMsg:
 					receiverChannel <- StopMsg{}
 				case midi.TimingClockMsg:
@@ -285,13 +297,13 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 					<-unlockReceiverChannel
 					break inner
 				case command = <-receiverChannel:
-					switch command.(type) {
+					switch command := command.(type) {
 					case StartMsg:
 						t.started = true
 						t.playTime = time.Now()
 						t.trackTime = time.Duration(0)
 						t.pulseCount = 0
-						sendFn(UIStartMsg{})
+						sendFn(UIStartMsg{LoopMode: command.LoopMode})
 					case StopMsg:
 						t.started = false
 						sendFn(UIStopMsg{})
@@ -372,6 +384,7 @@ func (t *Timing) StandAloneLoop(sendFn func(tea.Msg)) {
 
 type TimingMsg = any
 type StartMsg struct {
+	LoopMode     playstate.LoopMode
 	Tempo        int
 	Subdivisions int
 }
@@ -392,7 +405,7 @@ type ErrorMsg struct {
 }
 
 type UIStopMsg struct{}
-type UIStartMsg struct{}
+type UIStartMsg struct{ LoopMode playstate.LoopMode }
 
 type TransmitterConnectedMsg struct{}
 type TransmitterNotConnectedMsg struct{}

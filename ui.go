@@ -1068,7 +1068,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.Escape()
 		case mappings.PlayStop:
 			if !m.playState.Playing {
-				m.playState.LoopMode = playstate.LoopSong
+				m.playState.LoopMode = playstate.OneTimeWholeSequence
 			}
 			m.StartStop(0)
 		case mappings.PlayPart:
@@ -1078,9 +1078,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.StartStop(0)
 		case mappings.PlayLoop:
 			if !m.playState.Playing {
-				m.playState.LoopMode = playstate.LoopSong
+				m.playState.LoopMode = playstate.LoopWholeSequence
 			}
-			m.arrangement.Root.SetInfinite()
 			m.StartStop(0)
 		case mappings.PlayOverlayLoop:
 			if !m.playState.Playing {
@@ -1391,6 +1390,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		}
 	case timing.UIStartMsg:
 		if !m.playState.Playing {
+			m.playState.LoopMode = msg.LoopMode
 			m.playState.Playing = true
 			// NOTE: Getting a start message from midieventloop means we are in receiver mode
 			m.playState.PlayMode = playstate.PlayReceiver
@@ -1402,7 +1402,6 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.playState.Playing = false
 		m.playState.PlayMode = playstate.PlayStandard
 		m.Stop()
-		m.SyncBeatLoop()
 	case timing.TransmitterConnectedMsg:
 		m.connected = true
 	case timing.TransmitterNotConnectedMsg:
@@ -1661,7 +1660,12 @@ func (m *model) Start(delay time.Duration) {
 	}
 
 	switch m.playState.LoopMode {
-	case playstate.LoopSong:
+	case playstate.OneTimeWholeSequence:
+		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.Arrangement}
+		m.arrangement.Cursor.MoveNext()
+		m.arrangement.Cursor.ResetIterations()
+	case playstate.LoopWholeSequence:
+		m.arrangement.Root.SetInfinite()
 		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.Arrangement}
 		m.arrangement.Cursor.MoveNext()
 		m.arrangement.Cursor.ResetIterations()
@@ -1683,7 +1687,7 @@ func (m *model) Start(delay time.Duration) {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
 			updateChannel <- beats.ModelMsg{Sequence: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiConnection: m.midiConnection}
 			if m.playState.PlayMode != playstate.PlayReceiver {
-				timingChannel <- timing.StartMsg{Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions}
+				timingChannel <- timing.StartMsg{LoopMode: m.playState.LoopMode, Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions}
 			}
 		})
 	}
@@ -1692,9 +1696,7 @@ func (m *model) Start(delay time.Duration) {
 func (m *model) Stop() {
 	m.playState.AllowAdvance = false
 	m.playState.RecordPreRollBeats = 0
-	if m.playState.LoopMode == playstate.LoopPart {
-		m.arrangement.ResetDepth()
-	}
+	m.arrangement.ResetDepth()
 	m.arrangement.Root.ResetCycles()
 	m.arrangement.Root.ResetAllPlayCycles()
 	m.arrangement.Root.ResetIterations()
