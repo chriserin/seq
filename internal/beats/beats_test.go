@@ -203,7 +203,7 @@ func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit i
 		} else {
 			beatsPlayedCounter++
 		}
-		updateChannel <- ModelMsg{PlayState: update.PlayState, Sequence: update.Definition, Cursor: update.Cursor, MidiConnection: seqmidi.MidiConnection{Test: true}}
+		updateChannel <- ModelMsg{PlayState: update.PlayState, Sequence: sequence, Cursor: update.Cursor, MidiConnection: seqmidi.MidiConnection{Test: true}}
 	}
 	doneChannel := GetDoneChannel()
 	doneChannel <- struct{}{}

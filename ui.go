@@ -1411,7 +1411,6 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	case arrangement.Undo:
 		m.PushArrUndo(msg)
 	case beats.ModelPlayedMsg:
-		m.definition = msg.Definition
 		m.playState = msg.PlayState
 		m.arrangement.Cursor = msg.Cursor
 		if msg.PerformStop {

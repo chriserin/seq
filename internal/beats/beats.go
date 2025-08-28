@@ -29,7 +29,6 @@ type ModelMsg struct {
 type ModelPlayedMsg struct {
 	PerformStop bool
 	PlayState   playstate.PlayState
-	Definition  sequence.Sequence
 	Cursor      arrangement.ArrCursor
 }
 
@@ -127,7 +126,7 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 					playState.LineStates = playstate.InitLineStates(len(definition.Lines), playState.LineStates, uint8(cursor[len(cursor)-1].Section.StartBeat))
 				} else {
 					playState.LineStates = playstate.InitLineStates(len(definition.Lines), playState.LineStates, 0)
-					sendFn(ModelPlayedMsg{PerformStop: true, PlayState: playState, Definition: definition, Cursor: cursor})
+					sendFn(ModelPlayedMsg{PerformStop: true, PlayState: playState, Cursor: cursor})
 					return
 				}
 			}
@@ -159,7 +158,7 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 		if err != nil {
 			errChan <- fault.Wrap(err, fmsg.With("error when playing beat"))
 		}
-		sendFn(ModelPlayedMsg{PlayState: playState, Definition: definition, Cursor: cursor})
+		sendFn(ModelPlayedMsg{PlayState: playState, Cursor: cursor})
 	}
 }
 
