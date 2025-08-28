@@ -37,6 +37,7 @@ type Timing struct {
 	subdivisions int
 	started      bool
 	pulseCount   int
+	pulseLimit   int
 }
 
 type MidiLoopMode uint8
@@ -175,6 +176,7 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 					t.subdivisions = command.Subdivisions
 					t.trackTime = time.Duration(0)
 					t.pulseCount = 0
+					t.pulseLimit = 0
 					pulse(0)
 					err := transmitter.Start(command.LoopMode)
 					if err != nil {
@@ -188,16 +190,22 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 						sendFn(ErrorMsg{err})
 					}
 					// m.playing should be false now.
+				case PrematureStopMsg:
+					if t.pulseLimit == 0 {
+						t.pulseLimit = t.pulseCount + ((24 / t.subdivisions) - 1)
+					}
 				case TempoMsg:
 					t.tempo = command.Tempo
 					t.subdivisions = command.Subdivisions
 				}
 			case pulseTiming := <-tickChannel:
 				if t.started {
-					err := transmitter.Pulse()
-					if err != nil {
-						wrappedErr := fault.Wrap(err)
-						sendFn(ErrorMsg{wrappedErr})
+					if t.pulseLimit == 0 || t.pulseCount < t.pulseLimit {
+						err := transmitter.Pulse()
+						if err != nil {
+							wrappedErr := fault.Wrap(err)
+							sendFn(ErrorMsg{wrappedErr})
+						}
 					}
 					pulse(t.PulseInterval())
 					if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
@@ -389,11 +397,9 @@ type StartMsg struct {
 	Subdivisions int
 }
 
-type StopMsg struct {
-}
-
-type QuitMsg struct {
-}
+type StopMsg struct{}
+type PrematureStopMsg struct{}
+type QuitMsg struct{}
 
 type TempoMsg struct {
 	Tempo        int

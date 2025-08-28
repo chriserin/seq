@@ -176,8 +176,11 @@ func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit i
 	beatsPlayedCounter := 0
 	var update = ModelPlayedMsg{PlayState: playstate.PlayState{Playing: true}}
 	sendFn := func(msg tea.Msg) {
-		update = msg.(ModelPlayedMsg)
-		testMessageChan <- update
+		switch msg := msg.(type) {
+		case ModelPlayedMsg:
+			testMessageChan <- msg
+		case PrematureStop:
+		}
 	}
 
 	updateChannel := GetUpdateChannel()

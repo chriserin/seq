@@ -32,6 +32,8 @@ type ModelPlayedMsg struct {
 	Cursor      arrangement.ArrCursor
 }
 
+type PrematureStop struct{}
+
 var beatChannel chan BeatMsg
 var updateChannel chan ModelMsg
 var doneChannel chan struct{}
@@ -104,8 +106,64 @@ func IsDone(playState playstate.PlayState, currentNode *arrangement.Arrangement,
 
 func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, midiSendFn seqmidi.SendFunc, sendFn func(tea.Msg), errChan chan error) {
 
+	if playState.Playing {
+		AdvancePlayState(&playState, definition, &cursor)
+	}
+
+	if !playState.Playing {
+		sendFn(ModelPlayedMsg{PerformStop: true, PlayState: playState, Cursor: cursor})
+		return
+	} else {
+		PlaySequence(&playState, definition, cursor, msg, midiSendFn, errChan)
+		sendFn(ModelPlayedMsg{PlayState: playState, Cursor: cursor})
+	}
+
+	copiedPlayState := playstate.Copy(playState)
+	copiedCursor := make(arrangement.ArrCursor, len(cursor))
+	copy(copiedCursor, cursor)
+	AdvancePlayState(&copiedPlayState, definition, &copiedCursor)
+	if !copiedPlayState.Playing {
+		sendFn(PrematureStop{})
+	}
+}
+
+func PlaySequence(playState *playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, msg BeatMsg, midiSendFn seqmidi.SendFunc, errChan chan error) {
+	if playState.RecordPreRollBeats > 0 {
+		playState.RecordPreRollBeats--
+		return
+	}
+
 	currentNode := cursor[len(cursor)-1]
 	currentSection := cursor[len(cursor)-1].Section
+	var partID int
+	var currentCycles int
+	var currentPart arrangement.Part
+	var playingOverlay *overlays.Overlay
+
+	partID = currentSection.Part
+	currentPart = (*definition.Parts)[partID]
+	currentCycles = (*playState.Iterations)[currentNode]
+	playingOverlay = currentPart.Overlays.HighestMatchingOverlay(currentCycles)
+	gridKeys := make([]grid.GridKey, 0, len(playState.LineStates))
+	CurrentBeatGridKeys(&gridKeys, playState.LineStates, playState.HasSolo)
+
+	pattern := make(grid.Pattern)
+	playingOverlay.CurrentBeatOverlayPattern(&pattern, currentCycles, gridKeys)
+
+	err := PlayBeat(msg.Interval, pattern, definition, midiSendFn, errChan)
+
+	if !playState.AllowAdvance {
+		playState.AllowAdvance = true
+	}
+
+	if err != nil {
+		errChan <- fault.Wrap(err, fmsg.With("error when playing beat"))
+	}
+}
+
+func AdvancePlayState(playState *playstate.PlayState, definition sequence.Sequence, cursor *arrangement.ArrCursor) {
+	currentNode := (*cursor)[len(*cursor)-1]
+	currentSection := (*cursor)[len(*cursor)-1].Section
 	partID := currentSection.Part
 	currentPart := (*definition.Parts)[partID]
 	currentCycles := (*playState.Iterations)[currentNode]
@@ -114,52 +172,24 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 	if playState.Playing && playState.RecordPreRollBeats == 0 {
 		// NOTE: Only advance if we've already played the first beat.
 		if playState.AllowAdvance {
-			advanceCurrentBeat((*playState.Iterations)[currentNode], playingOverlay, playState.LineStates, currentPart.Beats)
+			advanceCurrentBeat(currentCycles, *playingOverlay, playState.LineStates, currentPart.Beats)
 			advanceKeyCycle(definition.Keyline, playState.LineStates, playState.LoopMode, currentNode, playState.Iterations)
-			if IsDone(playState, currentNode, currentSection) && playState.LoopMode != playstate.LoopOverlay {
-				if PlayMove(&cursor, playState.Iterations) || playState.PlayMode == playstate.PlayReceiver {
-					currentSection = cursor[len(cursor)-1].Section
-					currentNode = cursor[len(cursor)-1]
+			if IsDone(*playState, currentNode, currentSection) && playState.LoopMode != playstate.LoopOverlay {
+				if PlayMove(cursor, playState.Iterations) || playState.PlayMode == playstate.PlayReceiver {
+					currentSection = (*cursor)[len(*cursor)-1].Section
+					currentNode = (*cursor)[len(*cursor)-1]
 					if !currentSection.KeepCycles {
 						(*playState.Iterations)[currentNode] = currentSection.StartCycles
 					}
-					playState.LineStates = playstate.InitLineStates(len(definition.Lines), playState.LineStates, uint8(cursor[len(cursor)-1].Section.StartBeat))
+					playState.LineStates = playstate.InitLineStates(len(definition.Lines), playState.LineStates, uint8((*cursor)[len(*cursor)-1].Section.StartBeat))
 				} else {
-					playState.LineStates = playstate.InitLineStates(len(definition.Lines), playState.LineStates, 0)
-					sendFn(ModelPlayedMsg{PerformStop: true, PlayState: playState, Cursor: cursor})
+					playState.Playing = false
 					return
 				}
 			}
 		}
 	}
 
-	if playState.Playing {
-		partID = currentSection.Part
-		currentPart = (*definition.Parts)[partID]
-		currentCycles = (*playState.Iterations)[currentNode]
-		playingOverlay = currentPart.Overlays.HighestMatchingOverlay(currentCycles)
-		gridKeys := make([]grid.GridKey, 0, len(playState.LineStates))
-		CurrentBeatGridKeys(&gridKeys, playState.LineStates, playState.HasSolo)
-
-		pattern := make(grid.Pattern)
-		playingOverlay.CurrentBeatOverlayPattern(&pattern, currentCycles, gridKeys)
-
-		if playState.RecordPreRollBeats > 0 {
-			playState.RecordPreRollBeats--
-			return
-		}
-
-		err := PlayBeat(msg.Interval, pattern, definition, midiSendFn, errChan)
-
-		if !playState.AllowAdvance {
-			playState.AllowAdvance = true
-		}
-
-		if err != nil {
-			errChan <- fault.Wrap(err, fmsg.With("error when playing beat"))
-		}
-		sendFn(ModelPlayedMsg{PlayState: playState, Cursor: cursor})
-	}
 }
 
 func CurrentBeatGridKeys(gridKeys *[]grid.GridKey, lineStates []playstate.LineState, hasSolo bool) {
@@ -170,7 +200,7 @@ func CurrentBeatGridKeys(gridKeys *[]grid.GridKey, lineStates []playstate.LineSt
 	}
 }
 
-func advanceCurrentBeat(keyCycles int, playingOverlay *overlays.Overlay, lineStates []playstate.LineState, partBeats uint8) {
+func advanceCurrentBeat(keyCycles int, playingOverlay overlays.Overlay, lineStates []playstate.LineState, partBeats uint8) {
 	pattern := make(grid.Pattern)
 	playingOverlay.CombineActionPattern(&pattern, keyCycles)
 	for i := range lineStates {
@@ -193,7 +223,6 @@ func PlayMove(cursor *arrangement.ArrCursor, iterations *map[*arrangement.Arrang
 		return false
 	} else if cursor.IsLastSibling() {
 		(*iterations)[cursor.GetParentNode()]++
-		fmt.Println("Parent iterations", (*iterations)[cursor.GetParentNode()])
 		hasParentIterations := (*iterations)[cursor.GetParentNode()] < cursor.GetParentNode().Iterations
 		if hasParentIterations {
 			cursor.MoveToFirstSibling()

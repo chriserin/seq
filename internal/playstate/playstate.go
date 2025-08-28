@@ -1,6 +1,7 @@
 package playstate
 
 import (
+	"maps"
 	"time"
 
 	"github.com/chriserin/seq/internal/arrangement"
@@ -173,4 +174,16 @@ func BuildIterationsMap(arr *arrangement.Arrangement, iterations *map[*arrangeme
 	for _, node := range arr.Nodes {
 		BuildIterationsMap(node, iterations)
 	}
+}
+
+func Copy(playState PlayState) PlayState {
+	newIterations := make(map[*arrangement.Arrangement]int)
+	maps.Copy(newIterations, *playState.Iterations)
+	playState.Iterations = &newIterations
+
+	newLineStates := make([]LineState, len(playState.LineStates))
+	copy(newLineStates, playState.LineStates)
+	playState.LineStates = newLineStates
+
+	return playState
 }

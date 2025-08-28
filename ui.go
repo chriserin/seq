@@ -1414,12 +1414,17 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.playState = msg.PlayState
 		m.arrangement.Cursor = msg.Cursor
 		if msg.PerformStop {
+			m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, 0)
 			m.SafeStop()
 		}
 		m.ResetCurrentOverlay()
 		m.arrangement.ResetDepth()
 		m.SyncBeatLoop()
 		return m, nil
+	case beats.PrematureStop:
+		if m.midiLoopMode == timing.MlmTransmitter {
+			timingChannel <- timing.PrematureStopMsg{}
+		}
 	}
 
 	var cmd tea.Cmd
