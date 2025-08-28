@@ -3,6 +3,7 @@ package playstate
 import (
 	"time"
 
+	"github.com/chriserin/seq/internal/arrangement"
 	"github.com/chriserin/seq/internal/grid"
 )
 
@@ -15,6 +16,8 @@ type PlayState struct {
 	LoopMode           LoopMode
 	BeatTime           time.Time
 	LineStates         []LineState
+	Iterations         *map[*arrangement.Arrangement]int
+	LoopedArrangement  *arrangement.Arrangement
 }
 
 type PlayMode uint8
@@ -159,4 +162,15 @@ func (ls *LineState) AdvancePlayState(combinedPattern grid.Pattern, lineIndex in
 	}
 
 	return true
+}
+
+func BuildIterationsMap(arr *arrangement.Arrangement, iterations *map[*arrangement.Arrangement]int) {
+	if arr.IsGroup() {
+		(*iterations)[arr] = 0
+	} else {
+		(*iterations)[arr] = arr.Section.StartCycles
+	}
+	for _, node := range arr.Nodes {
+		BuildIterationsMap(node, iterations)
+	}
 }

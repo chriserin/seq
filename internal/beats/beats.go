@@ -99,22 +99,31 @@ func Loop(sendFn func(tea.Msg)) {
 	}()
 }
 
+func IsDone(playState playstate.PlayState, currentNode *arrangement.Arrangement, currentSection arrangement.SongSection) bool {
+	return playState.LoopedArrangement != currentNode && currentSection.Cycles+currentSection.StartCycles <= (*playState.Iterations)[currentNode]
+}
+
 func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, midiSendFn seqmidi.SendFunc, sendFn func(tea.Msg), errChan chan error) {
 
-	currentSection := &cursor[len(cursor)-1].Section
+	currentNode := cursor[len(cursor)-1]
+	currentSection := cursor[len(cursor)-1].Section
 	partID := currentSection.Part
 	currentPart := (*definition.Parts)[partID]
-	playingOverlay := currentPart.Overlays.HighestMatchingOverlay(currentSection.PlayCycles())
+	currentCycles := (*playState.Iterations)[currentNode]
+	playingOverlay := currentPart.Overlays.HighestMatchingOverlay(currentCycles)
 
 	if playState.Playing && playState.RecordPreRollBeats == 0 {
 		// NOTE: Only advance if we've already played the first beat.
 		if playState.AllowAdvance {
-			advanceCurrentBeat(*currentSection, playingOverlay, playState.LineStates, currentPart.Beats)
-			advanceKeyCycle(definition.Keyline, playState.LineStates, playState.LoopMode, currentSection)
-			if currentSection.IsDone() && playState.LoopMode != playstate.LoopOverlay {
-				if PlayMove(&cursor) || playState.PlayMode == playstate.PlayReceiver {
-					cursor[len(cursor)-1].Section.DuringPlayReset()
-					currentSection = &cursor[len(cursor)-1].Section
+			advanceCurrentBeat((*playState.Iterations)[currentNode], playingOverlay, playState.LineStates, currentPart.Beats)
+			advanceKeyCycle(definition.Keyline, playState.LineStates, playState.LoopMode, currentNode, playState.Iterations)
+			if IsDone(playState, currentNode, currentSection) && playState.LoopMode != playstate.LoopOverlay {
+				if PlayMove(&cursor, playState.Iterations) || playState.PlayMode == playstate.PlayReceiver {
+					currentSection = cursor[len(cursor)-1].Section
+					currentNode = cursor[len(cursor)-1]
+					if !currentSection.KeepCycles {
+						(*playState.Iterations)[currentNode] = currentSection.StartCycles
+					}
 					playState.LineStates = playstate.InitLineStates(len(definition.Lines), playState.LineStates, uint8(cursor[len(cursor)-1].Section.StartBeat))
 				} else {
 					playState.LineStates = playstate.InitLineStates(len(definition.Lines), playState.LineStates, 0)
@@ -128,12 +137,13 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 	if playState.Playing {
 		partID = currentSection.Part
 		currentPart = (*definition.Parts)[partID]
-		playingOverlay = currentPart.Overlays.HighestMatchingOverlay(currentSection.PlayCycles())
+		currentCycles = (*playState.Iterations)[currentNode]
+		playingOverlay = currentPart.Overlays.HighestMatchingOverlay(currentCycles)
 		gridKeys := make([]grid.GridKey, 0, len(playState.LineStates))
 		CurrentBeatGridKeys(&gridKeys, playState.LineStates, playState.HasSolo)
 
 		pattern := make(grid.Pattern)
-		playingOverlay.CurrentBeatOverlayPattern(&pattern, currentSection.PlayCycles(), gridKeys)
+		playingOverlay.CurrentBeatOverlayPattern(&pattern, currentCycles, gridKeys)
 
 		if playState.RecordPreRollBeats > 0 {
 			playState.RecordPreRollBeats--
@@ -161,9 +171,9 @@ func CurrentBeatGridKeys(gridKeys *[]grid.GridKey, lineStates []playstate.LineSt
 	}
 }
 
-func advanceCurrentBeat(currentSection arrangement.SongSection, playingOverlay *overlays.Overlay, lineStates []playstate.LineState, partBeats uint8) {
+func advanceCurrentBeat(keyCycles int, playingOverlay *overlays.Overlay, lineStates []playstate.LineState, partBeats uint8) {
 	pattern := make(grid.Pattern)
-	playingOverlay.CombineActionPattern(&pattern, currentSection.PlayCycles())
+	playingOverlay.CombineActionPattern(&pattern, keyCycles)
 	for i := range lineStates {
 		doContinue := lineStates[i].AdvancePlayState(pattern, i, partBeats, lineStates)
 		if !doContinue {
@@ -172,31 +182,33 @@ func advanceCurrentBeat(currentSection arrangement.SongSection, playingOverlay *
 	}
 }
 
-func advanceKeyCycle(keyline uint8, lineStates []playstate.LineState, loopMode playstate.LoopMode, section *arrangement.SongSection) {
+func advanceKeyCycle(keyline uint8, lineStates []playstate.LineState, loopMode playstate.LoopMode, node *arrangement.Arrangement, iterations *map[*arrangement.Arrangement]int) {
 	if lineStates[keyline].CurrentBeat == 0 && loopMode != playstate.LoopOverlay {
-		section.IncrementPlayCycles()
+		(*iterations)[node]++
 	}
 }
 
-func PlayMove(cursor *arrangement.ArrCursor) bool {
+func PlayMove(cursor *arrangement.ArrCursor, iterations *map[*arrangement.Arrangement]int) bool {
 	if cursor.IsRoot() {
 		cursor.MoveNext()
 		return false
 	} else if cursor.IsLastSibling() {
-		cursor.GetParentNode().DrawDown()
-		if cursor.HasParentIterations() {
+		(*iterations)[cursor.GetParentNode()]++
+		fmt.Println("Parent iterations", (*iterations)[cursor.GetParentNode()])
+		hasParentIterations := (*iterations)[cursor.GetParentNode()] < cursor.GetParentNode().Iterations
+		if hasParentIterations {
 			cursor.MoveToFirstSibling()
 			if cursor.GetCurrentNode().IsGroup() {
 				cursor.MoveNext()
 			}
 		} else {
-			cursor.ResetIterations()
+			cursor.ResetIterations(iterations)
 			cursor.Up()
-			return PlayMove(cursor)
+			return PlayMove(cursor, iterations)
 		}
 	} else {
 		cursor.MoveToSibling()
-		cursor.ResetIterations()
+		cursor.ResetIterations(iterations)
 	}
 	return true
 }

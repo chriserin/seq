@@ -25,11 +25,14 @@ func TestUpdateArrangementFocus(t *testing.T) {
 			Keyline:     0,
 		}
 
+		iterations := make(map[*arrangement.Arrangement]int)
+		playstate.BuildIterationsMap(arr, &iterations)
 		m := model{
 			arrangement: arrangement.InitModel(def.Arrangement, def.Parts),
 			definition:  def,
 			playState: playstate.PlayState{
 				LineStates: playstate.InitLineStates(1, []playstate.LineState{}, 0),
+				Iterations: &iterations,
 			},
 			focus: operation.FocusGrid, // Start with grid focus
 		}

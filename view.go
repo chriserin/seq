@@ -100,7 +100,7 @@ func (m model) View() (output string) {
 	}
 	if m.showArrangementView {
 		buf.WriteString("\n")
-		buf.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, "  ", m.arrangement.View()))
+		buf.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, "  ", m.arrangement.View(m.playState.LoopedArrangement)))
 	}
 	buf.WriteString("\n")
 	return buf.String()
@@ -447,7 +447,7 @@ func (m model) SeqView(showLines []uint8) string {
 	} else if m.selectionIndicator == operation.SelectSpecificValue {
 		buf.WriteString(m.SpecificValueEditView(currentNote.Note))
 	} else if m.playState.Playing {
-		buf.WriteString(m.arrangement.Cursor.PlayStateView(m.CurrentSongSection().PlayCycles()))
+		buf.WriteString(playstate.View(m.playState, m.arrangement.Cursor))
 	} else if len(*m.definition.Parts) > 1 {
 		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
 		buf.WriteString(themes.AppDescriptorStyle.Render(fmt.Sprintf("- %s", m.CurrentPart().GetName())))
@@ -569,7 +569,8 @@ func (m model) ViewOverlay() string {
 func (m model) CurrentOverlayView() string {
 	var matchedKey overlayKey
 	if m.playState.Playing {
-		matchedKey = m.CurrentPart().Overlays.HighestMatchingOverlay(m.CurrentSongSection().PlayCycles()).Key
+		cycles := (*m.playState.Iterations)[m.arrangement.CurrentNode()]
+		matchedKey = m.CurrentPart().Overlays.HighestMatchingOverlay(cycles).Key
 	} else {
 		matchedKey = overlaykey.ROOT
 	}

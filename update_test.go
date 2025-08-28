@@ -100,6 +100,7 @@ type modelFunc func(m *model) model
 func createTestModel(modelFns ...modelFunc) model {
 
 	m := InitModel("", seqmidi.MidiConnection{}, "", "", timing.MlmStandAlone, "default")
+	m.ResetIterations()
 
 	for _, fn := range modelFns {
 		m = fn(&m)

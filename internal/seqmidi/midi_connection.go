@@ -127,6 +127,7 @@ func (mc MidiConnection) AcquireSendFunc() (SendFunc, error) {
 		return sendFn, nil
 	}
 
+	// Ensure connection is open
 	err := mc.ConnectAndOpen()
 	if err != nil {
 		return nil, fault.Wrap(err)

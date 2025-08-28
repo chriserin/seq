@@ -2,7 +2,6 @@ package arrangement
 
 import (
 	"fmt"
-	"math"
 	"slices"
 	"strings"
 
@@ -10,7 +9,7 @@ import (
 	themes "github.com/chriserin/seq/internal/themes"
 )
 
-func (m Model) View() string {
+func (m Model) View(loopingNode *Arrangement) string {
 	var buf strings.Builder
 
 	// Create stylish header
@@ -24,7 +23,7 @@ func (m Model) View() string {
 	buf.WriteString(header)
 	buf.WriteString("\n")
 
-	m.renderNode(&buf, m.Root, 0, false)
+	m.renderNode(&buf, m.Root, 0, false, loopingNode)
 
 	return buf.String()
 }
@@ -32,7 +31,7 @@ func (m Model) View() string {
 // Style definitions for node rendering
 
 // Recursively render a node and its children
-func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, isLast bool) {
+func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, isLast bool, loopingNode *Arrangement) {
 	if node == nil {
 		return
 	}
@@ -84,7 +83,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 
 		// Render child nodes
 		for i, childNode := range node.Nodes {
-			m.renderNode(buf, childNode, depth+1, len(node.Nodes)-1 == i)
+			m.renderNode(buf, childNode, depth+1, len(node.Nodes)-1 == i, loopingNode)
 		}
 	} else if node.IsEndNode() {
 		songSection := node.Section
@@ -130,7 +129,7 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 
 		// Handle cycles
 		var cyclesString string
-		if songSection.infinite {
+		if node == loopingNode {
 			cyclesString = "∞"
 		} else {
 			cyclesString = fmt.Sprintf("%d", songSection.Cycles)
@@ -187,45 +186,11 @@ func (m Model) renderNode(buf *strings.Builder, node *Arrangement, depth int, is
 		buf.WriteString("\n")
 	} else {
 		for i, childNode := range node.Nodes {
-			m.renderNode(buf, childNode, depth+1, len(node.Nodes)-1 == i)
+			m.renderNode(buf, childNode, depth+1, len(node.Nodes)-1 == i, loopingNode)
 		}
 	}
 }
 
 func (p Part) GetName() string {
 	return p.Name
-}
-
-func (ac ArrCursor) PlayStateView(cycles int) string {
-	var buf strings.Builder
-	buf.WriteString(" ▶ ")
-	for i, arr := range ac {
-		if i == 0 {
-			if arr.playingIterations == math.MaxInt64 {
-				buf.WriteString("∞ ⬩ ")
-			}
-			continue
-		} else if i != 1 {
-			buf.WriteString(" ⬩ ")
-		}
-		arr.PlayStateView(&buf, cycles)
-	}
-	buf.WriteString("\n")
-	return buf.String()
-}
-
-func (a Arrangement) PlayStateView(buf *strings.Builder, cycles int) {
-	if a.IsGroup() {
-		if a.IsInfinite() {
-			fmt.Fprintf(buf, "∞/%d", a.Iterations)
-		} else {
-			fmt.Fprintf(buf, "%d/%d", a.playingIterations, a.Iterations)
-		}
-	} else {
-		if a.Section.infinite {
-			fmt.Fprintf(buf, "%d/∞", cycles)
-		} else {
-			fmt.Fprintf(buf, "%d/%d", cycles, a.Section.Cycles)
-		}
-	}
 }

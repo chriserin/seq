@@ -302,7 +302,7 @@ func TestCursorForNode(t *testing.T) {
 		assert.Equal(t, ArrCursor{}, cursor, "Cursor should be empty for non-existing node")
 	})
 
-	t.Run("grouped hierarcy", func(t *testing.T) {
+	t.Run("grouped hierarchy", func(t *testing.T) {
 		// Create a basic arrangement tree
 		root := &Arrangement{
 			Iterations: 1,
@@ -509,7 +509,7 @@ func TestModelView(t *testing.T) {
 	model.Focus = true
 
 	// Test view rendering
-	output := model.View()
+	output := model.View(nil)
 
 	// Basic validation of output
 	assert.Contains(t, output, "Part 1", "Output should contain Part 1")
@@ -518,7 +518,7 @@ func TestModelView(t *testing.T) {
 
 	// Test that indentation is working
 	var buf strings.Builder
-	model.renderNode(&buf, group, 1, false)
+	model.renderNode(&buf, group, 1, false, nil)
 	groupOutput := buf.String()
 	assert.Contains(t, groupOutput, "  ", "Group rendering should include indentation")
 }
@@ -695,94 +695,6 @@ func TestIsRoot(t *testing.T) {
 	}
 }
 
-func TestHasParentIterations(t *testing.T) {
-	// Setup arrangement with playingIterations
-	// Remember: only group nodes have iterations, end nodes (with Sections) don't
-
-	// Root node (group)
-	root := &Arrangement{
-		Iterations:        2,
-		playingIterations: 1, // Has iterations left
-		Nodes:             make([]*Arrangement, 0),
-	}
-
-	// End node with section
-	nodeA := &Arrangement{
-		Section: SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
-		Nodes:   nil, // End node
-	}
-
-	// Group node with iterations
-	groupWithIter := &Arrangement{
-		Iterations:        2,
-		playingIterations: 2, // Has iterations left
-		Nodes:             make([]*Arrangement, 0),
-	}
-
-	// Group node without iterations left
-	groupNoIter := &Arrangement{
-		Iterations:        2,
-		playingIterations: 0, // No iterations left
-		Nodes:             make([]*Arrangement, 0),
-	}
-
-	// End node in groups
-	nodeB := &Arrangement{
-		Section: SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2},
-		Nodes:   nil, // End node
-	}
-
-	nodeC := &Arrangement{
-		Section: SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1},
-		Nodes:   nil, // End node
-	}
-
-	// Set up the tree
-	groupWithIter.Nodes = append(groupWithIter.Nodes, nodeB)
-	groupNoIter.Nodes = append(groupNoIter.Nodes, nodeC)
-	root.Nodes = append(root.Nodes, nodeA, groupWithIter, groupNoIter)
-
-	// Test cases
-	tests := []struct {
-		name     string
-		cursor   ArrCursor
-		expected bool
-	}{
-		{
-			name:     "Root only cursor has no parent",
-			cursor:   ArrCursor{root},
-			expected: false,
-		},
-		{
-			name:     "Parent with playingIterations > 0",
-			cursor:   ArrCursor{root, groupWithIter, nodeB},
-			expected: true,
-		},
-		{
-			name:     "Parent with playingIterations = 0",
-			cursor:   ArrCursor{root, groupNoIter, nodeC},
-			expected: false,
-		},
-		{
-			name:     "End node directly under root",
-			cursor:   ArrCursor{root, nodeA},
-			expected: true, // root has playingIterations > 0
-		},
-		{
-			name:     "Empty cursor has no parent",
-			cursor:   ArrCursor{},
-			expected: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := tc.cursor.HasParentIterations()
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
-
 func TestMoveToFirstSibling(t *testing.T) {
 	root := &Arrangement{
 		Iterations: 1,
@@ -881,35 +793,6 @@ func TestUp(t *testing.T) {
 			assert.Equal(t, tc.expected, cursorCopy)
 		})
 	}
-}
-
-func TestResetIterations(t *testing.T) {
-	root := &Arrangement{
-		Iterations:        2,
-		playingIterations: 0, // Needs reset
-		Nodes:             make([]*Arrangement, 0),
-	}
-
-	nodeA := &Arrangement{
-		Section:           SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
-		Iterations:        3,
-		playingIterations: 0, // Needs reset
-	}
-
-	group1 := &Arrangement{
-		Iterations:        1,
-		playingIterations: 1, // Already set, should not change
-	}
-
-	root.Nodes = append(root.Nodes, nodeA, group1)
-
-	cursor := ArrCursor{root, nodeA}
-
-	cursor.ResetIterations()
-
-	assert.Equal(t, 2, root.playingIterations, "Root playingIterations should be reset to Iterations value")
-	assert.Equal(t, 3, nodeA.playingIterations, "NodeA playingIterations should be reset to Iterations value")
-	assert.Equal(t, 1, group1.playingIterations, "Group1 playingIterations should remain unchanged")
 }
 
 // TestDeleteNodeComplex tests the DeleteNode function in more complex scenarios

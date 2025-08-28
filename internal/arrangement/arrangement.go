@@ -21,7 +21,6 @@ package arrangement
 
 import (
 	"fmt"
-	"math"
 	"slices"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -31,11 +30,10 @@ import (
 )
 
 type Arrangement struct {
-	Section           SongSection
-	Nodes             []*Arrangement
-	Iterations        int
-	playingIterations int
-	isRoot            bool
+	Section    SongSection
+	Nodes      []*Arrangement
+	Iterations int
+	isRoot     bool
 }
 
 func InitRoot(parts []Part) *Arrangement {
@@ -43,59 +41,6 @@ func InitRoot(parts []Part) *Arrangement {
 		Iterations: 1,
 		Nodes:      make([]*Arrangement, 0, len(parts)),
 		isRoot:     true,
-	}
-}
-
-func (a *Arrangement) Reset() {
-	a.playingIterations = a.Iterations
-}
-
-func (a *Arrangement) IsInfinite() bool {
-	return math.MaxInt64 == a.playingIterations
-}
-
-func (a *Arrangement) DrawDown() {
-	if a.playingIterations == math.MaxInt64 {
-		return
-	} else if a.playingIterations > 0 {
-		a.playingIterations--
-	}
-}
-
-func (a *Arrangement) PlayingIterations() int {
-	return a.playingIterations
-}
-
-func (a *Arrangement) SetInfinite() {
-	a.playingIterations = math.MaxInt64
-}
-
-func (a *Arrangement) ResetIterations() {
-	if len(a.Nodes) > 0 {
-		a.playingIterations = 0
-		for _, n := range a.Nodes {
-			n.ResetIterations()
-		}
-	}
-}
-
-func (a *Arrangement) ResetCycles() {
-	if len(a.Nodes) == 0 {
-		a.Section.ResetInfinite()
-	} else {
-		for _, n := range a.Nodes {
-			n.ResetCycles()
-		}
-	}
-}
-
-func (a *Arrangement) ResetAllPlayCycles() {
-	if len(a.Nodes) == 0 {
-		a.Section.ResetPlayCycles()
-	} else {
-		for _, n := range a.Nodes {
-			n.ResetAllPlayCycles()
-		}
 	}
 }
 
@@ -189,16 +134,6 @@ func (ac *ArrCursor) IsRoot() bool {
 	return len(*ac) == 1
 }
 
-func (ac *ArrCursor) HasParentIterations() bool {
-	cursorLength := len(*ac)
-	if cursorLength < 2 {
-		return false
-	}
-
-	parent := (*ac)[cursorLength-2]
-	return parent.playingIterations > 0
-}
-
 func (ac *ArrCursor) GetParentNode() *Arrangement {
 	cursorLength := len(*ac)
 	if cursorLength < 2 {
@@ -220,10 +155,10 @@ func (ac *ArrCursor) Up() {
 	*ac = (*ac)[:len(*ac)-1]
 }
 
-func (ac *ArrCursor) ResetIterations() {
-	for i := range *ac {
-		if (*ac)[i].playingIterations == 0 {
-			(*ac)[i].playingIterations = (*ac)[i].Iterations
+func (ac *ArrCursor) ResetIterations(iterations *map[*Arrangement]int) {
+	for _, arrRef := range *ac {
+		if (*iterations)[arrRef] == arrRef.Iterations {
+			(*iterations)[arrRef] = 0
 		}
 	}
 }
@@ -415,16 +350,6 @@ func MoveToLastChild(currentCursor *ArrCursor, workingCursor *ArrCursor) bool {
 		return MoveToLastChild(currentCursor, workingCursor)
 	} else {
 		panic("Malformed arrangement tree")
-	}
-}
-
-func (m Model) SetCurrentNodeInfinite() {
-	if m.depthCursor == len(m.Cursor)-1 {
-		currentNode := m.Cursor[len(m.Cursor)-1]
-		currentNode.Section.infinite = true
-	} else {
-		group := m.Cursor[m.depthCursor]
-		group.SetInfinite()
 	}
 }
 
@@ -1001,39 +926,6 @@ type SongSection struct {
 	StartBeat   int
 	StartCycles int
 	KeepCycles  bool
-	playCycles  int
-	infinite    bool
-}
-
-func (ss *SongSection) ResetPlayCycles() {
-	ss.playCycles = ss.StartCycles
-}
-
-func (ss *SongSection) DuringPlayReset() {
-	if !ss.KeepCycles {
-		ss.playCycles = ss.StartCycles
-	}
-}
-
-func (ss SongSection) PlayCycles() int {
-	return ss.playCycles
-}
-
-func (ss *SongSection) ResetInfinite() {
-	ss.infinite = false
-}
-
-func (ss *SongSection) IncrementPlayCycles() {
-	ss.playCycles++
-}
-
-func (ss *SongSection) SetPlayCycles(keyCycles int) {
-	ss.playCycles = keyCycles
-}
-
-func (ss *SongSection) IsDone() bool {
-	return !ss.infinite &&
-		ss.Cycles+ss.StartCycles <= ss.playCycles
 }
 
 func InitSongSection(part int) SongSection {
@@ -1042,7 +934,6 @@ func InitSongSection(part int) SongSection {
 		Cycles:      1,
 		StartBeat:   0,
 		StartCycles: 1,
-		infinite:    false,
 		KeepCycles:  false,
 	}
 }
