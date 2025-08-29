@@ -11,7 +11,7 @@ env:
   GH_TOKEN: ${{ github.token }}
 
 jobs:
-  # Test and build Linux
+  # build Linux
   build-linux:
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +41,7 @@ jobs:
           name: seq-linux-amd64-${{ github.sha }}
           path: seq-linux-amd64
 
-  # Test and build macOS
+  # build macOS
   build-macos:
     runs-on: macos-latest
     strategy:
