@@ -1667,8 +1667,11 @@ func (m *model) Start(delay time.Duration) {
 		}
 	}
 
+	m.ResetIterations()
+
 	switch m.playState.LoopMode {
 	case playstate.OneTimeWholeSequence:
+		m.playState.LoopedArrangement = nil
 		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.Arrangement}
 		m.arrangement.Cursor.MoveNext()
 	case playstate.LoopWholeSequence:
@@ -1677,18 +1680,15 @@ func (m *model) Start(delay time.Duration) {
 		m.arrangement.Cursor.MoveNext()
 	case playstate.LoopPart:
 		m.playState.LoopedArrangement = m.arrangement.CurrentNode()
+	case playstate.LoopOverlay:
+		m.playState.LoopedArrangement = m.arrangement.CurrentNode()
+		(*m.playState.Iterations)[m.arrangement.CurrentNode()] = m.currentOverlay.Key.GetMinimumKeyCycle()
 	}
 	m.arrangement.ResetDepth()
 
-	m.ResetIterations()
-
 	section := m.CurrentSongSection()
-	if m.playState.LoopMode == playstate.LoopOverlay {
-		cycles := m.currentOverlay.Key.GetMinimumKeyCycle()
-		(*m.playState.Iterations)[m.arrangement.CurrentNode()] = cycles
-	}
-
 	m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, uint8(section.StartBeat))
+
 	if m.playState.Playing {
 		time.AfterFunc(delay, func() {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
