@@ -32,7 +32,7 @@ type ModelPlayedMsg struct {
 	Cursor      arrangement.ArrCursor
 }
 
-type PrematureStop struct{}
+type AnticipatoryStop struct{}
 
 var beatChannel chan BeatMsg
 var updateChannel chan ModelMsg
@@ -123,7 +123,7 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 	copy(copiedCursor, cursor)
 	AdvancePlayState(&copiedPlayState, definition, &copiedCursor)
 	if !copiedPlayState.Playing {
-		sendFn(PrematureStop{})
+		sendFn(AnticipatoryStop{})
 	}
 }
 

@@ -1421,9 +1421,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.arrangement.ResetDepth()
 		m.SyncBeatLoop()
 		return m, nil
-	case beats.PrematureStop:
+	case beats.AnticipatoryStop:
 		if m.midiLoopMode == timing.MlmTransmitter {
-			timingChannel <- timing.PrematureStopMsg{}
+			timingChannel <- timing.AnticipatoryStopMsg{}
 		}
 	}
 

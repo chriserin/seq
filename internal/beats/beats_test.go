@@ -179,7 +179,7 @@ func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit i
 		switch msg := msg.(type) {
 		case ModelPlayedMsg:
 			testMessageChan <- msg
-		case PrematureStop:
+		case AnticipatoryStop:
 		}
 	}
 

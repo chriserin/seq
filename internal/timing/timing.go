@@ -190,7 +190,10 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 						sendFn(ErrorMsg{err})
 					}
 					// m.playing should be false now.
-				case PrematureStopMsg:
+				case AnticipatoryStopMsg:
+					//NOTE: A receiver must not receive a Pulse message and a Stop message in immediate succession.
+					//This will result in a race condition on the receiver end.  Instead, we anticipate stopping
+					//and set a limit on the pulses that will be accumulated, preventing the final pulse.
 					if t.pulseLimit == 0 {
 						t.pulseLimit = t.pulseCount + ((24 / t.subdivisions) - 1)
 					}
@@ -398,7 +401,7 @@ type StartMsg struct {
 }
 
 type StopMsg struct{}
-type PrematureStopMsg struct{}
+type AnticipatoryStopMsg struct{}
 type QuitMsg struct{}
 
 type TempoMsg struct {
