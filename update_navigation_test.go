@@ -144,10 +144,10 @@ func TestNextOverlay(t *testing.T) {
 				mappings.NextOverlay,
 			},
 			addedOverlayKeys: []overlaykey.OverlayPeriodicity{
-				{Shift: 1, Interval: 2, Width: 0, StartCycle: 0},
-				{Shift: 1, Interval: 3, Width: 0, StartCycle: 0},
+				{Shift: 1, Interval: 2, Width: 1, StartCycle: 0},
+				{Shift: 1, Interval: 3, Width: 1, StartCycle: 0},
 			},
-			expectedOverlayKey: overlaykey.OverlayPeriodicity{Shift: 1, Interval: 2, Width: 0, StartCycle: 0},
+			expectedOverlayKey: overlaykey.OverlayPeriodicity{Shift: 1, Interval: 2, Width: 1, StartCycle: 0},
 			description:        "Should switch to next overlay with key 1/2",
 		},
 		{
@@ -158,10 +158,10 @@ func TestNextOverlay(t *testing.T) {
 				mappings.PrevOverlay,
 			},
 			addedOverlayKeys: []overlaykey.OverlayPeriodicity{
-				{Shift: 1, Interval: 2, Width: 0, StartCycle: 0},
-				{Shift: 1, Interval: 3, Width: 0, StartCycle: 0},
+				{Shift: 1, Interval: 2, Width: 1, StartCycle: 0},
+				{Shift: 1, Interval: 3, Width: 1, StartCycle: 0},
 			},
-			expectedOverlayKey: overlaykey.OverlayPeriodicity{Shift: 1, Interval: 2, Width: 0, StartCycle: 0},
+			expectedOverlayKey: overlaykey.OverlayPeriodicity{Shift: 1, Interval: 2, Width: 1, StartCycle: 0},
 			description:        "Should switch to next overlay with key 1/2",
 		},
 		{
@@ -173,10 +173,10 @@ func TestNextOverlay(t *testing.T) {
 				mappings.PrevOverlay,
 			},
 			addedOverlayKeys: []overlaykey.OverlayPeriodicity{
-				{Shift: 1, Interval: 2, Width: 0, StartCycle: 0},
-				{Shift: 1, Interval: 3, Width: 0, StartCycle: 0},
+				{Shift: 1, Interval: 2, Width: 1, StartCycle: 0},
+				{Shift: 1, Interval: 3, Width: 1, StartCycle: 0},
 			},
-			expectedOverlayKey: overlaykey.OverlayPeriodicity{Shift: 1, Interval: 1, Width: 0, StartCycle: 0},
+			expectedOverlayKey: overlaykey.OverlayPeriodicity{Shift: 1, Interval: 1, Width: 1, StartCycle: 0},
 			description:        "Should switch to next overlay with key 1/2",
 		},
 	}
@@ -185,7 +185,7 @@ func TestNextOverlay(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel()
 
-			rootKey := overlaykey.OverlayPeriodicity{Shift: 1, Interval: 1, Width: 0, StartCycle: 0}
+			rootKey := overlaykey.ROOT
 
 			for _, key := range tt.addedOverlayKeys {
 				(*m.definition.Parts)[0].Overlays = m.CurrentPart().Overlays.Add(key)

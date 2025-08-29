@@ -30,19 +30,19 @@ func TestUpdateOverlayKey(t *testing.T) {
 		{
 			name:        "New Overlay Key with interval",
 			commands:    []any{mappings.OverlayInputSwitch, TestKey{Keys: "3/2"}, mappings.Enter},
-			expectedKey: overlaykey.OverlayPeriodicity{Shift: 3, Interval: 2, Width: 0, StartCycle: 0},
+			expectedKey: overlaykey.OverlayPeriodicity{Shift: 3, Interval: 2, Width: 1, StartCycle: 0},
 			description: "Should create a new overlay key with interval",
 		},
 		{
 			name:        "New Overlay Key with StartCycle",
 			commands:    []any{mappings.OverlayInputSwitch, TestKey{Keys: "3S2"}, mappings.Enter},
-			expectedKey: overlaykey.OverlayPeriodicity{Shift: 3, Interval: 1, Width: 0, StartCycle: 2},
+			expectedKey: overlaykey.OverlayPeriodicity{Shift: 3, Interval: 1, Width: 1, StartCycle: 2},
 			description: "Should create a new overlay key with StartCycle",
 		},
 		{
 			name:        "New Overlay Key with StartCycle lower case s",
 			commands:    []any{mappings.OverlayInputSwitch, TestKey{Keys: "3S2s"}, mappings.Enter},
-			expectedKey: overlaykey.OverlayPeriodicity{Shift: 3, Interval: 1, Width: 0, StartCycle: 0},
+			expectedKey: overlaykey.OverlayPeriodicity{Shift: 3, Interval: 1, Width: 1, StartCycle: 0},
 			description: "Should create a new overlay key with StartCycle lower case s",
 		},
 		{
@@ -54,7 +54,7 @@ func TestUpdateOverlayKey(t *testing.T) {
 		{
 			name:        "Escape from overlay key edit",
 			commands:    []any{mappings.OverlayInputSwitch, TestKey{Keys: "3:3/3S3"}, mappings.Escape},
-			expectedKey: overlaykey.OverlayPeriodicity{Shift: 1, Interval: 1, Width: 0, StartCycle: 0},
+			expectedKey: overlaykey.OverlayPeriodicity{Shift: 1, Interval: 1, Width: 1, StartCycle: 0},
 			description: "Should escape from overlay key edit and return to current key",
 		},
 	}

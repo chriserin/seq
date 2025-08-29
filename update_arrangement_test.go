@@ -131,14 +131,14 @@ func TestSectionNavigationResetOverlay(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := createTestModel(
 				func(m *model) model {
-					nonRootKey := overlaykey.OverlayPeriodicity{Shift: 1, Interval: 2, Width: 0, StartCycle: 0}
+					nonRootKey := overlaykey.OverlayPeriodicity{Shift: 1, Interval: 2, Width: 1, StartCycle: 0}
 					(*m.definition.Parts)[0].Overlays = m.CurrentPart().Overlays.Add(nonRootKey)
 					m.currentOverlay = (*m.definition.Parts)[0].Overlays.FindOverlay(nonRootKey)
 					return *m
 				},
 			)
 
-			rootKey := overlaykey.OverlayPeriodicity{Shift: 1, Interval: 1, Width: 0, StartCycle: 0}
+			rootKey := overlaykey.ROOT
 			assert.NotEqual(t, rootKey, m.currentOverlay.Key, "Should start with non-root overlay")
 
 			m, _ = processCommands(tt.commands, m)

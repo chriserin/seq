@@ -192,7 +192,7 @@ func View(ok OverlayPeriodicity) string {
 	start = NormalColor(ok.StartCycle)
 
 	buf.WriteString(shift)
-	if ok.Width > 0 {
+	if ok.Width > 1 {
 		buf.WriteString(":")
 		buf.WriteString(width)
 	}
@@ -226,7 +226,7 @@ func (m Model) ViewOverlay() string {
 	}
 
 	buf.WriteString(shift)
-	if m.overlayKey.Width > 0 {
+	if m.overlayKey.Width > 1 || m.focus == FocusWidth {
 		buf.WriteString(":")
 		buf.WriteString(width)
 	}

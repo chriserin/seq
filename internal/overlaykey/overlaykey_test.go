@@ -15,32 +15,32 @@ func TestMatches(t *testing.T) {
 	}{
 		{
 			desc:    "Root",
-			op:      OverlayPeriodicity{1, 1, 0, 0},
+			op:      OverlayPeriodicity{1, 1, 1, 0},
 			results: []bool{true, true, true, true, true, true, true, true, true, true},
 		},
 		{
 			desc:    "Every Other",
-			op:      OverlayPeriodicity{2, 1, 0, 0},
+			op:      OverlayPeriodicity{2, 1, 1, 0},
 			results: []bool{false, true, false, true, false, true, false, true, false, true},
 		},
 		{
 			desc:    "Every Other And starts at 5",
-			op:      OverlayPeriodicity{2, 1, 0, 5},
+			op:      OverlayPeriodicity{2, 1, 1, 5},
 			results: []bool{false, false, false, false, false, true, false, true, false, true},
 		},
 		{
 			desc:    "First of every two",
-			op:      OverlayPeriodicity{1, 2, 0, 0},
+			op:      OverlayPeriodicity{1, 2, 1, 0},
 			results: []bool{true, false, true, false, true, false, true, false, true, false},
 		},
 		{
 			desc:    "Every fifth",
-			op:      OverlayPeriodicity{5, 1, 0, 0},
+			op:      OverlayPeriodicity{5, 1, 1, 0},
 			results: []bool{false, false, false, false, true, false, false, false, false, true},
 		},
 		{
 			desc:    "Every fifth plus width",
-			op:      OverlayPeriodicity{5, 1, 1, 0},
+			op:      OverlayPeriodicity{5, 1, 2, 0},
 			results: []bool{false, false, false, false, true, true, false, false, false, true},
 		},
 	}

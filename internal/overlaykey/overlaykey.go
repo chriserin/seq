@@ -12,7 +12,7 @@ type OverlayPeriodicity struct {
 }
 
 func InitOverlayKey(shift, interval uint8) OverlayPeriodicity {
-	return OverlayPeriodicity{shift, interval, 0, 0}
+	return OverlayPeriodicity{shift, interval, 1, 0}
 }
 
 func (op *OverlayPeriodicity) IncrementShift() {
@@ -63,7 +63,7 @@ func (op *OverlayPeriodicity) DecrementInterval() {
 	}
 }
 
-var ROOT OverlayPeriodicity = OverlayPeriodicity{1, 1, 0, 0}
+var ROOT OverlayPeriodicity = OverlayPeriodicity{1, 1, 1, 0}
 
 // Compare from most specific to least specific
 func Compare(a, b OverlayPeriodicity) int {
@@ -100,7 +100,7 @@ func (op OverlayPeriodicity) DoesMatch(cycle int) bool {
 		return true
 	} else if shift+overallInterval == cycle {
 		return true
-	} else if int(shift)+intervalLevel <= cycle && shift+intervalLevel+int(op.Width) >= cycle {
+	} else if int(shift)+intervalLevel <= cycle && shift+intervalLevel+(int(op.Width)-1) >= cycle {
 		return true
 	}
 	return false
