@@ -166,6 +166,10 @@ const (
 	ConfirmConfirmReload
 	ConfirmConfirmQuit
 	MidiPanic
+	IncreaseAllChannels
+	DecreaseAllChannels
+	IncreaseAllNote
+	DecreaseAllNote
 )
 
 type mappingKey [3]string
@@ -316,6 +320,10 @@ var mappings = registry{
 	OperationKey{selection: operation.SelectConfirmReload, key: k("enter")}:                                                      ConfirmConfirmReload,
 	OperationKey{selection: operation.SelectConfirmQuit, key: k("enter")}:                                                        ConfirmConfirmQuit,
 	OperationKey{selection: operation.SelectFileName, key: k("esc")}:                                                             Escape,
+	OperationKey{selection: operation.SelectSetupChannel, key: k("J")}:                                                           DecreaseAllChannels,
+	OperationKey{selection: operation.SelectSetupChannel, key: k("K")}:                                                           IncreaseAllChannels,
+	OperationKey{selection: operation.SelectSetupValue, key: k("J")}:                                                             DecreaseAllNote,
+	OperationKey{selection: operation.SelectSetupValue, key: k("K")}:                                                             IncreaseAllNote,
 	OperationKey{key: k("esc")}:                                                                                                  Escape,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeLine, key: k("!")}:                                           NumberPattern,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeLine, key: k("@")}:                                           NumberPattern,

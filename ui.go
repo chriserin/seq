@@ -913,6 +913,22 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
+		case mappings.DecreaseAllChannels:
+			for i := range m.definition.Lines {
+				m.definition.Lines[i].DecrementChannel()
+			}
+		case mappings.IncreaseAllChannels:
+			for i := range m.definition.Lines {
+				m.definition.Lines[i].IncrementChannel()
+			}
+		case mappings.DecreaseAllNote:
+			for i := range m.definition.Lines {
+				m.definition.Lines[i].DecrementNote()
+			}
+		case mappings.IncreaseAllNote:
+			for i := range m.definition.Lines {
+				m.definition.Lines[i].IncrementNote()
+			}
 		case mappings.MidiPanic:
 			err := m.midiConnection.Panic()
 			m.SetCurrentError(err)

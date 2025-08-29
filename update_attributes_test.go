@@ -271,6 +271,54 @@ func TestSetupInputSwitchWithIncrease(t *testing.T) {
 	}
 }
 
+func TestSetupInputSwitchIncreaseAllChannels(t *testing.T) {
+	tests := []struct {
+		name                 string
+		commands             []any
+		initialSetupChannel  uint8
+		expectedSetupChannel uint8
+		description          string
+	}{
+		{
+			name:                 "Setup All Channel Increase",
+			commands:             []any{mappings.SetupInputSwitch, mappings.IncreaseAllChannels},
+			initialSetupChannel:  0,
+			expectedSetupChannel: 1,
+			description:          "Setup input switch should select channel and increase should increment it",
+		},
+		{
+			name:                 "Setup All Channel Decrease",
+			commands:             []any{mappings.SetupInputSwitch, mappings.DecreaseAllChannels},
+			initialSetupChannel:  5,
+			expectedSetupChannel: 4,
+			description:          "Setup input switch should select channel and increase should increment it",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					for i := range m.definition.Lines {
+						m.definition.Lines[i].Channel = tt.initialSetupChannel
+					}
+					return *m
+				},
+			)
+
+			assert.Equal(t, tt.initialSetupChannel, m.definition.Lines[m.gridCursor.Line].Channel, "Initial setup channel should match")
+			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, operation.SelectSetupChannel, m.selectionIndicator, tt.description+" - selection state")
+			for i := range m.definition.Lines {
+				assert.Equal(t, tt.expectedSetupChannel, m.definition.Lines[i].Channel, tt.description+" - channel value")
+			}
+		})
+	}
+}
+
 func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 	tests := []struct {
 		name                string
@@ -435,6 +483,50 @@ func TestSetupNoteChange(t *testing.T) {
 			m, _ = processCommands(tt.commands, m)
 
 			assert.Equal(t, tt.expectedNote, m.definition.Lines[m.gridCursor.Line].Note, tt.description)
+		})
+	}
+}
+
+func TestSetupNoteChangeAll(t *testing.T) {
+	tests := []struct {
+		name                 string
+		commands             []any
+		initialStartingNote  uint8
+		expectedStartingNote uint8
+		description          string
+	}{
+		{
+			name:                 "Note Increase",
+			commands:             []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.IncreaseAllNote},
+			initialStartingNote:  60,
+			expectedStartingNote: 61,
+			description:          "Note should increase by 1",
+		},
+		{
+			name:                 "Note Decrease",
+			commands:             []any{mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.SetupInputSwitch, mappings.DecreaseAllNote},
+			initialStartingNote:  60,
+			expectedStartingNote: 59,
+			description:          "Note should decrease by 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					for i := range m.definition.Lines {
+						m.definition.Lines[i].Note = tt.initialStartingNote + uint8(i)
+					}
+					return *m
+				},
+			)
+
+			m, _ = processCommands(tt.commands, m)
+
+			for i := range m.definition.Lines {
+				assert.Equal(t, tt.expectedStartingNote+uint8(i), m.definition.Lines[i].Note, tt.description)
+			}
 		})
 	}
 }
