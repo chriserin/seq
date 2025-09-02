@@ -984,6 +984,31 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.focus = operation.FocusGrid
 			m.overlayKeyEdit.Focus(false)
 			m.EnsureOverlay()
+			undoable := UndoNewOverlay{
+				overlayKey:     m.overlayKeyEdit.GetKey(),
+				cursorPosition: m.gridCursor,
+				ArrCursor:      m.arrangement.Cursor,
+			}
+			redoable := UndoRemoveOverlay{
+				overlayKey:     m.overlayKeyEdit.GetKey(),
+				cursorPosition: m.gridCursor,
+				ArrCursor:      m.arrangement.Cursor,
+			}
+			m.PushUndoables(undoable, redoable)
+		case mappings.RemoveOverlay:
+			undoable := UndoRemoveOverlay{
+				overlay:        m.currentOverlay,
+				overlayKey:     m.overlayKeyEdit.GetKey(),
+				cursorPosition: m.gridCursor,
+				ArrCursor:      m.arrangement.Cursor,
+			}
+			m.RemoveOverlay()
+			redoable := UndoNewOverlay{
+				overlayKey:     undoable.overlayKey,
+				cursorPosition: m.gridCursor,
+				ArrCursor:      m.arrangement.Cursor,
+			}
+			m.PushUndoables(undoable, redoable)
 		case mappings.Quit:
 			if m.currentViewError == nil {
 				m.SetSelectionIndicator(operation.SelectConfirmQuit)
@@ -1819,6 +1844,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		} else {
 			m.ClearOverlayLine()
 		}
+	case mappings.ClearOverlay:
+		m.ClearOverlay()
 	case mappings.RatchetIncrease:
 		m.RatchetModify(1)
 	case mappings.RatchetDecrease:
@@ -1849,10 +1876,6 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.definition.Keyline = m.gridCursor.Line
 	case mappings.OverlayStackToggle:
 		m.currentOverlay.ToggleOverlayStackOptions()
-	case mappings.ClearOverlay:
-		m.ClearOverlay()
-	case mappings.RemoveOverlay:
-		m.RemoveOverlay()
 	case mappings.RotateRight:
 		switch m.definition.TemplateSequencerType {
 		case operation.SeqModeLine:

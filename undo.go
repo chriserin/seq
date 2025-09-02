@@ -71,6 +71,23 @@ func (uno UndoNewOverlay) ApplyUndo(m *model) Location {
 	return Location{uno.overlayKey, uno.cursorPosition, true}
 }
 
+type UndoRemoveOverlay struct {
+	overlayKey     overlayKey
+	overlay        *overlays.Overlay
+	cursorPosition gridKey
+	ArrCursor      arrangement.ArrCursor
+}
+
+func (uro UndoRemoveOverlay) ApplyUndo(m *model) Location {
+	m.arrangement.Cursor = uro.ArrCursor
+	m.EnsureOverlayWithKey(uro.overlayKey)
+	if uro.overlay != nil {
+		diff := overlays.DiffOverlays(m.currentOverlay, uro.overlay)
+		diff.Apply(m.currentOverlay)
+	}
+	return Location{uro.overlayKey, uro.cursorPosition, true}
+}
+
 type UndoArrangement struct {
 	arrUndo arrangement.Undoable
 }
