@@ -81,6 +81,8 @@ seq.addtemplate({
 seq.addinstrument({
 	name = "Prophet 10",
 	controlchanges = {
+		{ 1, 127, "Mod Wheel" },
+		{ 4, 127, "Foot Controller" },
 		{ 7, 120, "MASTER VOLUME" },
 		{ 9, 120, "OSC B FREQUENCY" },
 		{ 14, 127, "OSC B FINE TUNE" },
@@ -114,6 +116,7 @@ seq.addinstrument({
 		{ 61, 1, "POLY MOD FREQ A ON/OFF" },
 		{ 62, 1, "POLY MOD PW ON/OFF" },
 		{ 63, 1, "POLY MOD FILTER ON/OFF" },
+		{ 64, 127, "Damper Pedal" },
 		{ 70, 11, "PITCH WHEEL RANGE" },
 		{ 71, 3, "RETRIGGER AND UNISON ASSIGN" },
 		{ 73, 120, "CUTOFF" },
@@ -140,5 +143,7 @@ seq.addinstrument({
 		{ 117, 1, "LFO SAW ON/OFF" },
 		{ 118, 1, "LFO TRI ON/OFF" },
 		{ 119, 1, "LFO SQUARE ON/OFF" },
+		{ 121, 1, "Reset All Controllers" },
+		{ 123, 1, "All Notes Off" },
 	},
 })

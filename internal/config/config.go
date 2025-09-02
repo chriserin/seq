@@ -129,14 +129,17 @@ var StandardCCs = []ControlChange{
 
 func FindCC(value uint8, instrumentName string) (ControlChange, bool) {
 	instrument := GetInstrument(instrumentName)
-	for _, cc := range instrument.CCs {
-		if cc.Value == value {
-			return cc, true
+	if len(instrument.CCs) == 0 {
+		for _, cc := range StandardCCs {
+			if cc.Value == value {
+				return cc, true
+			}
 		}
-	}
-	for _, cc := range StandardCCs {
-		if cc.Value == value {
-			return cc, true
+	} else {
+		for _, cc := range instrument.CCs {
+			if cc.Value == value {
+				return cc, true
+			}
 		}
 	}
 	return ControlChange{}, false
