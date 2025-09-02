@@ -67,7 +67,7 @@ var zeronote note
 
 type model struct {
 	hasUIFocus            bool
-	connected             bool
+	transmitterConnected  bool
 	visualMode            bool
 	logFileAvailable      bool
 	playEditing           bool
@@ -1416,9 +1416,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.playState.PlayMode = playstate.PlayStandard
 		m.Stop()
 	case timing.TransmitterConnectedMsg:
-		m.connected = true
+		m.transmitterConnected = true
 	case timing.TransmitterNotConnectedMsg:
-		m.connected = false
+		m.transmitterConnected = false
 	case arrangement.GiveBackFocus:
 		m.selectionIndicator = operation.SelectGrid
 		m.focus = operation.FocusGrid

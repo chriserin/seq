@@ -21,6 +21,7 @@ import (
 	"github.com/chriserin/seq/internal/playstate"
 	"github.com/chriserin/seq/internal/sequence"
 	themes "github.com/chriserin/seq/internal/themes"
+	"github.com/chriserin/seq/internal/timing"
 	midi "gitlab.com/gomidi/midi/v2"
 )
 
@@ -460,7 +461,13 @@ func (m model) SeqView(showLines []uint8) string {
 
 	beats := m.CurrentPart().Beats
 	topLine := strings.Repeat("─", max(32, int(beats)))
-	buf.WriteString("   ")
+	if m.midiLoopMode == timing.MlmReceiver && !m.transmitterConnected {
+		buf.WriteString("  X")
+	} else if m.midiLoopMode == timing.MlmReceiver && m.transmitterConnected {
+		buf.WriteString("  ☨")
+	} else {
+		buf.WriteString("   ")
+	}
 	buf.WriteString(themes.SeqBorderStyle.Render(fmt.Sprintf(" ┌%s", topLine)))
 	buf.WriteString("\n")
 
