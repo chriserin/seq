@@ -368,7 +368,11 @@ func (m model) OverlaysView() string {
 	for currentOverlay := m.CurrentPart().Overlays; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		var playingSpacer = "   "
 		var playing = ""
-		if m.playState.Playing && playingOverlayKeys[0] == currentOverlay.Key {
+		if m.playState.LoopMode == playstate.LoopOverlay && m.playState.Playing && playingOverlayKeys[0] == currentOverlay.Key {
+			playing = themes.OverlayCurrentlyLoopingSymbol
+			buf.WriteString(playing)
+			playingSpacer = ""
+		} else if m.playState.Playing && playingOverlayKeys[0] == currentOverlay.Key {
 			playing = themes.OverlayCurrentlyPlayingSymbol
 			buf.WriteString(playing)
 			playingSpacer = ""

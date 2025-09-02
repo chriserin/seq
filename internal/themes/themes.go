@@ -861,6 +861,7 @@ var AppTitleStyle,
 // Symbols
 var CurrentlyPlayingSymbol,
 	OverlayCurrentlyPlayingSymbol,
+	OverlayCurrentlyLoopingSymbol,
 	ActiveSymbol string
 
 var Themes = []string{
@@ -973,6 +974,7 @@ func SetColors(newColors map[string]string) {
 func EvaluateSymbols() {
 	CurrentlyPlayingSymbol = lipgloss.NewStyle().Foreground(CurrentPlayingColor).Render(" \u25CF ")
 	OverlayCurrentlyPlayingSymbol = lipgloss.NewStyle().Background(SeqOverlayColor).Foreground(CurrentPlayingColor).Render(" \u25CF ")
+	OverlayCurrentlyLoopingSymbol = lipgloss.NewStyle().Background(SeqOverlayColor).Foreground(CurrentPlayingColor).Render(" ∞ ")
 	ActiveSymbol = lipgloss.NewStyle().Background(SeqOverlayColor).Foreground(ActivePlayingColor).Render(" \u25C9 ")
 }
 
