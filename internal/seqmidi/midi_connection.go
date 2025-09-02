@@ -134,17 +134,17 @@ func (mc MidiConnection) AcquireSendFunc() (SendFunc, error) {
 	}
 	//NOTE: midi library checks IsOpen(), tries to open and returns error
 	newSendFn, err := midi.SendTo(mc.outport)
-	sendFn = newSendFn
-	if err != nil {
-		return nil, fault.Wrap(err)
-	}
-	return func(msg midi.Message) error {
+	sendFn = func(msg midi.Message) error {
 		// NOTE: midi send reuses a global state buffer so we need to ensure that the buffer is accessed sequentially
 		playMutex.Lock()
 		defer playMutex.Unlock()
-		error := sendFn(msg)
+		error := newSendFn(msg)
 		return error
-	}, nil
+	}
+	if err != nil {
+		return nil, fault.Wrap(err)
+	}
+	return sendFn, nil
 }
 
 var dawOutports = []string{"Logic Pro Virtual In"}
