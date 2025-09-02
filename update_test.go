@@ -431,7 +431,7 @@ func TestClearLine(t *testing.T) {
 	}
 }
 
-func TestClearOverlay(t *testing.T) {
+func TestRemoveOverlay(t *testing.T) {
 	tests := []struct {
 		name        string
 		commands    []any
@@ -441,7 +441,7 @@ func TestClearOverlay(t *testing.T) {
 			name: "Clear overlay removes current overlay",
 			commands: []any{
 				mappings.NoteAdd,
-				mappings.ClearOverlay,
+				mappings.RemoveOverlay,
 			},
 			description: "Should remove the current overlay from the part",
 		},
@@ -451,7 +451,7 @@ func TestClearOverlay(t *testing.T) {
 				mappings.NoteAdd,
 				mappings.NextOverlay,
 				mappings.NoteAdd,
-				mappings.ClearOverlay,
+				mappings.RemoveOverlay,
 			},
 			description: "Should remove the current overlay and switch to next available overlay",
 		},
@@ -485,6 +485,40 @@ func TestClearOverlay(t *testing.T) {
 			assert.NotEqual(t, initialOverlayKey, m.currentOverlay.Key, tt.description+" - should switch to different overlay")
 		})
 	}
+}
+
+func TestClearOverlay(t *testing.T) {
+	m := createTestModel()
+
+	commands := []any{
+		mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter,
+	}
+
+	m, _ = processCommands(commands, m)
+
+	assert.Equal(t, overlaykey.InitOverlayKey(2, 1), m.currentOverlay.Key, "Should be on the last added overlay key")
+
+	// Add some notes to the current overlay
+	noteCommands := []any{
+		mappings.NoteAdd,
+		mappings.CursorRight,
+		mappings.NoteAdd,
+		mappings.CursorRight,
+		mappings.NoteAdd,
+	}
+
+	m, _ = processCommands(noteCommands, m)
+
+	assert.Equal(t, 3, len(m.currentOverlay.Notes), "Current overlay should have 3 notes")
+
+	// Clear the current overlay
+	clearCommands := []any{
+		mappings.ClearOverlay,
+	}
+
+	m, _ = processCommands(clearCommands, m)
+
+	assert.Equal(t, 0, len(m.currentOverlay.Notes), "Current overlay should be cleared of notes")
 }
 
 func TestActionMappings(t *testing.T) {

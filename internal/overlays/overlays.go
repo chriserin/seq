@@ -70,6 +70,12 @@ func (ol Overlay) Remove(key Key) *Overlay {
 	}
 }
 
+func (ol *Overlay) Clear() {
+	ol.Notes = make(grid.Pattern)
+	ol.Chords = []*GridChord{}
+	ol.blockers = []grid.GridKey{}
+}
+
 func InitOverlay(key Key, below *Overlay) *Overlay {
 	return &Overlay{
 		Key:     key,

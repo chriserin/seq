@@ -98,6 +98,7 @@ const (
 	WaitDecrease
 	ClearLine
 	ClearOverlay
+	RemoveOverlay
 	RatchetIncrease
 	RatchetDecrease
 	ActionAddLineReset
@@ -238,6 +239,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("b", "h")}:                                                                   ToggleHideLines,
 	OperationKey{focus: operation.FocusGrid, key: k("A")}:                                                                        AccentIncrease,
 	OperationKey{focus: operation.FocusGrid, key: k("C")}:                                                                        ClearOverlay,
+	OperationKey{focus: operation.FocusGrid, key: k("D")}:                                                                        RemoveOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("G")}:                                                                        GateIncrease,
 	OperationKey{focus: operation.FocusGrid, key: k("E")}:                                                                        GateBigIncrease,
 	OperationKey{focus: operation.FocusGrid, key: k("J")}:                                                                        RotateDown,
@@ -444,7 +446,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, patternMode: operation.PatternFill, mode: operation.SeqModeChord, key: k("7", "o")}: OmitSeventh,
 	OperationKey{focus: operation.FocusGrid, patternMode: operation.PatternFill, mode: operation.SeqModeChord, key: k("8", "o")}: OmitOctave,
 	OperationKey{focus: operation.FocusGrid, patternMode: operation.PatternFill, mode: operation.SeqModeChord, key: k("9", "o")}: OmitNinth,
-	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeChord, key: k("D")}:                                          RemoveChord,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeChord, key: k("X")}:                                          RemoveChord,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeChord, key: k("]", "p")}:                                     NextArpeggio,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeChord, key: k("[", "p")}:                                     PrevArpeggio,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeChord, key: k("]", "d")}:                                     NextDouble,

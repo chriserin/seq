@@ -1851,6 +1851,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.currentOverlay.ToggleOverlayStackOptions()
 	case mappings.ClearOverlay:
 		m.ClearOverlay()
+	case mappings.RemoveOverlay:
+		m.RemoveOverlay()
 	case mappings.RotateRight:
 		switch m.definition.TemplateSequencerType {
 		case operation.SeqModeLine:
@@ -2238,13 +2240,17 @@ func (m *model) ClearOverlayLine() {
 	}
 }
 
-func (m *model) ClearOverlay() {
+func (m *model) RemoveOverlay() {
 	newOverlay := (*m.definition.Parts)[m.CurrentPartID()].Overlays.Remove(m.currentOverlay.Key)
 	if newOverlay != nil {
 		(*m.definition.Parts)[m.CurrentPartID()].Overlays = newOverlay
 		m.currentOverlay = (*m.definition.Parts)[m.CurrentPartID()].Overlays
 		m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 	}
+}
+
+func (m *model) ClearOverlay() {
+	(*m.definition.Parts)[m.CurrentPartID()].Overlays.Clear()
 }
 
 type MoveFunc func()
