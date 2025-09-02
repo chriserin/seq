@@ -3,6 +3,7 @@ package beats
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/Southclaws/fault"
@@ -93,7 +94,7 @@ func Loop(sendFn func(tea.Msg)) {
 				case <-doneChannel:
 					return
 				case err := <-errChan:
-					fmt.Println(err)
+					fmt.Fprintln(os.Stderr, err)
 				}
 			}
 		}
