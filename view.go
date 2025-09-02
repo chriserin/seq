@@ -623,13 +623,17 @@ func (m model) LineIndicator(lineNumber uint8) string {
 	var lineName string
 	if m.definition.Lines[lineNumber].Name != "" {
 		lineName = themes.LineNumberStyle.Render(m.definition.Lines[lineNumber].Name)
-	} else if m.definition.TemplateUIStyle == "blackwhite" {
+	} else if m.definition.TemplateUIStyle == "blackwhite" && m.definition.Lines[lineNumber].MsgType == grid.MessageTypeNote {
 		notename := NoteName(m.definition.Lines[lineNumber].Note)
 		if slices.Contains(blackNotes, m.definition.Lines[lineNumber].Note%12) {
 			lineName = themes.BlackKeyStyle.Render(notename[0:4])
 		} else {
 			lineName = themes.WhiteKeyStyle.Render(notename)
 		}
+	} else if m.definition.Lines[lineNumber].MsgType == grid.MessageTypeCc {
+		lineName = themes.LineNumberStyle.Render(fmt.Sprintf("C%2d", m.definition.Lines[lineNumber].Note))
+	} else if m.definition.Lines[lineNumber].MsgType == grid.MessageTypeProgramChange {
+		lineName = themes.LineNumberStyle.Render("PC")
 	} else {
 		lineName = themes.LineNumberStyle.Render(fmt.Sprintf("%2d", lineNumber))
 	}
