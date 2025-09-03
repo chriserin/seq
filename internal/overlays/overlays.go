@@ -33,6 +33,10 @@ func (ol Overlay) IsFresh() bool {
 }
 
 func (ol Overlay) Add(key Key) *Overlay {
+	return ol.Insert(key, InitOverlay(key, nil))
+}
+
+func (ol Overlay) Insert(key Key, newOverlay *Overlay) *Overlay {
 	aboveComparison := overlaykey.Compare(key, ol.Key)
 	var belowComparison int
 	if ol.Below != nil {
@@ -45,10 +49,11 @@ func (ol Overlay) Add(key Key) *Overlay {
 		newOverlay := ol.Below.Add(key)
 		ol.Below = newOverlay
 	} else if aboveComparison > 0 && belowComparison < 0 {
-		newOverlay := InitOverlay(key, ol.Below)
+		newOverlay.Below = ol.Below
 		ol.Below = newOverlay
 	} else if aboveComparison < 0 {
-		return InitOverlay(key, &ol)
+		newOverlay.Below = &ol
+		return newOverlay
 	} else {
 		panic("NOT AN OPTION")
 	}

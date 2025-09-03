@@ -587,7 +587,11 @@ func (m model) CurrentOverlayView() string {
 	}
 
 	var editOverlayTitle string
-	if m.playEditing {
+	if m.modifyKey && m.focus == operation.FocusOverlayKey {
+		editOverlayTitle = lipgloss.NewStyle().Foreground(themes.AppTitleColor).Render(" Mod")
+	} else if m.focus == operation.FocusOverlayKey {
+		editOverlayTitle = lipgloss.NewStyle().Foreground(themes.AppTitleColor).Render(" New")
+	} else if m.playEditing {
 		editOverlayTitle = lipgloss.NewStyle().Background(themes.SeqOverlayColor).Foreground(themes.AppTitleColor).Render("Edit")
 	} else {
 		editOverlayTitle = lipgloss.NewStyle().Foreground(themes.AppTitleColor).Render("Edit")

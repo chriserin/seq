@@ -73,6 +73,7 @@ type model struct {
 	playEditing           bool
 	showArrangementView   bool
 	hideEmptyLines        bool
+	modifyKey             bool
 	ratchetCursor         uint8
 	temporaryNoteValue    uint8
 	focus                 operation.Focus
@@ -416,14 +417,29 @@ func (m model) FindOverlay(key overlayKey) *overlays.Overlay {
 }
 
 func (m *model) EnsureOverlayWithKey(key overlayKey) {
-	partID := m.CurrentPartID()
 	overlay := m.FindOverlay(key)
-	if overlay == nil {
-		var newOverlay = m.CurrentPart().Overlays.Add(key)
+	if overlay != nil {
+		m.currentOverlay = overlay
+		return
+	}
+
+	partID := m.CurrentPartID()
+	var overlayToInsert *overlays.Overlay
+	if m.modifyKey && m.currentOverlay.Key != overlaykey.ROOT {
+		overlayToInsert = m.currentOverlay
+		(*m.definition.Parts)[partID].Overlays = (*m.definition.Parts)[partID].Overlays.Remove(m.currentOverlay.Key)
+		m.modifyKey = false
+	} else {
+		overlayToInsert = overlays.InitOverlay(key, nil)
+	}
+
+	overlayToInsert.Key = key
+	if m.CurrentPart().Overlays != nil {
+		var newOverlay = m.CurrentPart().Overlays.Insert(key, overlayToInsert)
 		(*m.definition.Parts)[partID].Overlays = newOverlay
 		m.currentOverlay = newOverlay.FindOverlay(key)
 	} else {
-		m.currentOverlay = overlay
+		(*m.definition.Parts)[partID].Overlays = overlayToInsert
 	}
 }
 
@@ -1136,9 +1152,15 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			} else {
 				m.StartStop(0)
 			}
+		case mappings.ModifyKeyInputSwitch:
+			m.SetSelectionIndicator(operation.SelectGrid)
+			m.focus = operation.FocusOverlayKey
+			m.overlayKeyEdit.Focus(true)
+			m.modifyKey = true
 		case mappings.OverlayInputSwitch:
 			// NOTE: This component handles getting into the overlay key edit mode
 			// the overlaykey component handles getting out of it
+			m.modifyKey = false
 			m.SetSelectionIndicator(operation.SelectGrid)
 			if m.focus == operation.FocusOverlayKey {
 				m.focus = operation.FocusGrid

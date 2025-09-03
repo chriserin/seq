@@ -52,6 +52,7 @@ const (
 	PlayRecord
 	TempoInputSwitch
 	OverlayInputSwitch
+	ModifyKeyInputSwitch
 	SetupInputSwitch
 	AccentInputSwitch
 	RatchetInputSwitch
@@ -269,6 +270,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusAny, key: k("ctrl+l")}:                                                                    NewLine,
 	OperationKey{focus: operation.FocusAny, key: k("ctrl+n")}:                                                                    New,
 	OperationKey{focus: operation.FocusGrid, key: k("ctrl+o")}:                                                                   OverlayInputSwitch,
+	OperationKey{focus: operation.FocusGrid, key: k("ctrl+x")}:                                                                   ModifyKeyInputSwitch,
 	OperationKey{focus: operation.FocusOverlayKey, key: k("ctrl+o")}:                                                             OverlayInputSwitch,
 	OperationKey{focus: operation.FocusAny, key: k("ctrl+p")}:                                                                    NewSectionBefore,
 	OperationKey{focus: operation.FocusGrid, key: k("ctrl+d")}:                                                                   SetupInputSwitch,
