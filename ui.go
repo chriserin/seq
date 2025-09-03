@@ -1389,10 +1389,18 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.playEditing = !m.playEditing
 		case mappings.NewLine:
 			if len(m.definition.Lines) < 100 {
-				lastline := m.definition.Lines[len(m.definition.Lines)-1]
+				lastLine := m.definition.Lines[len(m.definition.Lines)-1]
+				secondLastLine := m.definition.Lines[len(m.definition.Lines)-2]
+				var difference int8
+				if int8(lastLine.Note)-int8(secondLastLine.Note) > 0 {
+					difference = 1
+				} else {
+					difference = -1
+				}
+
 				m.definition.Lines = append(m.definition.Lines, grid.LineDefinition{
-					Channel: lastline.Channel,
-					Note:    lastline.Note + 1,
+					Channel: lastLine.Channel,
+					Note:    uint8(int8(lastLine.Note) + difference),
 				})
 				if m.playState.Playing {
 					m.playState.LineStates = append(m.playState.LineStates, playstate.InitLineState(playstate.PlayStatePlay, uint8(len(m.definition.Lines)-1), 0))
