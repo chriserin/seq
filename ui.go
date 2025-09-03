@@ -833,7 +833,7 @@ func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template
 	model.ResetIterations()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	SetupTimingLoop(model, program.Send)
-	beats.Loop(program.Send)
+	beats.Loop(program.Send, midiConnection)
 	return program
 }
 
@@ -1476,7 +1476,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 
 func (m *model) SyncBeatLoop() {
 	go func() {
-		updateChannel <- beats.ModelMsg{Sequence: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiConnection: m.midiConnection}
+		updateChannel <- beats.ModelMsg{Sequence: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor}
 	}()
 }
 
@@ -1733,7 +1733,7 @@ func (m *model) Start(delay time.Duration) {
 	if m.playState.Playing {
 		time.AfterFunc(delay, func() {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
-			updateChannel <- beats.ModelMsg{Sequence: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor, MidiConnection: m.midiConnection}
+			updateChannel <- beats.ModelMsg{Sequence: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor}
 			if m.playState.PlayMode != playstate.PlayReceiver {
 				timingChannel <- timing.StartMsg{LoopMode: m.playState.LoopMode, Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions}
 			}
@@ -1749,14 +1749,10 @@ func (m *model) Stop() {
 	m.SyncBeatLoop()
 
 	notes := notereg.Clear()
-	sendFn, err := m.midiConnection.AcquireSendFunc()
-	if err != nil {
-		m.SetCurrentError(fault.Wrap(err))
-	}
 	for _, n := range notes {
 		switch n := n.(type) {
 		case beats.NoteMsg:
-			beats.PlayMessage(time.Duration(0), n.OffMessage(), sendFn, m.errChan)
+			beats.PlayMessage(time.Duration(0), n.OffMessage())
 		}
 	}
 }

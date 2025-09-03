@@ -186,16 +186,16 @@ func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit i
 	updateChannel := GetUpdateChannel()
 	beatChannel := GetBeatChannel()
 
-	Loop(sendFn)
+	Loop(sendFn, seqmidi.MidiConnection{Test: true})
+
 	iterations := make(map[*arrangement.Arrangement]int)
 	playstate.BuildIterationsMap(sequence.Arrangement, &iterations)
 	playState := playstate.PlayState{Playing: true, LineStates: playstate.InitLineStates(1, []playstate.LineState{}, 0), Iterations: &iterations}
 
 	updateChannel <- ModelMsg{
-		PlayState:      playState,
-		Sequence:       sequence,
-		Cursor:         cursor,
-		MidiConnection: seqmidi.MidiConnection{Test: true},
+		PlayState: playState,
+		Sequence:  sequence,
+		Cursor:    cursor,
 	}
 
 	for update.PlayState.Playing && beatsPlayedCounter < limit {
@@ -206,7 +206,7 @@ func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit i
 		} else {
 			beatsPlayedCounter++
 		}
-		updateChannel <- ModelMsg{PlayState: update.PlayState, Sequence: sequence, Cursor: update.Cursor, MidiConnection: seqmidi.MidiConnection{Test: true}}
+		updateChannel <- ModelMsg{PlayState: update.PlayState, Sequence: sequence, Cursor: update.Cursor}
 	}
 	doneChannel := GetDoneChannel()
 	doneChannel <- struct{}{}

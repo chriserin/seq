@@ -21,10 +21,9 @@ import (
 )
 
 type ModelMsg struct {
-	PlayState      playstate.PlayState
-	Sequence       sequence.Sequence
-	Cursor         arrangement.ArrCursor
-	MidiConnection seqmidi.MidiConnection
+	PlayState playstate.PlayState
+	Sequence  sequence.Sequence
+	Cursor    arrangement.ArrCursor
 }
 
 type ModelPlayedMsg struct {
@@ -38,11 +37,13 @@ type AnticipatoryStop struct{}
 var beatChannel chan BeatMsg
 var updateChannel chan ModelMsg
 var doneChannel chan struct{}
+var playQueue chan midi.Message
 
 func init() {
 	beatChannel = make(chan BeatMsg)
 	updateChannel = make(chan ModelMsg)
 	doneChannel = make(chan struct{})
+	playQueue = make(chan midi.Message)
 }
 
 func GetBeatChannel() chan BeatMsg {
@@ -57,13 +58,13 @@ func GetDoneChannel() chan struct{} {
 	return doneChannel
 }
 
-func Loop(sendFn func(tea.Msg)) {
+func Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection) {
+
+	var errChan = make(chan error)
 	go func() {
 		var playState playstate.PlayState
 		var definition sequence.Sequence
 		var cursor arrangement.ArrCursor
-		var midiConn seqmidi.MidiConnection
-		var errChan = make(chan error)
 		for {
 			if !playState.Playing {
 				// NOTE: Wait for a model update that puts us into a playing state.
@@ -72,7 +73,6 @@ func Loop(sendFn func(tea.Msg)) {
 					playState = modelMsg.PlayState
 					definition = modelMsg.Sequence
 					cursor = modelMsg.Cursor
-					midiConn = modelMsg.MidiConnection
 				case <-doneChannel:
 					return
 				}
@@ -83,14 +83,8 @@ func Loop(sendFn func(tea.Msg)) {
 					playState = modelMsg.PlayState
 					definition = modelMsg.Sequence
 					cursor = modelMsg.Cursor
-					midiConn = modelMsg.MidiConnection
 				case BeatMsg := <-beatChannel:
-					midiSendFn, err := midiConn.AcquireSendFunc()
-					if err != nil {
-						errChan <- err
-					} else {
-						Beat(BeatMsg, playState, definition, cursor, midiSendFn, sendFn, errChan)
-					}
+					Beat(BeatMsg, playState, definition, cursor, sendFn, errChan)
 				case <-doneChannel:
 					return
 				case err := <-errChan:
@@ -99,13 +93,24 @@ func Loop(sendFn func(tea.Msg)) {
 			}
 		}
 	}()
+	go func() {
+		midiSendFn, err := midiConn.AcquireSendFunc()
+		if err != nil {
+			errChan <- err
+			return
+		}
+		for {
+			midiMessage := <-playQueue
+			midiSendFn(midiMessage)
+		}
+	}()
 }
 
 func IsDone(playState playstate.PlayState, currentNode *arrangement.Arrangement, currentSection arrangement.SongSection) bool {
 	return playState.LoopedArrangement != currentNode && currentSection.Cycles+currentSection.StartCycles <= (*playState.Iterations)[currentNode]
 }
 
-func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, midiSendFn seqmidi.SendFunc, sendFn func(tea.Msg), errChan chan error) {
+func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, sendFn func(tea.Msg), errChan chan error) {
 
 	if playState.Playing {
 		AdvancePlayState(&playState, definition, &cursor)
@@ -115,7 +120,7 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 		sendFn(ModelPlayedMsg{PerformStop: true, PlayState: playState, Cursor: cursor})
 		return
 	} else {
-		PlaySequence(&playState, definition, cursor, msg, midiSendFn, errChan)
+		PlaySequence(&playState, definition, cursor, msg, errChan)
 		sendFn(ModelPlayedMsg{PlayState: playState, Cursor: cursor})
 	}
 
@@ -128,7 +133,7 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 	}
 }
 
-func PlaySequence(playState *playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, msg BeatMsg, midiSendFn seqmidi.SendFunc, errChan chan error) {
+func PlaySequence(playState *playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, msg BeatMsg, errChan chan error) {
 	if playState.RecordPreRollBeats > 0 {
 		playState.RecordPreRollBeats--
 		return
@@ -145,13 +150,38 @@ func PlaySequence(playState *playstate.PlayState, definition sequence.Sequence, 
 	currentPart = (*definition.Parts)[partID]
 	currentCycles = (*playState.Iterations)[currentNode]
 	playingOverlay = currentPart.Overlays.HighestMatchingOverlay(currentCycles)
+
+	noteLineStates := make([]playstate.LineState, 0, len(playState.LineStates))
+	metaLineStates := make([]playstate.LineState, 0, len(playState.LineStates))
+	for i, ls := range playState.LineStates {
+		if definition.Lines[i].MsgType == grid.MessageTypeNote {
+			noteLineStates = append(noteLineStates, ls)
+		} else {
+			metaLineStates = append(metaLineStates, ls)
+		}
+	}
+
+	// Play the CC/PC Messages
 	gridKeys := make([]grid.GridKey, 0, len(playState.LineStates))
-	CurrentBeatGridKeys(&gridKeys, playState.LineStates, playState.HasSolo)
+	CurrentBeatGridKeys(&gridKeys, metaLineStates, playState.HasSolo)
 
 	pattern := make(grid.Pattern)
 	playingOverlay.CurrentBeatOverlayPattern(&pattern, currentCycles, gridKeys)
 
-	err := PlayBeat(msg.Interval, pattern, definition, midiSendFn, errChan)
+	err := PlayBeat(msg.Interval, pattern, definition, errChan)
+	if err != nil {
+		errChan <- fault.Wrap(err, fmsg.With("error when playing beat"))
+		return
+	}
+
+	// Play the Note Messages
+	gridKeys = make([]grid.GridKey, 0, len(playState.LineStates))
+	CurrentBeatGridKeys(&gridKeys, noteLineStates, playState.HasSolo)
+
+	pattern = make(grid.Pattern)
+	playingOverlay.CurrentBeatOverlayPattern(&pattern, currentCycles, gridKeys)
+
+	err = PlayBeat(msg.Interval, pattern, definition, errChan)
 
 	if !playState.AllowAdvance {
 		playState.AllowAdvance = true
@@ -242,13 +272,13 @@ func PlayMove(cursor *arrangement.ArrCursor, iterations *map[*arrangement.Arrang
 	return true
 }
 
-func PlayBeat(beatInterval time.Duration, pattern grid.Pattern, definition sequence.Sequence, midiSendFn seqmidi.SendFunc, errChan chan error) error {
+func PlayBeat(beatInterval time.Duration, pattern grid.Pattern, definition sequence.Sequence, errChan chan error) error {
 	lines := definition.Lines
 
 	for gridKey, note := range pattern {
 		line := lines[gridKey.Line]
 		if note.Ratchets.Length > 0 {
-			ProcessRatchets(note, beatInterval, line, definition, midiSendFn, errChan)
+			ProcessRatchets(note, beatInterval, line, definition, errChan)
 		} else if note != grid.ZeroNote {
 			accents := definition.Accents
 
@@ -264,23 +294,23 @@ func PlayBeat(beatInterval time.Duration, pattern grid.Pattern, definition seque
 					accents.Target,
 					delay,
 				)
-				err := ProcessNoteMsg(onMessage, midiSendFn, errChan)
+				err := ProcessNoteMsg(onMessage, errChan)
 				if err != nil {
 					return fault.Wrap(err, fmsg.With("cannot process note on msg"))
 				}
-				err = ProcessNoteMsg(offMessage, midiSendFn, errChan)
+				err = ProcessNoteMsg(offMessage, errChan)
 				if err != nil {
 					return fault.Wrap(err, fmsg.With("cannot process note off msg"))
 				}
 			case grid.MessageTypeCc:
 				ccMessage := CCMessage(line, note, accents.Data, delay, true, definition.Instrument)
-				err := ProcessNoteMsg(ccMessage, midiSendFn, errChan)
+				err := ProcessNoteMsg(ccMessage, errChan)
 				if err != nil {
 					return fault.Wrap(err, fmsg.With("cannot process cc msg"))
 				}
 			case grid.MessageTypeProgramChange:
 				pcMessage := PCMessage(line, note, accents.Data, delay, true, definition.Instrument)
-				err := ProcessNoteMsg(pcMessage, midiSendFn, errChan)
+				err := ProcessNoteMsg(pcMessage, errChan)
 				if err != nil {
 					return fault.Wrap(err, fmsg.With("cannot process cc msg"))
 				}
@@ -291,17 +321,17 @@ func PlayBeat(beatInterval time.Duration, pattern grid.Pattern, definition seque
 	return nil
 }
 
-func ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition, definition sequence.Sequence, midiSendFn seqmidi.SendFunc, errChan chan error) error {
+func ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition, definition sequence.Sequence, errChan chan error) error {
 	for i := range note.Ratchets.Length + 1 {
 		if note.Ratchets.HitAt(i) {
 			shortGateLength := 20 * time.Millisecond
 			ratchetInterval := time.Duration(i) * note.Ratchets.Interval(beatInterval)
 			onMessage, offMessage := NoteMessages(line, definition.Accents.Data[note.AccentIndex].Value, shortGateLength, definition.Accents.Target, ratchetInterval)
-			err := ProcessNoteMsg(onMessage, midiSendFn, errChan)
+			err := ProcessNoteMsg(onMessage, errChan)
 			if err != nil {
 				return fault.Wrap(err, fmsg.With("cannot turn on ratchet note"))
 			}
-			err = ProcessNoteMsg(offMessage, midiSendFn, errChan)
+			err = ProcessNoteMsg(offMessage, errChan)
 			if err != nil {
 				return fault.Wrap(err, fmsg.With("cannot turn off ratchet note"))
 			}
@@ -310,7 +340,7 @@ func ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineD
 	return nil
 }
 
-func ProcessNoteMsg(msg Delayable, midiSendFn seqmidi.SendFunc, errChan chan error) error {
+func ProcessNoteMsg(msg Delayable, errChan chan error) error {
 	// TODO: We don't need the redirection, we know what each type of note is when this function is called
 	switch msg := msg.(type) {
 	case NoteMsg:
@@ -318,39 +348,37 @@ func ProcessNoteMsg(msg Delayable, midiSendFn seqmidi.SendFunc, errChan chan err
 		case midi.NoteOnMsg:
 			if notereg.Has(msg) {
 				notereg.Remove(msg)
-				PlayMessage(0, msg.OffMessage(), midiSendFn, errChan)
+				PlayMessage(0, msg.OffMessage())
 			}
 			if err := notereg.Add(msg); err != nil {
 				return fault.Wrap(err, fmsg.With("added a note already in registry"))
 			}
-			PlayMessage(msg.delay, msg.GetOnMidi(), midiSendFn, errChan)
+			PlayMessage(msg.delay, msg.GetOnMidi())
 		case midi.NoteOffMsg:
-			PlayOffMessage(msg, midiSendFn, errChan)
+			PlayOffMessage(msg)
 		}
 	case controlChangeMsg:
-		PlayMessage(msg.delay, msg.MidiMessage(), midiSendFn, errChan)
+		PlayMessage(msg.delay, msg.MidiMessage())
 	case programChangeMsg:
-		PlayMessage(msg.delay, msg.MidiMessage(), midiSendFn, errChan)
+		PlayMessage(msg.delay, msg.MidiMessage())
 	}
 	return nil
 }
 
-func PlayMessage(delay time.Duration, message midi.Message, sendFn seqmidi.SendFunc, errChan chan error) {
-	time.AfterFunc(delay, func() {
-		err := sendFn(message)
-		if err != nil {
-			errChan <- fault.Wrap(err, fmsg.With("cannot send play message"))
-		}
-	})
+func PlayMessage(delay time.Duration, message midi.Message) {
+	if delay == 0 {
+		playQueue <- message
+	} else {
+		time.AfterFunc(delay, func() {
+			playQueue <- message
+		})
+	}
 }
 
-func PlayOffMessage(nm NoteMsg, sendFn seqmidi.SendFunc, errChan chan error) {
+func PlayOffMessage(nm NoteMsg) {
 	time.AfterFunc(nm.delay, func() {
 		if notereg.RemoveID(nm) {
-			err := sendFn(nm.GetOffMidi())
-			if err != nil {
-				errChan <- fault.Wrap(err, fmsg.With("cannot send off message"))
-			}
+			playQueue <- nm.GetOffMidi()
 		}
 	})
 }
