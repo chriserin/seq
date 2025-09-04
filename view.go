@@ -407,6 +407,10 @@ func (m model) OverlaysView() string {
 	return buf.String()
 }
 
+func PatternMode(mode string) string {
+	return fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode))
+}
+
 func (m model) SeqView(showLines []uint8) string {
 	var buf strings.Builder
 	var mode string
@@ -416,17 +420,28 @@ func (m model) SeqView(showLines []uint8) string {
 
 	buf.WriteString(m.WriteView())
 	if m.patternMode == operation.PatternAccent {
-		mode = " Accent "
-		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(PatternMode(" Accent "))
+	} else if m.patternMode == operation.PatternNoteAccent {
+		mode = " Accent Note "
+		buf.WriteString(PatternMode(mode))
 	} else if m.patternMode == operation.PatternGate {
 		mode = " Gate "
-		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(PatternMode(mode))
+	} else if m.patternMode == operation.PatternNoteGate {
+		mode = " Gate Note "
+		buf.WriteString(PatternMode(mode))
 	} else if m.patternMode == operation.PatternWait {
 		mode = " Wait "
-		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(PatternMode(mode))
+	} else if m.patternMode == operation.PatternNoteWait {
+		mode = " Wait Note "
+		buf.WriteString(PatternMode(mode))
 	} else if m.patternMode == operation.PatternRatchet {
 		mode = " Ratchet "
-		buf.WriteString(fmt.Sprintf(" %s  %s\n", themes.AccentModeStyle.Render(" PATTERN MODE "), themes.AccentModeStyle.Render(mode)))
+		buf.WriteString(PatternMode(mode))
+	} else if m.patternMode == operation.PatternNoteRatchet {
+		mode = " Ratchet Note "
+		buf.WriteString(PatternMode(mode))
 	} else if m.selectionIndicator == operation.SelectRatchets || m.selectionIndicator == operation.SelectRatchetSpan {
 		buf.WriteString(m.RatchetEditView())
 	} else if m.selectionIndicator == operation.SelectTempo || m.selectionIndicator == operation.SelectTempoSubdivision {

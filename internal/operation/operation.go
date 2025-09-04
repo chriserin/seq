@@ -71,4 +71,15 @@ const (
 	PatternGate
 	PatternWait
 	PatternRatchet
+	PatternNoteAccent
+	PatternNoteGate
+	PatternNoteWait
+	PatternNoteRatchet
+)
+
+type EveryMode uint8
+
+const (
+	EveryBeat EveryMode = iota
+	EveryNote
 )

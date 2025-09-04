@@ -263,3 +263,217 @@ func TestPatternModeGateIncrease(t *testing.T) {
 		})
 	}
 }
+
+func TestPatternModeNoteAccentIncrease(t *testing.T) {
+	tests := []struct {
+		name            string
+		commands        []any
+		expectedAccents []uint8
+		description     string
+	}{
+		{
+			name: "Add note, switch to note accent mode, increase accent by 1",
+			commands: []any{
+				mappings.ToggleAccentNoteMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+			},
+			expectedAccents: []uint8{2, 3, 2},
+			description:     "Should add note, switch to note accent mode, and increase accent by 1",
+		},
+		{
+			name: "Add note, switch to note accent mode, decrease accent by 1",
+			commands: []any{
+				mappings.ToggleAccentNoteMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "2"},
+			},
+			expectedAccents: []uint8{4, 3, 4},
+			description:     "Should add note, switch to note accent mode, and increase accent by 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(func(m *model) model {
+				m.currentOverlay.AddNote(grid.GK(0, 0), note{AccentIndex: 3})
+				m.currentOverlay.AddNote(grid.GK(0, 2), note{AccentIndex: 3})
+				m.currentOverlay.AddNote(grid.GK(0, 3), note{AccentIndex: 3})
+				return *m
+			})
+
+			m, _ = processCommands(tt.commands, m)
+
+			gridLocations := []grid.GridKey{
+				grid.GK(0, 0),
+				grid.GK(0, 2),
+				grid.GK(0, 3),
+			}
+
+			for i, gk := range gridLocations {
+				note, exists := m.currentOverlay.GetNote(gk)
+				assert.True(t, exists, tt.description+" - note should exist at grid location "+gk.String())
+				assert.Equal(t, tt.expectedAccents[i], note.AccentIndex, tt.description+" - accent value at grid location "+gk.String())
+			}
+		})
+	}
+}
+
+func TestPatternModeNoteWaitIncrease(t *testing.T) {
+	tests := []struct {
+		name          string
+		commands      []any
+		expectedWaits []uint8
+		description   string
+	}{
+		{
+			name: "Add note, switch to note accent mode, increase accent by 1",
+			commands: []any{
+				mappings.ToggleWaitNoteMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+			},
+			expectedWaits: []uint8{4, 3, 4},
+			description:   "Should add note, switch to note accent mode, and increase accent by 1",
+		},
+		{
+			name: "Add note, switch to note accent mode, decrease accent by 1",
+			commands: []any{
+				mappings.ToggleWaitNoteMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "2"},
+			},
+			expectedWaits: []uint8{2, 3, 2},
+			description:   "Should add note, switch to note accent mode, and increase accent by 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(func(m *model) model {
+				m.currentOverlay.AddNote(grid.GK(0, 0), note{WaitIndex: 3})
+				m.currentOverlay.AddNote(grid.GK(0, 2), note{WaitIndex: 3})
+				m.currentOverlay.AddNote(grid.GK(0, 3), note{WaitIndex: 3})
+				return *m
+			})
+
+			m, _ = processCommands(tt.commands, m)
+
+			gridLocations := []grid.GridKey{
+				grid.GK(0, 0),
+				grid.GK(0, 2),
+				grid.GK(0, 3),
+			}
+
+			for i, gk := range gridLocations {
+				note, exists := m.currentOverlay.GetNote(gk)
+				assert.True(t, exists, tt.description+" - note should exist at grid location "+gk.String())
+				assert.Equal(t, tt.expectedWaits[i], note.WaitIndex, tt.description+" - accent value at grid location "+gk.String())
+			}
+		})
+	}
+}
+
+func TestPatternModeNoteGateIncrease(t *testing.T) {
+	tests := []struct {
+		name          string
+		commands      []any
+		expectedGates []uint8
+		description   string
+	}{
+		{
+			name: "Add note, switch to note accent mode, increase accent by 1",
+			commands: []any{
+				mappings.ToggleGateNoteMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+			},
+			expectedGates: []uint8{4, 3, 4},
+			description:   "Should add note, switch to note accent mode, and increase accent by 1",
+		},
+		{
+			name: "Add note, switch to note accent mode, decrease accent by 1",
+			commands: []any{
+				mappings.ToggleGateNoteMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "2"},
+			},
+			expectedGates: []uint8{2, 3, 2},
+			description:   "Should add note, switch to note accent mode, and increase accent by 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(func(m *model) model {
+				m.currentOverlay.AddNote(grid.GK(0, 0), note{GateIndex: 3})
+				m.currentOverlay.AddNote(grid.GK(0, 2), note{GateIndex: 3})
+				m.currentOverlay.AddNote(grid.GK(0, 3), note{GateIndex: 3})
+				return *m
+			})
+
+			m, _ = processCommands(tt.commands, m)
+
+			gridLocations := []grid.GridKey{
+				grid.GK(0, 0),
+				grid.GK(0, 2),
+				grid.GK(0, 3),
+			}
+
+			for i, gk := range gridLocations {
+				note, exists := m.currentOverlay.GetNote(gk)
+				assert.True(t, exists, tt.description+" - note should exist at grid location "+gk.String())
+				assert.Equal(t, tt.expectedGates[i], note.GateIndex, tt.description+" - accent value at grid location "+gk.String())
+			}
+		})
+	}
+}
+
+func TestPatternModeNoteRatchetIncrease(t *testing.T) {
+	tests := []struct {
+		name                   string
+		commands               []any
+		expectedRatchetLengths []uint8
+		description            string
+	}{
+		{
+			name: "Add note, switch to note accent mode, increase accent by 1",
+			commands: []any{
+				mappings.ToggleRatchetNoteMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+			},
+			expectedRatchetLengths: []uint8{1, 0, 1},
+			description:            "Should add note, switch to note accent mode, and increase accent by 1",
+		},
+		{
+			name: "Add note, switch to note accent mode, decrease accent by 1",
+			commands: []any{
+				mappings.ToggleRatchetNoteMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "2"},
+			},
+			expectedRatchetLengths: []uint8{1, 0, 1},
+			description:            "Should add note, switch to note accent mode, and increase accent by 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(func(m *model) model {
+				m.currentOverlay.AddNote(grid.GK(0, 0), note{AccentIndex: 1})
+				m.currentOverlay.AddNote(grid.GK(0, 2), note{AccentIndex: 1})
+				m.currentOverlay.AddNote(grid.GK(0, 3), note{AccentIndex: 1})
+				return *m
+			})
+
+			m, _ = processCommands(tt.commands, m)
+
+			gridLocations := []grid.GridKey{
+				grid.GK(0, 0),
+				grid.GK(0, 2),
+				grid.GK(0, 3),
+			}
+
+			for i, gk := range gridLocations {
+				note, exists := m.currentOverlay.GetNote(gk)
+				assert.True(t, exists, tt.description+" - note should exist at grid location "+gk.String())
+				assert.Equal(t, tt.expectedRatchetLengths[i], note.Ratchets.Length, tt.description+" - accent value at grid location "+gk.String())
+			}
+		})
+	}
+}

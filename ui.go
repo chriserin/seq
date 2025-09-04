@@ -1338,12 +1338,20 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		case mappings.ToggleGateMode:
 			m.SetPatternMode(operation.PatternGate)
+		case mappings.ToggleGateNoteMode:
+			m.SetPatternMode(operation.PatternNoteGate)
 		case mappings.ToggleWaitMode:
 			m.SetPatternMode(operation.PatternWait)
+		case mappings.ToggleWaitNoteMode:
+			m.SetPatternMode(operation.PatternNoteWait)
 		case mappings.ToggleAccentMode:
 			m.SetPatternMode(operation.PatternAccent)
+		case mappings.ToggleAccentNoteMode:
+			m.SetPatternMode(operation.PatternNoteAccent)
 		case mappings.ToggleRatchetMode:
 			m.SetPatternMode(operation.PatternRatchet)
+		case mappings.ToggleRatchetNoteMode:
+			m.SetPatternMode(operation.PatternNoteRatchet)
 		case mappings.ToggleChordMode:
 			if m.definition.TemplateSequencerType == operation.SeqModeChord {
 				m.definition.TemplateSequencerType = operation.SeqModeLine
@@ -2051,13 +2059,21 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		case operation.PatternFill:
 			m.fill(uint8(beatInterval))
 		case operation.PatternAccent:
-			m.incrementAccent(uint8(beatInterval), -1)
+			m.incrementAccent(uint8(beatInterval), -1, operation.EveryBeat)
+		case operation.PatternNoteAccent:
+			m.incrementAccent(uint8(beatInterval), -1, operation.EveryNote)
 		case operation.PatternGate:
-			m.incrementGate(uint8(beatInterval), -1)
+			m.incrementGate(uint8(beatInterval), -1, operation.EveryBeat)
+		case operation.PatternNoteGate:
+			m.incrementGate(uint8(beatInterval), -1, operation.EveryNote)
 		case operation.PatternRatchet:
-			m.incrementRatchet(uint8(beatInterval), -1)
+			m.incrementRatchet(uint8(beatInterval), -1, operation.EveryBeat)
+		case operation.PatternNoteRatchet:
+			m.incrementRatchet(uint8(beatInterval), -1, operation.EveryNote)
 		case operation.PatternWait:
-			m.incrementWait(uint8(beatInterval), -1)
+			m.incrementWait(uint8(beatInterval), -1, operation.EveryBeat)
+		case operation.PatternNoteWait:
+			m.incrementWait(uint8(beatInterval), -1, operation.EveryNote)
 		}
 	}
 
@@ -2067,13 +2083,21 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		case operation.PatternFill:
 			m.fill(uint8(beatInterval))
 		case operation.PatternAccent:
-			m.incrementAccent(uint8(beatInterval), 1)
+			m.incrementAccent(uint8(beatInterval), 1, operation.EveryBeat)
+		case operation.PatternNoteAccent:
+			m.incrementAccent(uint8(beatInterval), 1, operation.EveryNote)
 		case operation.PatternGate:
-			m.incrementGate(uint8(beatInterval), 1)
+			m.incrementGate(uint8(beatInterval), 1, operation.EveryBeat)
+		case operation.PatternNoteGate:
+			m.incrementGate(uint8(beatInterval), 1, operation.EveryNote)
 		case operation.PatternRatchet:
-			m.incrementRatchet(uint8(beatInterval), 1)
+			m.incrementRatchet(uint8(beatInterval), 1, operation.EveryBeat)
+		case operation.PatternNoteRatchet:
+			m.incrementRatchet(uint8(beatInterval), 1, operation.EveryNote)
 		case operation.PatternWait:
-			m.incrementWait(uint8(beatInterval), 1)
+			m.incrementWait(uint8(beatInterval), 1, operation.EveryBeat)
+		case operation.PatternNoteWait:
+			m.incrementWait(uint8(beatInterval), 1, operation.EveryNote)
 		}
 	}
 
@@ -2653,6 +2677,28 @@ func (m *model) Every(every uint8, everyFn func(gridKey)) {
 	}
 }
 
+func (m *model) EveryNote(every uint8, everyFn func(gridKey), combinedOverlay grid.Pattern) {
+	lineStart, lineEnd := m.PatternActionLineBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
+
+	noteCollection := make([]grid.GridKey, 0)
+	for gridKey, note := range combinedOverlay {
+		if note != zeronote {
+			if gridKey.Line >= lineStart && gridKey.Line <= lineEnd && gridKey.Beat >= start && gridKey.Beat <= end {
+				noteCollection = append(noteCollection, gridKey)
+			}
+		}
+	}
+
+	slices.SortFunc(noteCollection, grid.Compare)
+
+	for i, gridKey := range noteCollection {
+		if i%int(every) == 0 {
+			everyFn(gridKey)
+		}
+	}
+}
+
 func (m *model) fill(every uint8) {
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
@@ -2670,7 +2716,7 @@ func (m *model) fill(every uint8) {
 	m.Every(every, everyFn)
 }
 
-func (m *model) incrementAccent(every uint8, modifier int8) {
+func (m *model) incrementAccent(every uint8, modifier int8, everyMode operation.EveryMode) {
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	everyFn := func(gridKey gridKey) {
@@ -2681,10 +2727,16 @@ func (m *model) incrementAccent(every uint8, modifier int8) {
 			m.currentOverlay.SetNote(gridKey, currentNote.IncrementAccent(modifier, uint8(len(config.Accents))))
 		}
 	}
-	m.Every(every, everyFn)
+
+	switch everyMode {
+	case operation.EveryBeat:
+		m.Every(every, everyFn)
+	case operation.EveryNote:
+		m.EveryNote(every, everyFn, combinedOverlay)
+	}
 }
 
-func (m *model) incrementGate(every uint8, modifier int8) {
+func (m *model) incrementGate(every uint8, modifier int8, everyMode operation.EveryMode) {
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	everyFn := func(gridKey gridKey) {
@@ -2695,10 +2747,16 @@ func (m *model) incrementGate(every uint8, modifier int8) {
 			m.currentOverlay.SetNote(gridKey, currentNote.IncrementGate(modifier, len(config.ShortGates)+len(config.LongGates)))
 		}
 	}
-	m.Every(every, everyFn)
+
+	switch everyMode {
+	case operation.EveryBeat:
+		m.Every(every, everyFn)
+	case operation.EveryNote:
+		m.EveryNote(every, everyFn, combinedOverlay)
+	}
 }
 
-func (m *model) incrementRatchet(every uint8, modifier int8) {
+func (m *model) incrementRatchet(every uint8, modifier int8, everyMode operation.EveryMode) {
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	everyFn := func(gridKey gridKey) {
@@ -2709,10 +2767,16 @@ func (m *model) incrementRatchet(every uint8, modifier int8) {
 			m.currentOverlay.SetNote(gridKey, currentNote.IncrementRatchet(modifier))
 		}
 	}
-	m.Every(every, everyFn)
+
+	switch everyMode {
+	case operation.EveryBeat:
+		m.Every(every, everyFn)
+	case operation.EveryNote:
+		m.EveryNote(every, everyFn, combinedOverlay)
+	}
 }
 
-func (m *model) incrementWait(every uint8, modifier int8) {
+func (m *model) incrementWait(every uint8, modifier int8, everyMode operation.EveryMode) {
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
 
 	everyFn := func(gridKey gridKey) {
@@ -2723,7 +2787,13 @@ func (m *model) incrementWait(every uint8, modifier int8) {
 			m.currentOverlay.SetNote(gridKey, currentNote.IncrementWait(modifier))
 		}
 	}
-	m.Every(every, everyFn)
+
+	switch everyMode {
+	case operation.EveryBeat:
+		m.Every(every, everyFn)
+	case operation.EveryNote:
+		m.EveryNote(every, everyFn, combinedOverlay)
+	}
 }
 
 func (m *model) IncrementSpecificValue(note grid.Note) {

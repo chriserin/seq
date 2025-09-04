@@ -63,9 +63,13 @@ const (
 	Decrease
 	Enter
 	ToggleGateMode
+	ToggleGateNoteMode
 	ToggleWaitMode
+	ToggleWaitNoteMode
 	ToggleAccentMode
+	ToggleAccentNoteMode
 	ToggleRatchetMode
+	ToggleRatchetNoteMode
 	NextOverlay
 	PrevOverlay
 	Save
@@ -292,9 +296,13 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("m")}:                                                                        Mute,
 	OperationKey{focus: operation.FocusGrid, key: k("o")}:                                                                        ToggleChordMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "a")}:                                                                   ToggleAccentMode,
+	OperationKey{focus: operation.FocusGrid, key: k("n", "A")}:                                                                   ToggleAccentNoteMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "w")}:                                                                   ToggleWaitMode,
+	OperationKey{focus: operation.FocusGrid, key: k("n", "W")}:                                                                   ToggleWaitNoteMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "g")}:                                                                   ToggleGateMode,
+	OperationKey{focus: operation.FocusGrid, key: k("n", "G")}:                                                                   ToggleGateNoteMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "r")}:                                                                   ToggleRatchetMode,
+	OperationKey{focus: operation.FocusGrid, key: k("n", "R")}:                                                                   ToggleRatchetNoteMode,
 	OperationKey{focus: operation.FocusGrid, key: k("p")}:                                                                        Paste,
 	OperationKey{focus: operation.FocusAny, key: k("q")}:                                                                         Quit,
 	OperationKey{focus: operation.FocusGrid, key: k("r")}:                                                                        RatchetDecrease,
