@@ -22,6 +22,60 @@
 2. Extract: tar xzvf seq-linux-x86_64.tar.gz
 3. Run ./seq-linux-x86_64/bin/seq
 
+## [v0.1.0-alpha.7](https://github.com/chriserin/seq/compare/v0.1.0-alpha.6...v0.1.0-alpha.7) (2025-09-04)
+
+### Features
+
+* Intro pattern mode note variation [4cd1a45](https://github.com/chriserin/seq/commit/4cd1a45) 
+* modify existing key [68e59c9](https://github.com/chriserin/seq/commit/68e59c9) 
+* Display overlay loop indicator in side [35acc53](https://github.com/chriserin/seq/commit/35acc53) 
+* Undo remove/new overlay [3041a9b](https://github.com/chriserin/seq/commit/3041a9b) 
+* Remove Overlay [d2e9135](https://github.com/chriserin/seq/commit/d2e9135) 
+* Display connected indicator for rcvr [e81621d](https://github.com/chriserin/seq/commit/e81621d) 
+* Inc/Dec all notes/channels [41c286c](https://github.com/chriserin/seq/commit/41c286c) 
+* Send loopMode to receiver with SPP msg [b02da07](https://github.com/chriserin/seq/commit/b02da07) 
+
+### Fixes
+
+* New Line determines note val better [3ec2b6c](https://github.com/chriserin/seq/commit/3ec2b6c) 
+* CC msgs are sent before Note msgs [b9fa645](https://github.com/chriserin/seq/commit/b9fa645) 
+* Print to Stderr [f01669b](https://github.com/chriserin/seq/commit/f01669b) 
+* cache the wrapped sendFn not the naked [4b29bd1](https://github.com/chriserin/seq/commit/4b29bd1) 
+* line names for CC and PC [cdc8fc8](https://github.com/chriserin/seq/commit/cdc8fc8) 
+* don't combine standard and instr CCs [bc6c541](https://github.com/chriserin/seq/commit/bc6c541) 
+* Default width to 1 [844be84](https://github.com/chriserin/seq/commit/844be84) 
+* clear looped arr on play [6e29d5e](https://github.com/chriserin/seq/commit/6e29d5e) 
+* don't send final pulse for trans stop [a76f715](https://github.com/chriserin/seq/commit/a76f715) 
+* don't stop at end if receiver mode [05ea505](https://github.com/chriserin/seq/commit/05ea505) 
+* ui should follow msg from timing [1a11ad4](https://github.com/chriserin/seq/commit/1a11ad4) 
+* cache acquired send fn [848a444](https://github.com/chriserin/seq/commit/848a444) 
+* prevent runaway beat loop [bd24053](https://github.com/chriserin/seq/commit/bd24053) 
+* sync receiver to beat loop [42cd49e](https://github.com/chriserin/seq/commit/42cd49e) 
+* Add beat channel to transmitter loop [ecb8a5b](https://github.com/chriserin/seq/commit/ecb8a5b) 
+
+
+## Install
+
+### macOS (x86_64)
+
+1. Download seq-macos-x86_64.tar.gz
+2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf seq-macos-x86_64.tar.gz
+4. Run ./seq-macos-x86_64/bin/seq
+
+### macOS (arm64)
+
+1. Download seq-macos-arm64.tar.gz
+2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf seq-macos-arm64.tar.gz
+4. Run ./seq-macos-arm64/bin/seq
+
+### Linux (x86_64)
+
+1. Download seq-linux-x86_64.tar.gz
+2. Extract: tar xzvf seq-linux-x86_64.tar.gz
+3. Run ./seq-linux-x86_64/bin/seq
+
 ## [v0.1.0-alpha.6](https://github.com/chriserin/seq/compare/v0.1.0-alpha.5...v0.1.0-alpha.6) (2025-08-19)
 
 ### Features
