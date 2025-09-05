@@ -524,7 +524,7 @@ func GateLength(gateIndex int16, beatInterval time.Duration) time.Duration {
 		}
 		return delay
 	} else if gateIndex >= 8 {
-		return time.Duration(float64(config.LongGates[gateIndex].Value) * float64(beatInterval))
+		return time.Duration(float64(config.LongGates[gateIndex-uint8(len(config.ShortGates))].Value) * float64(beatInterval))
 	}
 	return delay
 }

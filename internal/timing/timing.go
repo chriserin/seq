@@ -210,9 +210,14 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 							sendFn(ErrorMsg{wrappedErr})
 						}
 					}
-					pulse(t.PulseInterval())
+					pulseInterval := t.PulseInterval()
+
+					adjuster := time.Since(t.playTime) - t.trackTime
+					t.trackTime = t.trackTime + pulseInterval
+					next := pulseInterval - adjuster
+					pulse(next)
 					if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
-						beatChannel <- beats.BeatMsg{Interval: t.BeatInterval()}
+						beatChannel <- beats.BeatMsg{Interval: t.TickInterval()}
 					}
 					t.pulseCount++
 				}
