@@ -412,9 +412,13 @@ func CCMessage(l grid.LineDefinition, note grid.Note, accents []config.Accent, d
 		return controlChangeMsg{l.Channel - 1, l.Note, note.AccentIndex, delay}
 	} else {
 		cc, _ := config.FindCC(l.Note, instrument)
-		ccValue := uint8((float32((len(accents))-int(note.AccentIndex)) / float32(len(accents)-1)) * float32(cc.UpperLimit))
+		var ccValue uint8
 		if cc.UpperLimit == 1 && note.AccentIndex > 4 {
-			ccValue = uint8(1)
+			ccValue = 0
+		} else if cc.UpperLimit == 1 {
+			ccValue = 1
+		} else {
+			ccValue = uint8((float32((len(accents))-int(note.AccentIndex)) / float32(len(accents)-1)) * float32(cc.UpperLimit))
 		}
 
 		return controlChangeMsg{l.Channel - 1, l.Note, ccValue, delay}
