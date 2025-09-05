@@ -1824,6 +1824,10 @@ func (m *model) SafeStop() {
 				m.unlockReceiverChannel <- true
 			}
 		}()
+	} else {
+		go func() {
+			timingChannel <- timing.StopMsg{}
+		}()
 	}
 	m.Stop()
 }

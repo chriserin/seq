@@ -377,7 +377,10 @@ func (t *Timing) StandAloneLoop(sendFn func(tea.Msg)) {
 					tick(0)
 				case StopMsg:
 					t.started = false
-					tickTimer.Stop()
+					if tickTimer != nil {
+
+						tickTimer.Stop()
+					}
 				case TempoMsg:
 					t.tempo = command.Tempo
 					t.subdivisions = command.Subdivisions
