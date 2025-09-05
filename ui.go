@@ -1414,6 +1414,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 					m.playState.LineStates = append(m.playState.LineStates, playstate.InitLineState(playstate.PlayStatePlay, uint8(len(m.definition.Lines)-1), 0))
 				}
 			}
+			m.SyncBeatLoop()
 		case mappings.NewSectionAfter:
 			m.SetSelectionIndicator(operation.SelectPart)
 			m.sectionSideIndicator = SectionAfter
@@ -1441,9 +1442,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.playState.LineStates = Mute(m.playState.LineStates, m.gridCursor.Line)
 				m.playState.HasSolo = m.HasSolo()
 			}
+			m.SyncBeatLoop()
 		case mappings.Solo:
 			m.playState.LineStates = Solo(m.playState.LineStates, m.gridCursor.Line)
 			m.playState.HasSolo = m.HasSolo()
+			m.SyncBeatLoop()
 		case mappings.Enter:
 			m.RecordSpecificValueUndo()
 			m.PushUndoableDefinitionState()
