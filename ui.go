@@ -1365,6 +1365,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.NextOverlay(+1)
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 		case mappings.Save:
+			m.Escape()
 			if m.filename == "" {
 				m.selectionIndicator = operation.SelectFileName
 			} else {
