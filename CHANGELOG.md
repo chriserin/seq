@@ -22,6 +22,46 @@
 2. Extract: tar xzvf seq-linux-x86_64.tar.gz
 3. Run ./seq-linux-x86_64/bin/seq
 
+## [v0.1.0-alpha.8](https://github.com/chriserin/seq/compare/v0.1.0-alpha.7...v0.1.0-alpha.8) (2025-09-08)
+
+### Features
+
+* Clear All Parts/Overlays [8e50f10](https://github.com/chriserin/seq/commit/8e50f10) 
+* Save As (ctrl+w) [46f78c9](https://github.com/chriserin/seq/commit/46f78c9) 
+
+### Fixes
+
+* Allow bigger gate values [528e560](https://github.com/chriserin/seq/commit/528e560) 
+* set to default loop state on stop [e5f4f4f](https://github.com/chriserin/seq/commit/e5f4f4f) 
+* Loop whole song [7f18382](https://github.com/chriserin/seq/commit/7f18382) 
+* Escape from mode before save [03e4a16](https://github.com/chriserin/seq/commit/03e4a16) 
+* CC msg on/off 1 or 0 [d081fad](https://github.com/chriserin/seq/commit/d081fad) 
+* SyncBeatLoop on linestate change [3c0bf80](https://github.com/chriserin/seq/commit/3c0bf80) 
+* send stop on stop when receiver [650367d](https://github.com/chriserin/seq/commit/650367d) 
+
+
+## Install
+
+### macOS (x86_64)
+
+1. Download seq-macos-x86_64.tar.gz
+2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf seq-macos-x86_64.tar.gz
+4. Run ./seq-macos-x86_64/bin/seq
+
+### macOS (arm64)
+
+1. Download seq-macos-arm64.tar.gz
+2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf seq-macos-arm64.tar.gz
+4. Run ./seq-macos-arm64/bin/seq
+
+### Linux (x86_64)
+
+1. Download seq-linux-x86_64.tar.gz
+2. Extract: tar xzvf seq-linux-x86_64.tar.gz
+3. Run ./seq-linux-x86_64/bin/seq
+
 ## [v0.1.0-alpha.7](https://github.com/chriserin/seq/compare/v0.1.0-alpha.6...v0.1.0-alpha.7) (2025-09-04)
 
 ### Features
