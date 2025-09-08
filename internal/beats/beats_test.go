@@ -30,7 +30,28 @@ func TestSimpleSequenceBeats(t *testing.T) {
 
 			(*sequence.Parts)[0].Beats = tt.partBeats
 
-			beatsPlayed := PlayBeats(sequence, cursor, int(tt.partBeats)+3)
+			beatsPlayed := PlayBeats(sequence, cursor, int(tt.partBeats)+3, playstate.PlayState{Playing: true})
+			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
+		})
+	}
+}
+
+func TestSimpleSequenceLoopSong(t *testing.T) {
+	tests := []struct {
+		name                string
+		partBeats           uint8
+		expectedBeatsPlayed int
+	}{
+		{"Part with 1 beat", 1, 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sequence, cursor := SimpleSequence()
+
+			(*sequence.Parts)[0].Beats = tt.partBeats
+
+			beatsPlayed := PlayBeats(sequence, cursor, int(tt.partBeats)+3, playstate.PlayState{Playing: true, LoopedArrangement: sequence.Arrangement})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
@@ -55,7 +76,7 @@ func TestGroupedSequenceBeats(t *testing.T) {
 			(*sequence.Parts)[0].Beats = tt.partBeats
 			cursor[1].Iterations = tt.groupIterations
 
-			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3)
+			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
@@ -81,7 +102,7 @@ func TestSiblingSections(t *testing.T) {
 			(*sequence.Parts)[0].Beats = tt.partABeats
 			(*sequence.Parts)[1].Beats = tt.partBBeats
 
-			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3)
+			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
@@ -109,7 +130,7 @@ func TestNestedGroups(t *testing.T) {
 			cursor[1].Iterations = tt.groupAIterations
 			cursor[2].Iterations = tt.groupBIterations
 
-			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3)
+			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
@@ -137,7 +158,7 @@ func TestGroupPartSiblingSequence(t *testing.T) {
 			(*sequence.Parts)[1].Beats = tt.partBBeats
 			sequence.Arrangement.Nodes[0].Iterations = tt.groupIterations
 
-			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3)
+			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
@@ -165,16 +186,16 @@ func TestPartGroupSiblingSequence(t *testing.T) {
 			(*sequence.Parts)[1].Beats = tt.partBBeats
 			sequence.Arrangement.Nodes[1].Iterations = tt.groupIterations
 
-			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3)
+			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
 }
 
-func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit int) int {
+func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit int, playState playstate.PlayState) int {
 	testMessageChan := make(chan ModelPlayedMsg)
 	beatsPlayedCounter := 0
-	var update = ModelPlayedMsg{PlayState: playstate.PlayState{Playing: true}}
+	var update = ModelPlayedMsg{PlayState: playState}
 	sendFn := func(msg tea.Msg) {
 		switch msg := msg.(type) {
 		case ModelPlayedMsg:
@@ -190,7 +211,8 @@ func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit i
 
 	iterations := make(map[*arrangement.Arrangement]int)
 	playstate.BuildIterationsMap(sequence.Arrangement, &iterations)
-	playState := playstate.PlayState{Playing: true, LineStates: playstate.InitLineStates(1, []playstate.LineState{}, 0), Iterations: &iterations}
+	playState.LineStates = playstate.InitLineStates(1, []playstate.LineState{}, 0)
+	playState.Iterations = &iterations
 
 	updateChannel <- ModelMsg{
 		PlayState: playState,

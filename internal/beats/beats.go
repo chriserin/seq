@@ -206,7 +206,7 @@ func AdvancePlayState(playState *playstate.PlayState, definition sequence.Sequen
 			advanceCurrentBeat(currentCycles, *playingOverlay, playState.LineStates, currentPart.Beats)
 			advanceKeyCycle(definition.Keyline, playState.LineStates, playState.LoopMode, currentNode, playState.Iterations)
 			if IsDone(*playState, currentNode, currentSection) && playState.LoopMode != playstate.LoopOverlay {
-				if PlayMove(cursor, playState.Iterations) || playState.PlayMode == playstate.PlayReceiver {
+				if PlayMove(cursor, playState.Iterations, playState.LoopedArrangement) || playState.PlayMode == playstate.PlayReceiver {
 					currentSection = (*cursor)[len(*cursor)-1].Section
 					currentNode = (*cursor)[len(*cursor)-1]
 					if !currentSection.KeepCycles {
@@ -248,14 +248,14 @@ func advanceKeyCycle(keyline uint8, lineStates []playstate.LineState, loopMode p
 	}
 }
 
-func PlayMove(cursor *arrangement.ArrCursor, iterations *map[*arrangement.Arrangement]int) bool {
+func PlayMove(cursor *arrangement.ArrCursor, iterations *map[*arrangement.Arrangement]int, loopNode *arrangement.Arrangement) bool {
 	if cursor.IsRoot() {
 		cursor.MoveNext()
 		return false
 	} else if cursor.IsLastSibling() {
 		(*iterations)[cursor.GetParentNode()]++
 		hasParentIterations := (*iterations)[cursor.GetParentNode()] < cursor.GetParentNode().Iterations
-		if hasParentIterations {
+		if hasParentIterations || loopNode == cursor.GetParentNode() {
 			cursor.MoveToFirstSibling()
 			if cursor.GetCurrentNode().IsGroup() {
 				cursor.MoveNext()
@@ -263,7 +263,7 @@ func PlayMove(cursor *arrangement.ArrCursor, iterations *map[*arrangement.Arrang
 		} else {
 			cursor.ResetIterations(iterations)
 			cursor.Up()
-			return PlayMove(cursor, iterations)
+			return PlayMove(cursor, iterations, loopNode)
 		}
 	} else {
 		cursor.MoveToSibling()
