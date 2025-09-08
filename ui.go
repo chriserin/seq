@@ -1786,6 +1786,8 @@ func (m *model) Start(delay time.Duration) {
 func (m *model) Stop() {
 	m.playState.AllowAdvance = false
 	m.playState.RecordPreRollBeats = 0
+	m.playState.LoopMode = playstate.OneTimeWholeSequence
+	m.playState.LoopedArrangement = nil
 	m.arrangement.ResetDepth()
 	m.ResetCurrentOverlay()
 	m.SyncBeatLoop()
