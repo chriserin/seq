@@ -1456,6 +1456,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.PushUndoableDefinitionState()
 			m.Escape()
 			m.SetSelectionIndicator(operation.SelectGrid)
+		case mappings.ClearAllOverlays:
+			m.ClearAllOverlays()
 		default:
 			// NOTE: Assuming that every other mapping updates the definition
 			m = m.UpdateDefinition(mapping)
@@ -2337,6 +2339,12 @@ func (m *model) RemoveOverlay() {
 
 func (m *model) ClearOverlay() {
 	(*m.definition.Parts)[m.CurrentPartID()].Overlays.Clear()
+}
+
+func (m *model) ClearAllOverlays() {
+	for i := range *m.definition.Parts {
+		(*m.definition.Parts)[i].Overlays.ClearRecursive()
+	}
 }
 
 type MoveFunc func()

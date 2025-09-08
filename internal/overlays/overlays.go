@@ -81,6 +81,13 @@ func (ol *Overlay) Clear() {
 	ol.blockers = []grid.GridKey{}
 }
 
+func (ol *Overlay) ClearRecursive() {
+	ol.Clear()
+	if ol.Below != nil {
+		ol.Below.ClearRecursive()
+	}
+}
+
 func InitOverlay(key Key, below *Overlay) *Overlay {
 	return &Overlay{
 		Key:     key,
