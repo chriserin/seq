@@ -73,6 +73,7 @@ const (
 	NextOverlay
 	PrevOverlay
 	Save
+	SaveAs
 	Undo
 	Redo
 	New
@@ -281,6 +282,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusAny, key: k("ctrl+t")}:                                                                    TempoInputSwitch,
 	OperationKey{focus: operation.FocusAny, key: k("ctrl+u")}:                                                                    OverlayStackToggle,
 	OperationKey{focus: operation.FocusAny, key: k("ctrl+s")}:                                                                    Save,
+	OperationKey{focus: operation.FocusAny, key: k("ctrl+w")}:                                                                    SaveAs,
 	OperationKey{focus: operation.FocusGrid, key: k("ctrl+y")}:                                                                   RatchetInputSwitch,
 	OperationKey{focus: operation.FocusGrid, key: k("a")}:                                                                        AccentDecrease,
 	OperationKey{focus: operation.FocusGrid, key: k("c")}:                                                                        ClearLine,

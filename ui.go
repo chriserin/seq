@@ -1371,6 +1371,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			} else {
 				m.Save()
 			}
+		case mappings.SaveAs:
+			m.Escape()
+			m.selectionIndicator = operation.SelectFileName
 		case mappings.Undo:
 			tempo, subdiv := m.definition.Tempo, m.definition.Subdivisions
 			undoStack := m.Undo()

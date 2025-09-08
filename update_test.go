@@ -229,6 +229,59 @@ func TestSaveBeforeFilename(t *testing.T) {
 	}
 }
 
+func TestSaveAs(t *testing.T) {
+	//NOTE: Using this temp directory method to work around limits on file name length within the input
+	tempDir, err := os.MkdirTemp("./", "ex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := os.RemoveAll(tempDir)
+		if err != nil {
+			t.Fatalf("Failed to remove temp dir: %v", err)
+		}
+	}()
+
+	tests := []struct {
+		name        string
+		commands    []any
+		description string
+	}{
+		{
+			name:        "SaveAs After Filename",
+			commands:    []any{mappings.SaveAs, TestKey{Keys: filepath.Join(tempDir, "tsave2")}, mappings.Enter},
+			description: "Should save file when filename is set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a temporary filename
+			firstFilename := filepath.Join(tempDir, "tsave.seq")
+			expectedFilename := filepath.Join(tempDir, "tsave2.seq")
+
+			m := createTestModel(
+				func(m *model) model {
+					m.filename = firstFilename
+					return *m
+				},
+			)
+
+			_, err := os.Stat(expectedFilename)
+			assert.True(t, os.IsNotExist(err), "File should not exist initially")
+
+			processCommands(tt.commands, m)
+
+			_, err = os.Stat(expectedFilename)
+			assert.NoError(t, err, tt.description+" - file should be created")
+
+			fileInfo, err := os.Stat(expectedFilename)
+			assert.NoError(t, err, "Should be able to get file info")
+			assert.Greater(t, fileInfo.Size(), int64(0), "File should not be empty")
+		})
+	}
+}
+
 func TestSaveBeforeFilenameEscape(t *testing.T) {
 
 	tests := []struct {
