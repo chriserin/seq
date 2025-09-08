@@ -639,7 +639,7 @@ func noteprops(propStr string) grid.Note {
 				}
 			case "GateIndex":
 				if gateIdx, err := strconv.ParseUint(value, 10, 8); err == nil {
-					note.GateIndex = uint8(gateIdx)
+					note.GateIndex = int16(gateIdx)
 				}
 			case "WaitIndex":
 				if waitIdx, err := strconv.ParseUint(value, 10, 8); err == nil {

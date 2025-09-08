@@ -111,7 +111,7 @@ func TestGateIncrease(t *testing.T) {
 	tests := []struct {
 		name         string
 		commands     []any
-		expectedGate uint8
+		expectedGate int16
 		description  string
 	}{
 		{
@@ -212,7 +212,7 @@ func TestGateBigIncrease(t *testing.T) {
 	tests := []struct {
 		name          string
 		commands      []any
-		expectedGate  uint8
+		expectedGate  int16
 		description   string
 		maxGateLength int
 	}{

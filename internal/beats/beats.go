@@ -512,7 +512,7 @@ func Delay(waitIndex uint8, beatInterval time.Duration) time.Duration {
 	return delay
 }
 
-func GateLength(gateIndex uint8, beatInterval time.Duration) time.Duration {
+func GateLength(gateIndex int16, beatInterval time.Duration) time.Duration {
 	var delay time.Duration
 	if gateIndex < 8 {
 		var delay time.Duration

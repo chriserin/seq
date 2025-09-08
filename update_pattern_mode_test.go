@@ -193,7 +193,7 @@ func TestPatternModeGateIncrease(t *testing.T) {
 	tests := []struct {
 		name         string
 		commands     []any
-		expectedGate uint8
+		expectedGate int16
 		description  string
 	}{
 		{
@@ -374,7 +374,7 @@ func TestPatternModeNoteGateIncrease(t *testing.T) {
 	tests := []struct {
 		name          string
 		commands      []any
-		expectedGates []uint8
+		expectedGates []int16
 		description   string
 	}{
 		{
@@ -383,7 +383,7 @@ func TestPatternModeNoteGateIncrease(t *testing.T) {
 				mappings.ToggleGateNoteMode,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
 			},
-			expectedGates: []uint8{4, 3, 4},
+			expectedGates: []int16{4, 3, 4},
 			description:   "Should add note, switch to note accent mode, and increase accent by 1",
 		},
 		{
@@ -392,7 +392,7 @@ func TestPatternModeNoteGateIncrease(t *testing.T) {
 				mappings.ToggleGateNoteMode,
 				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "2"},
 			},
-			expectedGates: []uint8{2, 3, 2},
+			expectedGates: []int16{2, 3, 2},
 			description:   "Should add note, switch to note accent mode, and increase accent by 1",
 		},
 	}

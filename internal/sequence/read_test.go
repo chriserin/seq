@@ -218,7 +218,7 @@ func TestReadWrite(t *testing.T) {
 		// Verify first note
 		if note, exists := readOverlay.Notes[grid.GridKey{Line: 0, Beat: 0}]; assert.True(t, exists) {
 			assert.Equal(t, uint8(1), note.AccentIndex)
-			assert.Equal(t, uint8(2), note.GateIndex)
+			assert.Equal(t, int16(2), note.GateIndex)
 		}
 
 		// Verify second note
@@ -331,7 +331,7 @@ func TestReadFileWithChords(t *testing.T) {
 		assert.Equal(t, uint8(0), beatNote.Note.Ratchets.Length)
 		assert.Equal(t, uint8(0), beatNote.Note.Ratchets.Span)
 		assert.Equal(t, grid.Action(0), beatNote.Note.Action)
-		assert.Equal(t, uint8(0), beatNote.Note.GateIndex)
+		assert.Equal(t, int16(0), beatNote.Note.GateIndex)
 		assert.Equal(t, uint8(0), beatNote.Note.WaitIndex)
 	}
 

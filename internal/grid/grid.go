@@ -53,8 +53,8 @@ type Note struct {
 	AccentIndex uint8
 	Ratchets    Ratchet
 	Action      Action
-	GateIndex   uint8
 	WaitIndex   uint8
+	GateIndex   int16
 }
 
 var ZeroNote = Note{}
@@ -76,11 +76,11 @@ func (n Note) IncrementAccent(modifier int8, accentsLength uint8) Note {
 }
 
 func (n Note) IncrementGate(modifier int8, gatesLength int) Note {
-	var newGate = int8(n.GateIndex) + modifier
+	var newGate = int16(n.GateIndex) + int16(modifier)
 	if newGate >= 0 && int(newGate) < gatesLength {
-		n.GateIndex = uint8(newGate)
+		n.GateIndex = int16(newGate)
 	} else if int(newGate) >= gatesLength {
-		n.GateIndex = uint8(gatesLength - 1)
+		n.GateIndex = int16(gatesLength - 1)
 	} else if newGate < 0 {
 		n.GateIndex = 0
 	}

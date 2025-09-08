@@ -741,7 +741,7 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 			style = style.Foreground(foregroundColor)
 		}
 
-		if overlayNote.Note.GateIndex > uint8(len(config.ShortGates))-1 && int(overlayNote.Note.GateIndex) < int(len(config.ShortGates)+len(config.LongGates)) {
+		if overlayNote.Note.GateIndex > int16(len(config.ShortGates))-1 && int(overlayNote.Note.GateIndex) < int(len(config.ShortGates)+len(config.LongGates)) {
 			gateSpaceValue := config.LongGates[overlayNote.Note.GateIndex-8].Shape
 			gateSpace.StringValue = []rune(gateSpaceValue)
 			gateSpace.Color = foregroundColor
@@ -791,7 +791,7 @@ func ViewNoteComponents(currentNote grid.Note) (string, lipgloss.Color) {
 }
 
 func ShortGate(note note) string {
-	if note.GateIndex < uint8(len(config.ShortGates)) {
+	if note.GateIndex < int16(len(config.ShortGates)) {
 		return string(config.ShortGates[note.GateIndex].Shape)
 	} else {
 		return ""
