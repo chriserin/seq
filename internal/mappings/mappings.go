@@ -180,6 +180,7 @@ const (
 	DecreaseAllChannels
 	IncreaseAllNote
 	DecreaseAllNote
+	ToggleTransmitting
 )
 
 type mappingKey [3]string
@@ -246,6 +247,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("b", "l")}:                                                                   CursorLastLine,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "f")}:                                                                   CursorFirstLine,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "h")}:                                                                   ToggleHideLines,
+	OperationKey{focus: operation.FocusGrid, key: k("b", "t")}:                                                                   ToggleTransmitting,
 	OperationKey{focus: operation.FocusGrid, key: k("A")}:                                                                        AccentIncrease,
 	OperationKey{focus: operation.FocusGrid, key: k("C")}:                                                                        ClearOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "C")}:                                                                   ClearAllOverlays,

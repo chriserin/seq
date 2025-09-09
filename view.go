@@ -480,7 +480,11 @@ func (m model) SeqView(showLines []uint8) string {
 
 	beats := m.CurrentPart().Beats
 	topLine := strings.Repeat("─", max(32, int(beats)))
-	if m.midiLoopMode == timing.MlmReceiver && !m.transmitterConnected {
+	if m.midiLoopMode == timing.MlmTransmitter && m.transmitting {
+		buf.WriteString("  T")
+	} else if m.midiLoopMode == timing.MlmTransmitter && !m.transmitting {
+		buf.WriteString("  ⊥")
+	} else if m.midiLoopMode == timing.MlmReceiver && !m.transmitterConnected {
 		buf.WriteString("  X")
 	} else if m.midiLoopMode == timing.MlmReceiver && m.transmitterConnected {
 		buf.WriteString("  ☨")

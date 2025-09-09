@@ -74,6 +74,7 @@ type model struct {
 	showArrangementView   bool
 	hideEmptyLines        bool
 	modifyKey             bool
+	transmitting          bool
 	ratchetCursor         uint8
 	temporaryNoteValue    uint8
 	focus                 operation.Focus
@@ -759,6 +760,7 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 	}
 
 	return model{
+		transmitting:          true,
 		currentError:          err,
 		theme:                 theme,
 		filename:              filename,
@@ -929,6 +931,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
+		case mappings.ToggleTransmitting:
+			m.transmitting = !m.transmitting
 		case mappings.DecreaseAllChannels:
 			for i := range m.definition.Lines {
 				m.definition.Lines[i].DecrementChannel()
@@ -1790,7 +1794,7 @@ func (m *model) Start(delay time.Duration) {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
 			updateChannel <- beats.ModelMsg{Sequence: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor}
 			if m.playState.PlayMode != playstate.PlayReceiver {
-				timingChannel <- timing.StartMsg{LoopMode: m.playState.LoopMode, Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions, Prerollbeats: m.playState.RecordPreRollBeats}
+				timingChannel <- timing.StartMsg{LoopMode: m.playState.LoopMode, Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions, Prerollbeats: m.playState.RecordPreRollBeats, Transmitting: m.transmitting}
 			}
 		})
 	}

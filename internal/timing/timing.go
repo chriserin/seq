@@ -39,6 +39,7 @@ type Timing struct {
 	pulseCount   int
 	pulseLimit   int
 	preRollBeats uint8
+	transmitting bool
 }
 
 type MidiLoopMode uint8
@@ -179,6 +180,7 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 					t.pulseCount = 0
 					t.pulseLimit = 0
 					t.preRollBeats = command.Prerollbeats
+					t.transmitting = command.Transmitting
 					pulse(0)
 					err := transmitter.Start(command.LoopMode)
 					if err != nil {
@@ -207,10 +209,12 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 				if t.started {
 					if t.preRollBeats == 0 {
 						if t.pulseLimit == 0 || t.pulseCount < t.pulseLimit {
-							err := transmitter.Pulse()
-							if err != nil {
-								wrappedErr := fault.Wrap(err)
-								sendFn(ErrorMsg{wrappedErr})
+							if t.transmitting {
+								err := transmitter.Pulse()
+								if err != nil {
+									wrappedErr := fault.Wrap(err)
+									sendFn(ErrorMsg{wrappedErr})
+								}
 							}
 						}
 						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
@@ -419,6 +423,7 @@ func (t *Timing) StandAloneLoop(sendFn func(tea.Msg)) {
 
 type TimingMsg = any
 type StartMsg struct {
+	Transmitting bool
 	LoopMode     playstate.LoopMode
 	Prerollbeats uint8
 	Tempo        int
