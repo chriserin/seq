@@ -38,6 +38,7 @@ type Timing struct {
 	started      bool
 	pulseCount   int
 	pulseLimit   int
+	preRollBeats uint8
 }
 
 type MidiLoopMode uint8
@@ -177,6 +178,7 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 					t.trackTime = time.Duration(0)
 					t.pulseCount = 0
 					t.pulseLimit = 0
+					t.preRollBeats = command.Prerollbeats
 					pulse(0)
 					err := transmitter.Start(command.LoopMode)
 					if err != nil {
@@ -203,11 +205,23 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 				}
 			case pulseTiming := <-tickChannel:
 				if t.started {
-					if t.pulseLimit == 0 || t.pulseCount < t.pulseLimit {
-						err := transmitter.Pulse()
-						if err != nil {
-							wrappedErr := fault.Wrap(err)
-							sendFn(ErrorMsg{wrappedErr})
+					if t.preRollBeats == 0 {
+						if t.pulseLimit == 0 || t.pulseCount < t.pulseLimit {
+							err := transmitter.Pulse()
+							if err != nil {
+								wrappedErr := fault.Wrap(err)
+								sendFn(ErrorMsg{wrappedErr})
+							}
+						}
+						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
+							beatChannel <- beats.BeatMsg{Interval: t.TickInterval()}
+						}
+					} else {
+						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
+							t.preRollBeats--
+							if t.preRollBeats == 0 {
+								t.pulseCount = -1
+							}
 						}
 					}
 					pulseInterval := t.PulseInterval()
@@ -216,9 +230,6 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 					t.trackTime = t.trackTime + pulseInterval
 					next := pulseInterval - adjuster
 					pulse(next)
-					if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
-						beatChannel <- beats.BeatMsg{Interval: t.TickInterval()}
-					}
 					t.pulseCount++
 				}
 			case <-activeSenseChannel:
@@ -379,6 +390,7 @@ func (t *Timing) StandAloneLoop(sendFn func(tea.Msg)) {
 					t.tempo = command.Tempo
 					t.subdivisions = command.Subdivisions
 					t.trackTime = time.Duration(0)
+					t.preRollBeats = command.Prerollbeats
 					tick(0)
 				case StopMsg:
 					t.started = false
@@ -394,7 +406,11 @@ func (t *Timing) StandAloneLoop(sendFn func(tea.Msg)) {
 				if t.started {
 					adjustedInterval := t.BeatInterval()
 					tick(adjustedInterval)
-					beatChannel <- beats.BeatMsg{Interval: adjustedInterval}
+					if t.preRollBeats == 0 {
+						beatChannel <- beats.BeatMsg{Interval: adjustedInterval}
+					} else {
+						t.preRollBeats--
+					}
 				}
 			}
 		}
@@ -404,6 +420,7 @@ func (t *Timing) StandAloneLoop(sendFn func(tea.Msg)) {
 type TimingMsg = any
 type StartMsg struct {
 	LoopMode     playstate.LoopMode
+	Prerollbeats uint8
 	Tempo        int
 	Subdivisions int
 }

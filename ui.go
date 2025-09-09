@@ -1782,7 +1782,7 @@ func (m *model) Start(delay time.Duration) {
 			// NOTE: Order matters here, modelMsg must be sent before startMsg
 			updateChannel <- beats.ModelMsg{Sequence: m.definition, PlayState: m.playState, Cursor: m.arrangement.Cursor}
 			if m.playState.PlayMode != playstate.PlayReceiver {
-				timingChannel <- timing.StartMsg{LoopMode: m.playState.LoopMode, Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions}
+				timingChannel <- timing.StartMsg{LoopMode: m.playState.LoopMode, Tempo: m.definition.Tempo, Subdivisions: m.definition.Subdivisions, Prerollbeats: m.playState.RecordPreRollBeats}
 			}
 		})
 	}

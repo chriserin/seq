@@ -134,10 +134,6 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 }
 
 func PlaySequence(playState *playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, msg BeatMsg, errChan chan error) {
-	if playState.RecordPreRollBeats > 0 {
-		playState.RecordPreRollBeats--
-		return
-	}
 
 	currentNode := cursor[len(cursor)-1]
 	currentSection := cursor[len(cursor)-1].Section
@@ -200,7 +196,7 @@ func AdvancePlayState(playState *playstate.PlayState, definition sequence.Sequen
 	currentCycles := (*playState.Iterations)[currentNode]
 	playingOverlay := currentPart.Overlays.HighestMatchingOverlay(currentCycles)
 
-	if playState.Playing && playState.RecordPreRollBeats == 0 {
+	if playState.Playing {
 		// NOTE: Only advance if we've already played the first beat.
 		if playState.AllowAdvance {
 			advanceCurrentBeat(currentCycles, *playingOverlay, playState.LineStates, currentPart.Beats)
@@ -524,7 +520,8 @@ func GateLength(gateIndex int16, beatInterval time.Duration) time.Duration {
 		}
 		return delay
 	} else if gateIndex >= 8 {
-		return time.Duration(float64(config.LongGates[gateIndex-uint8(len(config.ShortGates))].Value) * float64(beatInterval))
+		shortGatesLen := int16(len(config.ShortGates))
+		return time.Duration(float64(config.LongGates[gateIndex-shortGatesLen].Value) * float64(beatInterval))
 	}
 	return delay
 }

@@ -147,7 +147,7 @@ func (mc MidiConnection) AcquireSendFunc() (SendFunc, error) {
 	return sendFn, nil
 }
 
-var dawOutports = []string{"Logic Pro Virtual In"}
+var dawOutports = []string{"Logic Pro Virtual In", "TESTDAW"}
 
 func SendRecordMessage() error {
 	outports := midi.GetOutPorts()
