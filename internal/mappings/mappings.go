@@ -90,6 +90,8 @@ const (
 	PrevTheme
 	Yank
 	Mute
+	MuteAll
+	UnMuteAll
 	Solo
 	NoteAdd
 	NoteRemove
@@ -298,6 +300,8 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("k")}:                                                                        CursorUp,
 	OperationKey{focus: operation.FocusGrid, key: k("l")}:                                                                        CursorRight,
 	OperationKey{focus: operation.FocusGrid, key: k("m")}:                                                                        Mute,
+	OperationKey{focus: operation.FocusGrid, key: k("b", "m")}:                                                                   MuteAll,
+	OperationKey{focus: operation.FocusGrid, key: k("b", "M")}:                                                                   UnMuteAll,
 	OperationKey{focus: operation.FocusGrid, key: k("o")}:                                                                        ToggleChordMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "a")}:                                                                   ToggleAccentMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "A")}:                                                                   ToggleAccentNoteMode,

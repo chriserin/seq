@@ -1004,3 +1004,108 @@ func TestMuteAndSolo(t *testing.T) {
 		})
 	}
 }
+
+func TestMuteAll(t *testing.T) {
+	tests := []struct {
+		name                 string
+		commands             []any
+		initialMutedLines    []uint8
+		initialSoloLines     []uint8
+		expectedHasSolo      bool
+		expectedAllLineState playstate.GroupPlayState
+		description          string
+	}{
+		{
+			name:                 "MuteAll from all playing state",
+			commands:             []any{mappings.MuteAll},
+			initialMutedLines:    []uint8{},
+			initialSoloLines:     []uint8{},
+			expectedHasSolo:      false,
+			expectedAllLineState: playstate.PlayStateMute,
+			description:          "Should mute all lines when all are playing",
+		},
+		{
+			name:                 "MuteAll with some already muted",
+			commands:             []any{mappings.MuteAll},
+			initialMutedLines:    []uint8{1, 3},
+			initialSoloLines:     []uint8{},
+			expectedHasSolo:      false,
+			expectedAllLineState: playstate.PlayStateMute,
+			description:          "Should mute all lines when some are already muted",
+		},
+		{
+			name:                 "MuteAll with solo lines",
+			commands:             []any{mappings.MuteAll},
+			initialMutedLines:    []uint8{},
+			initialSoloLines:     []uint8{2, 4},
+			expectedHasSolo:      false,
+			expectedAllLineState: playstate.PlayStateMute,
+			description:          "Should mute all lines and clear solo state",
+		},
+		{
+			name:                 "MuteAll with mixed muted and solo lines",
+			commands:             []any{mappings.MuteAll},
+			initialMutedLines:    []uint8{1},
+			initialSoloLines:     []uint8{3},
+			expectedHasSolo:      false,
+			expectedAllLineState: playstate.PlayStateMute,
+			description:          "Should mute all lines with mixed initial states",
+		},
+		{
+			name:                 "UnMuteAll after MuteAll",
+			commands:             []any{mappings.MuteAll, mappings.UnMuteAll},
+			initialMutedLines:    []uint8{},
+			initialSoloLines:     []uint8{},
+			expectedHasSolo:      false,
+			expectedAllLineState: playstate.PlayStatePlay,
+			description:          "Should unmute all lines after muting all",
+		},
+		{
+			name:                 "UnMuteAll with initially mixed states",
+			commands:             []any{mappings.UnMuteAll},
+			initialMutedLines:    []uint8{1, 3},
+			initialSoloLines:     []uint8{2},
+			expectedHasSolo:      false,
+			expectedAllLineState: playstate.PlayStatePlay,
+			description:          "Should set all lines to play state regardless of initial state",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(
+				func(m *model) model {
+					m.playState = playstate.PlayState{LineStates: make([]playstate.LineState, len(m.definition.Lines))}
+					// Initialize all lines to play state first
+					for i := range m.playState.LineStates {
+						m.playState.LineStates[i] = playstate.InitLineState(playstate.PlayStatePlay, uint8(i), 0)
+					}
+					// Set initial muted lines
+					for _, lineIndex := range tt.initialMutedLines {
+						if int(lineIndex) < len(m.playState.LineStates) {
+							m.playState.LineStates[lineIndex].GroupPlayState = playstate.PlayStateMute
+						}
+					}
+					// Set initial solo lines and solo state
+					for _, lineIndex := range tt.initialSoloLines {
+						if int(lineIndex) < len(m.playState.LineStates) {
+							m.playState.LineStates[lineIndex].GroupPlayState = playstate.PlayStateSolo
+						}
+					}
+					if len(tt.initialSoloLines) > 0 {
+						m.playState.HasSolo = true
+					}
+					return *m
+				},
+			)
+
+			m, _ = processCommands(tt.commands, m)
+
+			for i := range m.playState.LineStates {
+				assert.Equal(t, m.playState.LineStates[i].GroupPlayState, tt.expectedAllLineState, tt.description+" - IsMuted() should return true for line %d", i)
+			}
+
+			assert.Equal(t, tt.expectedHasSolo, m.playState.HasSolo, tt.description+" - hasSolo should match expected value")
+		})
+	}
+}

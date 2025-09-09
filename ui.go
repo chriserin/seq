@@ -1447,6 +1447,14 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.playState.HasSolo = m.HasSolo()
 			}
 			m.SyncBeatLoop()
+		case mappings.MuteAll:
+			m.playState.LineStates = MuteAll(m.playState.LineStates, m.gridCursor.Line)
+			m.playState.HasSolo = false
+			m.SyncBeatLoop()
+		case mappings.UnMuteAll:
+			m.playState.LineStates = UnMuteAll(m.playState.LineStates, m.gridCursor.Line)
+			m.playState.HasSolo = false
+			m.SyncBeatLoop()
 		case mappings.Solo:
 			m.playState.LineStates = Solo(m.playState.LineStates, m.gridCursor.Line)
 			m.playState.HasSolo = m.HasSolo()
@@ -2531,6 +2539,20 @@ func Mute(playState []playstate.LineState, line uint8) []playstate.LineState {
 		playState[line].GroupPlayState = playstate.PlayStateMute
 	}
 	return playState
+}
+
+func MuteAll(lineStates []playstate.LineState, line uint8) []playstate.LineState {
+	for i := range lineStates {
+		lineStates[i].GroupPlayState = playstate.PlayStateMute
+	}
+	return lineStates
+}
+
+func UnMuteAll(lineStates []playstate.LineState, line uint8) []playstate.LineState {
+	for i := range lineStates {
+		lineStates[i].GroupPlayState = playstate.PlayStatePlay
+	}
+	return lineStates
 }
 
 func Solo(playState []playstate.LineState, line uint8) []playstate.LineState {
