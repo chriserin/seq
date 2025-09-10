@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/chriserin/seq/internal/grid"
@@ -473,6 +474,199 @@ func TestPatternModeNoteRatchetIncrease(t *testing.T) {
 				note, exists := m.currentOverlay.GetNote(gk)
 				assert.True(t, exists, tt.description+" - note should exist at grid location "+gk.String())
 				assert.Equal(t, tt.expectedRatchetLengths[i], note.Ratchets.Length, tt.description+" - accent value at grid location "+gk.String())
+			}
+		})
+	}
+}
+
+func TestPatternModeMonoSpaceIncrease(t *testing.T) {
+	tests := []struct {
+		name          string
+		commands      []any
+		expectedNotes []grid.GridKey
+		description   string
+	}{
+		{
+			name: "Add note, switch to mono mode, fill with 1",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleMonoMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+			},
+			expectedNotes: []grid.GridKey{GK(0, 1), GK(0, 2)},
+			description:   "Should add note, switch to mono mode, and add note with every space pattern",
+		},
+		{
+			name: "Add note, switch to mono mode, move to right no change",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleMonoMode,
+				mappings.CursorRight,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+			},
+			expectedNotes: []grid.GridKey{GK(0, 0), GK(0, 1), GK(0, 2)},
+			description:   "Should add note, switch to mono mode, move cursor right and note should remain",
+		},
+		{
+			name: "Add notes in mono mode",
+			commands: []any{
+				mappings.ToggleMonoMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+			},
+			expectedNotes: []grid.GridKey{GK(0, 0), GK(0, 1), GK(0, 2)},
+			description:   "Should add note, switch to mono mode, and handle increase then decrease",
+		},
+		{
+			name: "Add notes on two lines in mono mode",
+			commands: []any{
+				mappings.ToggleMonoMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+				mappings.CursorDown,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "2"},
+			},
+			expectedNotes: []grid.GridKey{GK(1, 0), GK(0, 1), GK(1, 2)},
+			description:   "Should add note, switch to mono mode, and handle increase then decrease",
+		},
+		{
+			name: "Add notes on two lines in mono mode with a 1 and 3",
+			commands: []any{
+				mappings.ToggleMonoMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+				mappings.CursorDown,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "3"},
+			},
+			expectedNotes: []grid.GridKey{GK(1, 0), GK(0, 1), GK(0, 2)},
+			description:   "Should add note, switch to mono mode, and handle increase then decrease",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(WithGridSize(3, 2))
+
+			m, _ = processCommands(tt.commands, m)
+
+			for b := range 3 {
+				for l := range 2 {
+					gk := grid.GK(uint8(l), uint8(b))
+					shouldExist := slices.Contains(tt.expectedNotes, gk)
+					_, noteExists := m.currentOverlay.GetNote(gk)
+					assert.Equal(t, shouldExist, noteExists, tt.description+" - note existence at grid location "+gk.String())
+				}
+			}
+		})
+	}
+}
+
+func TestPatternModeMonoAccentIncreasePattern(t *testing.T) {
+	tests := []struct {
+		name            string
+		commands        []any
+		expectedAccents []uint8
+		description     string
+	}{
+		{
+			name: "Switch to mono mode, increase accent every other space pattern",
+			commands: []any{
+				mappings.ToggleMonoMode,
+				mappings.ToggleAccentMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+			},
+			expectedAccents: []uint8{4, 5, 4, 5},
+			description:     "Should switch to mono mode and apply every other space pattern",
+		},
+		{
+			name: "Switch to mono mode, decrease accent every 2nd note",
+			commands: []any{
+				mappings.ToggleMonoMode,
+				mappings.ToggleAccentMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "2"},
+			},
+			expectedAccents: []uint8{6, 5, 6, 5},
+			description:     "Should switch to mono mode and decrease accent every 2nd note",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(func(m *model) model {
+				m.currentOverlay.AddNote(grid.GK(0, 0), note{AccentIndex: 5})
+				m.currentOverlay.AddNote(grid.GK(0, 1), note{AccentIndex: 5})
+				m.currentOverlay.AddNote(grid.GK(1, 2), note{AccentIndex: 5})
+				m.currentOverlay.AddNote(grid.GK(1, 3), note{AccentIndex: 5})
+				return *m
+			}, WithGridSize(4, 2))
+
+			m, _ = processCommands(tt.commands, m)
+
+			gridLocations := []grid.GridKey{
+				grid.GK(0, 0),
+				grid.GK(0, 1),
+				grid.GK(1, 2),
+				grid.GK(1, 3),
+			}
+
+			for i, gk := range gridLocations {
+				n, exists := m.currentOverlay.GetNote(gk)
+				assert.True(t, exists, tt.description+" - note should exist at grid location "+gk.String())
+				assert.Equal(t, tt.expectedAccents[i], n.AccentIndex, tt.description+" - note has expected accent "+gk.String())
+			}
+		})
+	}
+}
+
+func TestPatternModeMonoGatePattern(t *testing.T) {
+	tests := []struct {
+		name          string
+		commands      []any
+		expectedGates []int16
+		description   string
+	}{
+		{
+			name: "Switch to mono mode, increase accent every other space pattern",
+			commands: []any{
+				mappings.ToggleMonoMode,
+				mappings.ToggleGateMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+			},
+			expectedGates: []int16{6, 5, 6, 5},
+			description:   "Should switch to mono mode and apply every other space pattern",
+		},
+		{
+			name: "Switch to mono mode, decrease accent every 2nd note",
+			commands: []any{
+				mappings.ToggleMonoMode,
+				mappings.ToggleGateMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "2"},
+			},
+			expectedGates: []int16{4, 5, 4, 5},
+			description:   "Should switch to mono mode and decrease accent every 2nd note",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(func(m *model) model {
+				m.currentOverlay.AddNote(grid.GK(0, 0), note{AccentIndex: 5, GateIndex: 5})
+				m.currentOverlay.AddNote(grid.GK(0, 1), note{AccentIndex: 5, GateIndex: 5})
+				m.currentOverlay.AddNote(grid.GK(1, 2), note{AccentIndex: 5, GateIndex: 5})
+				m.currentOverlay.AddNote(grid.GK(1, 3), note{AccentIndex: 5, GateIndex: 5})
+				return *m
+			}, WithGridSize(4, 2))
+
+			m, _ = processCommands(tt.commands, m)
+
+			gridLocations := []grid.GridKey{
+				grid.GK(0, 0),
+				grid.GK(0, 1),
+				grid.GK(1, 2),
+				grid.GK(1, 3),
+			}
+
+			for i, gk := range gridLocations {
+				n, exists := m.currentOverlay.GetNote(gk)
+				assert.True(t, exists, tt.description+" - note should exist at grid location "+gk.String())
+				assert.Equal(t, tt.expectedGates[i], n.GateIndex, tt.description+" - note has expected accent "+gk.String())
 			}
 		})
 	}

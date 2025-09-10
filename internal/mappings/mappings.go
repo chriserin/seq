@@ -148,6 +148,7 @@ const (
 	IncreaseInversions
 	DecreaseInversions
 	ToggleChordMode
+	ToggleMonoMode
 	NextArpeggio
 	PrevArpeggio
 	NextDouble
@@ -305,6 +306,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("b", "m")}:                                                                   MuteAll,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "M")}:                                                                   UnMuteAll,
 	OperationKey{focus: operation.FocusGrid, key: k("o")}:                                                                        ToggleChordMode,
+	OperationKey{focus: operation.FocusGrid, key: k("O")}:                                                                        ToggleMonoMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "a")}:                                                                   ToggleAccentMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "A")}:                                                                   ToggleAccentNoteMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "w")}:                                                                   ToggleWaitMode,
@@ -365,6 +367,24 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeLine, key: k("7")}:                                           NumberPattern,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeLine, key: k("8")}:                                           NumberPattern,
 	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeLine, key: k("9")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("!")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("@")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("#")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("$")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("%")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("^")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("&")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("*")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("(")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("1")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("2")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("3")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("4")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("5")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("6")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("7")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("8")}:                                           NumberPattern,
+	OperationKey{focus: operation.FocusGrid, mode: operation.SeqModeMono, key: k("9")}:                                           NumberPattern,
 	OperationKey{focus: operation.FocusGrid, patternMode: operation.PatternAccent, mode: operation.SeqModeChord, key: k("!")}:    NumberPattern,
 	OperationKey{focus: operation.FocusGrid, patternMode: operation.PatternAccent, mode: operation.SeqModeChord, key: k("@")}:    NumberPattern,
 	OperationKey{focus: operation.FocusGrid, patternMode: operation.PatternAccent, mode: operation.SeqModeChord, key: k("#")}:    NumberPattern,

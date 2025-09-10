@@ -116,6 +116,23 @@ func WithGridCursor(pos grid.GridKey) modelFunc {
 	}
 }
 
+func WithGridSize(beats, lines int) modelFunc {
+	return func(m *model) model {
+		(*m.definition.Parts)[0].Beats = uint8(beats)
+		newLines := make([]grid.LineDefinition, lines)
+		for i := range lines {
+			newLines[i] = grid.LineDefinition{
+				Channel: 1,
+				Note:    uint8(i),
+				MsgType: grid.MessageTypeNote,
+				Name:    fmt.Sprintf("Line %d", i),
+			}
+		}
+		m.definition.Lines = newLines
+		return *m
+	}
+}
+
 func WithNonRootOverlay(overlayKey overlaykey.OverlayPeriodicity) modelFunc {
 	return func(m *model) model {
 		(*m.definition.Parts)[0].Overlays = m.CurrentPart().Overlays.Add(overlayKey)

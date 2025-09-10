@@ -7,6 +7,7 @@ const (
 	SeqModeAny SequencerMode = iota
 	SeqModeLine
 	SeqModeChord
+	SeqModeMono
 )
 
 type Focus uint8

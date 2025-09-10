@@ -49,6 +49,13 @@ func Compare(a GridKey, b GridKey) int {
 	}
 }
 
+func CompareBeat(a GridKey, b GridKey) int {
+	return int(b.Beat) - int(a.Beat)
+}
+func BSearchBeatFunc(a GridKey, target uint8) int {
+	return int(target) - int(a.Beat)
+}
+
 type Note struct {
 	AccentIndex uint8
 	Ratchets    Ratchet

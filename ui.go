@@ -1362,6 +1362,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			} else {
 				m.definition.TemplateSequencerType = operation.SeqModeChord
 			}
+		case mappings.ToggleMonoMode:
+			if m.definition.TemplateSequencerType == operation.SeqModeMono {
+				m.definition.TemplateSequencerType = operation.SeqModeLine
+			} else {
+				m.definition.TemplateSequencerType = operation.SeqModeMono
+			}
 		case mappings.PrevOverlay:
 			m.NextOverlay(-1)
 			m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
@@ -2698,28 +2704,76 @@ func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.Overla
 }
 
 func (m *model) Every(every uint8, everyFn func(gridKey)) {
-	if m.definition.TemplateSequencerType == operation.SeqModeChord {
-		bounds := m.PasteBounds()
-		combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
-		keys := slices.Collect(maps.Keys(combinedOverlay))
-		slices.SortFunc(keys, grid.Compare)
-		counter := 0
-		for _, gk := range keys {
-			if bounds.InBounds(gk) {
-				if counter%int(every) == 0 {
-					everyFn(gk)
-				}
-				counter++
+	switch m.definition.TemplateSequencerType {
+	case operation.SeqModeChord:
+		m.EveryChordNote(every, everyFn)
+	case operation.SeqModeMono:
+		m.EveryMonoSpace(every, everyFn)
+	default:
+		m.EveryLineSpace(every, everyFn)
+	}
+}
+
+func (m *model) EveryMonoSpace(every uint8, everyFn func(gridKey)) {
+	lineStart, lineEnd := m.MonoModeLineBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
+
+	lines := make([]uint8, 0, len(m.definition.Lines))
+	for i, line := range m.definition.Lines {
+		lineIndex := uint8(i)
+		if line.MsgType == grid.MessageTypeNote {
+			if lineIndex >= lineStart && lineIndex <= lineEnd {
+				lines = append(lines, lineIndex)
 			}
 		}
-	} else {
-		lineStart, lineEnd := m.PatternActionLineBoundaries()
-		start, end := m.PatternActionBeatBoundaries()
+	}
 
-		for l := lineStart; l <= lineEnd; l++ {
-			for i := start; i <= end; i += every {
-				everyFn(GK(l, i))
+	pattern := make(grid.Pattern)
+	m.currentOverlay.CombinedNotePattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle(), lines)
+
+	keys := slices.Collect(maps.Keys(pattern))
+
+	slices.SortFunc(keys, grid.CompareBeat)
+
+	keysWithSpaces := make([]grid.GridKey, 0, len(keys))
+	for b := start; b <= end; b += every {
+		index, exists := slices.BinarySearchFunc(keys, b, grid.BSearchBeatFunc)
+
+		if exists {
+			keysWithSpaces = append(keysWithSpaces, keys[index])
+		} else {
+			keysWithSpaces = append(keysWithSpaces, GK(lines[0], b))
+		}
+	}
+
+	for _, key := range keysWithSpaces {
+		everyFn(key)
+	}
+}
+
+func (m *model) EveryChordNote(every uint8, everyFn func(gridKey)) {
+	bounds := m.PasteBounds()
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
+	keys := slices.Collect(maps.Keys(combinedOverlay))
+	slices.SortFunc(keys, grid.Compare)
+	counter := 0
+	for _, gk := range keys {
+		if bounds.InBounds(gk) {
+			if counter%int(every) == 0 {
+				everyFn(gk)
 			}
+			counter++
+		}
+	}
+}
+
+func (m *model) EveryLineSpace(every uint8, everyFn func(gridKey)) {
+	lineStart, lineEnd := m.PatternActionLineBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
+
+	for l := lineStart; l <= lineEnd; l++ {
+		for b := start; b <= end; b += every {
+			everyFn(GK(l, b))
 		}
 	}
 }
@@ -2753,10 +2807,14 @@ func (m *model) fill(every uint8) {
 		currentNote, hasNote := combinedOverlay[gridKey]
 		hasNote = hasNote && currentNote != zeronote
 
+		currentLinePos := GK(m.gridCursor.Line, gridKey.Beat)
 		if hasNote {
 			m.currentOverlay.SetNote(gridKey, zeronote)
+			if gridKey != currentLinePos {
+				m.currentOverlay.SetNote(currentLinePos, grid.InitNote())
+			}
 		} else {
-			m.currentOverlay.SetNote(gridKey, grid.InitNote())
+			m.currentOverlay.SetNote(currentLinePos, grid.InitNote())
 		}
 	}
 
@@ -2925,6 +2983,18 @@ func (m model) PatternActionLineBoundaries() (uint8, uint8) {
 		}
 	} else {
 		return m.gridCursor.Line, m.gridCursor.Line
+	}
+}
+
+func (m model) MonoModeLineBoundaries() (uint8, uint8) {
+	if m.visualMode {
+		if m.visualAnchorCursor.Line < m.gridCursor.Line {
+			return m.visualAnchorCursor.Line, m.gridCursor.Line
+		} else {
+			return m.gridCursor.Line, m.visualAnchorCursor.Line
+		}
+	} else {
+		return 0, uint8(len(m.definition.Lines))
 	}
 }
 

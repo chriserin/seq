@@ -7,6 +7,7 @@ package overlays
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/overlaykey"
@@ -145,6 +146,21 @@ func (ol Overlay) CombinePattern(pattern *grid.Pattern, keyCycles int) {
 			_, hasNote := (*pattern)[gridKey]
 			if !hasNote {
 				(*pattern)[gridKey] = note
+			}
+		}
+		return true
+	}
+	ol.combine(keyCycles, addFunc)
+}
+
+func (ol *Overlay) CombinedNotePattern(pattern *grid.Pattern, keyCycles int, lines []uint8) {
+	var addFunc = func(overlayPattern grid.Pattern, key Key) bool {
+		for gridKey, note := range overlayPattern {
+			if slices.Contains(lines, gridKey.Line) {
+				_, hasNote := (*pattern)[gridKey]
+				if !hasNote {
+					(*pattern)[gridKey] = note
+				}
 			}
 		}
 		return true

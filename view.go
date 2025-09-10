@@ -64,9 +64,13 @@ func (m model) View() (output string) {
 		sideView = m.OverlaysView()
 
 		var chordView string
-		if m.definition.TemplateSequencerType == operation.SeqModeChord {
+		switch m.definition.TemplateSequencerType {
+		case operation.SeqModeChord:
 			currentChord := m.CurrentChord()
 			chordView = m.ChordView(currentChord.GridChord)
+		case operation.SeqModeMono:
+			chordView = themes.AppDescriptorStyle.Render("Mono")
+
 		}
 		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
 	}
