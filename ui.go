@@ -2751,6 +2751,39 @@ func (m *model) EveryMonoSpace(every uint8, everyFn func(gridKey)) {
 	}
 }
 
+func (m *model) EveryMonoNote(every uint8, everyFn func(gridKey)) {
+	lineStart, lineEnd := m.MonoModeLineBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
+
+	lines := make([]uint8, 0, len(m.definition.Lines))
+	for i, line := range m.definition.Lines {
+		lineIndex := uint8(i)
+		if line.MsgType == grid.MessageTypeNote {
+			if lineIndex >= lineStart && lineIndex <= lineEnd {
+				lines = append(lines, lineIndex)
+			}
+		}
+	}
+
+	pattern := make(grid.Pattern)
+	m.currentOverlay.CombinedNotePattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle(), lines)
+
+	keys := slices.Collect(maps.Keys(pattern))
+
+	slices.SortFunc(keys, grid.CompareBeat)
+	slices.Reverse(keys)
+
+	i := 0
+	for _, key := range keys {
+		if key.Beat >= start && key.Beat <= end {
+			if i%int(every) == 0 {
+				everyFn(key)
+			}
+			i++
+		}
+	}
+}
+
 func (m *model) EveryChordNote(every uint8, everyFn func(gridKey)) {
 	bounds := m.PasteBounds()
 	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
@@ -2779,6 +2812,17 @@ func (m *model) EveryLineSpace(every uint8, everyFn func(gridKey)) {
 }
 
 func (m *model) EveryNote(every uint8, everyFn func(gridKey), combinedOverlay grid.Pattern) {
+	switch m.definition.TemplateSequencerType {
+	case operation.SeqModeLine:
+		m.EveryLineNote(every, everyFn, combinedOverlay)
+	case operation.SeqModeMono:
+		m.EveryMonoNote(every, everyFn)
+	default:
+		m.EveryLineNote(every, everyFn, combinedOverlay)
+	}
+}
+
+func (m *model) EveryLineNote(every uint8, everyFn func(gridKey), combinedOverlay grid.Pattern) {
 	lineStart, lineEnd := m.PatternActionLineBoundaries()
 	start, end := m.PatternActionBeatBoundaries()
 
