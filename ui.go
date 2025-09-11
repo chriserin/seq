@@ -2142,7 +2142,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		beatInterval := convertSymbolToInt(mapping.LastValue)
 		switch m.patternMode {
 		case operation.PatternFill:
-			m.fill(uint8(beatInterval))
+			m.fillSpaces(uint8(beatInterval))
 		case operation.PatternAccent:
 			m.incrementAccent(uint8(beatInterval), 1, operation.EveryBeat)
 		case operation.PatternNoteAccent:
@@ -2839,6 +2839,74 @@ func (m *model) EveryLineSpace(every uint8, everyFn func(gridKey)) {
 	}
 }
 
+func (m *model) EveryMonoOpenSpace(every uint8, everyFn func(gridKey)) {
+	lineStart, lineEnd := m.MonoModeLineBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
+
+	lines := make([]uint8, 0, len(m.definition.Lines))
+	for i, line := range m.definition.Lines {
+		lineIndex := uint8(i)
+		if line.MsgType == grid.MessageTypeNote {
+			if lineIndex >= lineStart && lineIndex <= lineEnd {
+				lines = append(lines, lineIndex)
+			}
+		}
+	}
+
+	pattern := make(grid.Pattern)
+	m.currentOverlay.CombinedNotePattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle(), lines)
+
+	keys := slices.Collect(maps.Keys(pattern))
+
+	slices.SortFunc(keys, grid.CompareBeat)
+
+	keysWithSpaces := make([]grid.GridKey, 0, len(keys))
+	for b := start; b <= end; b += 1 {
+		_, exists := slices.BinarySearchFunc(keys, b, grid.BSearchBeatFunc)
+
+		if !exists {
+			keysWithSpaces = append(keysWithSpaces, GK(lines[0], b))
+		}
+	}
+
+	counter := 0
+	for _, key := range keysWithSpaces {
+		if counter%int(every) == 0 {
+			everyFn(key)
+		}
+		counter++
+	}
+}
+
+func (m *model) EveryOpenSpace(every uint8, everyFn func(gridKey)) {
+	lineStart, _ := m.PatternActionLineBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
+
+	pattern := make(grid.Pattern)
+	m.currentOverlay.CombinePattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle())
+
+	keys := slices.Collect(maps.Keys(pattern))
+
+	slices.SortFunc(keys, grid.CompareBeat)
+
+	justSpaces := make([]grid.GridKey, 0, len(keys))
+	for b := start; b <= end; b += 1 {
+		_, exists := pattern[GK(lineStart, b)]
+
+		if !exists {
+			justSpaces = append(justSpaces, GK(lineStart, b))
+		}
+	}
+
+	counter := 0
+	for _, gk := range justSpaces {
+		if counter%int(every) == 0 {
+			everyFn(gk)
+		}
+		counter++
+	}
+}
+
 func (m *model) EveryNote(every uint8, everyFn func(gridKey), combinedOverlay grid.Pattern) {
 	switch m.definition.TemplateSequencerType {
 	case operation.SeqModeLine:
@@ -2891,6 +2959,31 @@ func (m *model) fill(every uint8) {
 	}
 
 	m.Every(every, everyFn)
+}
+
+func (m *model) fillSpaces(every uint8) {
+	combinedOverlay := m.CombinedEditPattern(m.currentOverlay)
+
+	everyFn := func(gridKey gridKey) {
+		currentNote, hasNote := combinedOverlay[gridKey]
+		hasNote = hasNote && currentNote != zeronote
+
+		currentLinePos := GK(m.gridCursor.Line, gridKey.Beat)
+		if hasNote {
+			m.currentOverlay.SetNote(gridKey, zeronote)
+			if gridKey != currentLinePos {
+				m.currentOverlay.SetNote(currentLinePos, grid.InitNote())
+			}
+		} else {
+			m.currentOverlay.SetNote(currentLinePos, grid.InitNote())
+		}
+	}
+
+	if m.definition.TemplateSequencerType == operation.SeqModeMono {
+		m.EveryMonoOpenSpace(every, everyFn)
+	} else {
+		m.EveryOpenSpace(every, everyFn)
+	}
 }
 
 func (m *model) incrementAccent(every uint8, modifier int8, everyMode operation.EveryMode) {
