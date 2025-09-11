@@ -728,3 +728,117 @@ func TestPatternNoteModeMonoAccentPattern(t *testing.T) {
 		})
 	}
 }
+
+func TestPatternModeFillSpace(t *testing.T) {
+	tests := []struct {
+		name          string
+		commands      []any
+		expectedNotes []grid.GridKey
+		description   string
+	}{
+		{
+			name: "Space pattern fill",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+			},
+			expectedNotes: []grid.GridKey{GK(0, 0), GK(0, 1), GK(0, 2)},
+			description:   "Add note, then fill with space pattern",
+		},
+		{
+			name: "Space pattern fill, with 2",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+			},
+			expectedNotes: []grid.GridKey{GK(0, 0), GK(0, 1)},
+			description:   "Add note, then fill with space pattern 2",
+		},
+		{
+			name: "Space pattern fill doesn't overwrite existing notes",
+			commands: []any{
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+			},
+			expectedNotes: []grid.GridKey{GK(0, 0), GK(0, 1), GK(0, 2)},
+			description:   "Add note, then fill with space pattern 2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(WithGridSize(3, 2))
+
+			m, _ = processCommands(tt.commands, m)
+
+			for b := range 3 {
+				for l := range 2 {
+					gk := grid.GK(uint8(l), uint8(b))
+					shouldExist := slices.Contains(tt.expectedNotes, gk)
+					_, noteExists := m.currentOverlay.GetNote(gk)
+					assert.Equal(t, shouldExist, noteExists, tt.description+" - note existence at grid location "+gk.String())
+				}
+			}
+		})
+	}
+}
+
+func TestPatternModeMonoFillSpace(t *testing.T) {
+	tests := []struct {
+		name          string
+		commands      []any
+		expectedNotes []grid.GridKey
+		description   string
+	}{
+		{
+			name: "Space pattern fill",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleMonoMode,
+				mappings.CursorDown,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+			},
+			expectedNotes: []grid.GridKey{GK(0, 0), GK(1, 1), GK(1, 2)},
+			description:   "Add note, then fill with space pattern",
+		},
+		{
+			name: "Space pattern fill, with 2",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleMonoMode,
+				mappings.CursorDown,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+			},
+			expectedNotes: []grid.GridKey{GK(0, 0), GK(1, 1)},
+			description:   "Add note, then fill with space pattern 2",
+		},
+		{
+			name: "Space pattern fill doesn't overwrite existing notes",
+			commands: []any{
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "1"},
+				mappings.ToggleMonoMode,
+				mappings.CursorDown,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "!"},
+			},
+			expectedNotes: []grid.GridKey{GK(0, 0), GK(0, 1), GK(0, 2)},
+			description:   "Add note, then fill with space pattern 2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(WithGridSize(3, 2))
+
+			m, _ = processCommands(tt.commands, m)
+
+			for b := range 3 {
+				for l := range 2 {
+					gk := grid.GK(uint8(l), uint8(b))
+					shouldExist := slices.Contains(tt.expectedNotes, gk)
+					_, noteExists := m.currentOverlay.GetNote(gk)
+					assert.Equal(t, shouldExist, noteExists, tt.description+" - note existence at grid location "+gk.String())
+				}
+			}
+		})
+	}
+}
