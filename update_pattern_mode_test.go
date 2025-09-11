@@ -671,3 +671,60 @@ func TestPatternModeMonoGatePattern(t *testing.T) {
 		})
 	}
 }
+
+func TestPatternNoteModeMonoAccentPattern(t *testing.T) {
+	tests := []struct {
+		name            string
+		commands        []any
+		expectedAccents []uint8
+		description     string
+	}{
+		{
+			name: "Switch to mono mode, increase accent every other space pattern",
+			commands: []any{
+				mappings.ToggleMonoMode,
+				mappings.ToggleAccentNoteMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "@"},
+			},
+			expectedAccents: []uint8{4, 5, 4, 5},
+			description:     "Should switch to mono mode and apply every other space pattern",
+		},
+		{
+			name: "Switch to mono mode, decrease accent every 2nd note",
+			commands: []any{
+				mappings.ToggleMonoMode,
+				mappings.ToggleAccentNoteMode,
+				mappings.Mapping{Command: mappings.NumberPattern, LastValue: "2"},
+			},
+			expectedAccents: []uint8{6, 5, 6, 5},
+			description:     "Should switch to mono mode and decrease accent every 2nd note",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(func(m *model) model {
+				m.currentOverlay.AddNote(grid.GK(0, 0), note{AccentIndex: 5})
+				m.currentOverlay.AddNote(grid.GK(1, 2), note{AccentIndex: 5})
+				m.currentOverlay.AddNote(grid.GK(1, 3), note{AccentIndex: 5})
+				m.currentOverlay.AddNote(grid.GK(1, 8), note{AccentIndex: 5})
+				return *m
+			}, WithGridSize(4, 2))
+
+			m, _ = processCommands(tt.commands, m)
+
+			gridLocations := []grid.GridKey{
+				grid.GK(0, 0),
+				grid.GK(1, 2),
+				grid.GK(1, 3),
+				grid.GK(1, 8),
+			}
+
+			for i, gk := range gridLocations {
+				n, exists := m.currentOverlay.GetNote(gk)
+				assert.True(t, exists, tt.description+" - note should exist at grid location "+gk.String())
+				assert.Equal(t, tt.expectedAccents[i], n.AccentIndex, tt.description+" - note has expected accent "+gk.String())
+			}
+		})
+	}
+}
