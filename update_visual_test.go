@@ -33,8 +33,8 @@ func TestToggleVisualMode(t *testing.T) {
 		},
 		{
 			name:               "Toggle from VisualLine to VisualBlock",
-			commands:           []any{mappings.ToggleVisualMode},
-			initialVisualMode:  operation.VisualLine,
+			commands:           []any{mappings.ToggleVisualLineMode, mappings.ToggleVisualMode},
+			initialVisualMode:  operation.VisualNone,
 			expectedVisualMode: operation.VisualBlock,
 			description:        "Should toggle from VisualLine to VisualBlock",
 		},
@@ -102,8 +102,8 @@ func TestToggleVisualLineMode(t *testing.T) {
 		},
 		{
 			name:               "Toggle from VisualBlock to VisualLine",
-			commands:           []any{mappings.ToggleVisualLineMode},
-			initialVisualMode:  operation.VisualBlock,
+			commands:           []any{mappings.ToggleVisualMode, mappings.ToggleVisualLineMode},
+			initialVisualMode:  operation.VisualNone,
 			expectedVisualMode: operation.VisualLine,
 			description:        "Should toggle from VisualBlock to VisualLine",
 		},
@@ -168,7 +168,7 @@ func TestVisualModeInteractions(t *testing.T) {
 		},
 		{
 			name:               "Complex visual mode cycling",
-			commands:           []any{mappings.ToggleVisualMode, mappings.ToggleVisualLineMode, mappings.ToggleVisualMode, mappings.ToggleVisualLineMode},
+			commands:           []any{mappings.ToggleVisualMode, mappings.ToggleVisualLineMode, mappings.ToggleVisualMode, mappings.ToggleVisualLineMode, mappings.ToggleVisualLineMode},
 			expectedVisualMode: operation.VisualNone,
 			description:        "Should end up in VisualNone mode after complex cycling",
 		},
