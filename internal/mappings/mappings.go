@@ -78,6 +78,7 @@ const (
 	Redo
 	New
 	ToggleVisualMode
+	ToggleVisualLineMode
 	TogglePlayEdit
 	ToggleHideLines
 	NewLine
@@ -328,6 +329,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("s", "z")}:                                                                   ActionAddLineDelay,
 	OperationKey{focus: operation.FocusAny, key: k("u")}:                                                                         Undo,
 	OperationKey{focus: operation.FocusGrid, key: k("v")}:                                                                        ToggleVisualMode,
+	OperationKey{focus: operation.FocusGrid, key: k("V")}:                                                                        ToggleVisualLineMode,
 	OperationKey{focus: operation.FocusGrid, key: k("w")}:                                                                        WaitDecrease,
 	OperationKey{focus: operation.FocusGrid, key: k("x")}:                                                                        OverlayNoteRemove,
 	OperationKey{focus: operation.FocusGrid, key: k("y")}:                                                                        Yank,

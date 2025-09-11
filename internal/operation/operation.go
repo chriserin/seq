@@ -10,6 +10,14 @@ const (
 	SeqModeMono
 )
 
+type VisualMode uint8
+
+const (
+	VisualNone VisualMode = iota
+	VisualBlock
+	VisualLine
+)
+
 type Focus uint8
 
 // NOTE: Focus is necessary because the selection can be focused for a part operation

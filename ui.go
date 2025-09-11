@@ -65,10 +65,24 @@ type action = grid.Action
 
 var zeronote note
 
+type VisualSelection struct {
+	visualMode operation.VisualMode
+	anchor     gridKey
+	lead       gridKey
+}
+
+func (va VisualSelection) Bounds(totalBeats uint8) grid.Bounds {
+	if va.visualMode == operation.VisualBlock {
+		return grid.InitBounds(va.anchor, va.lead)
+	} else if va.visualMode == operation.VisualLine {
+		return grid.InitBounds(GK(va.anchor.Line, 0), GK(va.lead.Line, totalBeats-1))
+	}
+	panic(fmt.Sprintf("no visual area for mode: %d", va.visualMode))
+}
+
 type model struct {
 	hasUIFocus            bool
 	transmitterConnected  bool
-	visualMode            bool
 	logFileAvailable      bool
 	playEditing           bool
 	showArrangementView   bool
@@ -83,7 +97,7 @@ type model struct {
 	patternMode           operation.PatternMode
 	midiLoopMode          timing.MidiLoopMode
 	gridCursor            gridKey
-	visualAnchorCursor    gridKey
+	visualSelection       VisualSelection
 	partSelectorIndex     int
 	needsWrite            int
 	currentOverlay        *overlays.Overlay
@@ -444,17 +458,8 @@ func (m *model) EnsureOverlayWithKey(key overlayKey) {
 	}
 }
 
-func InitBounds(cursorA, cursorB gridKey) grid.Bounds {
-	return grid.Bounds{
-		Top:    min(cursorA.Line, cursorB.Line),
-		Right:  max(cursorA.Beat, cursorB.Beat),
-		Bottom: max(cursorA.Line, cursorB.Line),
-		Left:   min(cursorA.Beat, cursorB.Beat),
-	}
-}
-
 func (m model) VisualSelectionBounds() grid.Bounds {
-	return InitBounds(m.gridCursor, m.visualAnchorCursor)
+	return m.visualSelection.Bounds(m.CurrentPart().Beats)
 }
 
 func (m model) PatternBounds() grid.Bounds {
@@ -467,18 +472,18 @@ func (m model) PatternBounds() grid.Bounds {
 }
 
 func (m model) PasteBounds() grid.Bounds {
-	if m.visualMode {
-		return m.VisualSelectionBounds()
-	} else {
+	if m.visualSelection.visualMode == operation.VisualNone {
 		return m.PatternBounds()
+	} else {
+		return m.VisualSelectionBounds()
 	}
 }
 
 func (m model) YankBounds() grid.Bounds {
-	if m.visualMode {
-		return m.VisualSelectionBounds()
+	if m.visualSelection.visualMode == operation.VisualNone {
+		return grid.InitBounds(m.gridCursor, m.gridCursor)
 	} else {
-		return InitBounds(m.gridCursor, m.gridCursor)
+		return m.VisualSelectionBounds()
 	}
 }
 
@@ -487,10 +492,10 @@ func (m model) InVisualSelection(key gridKey) bool {
 }
 
 func (m model) VisualSelectedGridKeys() []gridKey {
-	if m.visualMode {
-		return InitBounds(m.visualAnchorCursor, m.gridCursor).GridKeys()
-	} else {
+	if m.visualSelection.visualMode == operation.VisualNone {
 		return []gridKey{m.gridCursor}
+	} else {
+		return m.visualSelection.Bounds(m.CurrentPart().Beats).GridKeys()
 	}
 }
 
@@ -1056,11 +1061,13 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			if slices.Contains([]operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue, operation.SelectSpecificValue}, m.selectionIndicator) {
 				m.CursorDown()
 				m.UnsetActiveChord()
+				m.SetVisualArea()
 			}
 		case mappings.CursorUp:
 			if slices.Contains([]operation.Selection{operation.SelectGrid, operation.SelectSetupChannel, operation.SelectSetupMessageType, operation.SelectSetupValue, operation.SelectSpecificValue}, m.selectionIndicator) {
 				m.CursorUp()
 				m.UnsetActiveChord()
+				m.SetVisualArea()
 			}
 		case mappings.CursorLeft:
 			if m.selectionIndicator == operation.SelectRatchets {
@@ -1072,6 +1079,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			} else {
 				m.CursorLeft()
 				m.UnsetActiveChord()
+				m.SetVisualArea()
 			}
 		case mappings.CursorRight:
 			if m.selectionIndicator == operation.SelectRatchets {
@@ -1084,6 +1092,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			} else {
 				m.CursorRight()
 				m.UnsetActiveChord()
+				m.SetVisualArea()
 			}
 		case mappings.CursorLineStart:
 			m.SetGridCursor(gridKey{
@@ -1405,8 +1414,23 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.New:
 			m.selectionIndicator = operation.SelectConfirmNew
 		case mappings.ToggleVisualMode:
-			m.visualAnchorCursor = m.gridCursor
-			m.visualMode = !m.visualMode
+			switch m.visualSelection.visualMode {
+			case operation.VisualBlock:
+				m.visualSelection.visualMode = operation.VisualNone
+			case operation.VisualLine:
+				m.visualSelection.visualMode = operation.VisualBlock
+			default:
+				m.visualSelection = VisualSelection{anchor: m.gridCursor, lead: m.gridCursor, visualMode: operation.VisualBlock}
+			}
+		case mappings.ToggleVisualLineMode:
+			switch m.visualSelection.visualMode {
+			case operation.VisualLine:
+				m.visualSelection.visualMode = operation.VisualNone
+			case operation.VisualBlock:
+				m.visualSelection.visualMode = operation.VisualLine
+			default:
+				m.visualSelection = VisualSelection{anchor: m.gridCursor, lead: m.gridCursor, visualMode: operation.VisualLine}
+			}
 		case mappings.TogglePlayEdit:
 			m.playEditing = !m.playEditing
 		case mappings.NewLine:
@@ -1448,7 +1472,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.Yank:
 			m.yankBuffer = m.Yank()
 			m.SetGridCursor(m.YankBounds().TopLeft())
-			m.visualMode = false
+			m.visualSelection.visualMode = operation.VisualNone
 		case mappings.Mute:
 			if m.IsRatchetSelector() {
 				m.ToggleRatchetMute()
@@ -1554,6 +1578,10 @@ func (m model) Quit() (tea.Model, tea.Cmd) {
 		panic("Unable to close logfile")
 	}
 	return m, tea.Quit
+}
+
+func (m *model) SetVisualArea() {
+	m.visualSelection.lead = m.gridCursor
 }
 
 func (m *model) CursorDown() {
@@ -1694,7 +1722,7 @@ func (m *model) SetPatternMode(mode operation.PatternMode) {
 func (m *model) Escape() {
 	// NOTE: Visual mode is only exited when pressing escape in base state
 	if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternFill {
-		m.visualMode = false
+		m.visualSelection.visualMode = operation.VisualNone
 	}
 
 	if m.selectionIndicator == operation.SelectGrid {
@@ -1886,7 +1914,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.NoteRemove:
 		m.yankBuffer = m.Yank()
 		m.RemoveNote()
-		m.visualMode = false
+		m.visualSelection.visualMode = operation.VisualNone
 	case mappings.AccentIncrease:
 		m.AccentModify(1)
 	case mappings.AccentDecrease:
@@ -1906,10 +1934,10 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.OverlayNoteRemove:
 		m.OverlayRemoveNote()
 	case mappings.ClearLine:
-		if m.visualMode {
-			m.RemoveNote()
-		} else {
+		if m.visualSelection.visualMode == operation.VisualNone {
 			m.ClearOverlayLine()
+		} else {
+			m.RemoveNote()
 		}
 	case mappings.ClearOverlay:
 		m.ClearOverlay()
@@ -2615,7 +2643,7 @@ func InitBuffer(bounds grid.Bounds, notes []GridNote) Buffer {
 
 func (m model) Yank() Buffer {
 	currentChord := m.CurrentChord()
-	if !m.visualMode && currentChord.HasValue() {
+	if m.visualSelection.visualMode == operation.VisualNone && currentChord.HasValue() {
 		return InitChordBuffer(currentChord.GridChord)
 	} else {
 		bounds := m.YankBounds()
@@ -2641,10 +2669,10 @@ func (m *model) Paste() {
 		bounds := m.PasteBounds()
 
 		var keyModifier gridKey
-		if m.visualMode {
-			keyModifier = bounds.TopLeft()
-		} else {
+		if m.visualSelection.visualMode == operation.VisualNone {
 			keyModifier = m.gridCursor
+		} else {
+			keyModifier = bounds.TopLeft()
 		}
 		gridNotes := m.yankBuffer.gridNotes
 
@@ -2982,7 +3010,7 @@ func (m *model) Modify(modifyFunc func(gridKey, note)) {
 
 	var bounds Boundable
 	currentChord := m.CurrentChord()
-	if !m.visualMode && currentChord.HasValue() {
+	if (m.visualSelection.visualMode == operation.VisualBlock || m.visualSelection.visualMode == operation.VisualLine) && currentChord.HasValue() {
 		bounds = currentChord.GridChord
 	} else {
 		bounds = m.YankBounds()
@@ -3007,38 +3035,29 @@ func (m *model) WaitModify(modifier int8) {
 }
 
 func (m model) PatternActionBeatBoundaries() (uint8, uint8) {
-	if m.visualMode {
-		if m.visualAnchorCursor.Beat < m.gridCursor.Beat {
-			return m.visualAnchorCursor.Beat, m.gridCursor.Beat
-		} else {
-			return m.gridCursor.Beat, m.visualAnchorCursor.Beat
-		}
-	} else {
+	if m.visualSelection.visualMode == operation.VisualNone {
 		return m.gridCursor.Beat, m.CurrentPart().Beats - 1
+	} else {
+		bounds := m.visualSelection.Bounds(m.CurrentPart().Beats)
+		return bounds.Left, bounds.Right
 	}
 }
 
 func (m model) PatternActionLineBoundaries() (uint8, uint8) {
-	if m.visualMode {
-		if m.visualAnchorCursor.Line < m.gridCursor.Line {
-			return m.visualAnchorCursor.Line, m.gridCursor.Line
-		} else {
-			return m.gridCursor.Line, m.visualAnchorCursor.Line
-		}
-	} else {
+	if m.visualSelection.visualMode == operation.VisualNone {
 		return m.gridCursor.Line, m.gridCursor.Line
+	} else {
+		bounds := m.visualSelection.Bounds(m.CurrentPart().Beats)
+		return bounds.Top, bounds.Bottom
 	}
 }
 
 func (m model) MonoModeLineBoundaries() (uint8, uint8) {
-	if m.visualMode {
-		if m.visualAnchorCursor.Line < m.gridCursor.Line {
-			return m.visualAnchorCursor.Line, m.gridCursor.Line
-		} else {
-			return m.gridCursor.Line, m.visualAnchorCursor.Line
-		}
-	} else {
+	if m.visualSelection.visualMode == operation.VisualNone {
 		return 0, uint8(len(m.definition.Lines))
+	} else {
+		bounds := m.visualSelection.Bounds(m.CurrentPart().Beats)
+		return bounds.Top, bounds.Bottom
 	}
 }
 
