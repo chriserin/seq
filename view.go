@@ -741,6 +741,9 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		style := lipgloss.NewStyle().Background(backgroundSeqColor)
 		cursorMatch := m.gridCursor.Line == uint8(lineNumber) && m.gridCursor.Beat == i
 		if cursorMatch {
+			if hasGateTail {
+				m.cursor.Style = m.cursor.Style.Background(backgroundSeqColor).Foreground(gateSpace.Color)
+			}
 			m.cursor.SetChar(char)
 			char = m.cursor.View()
 		} else if m.visualSelection.visualMode != operation.VisualNone && m.InVisualSelection(currentGridKey) {
@@ -765,7 +768,11 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 			style = style.Background(fg).Foreground(bg)
 		}
 
-		buf.WriteString(style.Render(char))
+		if cursorMatch {
+			buf.WriteString(char)
+		} else {
+			buf.WriteString(style.Render(char))
+		}
 	}
 
 	buf.WriteString("\n")
