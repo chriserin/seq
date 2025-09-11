@@ -68,9 +68,6 @@ func (m model) View() (output string) {
 		case operation.SeqModeChord:
 			currentChord := m.CurrentChord()
 			chordView = m.ChordView(currentChord.GridChord)
-		case operation.SeqModeMono:
-			chordView = themes.AppDescriptorStyle.Render("Mono")
-
 		}
 		sideView = lipgloss.JoinVertical(lipgloss.Left, sideView, chordView)
 	}
@@ -620,11 +617,16 @@ func (m model) CurrentOverlayView() string {
 		editOverlayTitle = lipgloss.NewStyle().Foreground(themes.AppTitleColor).Render("Edit")
 	}
 
+	var monoIndicator = " "
+	if m.definition.TemplateSequencerType == operation.SeqModeMono {
+		monoIndicator = "M"
+	}
+
 	playOverlayTitle := lipgloss.NewStyle().Foreground(themes.AppTitleColor).Render("Play")
 
 	editOverlay := fmt.Sprintf("%s %s", editOverlayTitle, lipgloss.PlaceHorizontal(11, 0, m.ViewOverlay()))
 	playOverlay := fmt.Sprintf("%s %s", playOverlayTitle, lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
-	return fmt.Sprintf("      %s  %s %s", editOverlay, playOverlay, mappings.KeycomboView())
+	return fmt.Sprintf("    %s  %s  %s %s", monoIndicator, editOverlay, playOverlay, mappings.KeycomboView())
 }
 
 func KeyLineIndicator(k uint8, l uint8) string {
