@@ -18,7 +18,9 @@ if [ -z "$lastTag" ]; then
     exit 0
 fi
 
-cat <<EOF
+# if script argument of "WITHINSTALL" is present
+if [ "$1" == "WITHINSTALL" ]; then
+    cat <<EOF
 ## Install
 
 ### macOS (x86_64)
@@ -42,6 +44,7 @@ cat <<EOF
 3. Run ./seq-linux-x86_64/bin/seq
 
 EOF
+fi
 
 date=$(git log -1 --format=%cd --date=short "$startTag")
 

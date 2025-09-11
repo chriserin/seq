@@ -1,492 +1,239 @@
 # CHANGELOG
 
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
-
 ## [v0.1.0-alpha.8](https://github.com/chriserin/seq/compare/v0.1.0-alpha.7...v0.1.0-alpha.8) (2025-09-08)
 
 ### Features
 
-* Clear All Parts/Overlays [8e50f10](https://github.com/chriserin/seq/commit/8e50f10) 
-* Save As (ctrl+w) [46f78c9](https://github.com/chriserin/seq/commit/46f78c9) 
+- Clear All Parts/Overlays [8e50f10](https://github.com/chriserin/seq/commit/8e50f10)
+- Save As (ctrl+w) [46f78c9](https://github.com/chriserin/seq/commit/46f78c9)
 
 ### Fixes
 
-* Allow bigger gate values [528e560](https://github.com/chriserin/seq/commit/528e560) 
-* set to default loop state on stop [e5f4f4f](https://github.com/chriserin/seq/commit/e5f4f4f) 
-* Loop whole song [7f18382](https://github.com/chriserin/seq/commit/7f18382) 
-* Escape from mode before save [03e4a16](https://github.com/chriserin/seq/commit/03e4a16) 
-* CC msg on/off 1 or 0 [d081fad](https://github.com/chriserin/seq/commit/d081fad) 
-* SyncBeatLoop on linestate change [3c0bf80](https://github.com/chriserin/seq/commit/3c0bf80) 
-* send stop on stop when receiver [650367d](https://github.com/chriserin/seq/commit/650367d) 
-
-
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+- Allow bigger gate values [528e560](https://github.com/chriserin/seq/commit/528e560)
+- set to default loop state on stop [e5f4f4f](https://github.com/chriserin/seq/commit/e5f4f4f)
+- Loop whole song [7f18382](https://github.com/chriserin/seq/commit/7f18382)
+- Escape from mode before save [03e4a16](https://github.com/chriserin/seq/commit/03e4a16)
+- CC msg on/off 1 or 0 [d081fad](https://github.com/chriserin/seq/commit/d081fad)
+- SyncBeatLoop on linestate change [3c0bf80](https://github.com/chriserin/seq/commit/3c0bf80)
+- send stop on stop when receiver [650367d](https://github.com/chriserin/seq/commit/650367d)
 
 ## [v0.1.0-alpha.7](https://github.com/chriserin/seq/compare/v0.1.0-alpha.6...v0.1.0-alpha.7) (2025-09-04)
 
 ### Features
 
-* Intro pattern mode note variation [4cd1a45](https://github.com/chriserin/seq/commit/4cd1a45) 
-* modify existing key [68e59c9](https://github.com/chriserin/seq/commit/68e59c9) 
-* Display overlay loop indicator in side [35acc53](https://github.com/chriserin/seq/commit/35acc53) 
-* Undo remove/new overlay [3041a9b](https://github.com/chriserin/seq/commit/3041a9b) 
-* Remove Overlay [d2e9135](https://github.com/chriserin/seq/commit/d2e9135) 
-* Display connected indicator for rcvr [e81621d](https://github.com/chriserin/seq/commit/e81621d) 
-* Inc/Dec all notes/channels [41c286c](https://github.com/chriserin/seq/commit/41c286c) 
-* Send loopMode to receiver with SPP msg [b02da07](https://github.com/chriserin/seq/commit/b02da07) 
+- Intro pattern mode note variation [4cd1a45](https://github.com/chriserin/seq/commit/4cd1a45)
+- modify existing key [68e59c9](https://github.com/chriserin/seq/commit/68e59c9)
+- Display overlay loop indicator in side [35acc53](https://github.com/chriserin/seq/commit/35acc53)
+- Undo remove/new overlay [3041a9b](https://github.com/chriserin/seq/commit/3041a9b)
+- Remove Overlay [d2e9135](https://github.com/chriserin/seq/commit/d2e9135)
+- Display connected indicator for rcvr [e81621d](https://github.com/chriserin/seq/commit/e81621d)
+- Inc/Dec all notes/channels [41c286c](https://github.com/chriserin/seq/commit/41c286c)
+- Send loopMode to receiver with SPP msg [b02da07](https://github.com/chriserin/seq/commit/b02da07)
 
 ### Fixes
 
-* New Line determines note val better [3ec2b6c](https://github.com/chriserin/seq/commit/3ec2b6c) 
-* CC msgs are sent before Note msgs [b9fa645](https://github.com/chriserin/seq/commit/b9fa645) 
-* Print to Stderr [f01669b](https://github.com/chriserin/seq/commit/f01669b) 
-* cache the wrapped sendFn not the naked [4b29bd1](https://github.com/chriserin/seq/commit/4b29bd1) 
-* line names for CC and PC [cdc8fc8](https://github.com/chriserin/seq/commit/cdc8fc8) 
-* don't combine standard and instr CCs [bc6c541](https://github.com/chriserin/seq/commit/bc6c541) 
-* Default width to 1 [844be84](https://github.com/chriserin/seq/commit/844be84) 
-* clear looped arr on play [6e29d5e](https://github.com/chriserin/seq/commit/6e29d5e) 
-* don't send final pulse for trans stop [a76f715](https://github.com/chriserin/seq/commit/a76f715) 
-* don't stop at end if receiver mode [05ea505](https://github.com/chriserin/seq/commit/05ea505) 
-* ui should follow msg from timing [1a11ad4](https://github.com/chriserin/seq/commit/1a11ad4) 
-* cache acquired send fn [848a444](https://github.com/chriserin/seq/commit/848a444) 
-* prevent runaway beat loop [bd24053](https://github.com/chriserin/seq/commit/bd24053) 
-* sync receiver to beat loop [42cd49e](https://github.com/chriserin/seq/commit/42cd49e) 
-* Add beat channel to transmitter loop [ecb8a5b](https://github.com/chriserin/seq/commit/ecb8a5b) 
-
-
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+- New Line determines note val better [3ec2b6c](https://github.com/chriserin/seq/commit/3ec2b6c)
+- CC msgs are sent before Note msgs [b9fa645](https://github.com/chriserin/seq/commit/b9fa645)
+- Print to Stderr [f01669b](https://github.com/chriserin/seq/commit/f01669b)
+- cache the wrapped sendFn not the naked [4b29bd1](https://github.com/chriserin/seq/commit/4b29bd1)
+- line names for CC and PC [cdc8fc8](https://github.com/chriserin/seq/commit/cdc8fc8)
+- don't combine standard and instr CCs [bc6c541](https://github.com/chriserin/seq/commit/bc6c541)
+- Default width to 1 [844be84](https://github.com/chriserin/seq/commit/844be84)
+- clear looped arr on play [6e29d5e](https://github.com/chriserin/seq/commit/6e29d5e)
+- don't send final pulse for trans stop [a76f715](https://github.com/chriserin/seq/commit/a76f715)
+- don't stop at end if receiver mode [05ea505](https://github.com/chriserin/seq/commit/05ea505)
+- ui should follow msg from timing [1a11ad4](https://github.com/chriserin/seq/commit/1a11ad4)
+- cache acquired send fn [848a444](https://github.com/chriserin/seq/commit/848a444)
+- prevent runaway beat loop [bd24053](https://github.com/chriserin/seq/commit/bd24053)
+- sync receiver to beat loop [42cd49e](https://github.com/chriserin/seq/commit/42cd49e)
+- Add beat channel to transmitter loop [ecb8a5b](https://github.com/chriserin/seq/commit/ecb8a5b)
 
 ## [v0.1.0-alpha.6](https://github.com/chriserin/seq/compare/v0.1.0-alpha.5...v0.1.0-alpha.6) (2025-08-19)
 
 ### Features
 
-* cursor on valid line when hiding lines [ee2de85](https://github.com/chriserin/seq/commit/ee2de85) 
-* nav with hidden lines [452c20e](https://github.com/chriserin/seq/commit/452c20e) 
-* choose midi outport at the command line [4937915](https://github.com/chriserin/seq/commit/4937915) 
-* Start delay for record latency compensation [8c122f3](https://github.com/chriserin/seq/commit/8c122f3) 
-* move key combo view to below side [7bb38d9](https://github.com/chriserin/seq/commit/7bb38d9) 
-* Long gates everywhere [144d6dc](https://github.com/chriserin/seq/commit/144d6dc) 
-* Midi panic (mapping: bp) [a20d298](https://github.com/chriserin/seq/commit/a20d298) 
+- cursor on valid line when hiding lines [ee2de85](https://github.com/chriserin/seq/commit/ee2de85)
+- nav with hidden lines [452c20e](https://github.com/chriserin/seq/commit/452c20e)
+- choose midi outport at the command line [4937915](https://github.com/chriserin/seq/commit/4937915)
+- Start delay for record latency compensation [8c122f3](https://github.com/chriserin/seq/commit/8c122f3)
+- move key combo view to below side [7bb38d9](https://github.com/chriserin/seq/commit/7bb38d9)
+- Long gates everywhere [144d6dc](https://github.com/chriserin/seq/commit/144d6dc)
+- Midi panic (mapping: bp) [a20d298](https://github.com/chriserin/seq/commit/a20d298)
 
 ### Fixes
 
-* Use a no-bizlogic fn for read add note [209d004](https://github.com/chriserin/seq/commit/209d004) 
-* add back new line char in view [9d322d5](https://github.com/chriserin/seq/commit/9d322d5) 
-* Switch to overlay with overlay edit [3d8b034](https://github.com/chriserin/seq/commit/3d8b034) 
-* Accents end allow down to 0 [479164f](https://github.com/chriserin/seq/commit/479164f) 
-* pattern mode - accent on chords [88fa1e2](https://github.com/chriserin/seq/commit/88fa1e2) 
-* New sequence gets new undo state [223cb43](https://github.com/chriserin/seq/commit/223cb43) 
-* error on stop in standalone mode [e8e56c4](https://github.com/chriserin/seq/commit/e8e56c4) 
-* ensure first beat played for record play [ee320fe](https://github.com/chriserin/seq/commit/ee320fe) 
-* Escape selection before focus [cf6c3f2](https://github.com/chriserin/seq/commit/cf6c3f2) 
-* Inc/Dec from arr view [2762db7](https://github.com/chriserin/seq/commit/2762db7) 
-* Play Overlay Loop w/Arr Focus [0045ae7](https://github.com/chriserin/seq/commit/0045ae7) 
-* Reset depth after cursor move on play [d879b0e](https://github.com/chriserin/seq/commit/d879b0e) 
-* Find substring of virtual midi outs for DAW [5cee707](https://github.com/chriserin/seq/commit/5cee707) 
-* Loop Overlays loops correct overlay [d6c054d](https://github.com/chriserin/seq/commit/d6c054d) 
-
-
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+- Use a no-bizlogic fn for read add note [209d004](https://github.com/chriserin/seq/commit/209d004)
+- add back new line char in view [9d322d5](https://github.com/chriserin/seq/commit/9d322d5)
+- Switch to overlay with overlay edit [3d8b034](https://github.com/chriserin/seq/commit/3d8b034)
+- Accents end allow down to 0 [479164f](https://github.com/chriserin/seq/commit/479164f)
+- pattern mode - accent on chords [88fa1e2](https://github.com/chriserin/seq/commit/88fa1e2)
+- New sequence gets new undo state [223cb43](https://github.com/chriserin/seq/commit/223cb43)
+- error on stop in standalone mode [e8e56c4](https://github.com/chriserin/seq/commit/e8e56c4)
+- ensure first beat played for record play [ee320fe](https://github.com/chriserin/seq/commit/ee320fe)
+- Escape selection before focus [cf6c3f2](https://github.com/chriserin/seq/commit/cf6c3f2)
+- Inc/Dec from arr view [2762db7](https://github.com/chriserin/seq/commit/2762db7)
+- Play Overlay Loop w/Arr Focus [0045ae7](https://github.com/chriserin/seq/commit/0045ae7)
+- Reset depth after cursor move on play [d879b0e](https://github.com/chriserin/seq/commit/d879b0e)
+- Find substring of virtual midi outs for DAW [5cee707](https://github.com/chriserin/seq/commit/5cee707)
+- Loop Overlays loops correct overlay [d6c054d](https://github.com/chriserin/seq/commit/d6c054d)
 
 ## [v0.1.0-alpha.5](https://github.com/chriserin/seq/compare/v0.1.0-alpha.4...v0.1.0-alpha.5) (2025-08-08)
 
 ### Features
 
-* Reconfigure accent ui for ++intuitive [ce64da1](https://github.com/chriserin/seq/commit/ce64da1) 
-* Only complete files with seq ext [52abd72](https://github.com/chriserin/seq/commit/52abd72) 
-* Wait until DAW gets a chance to record [ab003bc](https://github.com/chriserin/seq/commit/ab003bc) 
-* hide lines without notes [aec0bc5](https://github.com/chriserin/seq/commit/aec0bc5) 
+- Reconfigure accent ui for ++intuitive [ce64da1](https://github.com/chriserin/seq/commit/ce64da1)
+- Only complete files with seq ext [52abd72](https://github.com/chriserin/seq/commit/52abd72)
+- Wait until DAW gets a chance to record [ab003bc](https://github.com/chriserin/seq/commit/ab003bc)
+- hide lines without notes [aec0bc5](https://github.com/chriserin/seq/commit/aec0bc5)
 
 ### Fixes
 
-* Send Stop message in own process [f66f572](https://github.com/chriserin/seq/commit/f66f572) 
-* Reset depth after play move [5389336](https://github.com/chriserin/seq/commit/5389336) 
-* Improve recording dest err messsage [a15dad3](https://github.com/chriserin/seq/commit/a15dad3) 
-* Group as second sibling need reset iterations [995287b](https://github.com/chriserin/seq/commit/995287b) 
-* Exit from arrView focus with Enter [a4c9ec4](https://github.com/chriserin/seq/commit/a4c9ec4) 
-
-
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+- Send Stop message in own process [f66f572](https://github.com/chriserin/seq/commit/f66f572)
+- Reset depth after play move [5389336](https://github.com/chriserin/seq/commit/5389336)
+- Improve recording dest err message [a15dad3](https://github.com/chriserin/seq/commit/a15dad3)
+- Group as second sibling need reset iterations [995287b](https://github.com/chriserin/seq/commit/995287b)
+- Exit from arrView focus with Enter [a4c9ec4](https://github.com/chriserin/seq/commit/a4c9ec4)
 
 ## [v0.1.0-alpha.4](https://github.com/chriserin/seq/compare/v0.1.0-alpha.3...v0.1.0-alpha.4) (2025-08-01)
 
 ### Features
 
-* Capture panic in View function [e24be3c](https://github.com/chriserin/seq/commit/e24be3c) 
-* Look in standard dirs for init.lua file [c630d83](https://github.com/chriserin/seq/commit/c630d83) 
+- Capture panic in View function [e24be3c](https://github.com/chriserin/seq/commit/e24be3c)
+- Look in standard dirs for init.lua file [c630d83](https://github.com/chriserin/seq/commit/c630d83)
 
 ### Fixes
 
-* initial state for file [77fc971](https://github.com/chriserin/seq/commit/77fc971) 
-* first digit application false on ok enter [37e28d0](https://github.com/chriserin/seq/commit/37e28d0) 
-* escape from overlay key edit [a045ae2](https://github.com/chriserin/seq/commit/a045ae2) 
-* escape from arr view [c75ac3d](https://github.com/chriserin/seq/commit/c75ac3d) 
-* arr cursor when grouping groups [eb9e383](https://github.com/chriserin/seq/commit/eb9e383) 
-* copy cursor for arr undo [3de2392](https://github.com/chriserin/seq/commit/3de2392) 
-* Only one focus at a time [78d081c](https://github.com/chriserin/seq/commit/78d081c) 
-* Error for multiple inbetween keys [b3f1bd0](https://github.com/chriserin/seq/commit/b3f1bd0) 
-* Specific Value Undo [2c56ebe](https://github.com/chriserin/seq/commit/2c56ebe) 
-* Spacing issue on edit key [074410b](https://github.com/chriserin/seq/commit/074410b) 
-* ensure length of line name [a5e8415](https://github.com/chriserin/seq/commit/a5e8415) 
-
-
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+- initial state for file [77fc971](https://github.com/chriserin/seq/commit/77fc971)
+- first digit application false on ok enter [37e28d0](https://github.com/chriserin/seq/commit/37e28d0)
+- escape from overlay key edit [a045ae2](https://github.com/chriserin/seq/commit/a045ae2)
+- escape from arr view [c75ac3d](https://github.com/chriserin/seq/commit/c75ac3d)
+- arr cursor when grouping groups [eb9e383](https://github.com/chriserin/seq/commit/eb9e383)
+- copy cursor for arr undo [3de2392](https://github.com/chriserin/seq/commit/3de2392)
+- Only one focus at a time [78d081c](https://github.com/chriserin/seq/commit/78d081c)
+- Error for multiple inbetween keys [b3f1bd0](https://github.com/chriserin/seq/commit/b3f1bd0)
+- Specific Value Undo [2c56ebe](https://github.com/chriserin/seq/commit/2c56ebe)
+- Spacing issue on edit key [074410b](https://github.com/chriserin/seq/commit/074410b)
+- ensure length of line name [a5e8415](https://github.com/chriserin/seq/commit/a5e8415)
 
 ## [v0.1.0-alpha.4](https://github.com/chriserin/seq/compare/v0.1.0-alpha.3...v0.1.0-alpha.4) (2025-08-01)
 
 ### Features
 
-* Capture panic in View function [e24be3c](https://github.com/chriserin/seq/commit/e24be3c) 
-* Look in standard dirs for init.lua file [c630d83](https://github.com/chriserin/seq/commit/c630d83) 
+- Capture panic in View function [e24be3c](https://github.com/chriserin/seq/commit/e24be3c)
+- Look in standard dirs for init.lua file [c630d83](https://github.com/chriserin/seq/commit/c630d83)
 
 ### Fixes
 
-* initial state for file [77fc971](https://github.com/chriserin/seq/commit/77fc971) 
-* first digit application false on ok enter [37e28d0](https://github.com/chriserin/seq/commit/37e28d0) 
-* escape from overlay key edit [a045ae2](https://github.com/chriserin/seq/commit/a045ae2) 
-* escape from arr view [c75ac3d](https://github.com/chriserin/seq/commit/c75ac3d) 
-* arr cursor when grouping groups [eb9e383](https://github.com/chriserin/seq/commit/eb9e383) 
-* copy cursor for arr undo [3de2392](https://github.com/chriserin/seq/commit/3de2392) 
-* Only one focus at a time [78d081c](https://github.com/chriserin/seq/commit/78d081c) 
-* Error for multiple inbetween keys [b3f1bd0](https://github.com/chriserin/seq/commit/b3f1bd0) 
-* Specific Value Undo [2c56ebe](https://github.com/chriserin/seq/commit/2c56ebe) 
-* Spacing issue on edit key [074410b](https://github.com/chriserin/seq/commit/074410b) 
-* ensure length of line name [a5e8415](https://github.com/chriserin/seq/commit/a5e8415) 
-
-
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+- initial state for file [77fc971](https://github.com/chriserin/seq/commit/77fc971)
+- first digit application false on ok enter [37e28d0](https://github.com/chriserin/seq/commit/37e28d0)
+- escape from overlay key edit [a045ae2](https://github.com/chriserin/seq/commit/a045ae2)
+- escape from arr view [c75ac3d](https://github.com/chriserin/seq/commit/c75ac3d)
+- arr cursor when grouping groups [eb9e383](https://github.com/chriserin/seq/commit/eb9e383)
+- copy cursor for arr undo [3de2392](https://github.com/chriserin/seq/commit/3de2392)
+- Only one focus at a time [78d081c](https://github.com/chriserin/seq/commit/78d081c)
+- Error for multiple inbetween keys [b3f1bd0](https://github.com/chriserin/seq/commit/b3f1bd0)
+- Specific Value Undo [2c56ebe](https://github.com/chriserin/seq/commit/2c56ebe)
+- Spacing issue on edit key [074410b](https://github.com/chriserin/seq/commit/074410b)
+- ensure length of line name [a5e8415](https://github.com/chriserin/seq/commit/a5e8415)
 
 ## [v0.1.0-alpha.4](https://github.com/chriserin/seq/compare/v0.1.0-alpha.3...v0.1.0-alpha.4) (2025-08-01)
 
 ### Features
 
-* Capture panic in View function [e24be3c](https://github.com/chriserin/seq/commit/e24be3c) 
-* Look in standard dirs for init.lua file [c630d83](https://github.com/chriserin/seq/commit/c630d83) 
+- Capture panic in View function [e24be3c](https://github.com/chriserin/seq/commit/e24be3c)
+- Look in standard dirs for init.lua file [c630d83](https://github.com/chriserin/seq/commit/c630d83)
 
 ### Fixes
 
-* first digit application false on ok enter [37e28d0](https://github.com/chriserin/seq/commit/37e28d0) 
-* escape from overlay key edit [a045ae2](https://github.com/chriserin/seq/commit/a045ae2) 
-* escape from arr view [c75ac3d](https://github.com/chriserin/seq/commit/c75ac3d) 
-* arr cursor when grouping groups [eb9e383](https://github.com/chriserin/seq/commit/eb9e383) 
-* copy cursor for arr undo [3de2392](https://github.com/chriserin/seq/commit/3de2392) 
-* Only one focus at a time [78d081c](https://github.com/chriserin/seq/commit/78d081c) 
-* Error for multiple inbetween keys [b3f1bd0](https://github.com/chriserin/seq/commit/b3f1bd0) 
-* Specific Value Undo [2c56ebe](https://github.com/chriserin/seq/commit/2c56ebe) 
-* Spacing issue on edit key [074410b](https://github.com/chriserin/seq/commit/074410b) 
-* ensure length of line name [a5e8415](https://github.com/chriserin/seq/commit/a5e8415) 
-
-
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+- first digit application false on ok enter [37e28d0](https://github.com/chriserin/seq/commit/37e28d0)
+- escape from overlay key edit [a045ae2](https://github.com/chriserin/seq/commit/a045ae2)
+- escape from arr view [c75ac3d](https://github.com/chriserin/seq/commit/c75ac3d)
+- arr cursor when grouping groups [eb9e383](https://github.com/chriserin/seq/commit/eb9e383)
+- copy cursor for arr undo [3de2392](https://github.com/chriserin/seq/commit/3de2392)
+- Only one focus at a time [78d081c](https://github.com/chriserin/seq/commit/78d081c)
+- Error for multiple inbetween keys [b3f1bd0](https://github.com/chriserin/seq/commit/b3f1bd0)
+- Specific Value Undo [2c56ebe](https://github.com/chriserin/seq/commit/2c56ebe)
+- Spacing issue on edit key [074410b](https://github.com/chriserin/seq/commit/074410b)
+- ensure length of line name [a5e8415](https://github.com/chriserin/seq/commit/a5e8415)
 
 ## [v0.1.0-alpha.3](https://github.com/chriserin/seq/compare/v0.1.0-alpha.2...v0.1.0-alpha.3) (2025-07-25)
 
 ### Features
 
-* Allow new line when more than 16 lines [328000e](https://github.com/chriserin/seq/commit/328000e) 
-* Reload file confirmation [0145d14](https://github.com/chriserin/seq/commit/0145d14) 
-* Group groups and focus group after creation [911ac56](https://github.com/chriserin/seq/commit/911ac56) 
+- Allow new line when more than 16 lines [328000e](https://github.com/chriserin/seq/commit/328000e)
+- Reload file confirmation [0145d14](https://github.com/chriserin/seq/commit/0145d14)
+- Group groups and focus group after creation [911ac56](https://github.com/chriserin/seq/commit/911ac56)
 
 ### Fixes
 
-* Next/Prev Section work with arr focus [a772452](https://github.com/chriserin/seq/commit/a772452) 
-* Tempo responds to undo/redo [2fa3604](https://github.com/chriserin/seq/commit/2fa3604) 
-* Ensure overlay after overlaykey enter [8073e01](https://github.com/chriserin/seq/commit/8073e01) 
-* Reset overlay key on new sequence [aaacc42](https://github.com/chriserin/seq/commit/aaacc42) 
-* escape from filename prompt [4cb63cf](https://github.com/chriserin/seq/commit/4cb63cf) 
-* save to ctrl+s. setup to ctrl+d [199e54b](https://github.com/chriserin/seq/commit/199e54b) 
-
-
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+- Next/Prev Section work with arr focus [a772452](https://github.com/chriserin/seq/commit/a772452)
+- Tempo responds to undo/redo [2fa3604](https://github.com/chriserin/seq/commit/2fa3604)
+- Ensure overlay after overlaykey enter [8073e01](https://github.com/chriserin/seq/commit/8073e01)
+- Reset overlay key on new sequence [aaacc42](https://github.com/chriserin/seq/commit/aaacc42)
+- escape from filename prompt [4cb63cf](https://github.com/chriserin/seq/commit/4cb63cf)
+- save to ctrl+s. setup to ctrl+d [199e54b](https://github.com/chriserin/seq/commit/199e54b)
 
 ## [v0.1.0-alpha.3](https://github.com/chriserin/seq/compare/v0.1.0-alpha.2...v0.1.0-alpha.3) (2025-07-25)
 
 ### Features
 
-* Allow new line when more than 16 lines [328000e](https://github.com/chriserin/seq/commit/328000e) 
-* Reload file confirmation [0145d14](https://github.com/chriserin/seq/commit/0145d14) 
-* Group groups and focus group after creation [911ac56](https://github.com/chriserin/seq/commit/911ac56) 
+- Allow new line when more than 16 lines [328000e](https://github.com/chriserin/seq/commit/328000e)
+- Reload file confirmation [0145d14](https://github.com/chriserin/seq/commit/0145d14)
+- Group groups and focus group after creation [911ac56](https://github.com/chriserin/seq/commit/911ac56)
 
 ### Fixes
 
-* Next/Prev Section work with arr focus [a772452](https://github.com/chriserin/seq/commit/a772452) 
-* Tempo responds to undo/redo [2fa3604](https://github.com/chriserin/seq/commit/2fa3604) 
-* Ensure overlay after overlaykey enter [8073e01](https://github.com/chriserin/seq/commit/8073e01) 
-* Reset overlay key on new sequence [aaacc42](https://github.com/chriserin/seq/commit/aaacc42) 
-* escape from filename prompt [4cb63cf](https://github.com/chriserin/seq/commit/4cb63cf) 
-* save to ctrl+s. setup to ctrl+d [199e54b](https://github.com/chriserin/seq/commit/199e54b) 
-
-
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+- Next/Prev Section work with arr focus [a772452](https://github.com/chriserin/seq/commit/a772452)
+- Tempo responds to undo/redo [2fa3604](https://github.com/chriserin/seq/commit/2fa3604)
+- Ensure overlay after overlaykey enter [8073e01](https://github.com/chriserin/seq/commit/8073e01)
+- Reset overlay key on new sequence [aaacc42](https://github.com/chriserin/seq/commit/aaacc42)
+- escape from filename prompt [4cb63cf](https://github.com/chriserin/seq/commit/4cb63cf)
+- save to ctrl+s. setup to ctrl+d [199e54b](https://github.com/chriserin/seq/commit/199e54b)
 
 ## [v0.1.0-alpha.3](https://github.com/chriserin/seq/compare/v0.1.0-alpha.2...v0.1.0-alpha.3) (2025-07-25)
 
 ### Features
 
-* Allow new line when more than 16 lines [328000e](https://github.com/chriserin/seq/commit/328000e) 
-* Reload file confirmation [0145d14](https://github.com/chriserin/seq/commit/0145d14) 
-* Group groups and focus group after creation [911ac56](https://github.com/chriserin/seq/commit/911ac56) 
+- Allow new line when more than 16 lines [328000e](https://github.com/chriserin/seq/commit/328000e)
+- Reload file confirmation [0145d14](https://github.com/chriserin/seq/commit/0145d14)
+- Group groups and focus group after creation [911ac56](https://github.com/chriserin/seq/commit/911ac56)
 
 ### Fixes
 
-* Next/Prev Section work with arr focus [a772452](https://github.com/chriserin/seq/commit/a772452) 
-* Tempo responds to undo/redo [2fa3604](https://github.com/chriserin/seq/commit/2fa3604) 
-* Ensure overlay after overlaykey enter [8073e01](https://github.com/chriserin/seq/commit/8073e01) 
-* Reset overlay key on new sequence [aaacc42](https://github.com/chriserin/seq/commit/aaacc42) 
-* escape from filename prompt [4cb63cf](https://github.com/chriserin/seq/commit/4cb63cf) 
-* save to ctrl+s. setup to ctrl+d [199e54b](https://github.com/chriserin/seq/commit/199e54b) 
-
-
-## Install
-
-### macOS (x86_64)
-
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
-
-### macOS (arm64)
-
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
-
-### Linux (x86_64)
-
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+- Next/Prev Section work with arr focus [a772452](https://github.com/chriserin/seq/commit/a772452)
+- Tempo responds to undo/redo [2fa3604](https://github.com/chriserin/seq/commit/2fa3604)
+- Ensure overlay after overlaykey enter [8073e01](https://github.com/chriserin/seq/commit/8073e01)
+- Reset overlay key on new sequence [aaacc42](https://github.com/chriserin/seq/commit/aaacc42)
+- escape from filename prompt [4cb63cf](https://github.com/chriserin/seq/commit/4cb63cf)
+- save to ctrl+s. setup to ctrl+d [199e54b](https://github.com/chriserin/seq/commit/199e54b)
 
 ## [v0.1.0-alpha.3](https://github.com/chriserin/seq/compare/v0.1.0-alpha.2...v0.1.0-alpha.3) (2025-07-25)
 
 ### Features
 
-* Allow new line when more than 16 lines [328000e](https://github.com/chriserin/seq/commit/328000e) 
-* Reload file confirmation [0145d14](https://github.com/chriserin/seq/commit/0145d14) 
-* Group groups and focus group after creation [911ac56](https://github.com/chriserin/seq/commit/911ac56) 
+- Allow new line when more than 16 lines [328000e](https://github.com/chriserin/seq/commit/328000e)
+- Reload file confirmation [0145d14](https://github.com/chriserin/seq/commit/0145d14)
+- Group groups and focus group after creation [911ac56](https://github.com/chriserin/seq/commit/911ac56)
 
 ### Fixes
 
-* Next/Prev Section work with arr focus [a772452](https://github.com/chriserin/seq/commit/a772452) 
-* Tempo responds to undo/redo [2fa3604](https://github.com/chriserin/seq/commit/2fa3604) 
-* Ensure overlay after overlaykey enter [8073e01](https://github.com/chriserin/seq/commit/8073e01) 
-* Reset overlay key on new sequence [aaacc42](https://github.com/chriserin/seq/commit/aaacc42) 
-* escape from filename prompt [4cb63cf](https://github.com/chriserin/seq/commit/4cb63cf) 
-* save to ctrl+s. setup to ctrl+d [199e54b](https://github.com/chriserin/seq/commit/199e54b) 
-
+- Next/Prev Section work with arr focus [a772452](https://github.com/chriserin/seq/commit/a772452)
+- Tempo responds to undo/redo [2fa3604](https://github.com/chriserin/seq/commit/2fa3604)
+- Ensure overlay after overlaykey enter [8073e01](https://github.com/chriserin/seq/commit/8073e01)
+- Reset overlay key on new sequence [aaacc42](https://github.com/chriserin/seq/commit/aaacc42)
+- escape from filename prompt [4cb63cf](https://github.com/chriserin/seq/commit/4cb63cf)
+- save to ctrl+s. setup to ctrl+d [199e54b](https://github.com/chriserin/seq/commit/199e54b)
 
 ## [v0.1.0-alpha.2](https://github.com/chriserin/seq/compare/v0.1.0-alpha.1...v0.1.0-alpha.2) (2025-07-22)
 
 ### Features
 
-* Add actions for BounceAll and SkipAll [6bb44d9](https://github.com/chriserin/seq/commit/6bb44d9) 
-* Omit Octave from chord [b66958f](https://github.com/chriserin/seq/commit/b66958f) 
+- Add actions for BounceAll and SkipAll [6bb44d9](https://github.com/chriserin/seq/commit/6bb44d9)
+- Omit Octave from chord [b66958f](https://github.com/chriserin/seq/commit/b66958f)
 
 ### Fixes
 
-* Rearrange arrangement view attributes [90290e0](https://github.com/chriserin/seq/commit/90290e0) 
-* Gate Decrease/Increse g/G [94fc6f5](https://github.com/chriserin/seq/commit/94fc6f5) 
-* Cursor should stay seen when reducing beats [769b6a2](https://github.com/chriserin/seq/commit/769b6a2) 
-* Default template should have ascending notes [7d8bcd1](https://github.com/chriserin/seq/commit/7d8bcd1) 
+- Rearrange arrangement view attributes [90290e0](https://github.com/chriserin/seq/commit/90290e0)
+- Gate Decrease/Increse g/G [94fc6f5](https://github.com/chriserin/seq/commit/94fc6f5)
+- Cursor should stay seen when reducing beats [769b6a2](https://github.com/chriserin/seq/commit/769b6a2)
+- Default template should have ascending notes [7d8bcd1](https://github.com/chriserin/seq/commit/7d8bcd1)

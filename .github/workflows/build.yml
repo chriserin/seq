@@ -183,7 +183,7 @@ jobs:
           tar -cvzf seq-darwin-X86_64.tar.gz -C output seq-darwin-X86_64
           tar -cvzf seq-darwin-arm64.tar.gz -C output seq-darwin-arm64
 
-          ./changelog.sh > release-notes.md
+          ./changelog.sh WITHINSTALL > release-notes.md
           # if the github_ref has alpha or beta make this a prerelease
           case "${GITHUB_REF}" in
             *alpha*|*beta*)
