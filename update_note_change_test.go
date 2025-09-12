@@ -582,6 +582,30 @@ func TestRotate(t *testing.T) {
 			description: "Should rotate pattern up wrapping to bottom",
 		},
 		{
+			name: "Rotate up at visual boundary",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleVisualLineMode,
+				mappings.CursorDown,
+				mappings.RotateUp,
+			},
+			initialPos:  grid.GridKey{Line: 0, Beat: 4},
+			expectedPos: grid.GridKey{Line: 1, Beat: 4},
+			description: "Should rotate pattern up wrapping to bottom",
+		},
+		{
+			name: "Rotate down at visual boundary",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.ToggleVisualLineMode,
+				mappings.CursorDown,
+				mappings.RotateDown,
+			},
+			initialPos:  grid.GridKey{Line: 0, Beat: 4},
+			expectedPos: grid.GridKey{Line: 1, Beat: 4},
+			description: "Should rotate pattern up wrapping to bottom",
+		},
+		{
 			name: "Rotate right",
 			commands: []any{
 				mappings.NoteAdd,

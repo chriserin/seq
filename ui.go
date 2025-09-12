@@ -1973,7 +1973,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.currentOverlay.ToggleOverlayStackOptions()
 	case mappings.RotateRight:
 		switch m.definition.TemplateSequencerType {
-		case operation.SeqModeLine:
+		default:
 			m.RotateRight()
 		case operation.SeqModeChord:
 			m.EnsureChord()
@@ -1982,7 +1982,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		}
 	case mappings.RotateLeft:
 		switch m.definition.TemplateSequencerType {
-		case operation.SeqModeLine:
+		default:
 			m.RotateLeft()
 		case operation.SeqModeChord:
 			m.EnsureChord()
@@ -1991,21 +1991,21 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		}
 	case mappings.RotateUp:
 		switch m.definition.TemplateSequencerType {
-		case operation.SeqModeLine:
-			m.RotateUp()
 		case operation.SeqModeChord:
 			m.EnsureChord()
 			m.MoveChordUp()
 			m.CursorUp()
+		default:
+			m.RotateUp()
 		}
 	case mappings.RotateDown:
 		switch m.definition.TemplateSequencerType {
-		case operation.SeqModeLine:
-			m.RotateDown()
 		case operation.SeqModeChord:
 			m.EnsureChord()
 			m.MoveChordDown()
 			m.CursorDown()
+		default:
+			m.RotateDown()
 		}
 	case mappings.Paste:
 		m.Paste()
@@ -2486,24 +2486,27 @@ func (m *model) RotateLeft() {
 
 func (m *model) RotateUp() {
 	pattern := m.CombinedEditPattern(m.currentOverlay)
-	beat := m.gridCursor.Beat
-	for l := 0; l < len(m.definition.Lines); l++ {
-		key := GK(uint8(l), beat)
-		_, exists := pattern[key]
-		if exists {
-			m.currentOverlay.RemoveNote(key)
-		}
-		if l != 0 {
-			newKey := GK(uint8(l-1), beat)
-			note, exists := pattern[key]
+	lineStart, lineEnd := m.MonoModeLineBoundaries()
+	beatStart, beatEnd := m.PatternActionBeatBoundaries()
+	for beat := beatStart; beat <= beatEnd; beat++ {
+		for l := lineStart; l <= lineEnd; l++ {
+			key := GK(uint8(l), beat)
+			_, exists := pattern[key]
 			if exists {
-				m.currentOverlay.SetNote(newKey, note)
+				m.currentOverlay.RemoveNote(key)
 			}
-		} else {
-			newKey := GK(uint8(len(m.definition.Lines)-1), beat)
-			note, exists := pattern[key]
-			if exists {
-				m.currentOverlay.SetNote(newKey, note)
+			if l != lineStart {
+				newKey := GK(uint8(l-1), beat)
+				note, exists := pattern[key]
+				if exists {
+					m.currentOverlay.SetNote(newKey, note)
+				}
+			} else {
+				newKey := GK(lineEnd, beat)
+				note, exists := pattern[key]
+				if exists {
+					m.currentOverlay.SetNote(newKey, note)
+				}
 			}
 		}
 	}
@@ -2511,25 +2514,28 @@ func (m *model) RotateUp() {
 
 func (m *model) RotateDown() {
 	pattern := m.CombinedEditPattern(m.currentOverlay)
-	beat := m.gridCursor.Beat
-	for l := len(m.definition.Lines); l >= 0; l-- {
-		key := GK(uint8(l), beat)
-		_, exists := pattern[key]
-		if exists {
-			m.currentOverlay.RemoveNote(key)
-		}
-		index := l + 1
-		if int(index) < len(m.definition.Lines) {
-			newKey := GK(uint8(index), beat)
-			note, exists := pattern[key]
+	lineStart, lineEnd := m.MonoModeLineBoundaries()
+	beatStart, beatEnd := m.PatternActionBeatBoundaries()
+	for beat := beatStart; beat <= beatEnd; beat++ {
+		for l := int(lineEnd); l >= int(lineStart); l-- {
+			key := GK(uint8(l), beat)
+			_, exists := pattern[key]
 			if exists {
-				m.currentOverlay.SetNote(newKey, note)
+				m.currentOverlay.RemoveNote(key)
 			}
-		} else {
-			newKey := GK(0, beat)
-			note, exists := pattern[key]
-			if exists {
-				m.currentOverlay.SetNote(newKey, note)
+			index := l + 1
+			if index <= int(lineEnd) {
+				newKey := GK(uint8(index), beat)
+				note, exists := pattern[key]
+				if exists {
+					m.currentOverlay.SetNote(newKey, note)
+				}
+			} else {
+				newKey := GK(lineStart, beat)
+				note, exists := pattern[key]
+				if exists {
+					m.currentOverlay.SetNote(newKey, note)
+				}
 			}
 		}
 	}
@@ -3147,7 +3153,7 @@ func (m model) PatternActionLineBoundaries() (uint8, uint8) {
 
 func (m model) MonoModeLineBoundaries() (uint8, uint8) {
 	if m.visualSelection.visualMode == operation.VisualNone {
-		return 0, uint8(len(m.definition.Lines))
+		return 0, uint8(len(m.definition.Lines) - 1)
 	} else {
 		bounds := m.visualSelection.Bounds(m.CurrentPart().Beats)
 		return bounds.Top, bounds.Bottom
