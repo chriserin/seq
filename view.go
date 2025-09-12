@@ -617,16 +617,19 @@ func (m model) CurrentOverlayView() string {
 		editOverlayTitle = lipgloss.NewStyle().Foreground(themes.AppTitleColor).Render("Edit")
 	}
 
-	var monoIndicator = " "
-	if m.definition.TemplateSequencerType == operation.SeqModeMono {
-		monoIndicator = "M"
+	var monoIndicator = "  "
+	switch m.definition.TemplateSequencerType {
+	case operation.SeqModeMono:
+		monoIndicator = "MN"
+	case operation.SeqModeChord:
+		monoIndicator = "CH"
 	}
 
 	playOverlayTitle := lipgloss.NewStyle().Foreground(themes.AppTitleColor).Render("Play")
 
 	editOverlay := fmt.Sprintf("%s %s", editOverlayTitle, lipgloss.PlaceHorizontal(11, 0, m.ViewOverlay()))
 	playOverlay := fmt.Sprintf("%s %s", playOverlayTitle, lipgloss.PlaceHorizontal(11, 0, overlaykey.View(matchedKey)))
-	return fmt.Sprintf("    %s  %s  %s %s", monoIndicator, editOverlay, playOverlay, mappings.KeycomboView())
+	return fmt.Sprintf("   %s  %s  %s %s", monoIndicator, editOverlay, playOverlay, mappings.KeycomboView())
 }
 
 func KeyLineIndicator(k uint8, l uint8) string {
