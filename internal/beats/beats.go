@@ -341,7 +341,7 @@ func PlayOnMessage(nm NoteMsg) {
 		if err != nil {
 			errChan <- err
 		}
-		playQueue <- nm.GetOffMidi()
+		playQueue <- nm.GetOnMidi()
 	})
 }
 

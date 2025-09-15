@@ -147,3 +147,13 @@ seq.addinstrument({
 		{ 123, 1, "All Notes Off" },
 	},
 })
+
+seq.addinstrument({
+	name = "Mother-32",
+	controlchanges = {
+		{ 1, 127, "Assignable Output" },
+		{ 5, 127, "Portamento Time" },
+		{ 65, 1, "Portamento On/Off" },
+		{ 64, 1, "Sustain" },
+	},
+})
