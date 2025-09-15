@@ -353,7 +353,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 					timer.Reset(330 * time.Millisecond)
 					if t.started {
 						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
-							beatChannel <- beats.BeatMsg{Interval: t.BeatInterval()}
+							beatChannel <- beats.BeatMsg{Interval: t.TickInterval()}
 						}
 						t.pulseCount++
 					}
