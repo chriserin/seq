@@ -32,8 +32,8 @@ func TestWriteAdditionalProperties(t *testing.T) {
 			Start:  10,
 			End:    5,
 			Data: []config.Accent{
-				{Value: 100},
-				{Value: 80},
+				100,
+				80,
 			},
 		}
 

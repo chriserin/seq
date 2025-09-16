@@ -40,6 +40,7 @@ type Timing struct {
 	pulseLimit   int
 	preRollBeats uint8
 	transmitting bool
+	beatsLooper  beats.BeatsLooper
 }
 
 type MidiLoopMode uint8
@@ -60,8 +61,8 @@ func GetTimingChannel() chan TimingMsg {
 	return timingChannel
 }
 
-func Loop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan bool, sendFn func(tea.Msg)) error {
-	timing := Timing{}
+func Loop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan bool, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg)) error {
+	timing := Timing{beatsLooper: beatsLooper}
 	switch mode {
 	case MlmStandAlone:
 		timing.StandAloneLoop(sendFn)
@@ -134,7 +135,7 @@ func (tmtr Transmitter) ActiveSense() error {
 const TransmitterName string = "seq-transmitter"
 
 func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
-	var beatChannel = beats.GetBeatChannel()
+	var beatChannel = t.beatsLooper.BeatChannel
 	driver, err := rtmididrv.New()
 	if err != nil {
 		return fault.Wrap(err, fmsg.With("midi driver error"))
@@ -257,7 +258,7 @@ type ListenFn func(msg []byte, milliseconds int32)
 
 func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, sendFn func(tea.Msg)) (receiverError error) {
 
-	var beatChannel = beats.GetBeatChannel()
+	var beatChannel = t.beatsLooper.BeatChannel
 	transmitPort, err := midi.FindInPort(TransmitterName)
 	if err != nil {
 		receiverError = fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
@@ -372,7 +373,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 }
 
 func (t *Timing) StandAloneLoop(sendFn func(tea.Msg)) {
-	var beatChannel = beats.GetBeatChannel()
+	var beatChannel = t.beatsLooper.BeatChannel
 	tickChannel := make(chan Timing)
 	var command TimingMsg
 

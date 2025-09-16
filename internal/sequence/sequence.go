@@ -43,10 +43,10 @@ func (pa *PatternAccents) ReCalc() {
 
 	interval := float64(pa.Start-pa.End) / float64(len(pa.Data)-2)
 
-	for i, a := range pa.Data[1:] {
+	for i := range pa.Data[1:] {
 		calculatedValue := float64(pa.Start) - (interval * float64(i))
 		roundedValue := math.Round(calculatedValue)
-		a.Value = uint8(roundedValue)
+		a := config.Accent(roundedValue)
 		accents[i+1] = a
 	}
 

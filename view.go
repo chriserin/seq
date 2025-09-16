@@ -252,7 +252,7 @@ func (m model) AccentKeyView() string {
 	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(themes.AccentIcons[1])), accentStartString))
 	for i, accent := range m.definition.Accents.Data[2 : len(m.definition.Accents.Data)-1] {
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(themes.AccentColors[i+2]))
-		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(themes.AccentIcons[i+2])), accent.Value))
+		buf.WriteString(fmt.Sprintf("  %s  -  %d\n", style.Render(string(themes.AccentIcons[i+2])), accent))
 	}
 	style = lipgloss.NewStyle().Foreground(lipgloss.Color(themes.AccentColors[len(themes.AccentIcons)-1]))
 	buf.WriteString(fmt.Sprintf("  %s  -  %s\n", style.Render(string(themes.AccentIcons[len(themes.AccentIcons)-1])), accentEndString))

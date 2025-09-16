@@ -114,7 +114,7 @@ func writeAccents(w io.Writer, accents PatternAccents) error {
 		fmt.Fprintln(w, "----------------------- ACCENT DATA -----------------------")
 		for i, accent := range accents.Data {
 			fmt.Fprintf(w, "Accent %d: Value=%d\n",
-				i, accent.Value)
+				i, accent)
 		}
 	}
 	fmt.Fprintln(w, "")

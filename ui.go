@@ -42,7 +42,6 @@ var updateChannel chan beats.ModelMsg
 
 func init() {
 	timingChannel = timing.GetTimingChannel()
-	updateChannel = beats.GetUpdateChannel()
 }
 
 func Key(help string, keyboardKey ...string) key.Binding {
@@ -850,18 +849,22 @@ func (m *model) LogFromBeatTime() {
 	}
 }
 
+var beatsLooper beats.BeatsLooper
+
 func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode timing.MidiLoopMode, theme string) *tea.Program {
 	config.Init()
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
 	model.ResetIterations()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
-	SetupTimingLoop(model, program.Send)
-	beats.Loop(program.Send, midiConnection)
+	beatsLooper = beats.InitBeatsLooper()
+	updateChannel = beatsLooper.UpdateChannel
+	SetupTimingLoop(model, beatsLooper, program.Send)
+	beatsLooper.Loop(program.Send, midiConnection)
 	return program
 }
 
-func SetupTimingLoop(model model, sendFn func(tea.Msg)) {
-	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, sendFn)
+func SetupTimingLoop(model model, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg)) {
+	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, beatsLooper, sendFn)
 	if err != nil {
 		go func() {
 			sendFn(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
@@ -1847,7 +1850,7 @@ func (m *model) Stop() {
 	for _, n := range notes {
 		switch n := n.(type) {
 		case beats.NoteMsg:
-			beats.PlayMessage(time.Duration(0), n.OffMessage())
+			beatsLooper.PlayMessage(time.Duration(0), n.OffMessage())
 		}
 	}
 }

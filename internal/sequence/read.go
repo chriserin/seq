@@ -279,7 +279,7 @@ func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 			paramStr := strings.TrimSpace(parts[1])
 			params := strings.Split(paramStr, ", ")
 
-			accent := config.Accent{}
+			var accent config.Accent
 
 			for _, param := range params {
 				keyVal := strings.SplitN(param, "=", 2)
@@ -293,7 +293,7 @@ func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 				switch key {
 				case "Value":
 					if val, err := strconv.Atoi(value); err == nil {
-						accent.Value = uint8(val)
+						accent = config.Accent(val)
 					}
 				}
 			}

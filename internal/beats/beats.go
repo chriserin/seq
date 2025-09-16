@@ -5,8 +5,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Southclaws/fault"
-	"github.com/Southclaws/fault/fmsg"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/chriserin/seq/internal/arrangement"
 	"github.com/chriserin/seq/internal/config"
@@ -33,33 +31,31 @@ type ModelPlayedMsg struct {
 
 type AnticipatoryStop struct{}
 
-var beatChannel chan BeatMsg
-var updateChannel chan ModelMsg
-var doneChannel chan struct{}
-var playQueue chan midi.Message
-var errChan chan error
-
-func init() {
-	beatChannel = make(chan BeatMsg)
-	updateChannel = make(chan ModelMsg)
-	doneChannel = make(chan struct{})
-	playQueue = make(chan midi.Message)
-	errChan = make(chan error)
+type BeatsLooper struct {
+	BeatChannel   chan BeatMsg
+	UpdateChannel chan ModelMsg
+	DoneChannel   chan struct{}
+	PlayQueue     chan seqmidi.Message
+	ErrChan       chan error
 }
 
-func GetBeatChannel() chan BeatMsg {
-	return beatChannel
+func InitBeatsLooper() BeatsLooper {
+	beatChannel := make(chan BeatMsg)
+	updateChannel := make(chan ModelMsg)
+	doneChannel := make(chan struct{})
+	playQueue := make(chan seqmidi.Message)
+	errChan := make(chan error)
+
+	return BeatsLooper{
+		BeatChannel:   beatChannel,
+		UpdateChannel: updateChannel,
+		DoneChannel:   doneChannel,
+		PlayQueue:     playQueue,
+		ErrChan:       errChan,
+	}
 }
 
-func GetUpdateChannel() chan ModelMsg {
-	return updateChannel
-}
-
-func GetDoneChannel() chan struct{} {
-	return doneChannel
-}
-
-func Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection) {
+func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection) {
 	logFile, _ := tea.LogToFile("debug.log", "debug")
 
 	go func() {
@@ -70,25 +66,25 @@ func Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection) {
 			if !playState.Playing {
 				// NOTE: Wait for a model update that puts us into a playing state.
 				select {
-				case modelMsg := <-updateChannel:
+				case modelMsg := <-bl.UpdateChannel:
 					playState = modelMsg.PlayState
 					definition = modelMsg.Sequence
 					cursor = modelMsg.Cursor
-				case <-doneChannel:
+				case <-bl.DoneChannel:
 					return
 				}
 			} else {
 				// NOTE: In a plyaing state, respond to beat messages
 				select {
-				case modelMsg := <-updateChannel:
+				case modelMsg := <-bl.UpdateChannel:
 					playState = modelMsg.PlayState
 					definition = modelMsg.Sequence
 					cursor = modelMsg.Cursor
-				case BeatMsg := <-beatChannel:
-					Beat(BeatMsg, playState, definition, cursor, sendFn, errChan)
-				case <-doneChannel:
+				case BeatMsg := <-bl.BeatChannel:
+					bl.Beat(BeatMsg, playState, definition, cursor, sendFn)
+				case <-bl.DoneChannel:
 					return
-				case err := <-errChan:
+				case err := <-bl.ErrChan:
 					_, logErr := fmt.Fprintf(logFile, "Error: %v", err)
 					if logErr != nil {
 						fmt.Println("An error occurred while writing the original error to the log file", err, logErr)
@@ -100,15 +96,12 @@ func Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection) {
 	go func() {
 		midiSendFn, err := midiConn.AcquireSendFunc()
 		if err != nil {
-			errChan <- err
+			bl.ErrChan <- err
 			return
 		}
 		for {
-			midiMessage := <-playQueue
-			err := midiSendFn(midiMessage)
-			if err != nil {
-				errChan <- err
-			}
+			midiMessage := <-bl.PlayQueue
+			midiSendFn(midiMessage)
 		}
 	}()
 }
@@ -117,8 +110,7 @@ func IsDone(playState playstate.PlayState, currentNode *arrangement.Arrangement,
 	return playState.LoopedArrangement != currentNode && currentSection.Cycles+currentSection.StartCycles <= (*playState.Iterations)[currentNode]
 }
 
-func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, sendFn func(tea.Msg), errChan chan error) {
-
+func (bl BeatsLooper) Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, sendFn func(tea.Msg)) {
 	if playState.Playing {
 		AdvancePlayState(&playState, definition, &cursor)
 	}
@@ -127,10 +119,12 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 		sendFn(ModelPlayedMsg{PerformStop: true, PlayState: playState, Cursor: cursor})
 		return
 	} else {
-		PlaySequence(&playState, definition, cursor, msg, errChan)
+		bl.PlaySequence(&playState, definition, cursor, msg)
 		sendFn(ModelPlayedMsg{PlayState: playState, Cursor: cursor})
 	}
 
+	// NOTE: Looking at future state to determine if we need to prevent sending the
+	// receiver a final pulse via an AnticipatoryStop
 	copiedPlayState := playstate.Copy(playState)
 	copiedCursor := make(arrangement.ArrCursor, len(cursor))
 	copy(copiedCursor, cursor)
@@ -140,7 +134,7 @@ func Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequen
 	}
 }
 
-func PlaySequence(playState *playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, msg BeatMsg, errChan chan error) {
+func (bl BeatsLooper) PlaySequence(playState *playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, msg BeatMsg) {
 
 	currentNode := cursor[len(cursor)-1]
 	currentSection := cursor[len(cursor)-1].Section
@@ -171,11 +165,7 @@ func PlaySequence(playState *playstate.PlayState, definition sequence.Sequence, 
 	pattern := make(grid.Pattern)
 	playingOverlay.CurrentBeatOverlayPattern(&pattern, currentCycles, gridKeys)
 
-	err := PlayBeat(msg.Interval, pattern, definition, errChan)
-	if err != nil {
-		errChan <- fault.Wrap(err, fmsg.With("error when playing beat"))
-		return
-	}
+	bl.PlayBeat(msg.Interval, pattern, definition)
 
 	// Play the Note Messages
 	gridKeys = make([]grid.GridKey, 0, len(playState.LineStates))
@@ -184,14 +174,10 @@ func PlaySequence(playState *playstate.PlayState, definition sequence.Sequence, 
 	pattern = make(grid.Pattern)
 	playingOverlay.CurrentBeatOverlayPattern(&pattern, currentCycles, gridKeys)
 
-	err = PlayBeat(msg.Interval, pattern, definition, errChan)
+	bl.PlayBeat(msg.Interval, pattern, definition)
 
 	if !playState.AllowAdvance {
 		playState.AllowAdvance = true
-	}
-
-	if err != nil {
-		errChan <- fault.Wrap(err, fmsg.With("error when playing beat"))
 	}
 }
 
@@ -275,13 +261,13 @@ func PlayMove(cursor *arrangement.ArrCursor, iterations *map[*arrangement.Arrang
 	return true
 }
 
-func PlayBeat(beatInterval time.Duration, pattern grid.Pattern, definition sequence.Sequence, errChan chan error) error {
+func (bl BeatsLooper) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, definition sequence.Sequence) {
 	lines := definition.Lines
 
 	for gridKey, note := range pattern {
 		line := lines[gridKey.Line]
 		if note.Ratchets.Length > 0 {
-			ProcessRatchets(note, beatInterval, line, definition, errChan)
+			bl.ProcessRatchets(note, beatInterval, line, definition)
 		} else if note != grid.ZeroNote {
 			accents := definition.Accents
 
@@ -292,65 +278,47 @@ func PlayBeat(beatInterval time.Duration, pattern grid.Pattern, definition seque
 			case grid.MessageTypeNote:
 				onMessage, offMessage := NoteMessages(
 					line,
-					definition.Accents.Data[note.AccentIndex].Value,
+					uint8(definition.Accents.Data[note.AccentIndex]),
 					gateLength,
 					accents.Target,
 					delay,
 				)
-				PlayOnMessage(onMessage)
-				PlayOffMessage(offMessage)
+				bl.PlayOnMessage(onMessage)
+				bl.PlayOffMessage(offMessage)
 			case grid.MessageTypeCc:
 				ccMessage := CCMessage(line, note, accents.Data, delay, true, definition.Instrument)
 
-				PlayMessage(ccMessage.delay, ccMessage.MidiMessage())
+				bl.PlayMessage(ccMessage.delay, ccMessage.MidiMessage())
 			case grid.MessageTypeProgramChange:
 				pcMessage := PCMessage(line, note, accents.Data, delay, true, definition.Instrument)
-				PlayMessage(pcMessage.delay, pcMessage.MidiMessage())
+				bl.PlayMessage(pcMessage.delay, pcMessage.MidiMessage())
 			}
 		}
 	}
-
-	return nil
 }
 
-func ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition, definition sequence.Sequence, errChan chan error) {
+func (bl BeatsLooper) ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition, definition sequence.Sequence) {
 	for i := range note.Ratchets.Length + 1 {
 		if note.Ratchets.HitAt(i) {
 			shortGateLength := 20 * time.Millisecond
 			ratchetInterval := time.Duration(i) * note.Ratchets.Interval(beatInterval)
-			onMessage, offMessage := NoteMessages(line, definition.Accents.Data[note.AccentIndex].Value, shortGateLength, definition.Accents.Target, ratchetInterval)
-			PlayOnMessage(onMessage)
-			PlayOffMessage(offMessage)
+			onMessage, offMessage := NoteMessages(line, uint8(definition.Accents.Data[note.AccentIndex]), shortGateLength, definition.Accents.Target, ratchetInterval)
+			bl.PlayOnMessage(onMessage)
+			bl.PlayOffMessage(offMessage)
 		}
 	}
 }
 
-func PlayMessage(delay time.Duration, message midi.Message) {
-	if delay == 0 {
-		playQueue <- message
-	} else {
-		time.AfterFunc(delay, func() {
-			playQueue <- message
-		})
-	}
+func (bl BeatsLooper) PlayMessage(delay time.Duration, message midi.Message) {
+	bl.PlayQueue <- seqmidi.Message{Msg: message, Delay: delay}
 }
 
-func PlayOnMessage(nm NoteMsg) {
-	time.AfterFunc(nm.delay, func() {
-		err := notereg.Add(nm)
-		if err != nil {
-			errChan <- err
-		}
-		playQueue <- nm.GetOnMidi()
-	})
+func (bl BeatsLooper) PlayOnMessage(nm NoteMsg) {
+	bl.PlayQueue <- seqmidi.Message{Msg: nm.GetOnMidi(), Delay: nm.delay}
 }
 
-func PlayOffMessage(nm NoteMsg) {
-	time.AfterFunc(nm.delay, func() {
-		if notereg.RemoveID(nm) {
-			playQueue <- nm.GetOffMidi()
-		}
-	})
+func (bl BeatsLooper) PlayOffMessage(nm NoteMsg) {
+	bl.PlayQueue <- seqmidi.Message{Msg: nm.GetOffMidi(), Delay: nm.delay}
 }
 
 type BeatMsg struct {

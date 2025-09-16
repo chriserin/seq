@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/mappings"
 	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/sequence"
@@ -14,21 +15,21 @@ func TestAccentInputSwitchDiffAndData(t *testing.T) {
 		name                 string
 		commands             []any
 		expectedAccentStart  uint8
-		expectedAccentValues []uint8
+		expectedAccentValues []config.Accent
 		description          string
 	}{
 		{
 			name:                 "Accent Input Switch with Increase",
 			commands:             []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Increase},
 			expectedAccentStart:  121,
-			expectedAccentValues: []uint8{0, 121, 106, 91, 76, 60, 45, 30, 15},
+			expectedAccentValues: []config.Accent{0, 121, 106, 91, 76, 60, 45, 30, 15},
 			description:          "Should select accent input and increase should set accent values",
 		},
 		{
 			name:                 "Accent Input Switch with Decrease",
 			commands:             []any{mappings.AccentInputSwitch, mappings.AccentInputSwitch, mappings.Decrease},
 			expectedAccentStart:  119,
-			expectedAccentValues: []uint8{0, 119, 104, 89, 74, 60, 45, 30, 15},
+			expectedAccentValues: []config.Accent{0, 119, 104, 89, 74, 60, 45, 30, 15},
 			description:          "Should select accent input and decrease should set accent values",
 		},
 	}
@@ -42,7 +43,7 @@ func TestAccentInputSwitchDiffAndData(t *testing.T) {
 			assert.Equal(t, tt.expectedAccentStart, m.definition.Accents.Start, tt.description+" - accent End value")
 
 			for i, value := range tt.expectedAccentValues {
-				assert.Equalf(t, value, m.definition.Accents.Data[i].Value, "accent values should match expected values - %d == %d", value, m.definition.Accents.Data[i].Value)
+				assert.Equalf(t, value, m.definition.Accents.Data[i], "accent values should match expected values - %d == %d", value, m.definition.Accents.Data[i])
 			}
 		})
 	}

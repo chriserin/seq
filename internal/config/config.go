@@ -21,20 +21,18 @@ type Config struct {
 	LineActions map[grid.Action]lineaction
 }
 
-type Accent struct {
-	Value uint8
-}
+type Accent uint8
 
 var Accents = []Accent{
-	{0},
-	{120},
-	{105},
-	{90},
-	{75},
-	{60},
-	{45},
-	{30},
-	{15},
+	0,
+	120,
+	105,
+	90,
+	75,
+	60,
+	45,
+	30,
+	15,
 }
 
 const C1 = 36

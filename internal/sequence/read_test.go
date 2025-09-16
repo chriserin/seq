@@ -80,8 +80,8 @@ func TestReadWrite(t *testing.T) {
 				Start:  50,
 				Target: AccentTargetVelocity,
 				Data: []config.Accent{
-					{Value: 100},
-					{Value: 80},
+					100,
+					80,
 				},
 			},
 		}

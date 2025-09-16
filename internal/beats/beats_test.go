@@ -2,14 +2,17 @@ package beats
 
 import (
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/chriserin/seq/internal/arrangement"
+	"github.com/chriserin/seq/internal/config"
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/playstate"
 	"github.com/chriserin/seq/internal/seqmidi"
 	"github.com/chriserin/seq/internal/sequence"
 	"github.com/stretchr/testify/assert"
+	midi "gitlab.com/gomidi/midi/v2"
 )
 
 func TestSimpleSequenceBeats(t *testing.T) {
@@ -30,8 +33,61 @@ func TestSimpleSequenceBeats(t *testing.T) {
 
 			(*sequence.Parts)[0].Beats = tt.partBeats
 
-			beatsPlayed := PlayBeats(sequence, cursor, int(tt.partBeats)+3, playstate.PlayState{Playing: true})
+			beatsPlayed, _ := PlayTestLoop(sequence, cursor, int(tt.partBeats)+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
+		})
+	}
+}
+
+func TestOneNote(t *testing.T) {
+	tests := []struct {
+		name                 string
+		partBeats            uint8
+		expectedBeatsPlayed  int
+		expectedMidiMessages []seqmidi.Message
+	}{
+		{
+			"Part with 1 note",
+			1,
+			1,
+			[]seqmidi.Message{{Msg: midi.NoteOn(4, 5, 5), Delay: 0}, {Msg: midi.NoteOff(4, 5), Delay: 20 * time.Millisecond}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sequence, cursor := SimpleSequence()
+
+			(*sequence.Parts)[0].Beats = tt.partBeats
+			(*sequence.Parts)[0].Overlays.AddNote(grid.GridKey{Line: 0, Beat: 0}, grid.Note{AccentIndex: 5})
+
+			beatsPlayed, testMessages := PlayTestLoop(sequence, cursor, int(tt.partBeats)+3, playstate.PlayState{Playing: true})
+			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
+
+			if assert.Len(t, testMessages, len(tt.expectedMidiMessages), "Number of MIDI messages") {
+				for i, msg := range tt.expectedMidiMessages {
+					assert.Equal(t, msg.Delay, testMessages[i].Delay, "Delay")
+
+					switch msg.Msg.Type() {
+					case midi.NoteOnMsg:
+						var expectedChannel, expectedNote, expectedVelocity uint8 = 0, 0, 0
+						var testChannel, testNote, testVelocity uint8 = 0, 0, 0
+						assert.True(t, msg.Msg.GetNoteOn(&expectedChannel, &expectedNote, &expectedVelocity), "Note On Parsing expected message")
+						assert.True(t, testMessages[i].Msg.GetNoteOn(&testChannel, &testNote, &testVelocity), "Note On Parsing test message")
+						assert.Equal(t, expectedChannel, testChannel, "Note On Channel")
+						assert.Equal(t, expectedNote, testNote, "Note On Note")
+						assert.Equal(t, expectedVelocity, testVelocity, "Note On Velocity")
+					case midi.NoteOffMsg:
+						var expectedChannel, expectedNote, expectedVelocity uint8 = 0, 0, 0
+						var testChannel, testNote, testVelocity uint8 = 0, 0, 0
+						assert.True(t, msg.Msg.GetNoteOff(&expectedChannel, &expectedNote, &expectedVelocity), "Note On Parsing expected message")
+						assert.True(t, testMessages[i].Msg.GetNoteOff(&testChannel, &testNote, &testVelocity), "Note On Parsing test message")
+						assert.Equal(t, expectedChannel, testChannel, "Note Off Channel")
+						assert.Equal(t, expectedNote, testNote, "Note Off Note")
+						assert.Equal(t, expectedVelocity, testVelocity, "Note Off Velocity")
+					}
+				}
+			}
 		})
 	}
 }
@@ -51,7 +107,7 @@ func TestSimpleSequenceLoopSong(t *testing.T) {
 
 			(*sequence.Parts)[0].Beats = tt.partBeats
 
-			beatsPlayed := PlayBeats(sequence, cursor, int(tt.partBeats)+3, playstate.PlayState{Playing: true, LoopedArrangement: sequence.Arrangement})
+			beatsPlayed, _ := PlayTestLoop(sequence, cursor, int(tt.partBeats)+3, playstate.PlayState{Playing: true, LoopedArrangement: sequence.Arrangement})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
@@ -76,7 +132,7 @@ func TestGroupedSequenceBeats(t *testing.T) {
 			(*sequence.Parts)[0].Beats = tt.partBeats
 			cursor[1].Iterations = tt.groupIterations
 
-			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
+			beatsPlayed, _ := PlayTestLoop(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
@@ -102,7 +158,7 @@ func TestSiblingSections(t *testing.T) {
 			(*sequence.Parts)[0].Beats = tt.partABeats
 			(*sequence.Parts)[1].Beats = tt.partBBeats
 
-			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
+			beatsPlayed, _ := PlayTestLoop(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
@@ -130,7 +186,7 @@ func TestNestedGroups(t *testing.T) {
 			cursor[1].Iterations = tt.groupAIterations
 			cursor[2].Iterations = tt.groupBIterations
 
-			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
+			beatsPlayed, _ := PlayTestLoop(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
@@ -158,7 +214,7 @@ func TestGroupPartSiblingSequence(t *testing.T) {
 			(*sequence.Parts)[1].Beats = tt.partBBeats
 			sequence.Arrangement.Nodes[0].Iterations = tt.groupIterations
 
-			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
+			beatsPlayed, _ := PlayTestLoop(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
@@ -186,13 +242,13 @@ func TestPartGroupSiblingSequence(t *testing.T) {
 			(*sequence.Parts)[1].Beats = tt.partBBeats
 			sequence.Arrangement.Nodes[1].Iterations = tt.groupIterations
 
-			beatsPlayed := PlayBeats(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
+			beatsPlayed, _ := PlayTestLoop(sequence, cursor, tt.expectedBeatsPlayed+3, playstate.PlayState{Playing: true})
 			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
 		})
 	}
 }
 
-func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit int, playState playstate.PlayState) int {
+func PlayTestLoop(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit int, playState playstate.PlayState) (int, []seqmidi.Message) {
 	testMessageChan := make(chan ModelPlayedMsg)
 	beatsPlayedCounter := 0
 	var update = ModelPlayedMsg{PlayState: playState}
@@ -204,10 +260,13 @@ func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit i
 		}
 	}
 
-	updateChannel := GetUpdateChannel()
-	beatChannel := GetBeatChannel()
+	beatsLooper := InitBeatsLooper()
 
-	Loop(sendFn, seqmidi.MidiConnection{Test: true})
+	updateChannel := beatsLooper.UpdateChannel
+	beatChannel := beatsLooper.BeatChannel
+
+	midiConnection := seqmidi.MidiConnection{Test: true, TestQueue: &[]seqmidi.Message{}}
+	beatsLooper.Loop(sendFn, midiConnection)
 
 	iterations := make(map[*arrangement.Arrangement]int)
 	playstate.BuildIterationsMap(sequence.Arrangement, &iterations)
@@ -230,9 +289,9 @@ func PlayBeats(sequence sequence.Sequence, cursor arrangement.ArrCursor, limit i
 		}
 		updateChannel <- ModelMsg{PlayState: update.PlayState, Sequence: sequence, Cursor: update.Cursor}
 	}
-	doneChannel := GetDoneChannel()
-	doneChannel <- struct{}{}
-	return beatsPlayedCounter
+	beatsLooper.DoneChannel <- struct{}{}
+
+	return beatsPlayedCounter, *midiConnection.TestQueue
 }
 
 func SimpleSequence() (sequence.Sequence, arrangement.ArrCursor) {
@@ -254,7 +313,13 @@ func SimpleSequence() (sequence.Sequence, arrangement.ArrCursor) {
 		Arrangement: root,
 		Parts:       &parts,
 		Keyline:     0,
-		Lines:       make([]grid.LineDefinition, 1),
+		Lines:       []grid.LineDefinition{{Channel: 5, Note: 5, MsgType: grid.MessageTypeNote, Name: "Line 1"}},
+		Accents: sequence.PatternAccents{
+			Start:  0,
+			End:    8,
+			Data:   []config.Accent{0, 1, 2, 3, 4, 5, 6, 7},
+			Target: sequence.AccentTargetVelocity,
+		},
 	}
 
 	return testSequence, arrangement.ArrCursor{root, nodeA}

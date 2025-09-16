@@ -5,8 +5,10 @@
 package seqmidi
 
 import (
+	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Southclaws/fault"
 	"github.com/Southclaws/fault/fmsg"
@@ -21,9 +23,16 @@ type MidiConnection struct {
 	outport     drivers.Out
 	connected   bool
 	Test        bool
+	midiChannel chan Message
+	TestQueue   *[]Message
 }
 
-type SendFunc func(msg midi.Message) error
+type Message struct {
+	Delay time.Duration
+	Msg   midi.Message
+}
+
+type SendFunc func(Message)
 
 var OutputName string = "seq-cli-out"
 
@@ -38,9 +47,9 @@ func InitMidiConnection(createOut bool, outportName string) (MidiConnection, err
 			return MidiConnection{}, fault.Wrap(err, fmsg.With("cannot open virtual out"))
 		}
 
-		return MidiConnection{connected: true, outport: out}, nil
+		return MidiConnection{connected: true, outport: out, midiChannel: make(chan Message)}, nil
 	} else {
-		return MidiConnection{outportName: outportName, connected: false}, nil
+		return MidiConnection{outportName: outportName, connected: false, midiChannel: make(chan Message)}, nil
 	}
 }
 
@@ -79,8 +88,35 @@ func (mc *MidiConnection) ConnectAndOpen() error {
 		if err != nil {
 			return fault.Wrap(err, fmsg.With("cannot open midi port"))
 		}
+	} else {
+		mc.LoopMidi()
 	}
 	return nil
+}
+
+func (mc *MidiConnection) LoopMidi() {
+	go func() {
+		for {
+			msg := <-mc.midiChannel
+			if msg.Delay == 0 {
+				playMutex.Lock()
+				err := mc.outport.Send(msg.Msg)
+				playMutex.Unlock()
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				time.AfterFunc(msg.Delay, func() {
+					playMutex.Lock()
+					err := mc.outport.Send(msg.Msg)
+					playMutex.Unlock()
+					if err != nil {
+						panic(err)
+					}
+				})
+			}
+		}
+	}()
 }
 
 func (mc *MidiConnection) Panic() error {
@@ -114,17 +150,12 @@ func (mc MidiConnection) IsReady() bool {
 
 var playMutex = sync.Mutex{}
 
-var sendFn SendFunc
-
 func (mc MidiConnection) AcquireSendFunc() (SendFunc, error) {
 	if mc.Test {
-		return func(msg midi.Message) error {
-			return nil
+		return func(seqmidiMessage Message) {
+			(*mc.TestQueue) = append((*mc.TestQueue), seqmidiMessage)
+			fmt.Println("TEST SEND", mc, len(*mc.TestQueue), seqmidiMessage)
 		}, nil
-	}
-
-	if sendFn != nil {
-		return sendFn, nil
 	}
 
 	// Ensure connection is open
@@ -132,17 +163,8 @@ func (mc MidiConnection) AcquireSendFunc() (SendFunc, error) {
 	if err != nil {
 		return nil, fault.Wrap(err)
 	}
-	//NOTE: midi library checks IsOpen(), tries to open and returns error
-	newSendFn, err := midi.SendTo(mc.outport)
-	sendFn = func(msg midi.Message) error {
-		// NOTE: midi send reuses a global state buffer so we need to ensure that the buffer is accessed sequentially
-		playMutex.Lock()
-		defer playMutex.Unlock()
-		error := newSendFn(msg)
-		return error
-	}
-	if err != nil {
-		return nil, fault.Wrap(err)
+	sendFn := func(msg Message) {
+		mc.midiChannel <- msg
 	}
 	return sendFn, nil
 }
