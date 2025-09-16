@@ -298,11 +298,13 @@ func (bl BeatsLooper) PlayBeat(beatInterval time.Duration, pattern grid.Pattern,
 }
 
 func (bl BeatsLooper) ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition, definition sequence.Sequence) {
+	ratchetInterval := note.Ratchets.Interval(beatInterval)
+	fmt.Println("Ratchet Interval:", ratchetInterval, beatInterval)
 	for i := range note.Ratchets.Length + 1 {
 		if note.Ratchets.HitAt(i) {
 			shortGateLength := 20 * time.Millisecond
-			ratchetInterval := time.Duration(i) * note.Ratchets.Interval(beatInterval)
-			onMessage, offMessage := NoteMessages(line, uint8(definition.Accents.Data[note.AccentIndex]), shortGateLength, definition.Accents.Target, ratchetInterval)
+			ratchetDelay := time.Duration(i) * ratchetInterval
+			onMessage, offMessage := NoteMessages(line, uint8(definition.Accents.Data[note.AccentIndex]), shortGateLength, definition.Accents.Target, ratchetDelay)
 			bl.PlayOnMessage(onMessage)
 			bl.PlayOffMessage(offMessage)
 		}

@@ -92,6 +92,67 @@ func TestOneNote(t *testing.T) {
 	}
 }
 
+func TestRatchet(t *testing.T) {
+	tests := []struct {
+		name                 string
+		partBeats            uint8
+		expectedBeatsPlayed  int
+		expectedMidiMessages []seqmidi.Message
+	}{
+		{
+			"Part with 1 note ratcheted twice",
+			1,
+			1,
+			[]seqmidi.Message{
+				{Msg: midi.NoteOn(4, 5, 5), Delay: 0},
+				{Msg: midi.NoteOff(4, 5), Delay: 20 * time.Millisecond},
+				{Msg: midi.NoteOn(4, 5, 5), Delay: 125 * time.Millisecond},
+				{Msg: midi.NoteOff(4, 5), Delay: 145 * time.Millisecond},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sequence, cursor := SimpleSequence()
+
+			(*sequence.Parts)[0].Beats = tt.partBeats
+			note := grid.Note{AccentIndex: 5}
+			note.Ratchets.SetLength(0)
+			note.Ratchets.SetLength(1)
+			(*sequence.Parts)[0].Overlays.AddNote(grid.GridKey{Line: 0, Beat: 0}, note)
+
+			beatsPlayed, testMessages := PlayTestLoop(sequence, cursor, int(tt.partBeats)+3, playstate.PlayState{Playing: true})
+			assert.Equal(t, tt.expectedBeatsPlayed, beatsPlayed)
+
+			if assert.Len(t, testMessages, len(tt.expectedMidiMessages), "Number of MIDI messages") {
+				for i, msg := range tt.expectedMidiMessages {
+					assert.Equal(t, msg.Delay, testMessages[i].Delay, "Delay")
+
+					switch msg.Msg.Type() {
+					case midi.NoteOnMsg:
+						var expectedChannel, expectedNote, expectedVelocity uint8 = 0, 0, 0
+						var testChannel, testNote, testVelocity uint8 = 0, 0, 0
+						assert.True(t, msg.Msg.GetNoteOn(&expectedChannel, &expectedNote, &expectedVelocity), "Note On Parsing expected message")
+						assert.True(t, testMessages[i].Msg.GetNoteOn(&testChannel, &testNote, &testVelocity), "Note On Parsing test message")
+						assert.Equal(t, expectedChannel, testChannel, "Note On Channel")
+						assert.Equal(t, expectedNote, testNote, "Note On Note")
+						assert.Equal(t, expectedVelocity, testVelocity, "Note On Velocity")
+					case midi.NoteOffMsg:
+						var expectedChannel, expectedNote, expectedVelocity uint8 = 0, 0, 0
+						var testChannel, testNote, testVelocity uint8 = 0, 0, 0
+						assert.True(t, msg.Msg.GetNoteOff(&expectedChannel, &expectedNote, &expectedVelocity), "Note On Parsing expected message")
+						assert.True(t, testMessages[i].Msg.GetNoteOff(&testChannel, &testNote, &testVelocity), "Note On Parsing test message")
+						assert.Equal(t, expectedChannel, testChannel, "Note Off Channel")
+						assert.Equal(t, expectedNote, testNote, "Note Off Note")
+						assert.Equal(t, expectedVelocity, testVelocity, "Note Off Velocity")
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestSimpleSequenceLoopSong(t *testing.T) {
 	tests := []struct {
 		name                string
@@ -280,7 +341,7 @@ func PlayTestLoop(sequence sequence.Sequence, cursor arrangement.ArrCursor, limi
 	}
 
 	for update.PlayState.Playing && beatsPlayedCounter < limit {
-		beatChannel <- BeatMsg{Interval: 0}
+		beatChannel <- BeatMsg{Interval: 250 * time.Millisecond}
 		update = <-testMessageChan
 		if update.PerformStop {
 			break
