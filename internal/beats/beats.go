@@ -1,6 +1,7 @@
 package beats
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -55,7 +56,8 @@ func InitBeatsLooper() BeatsLooper {
 	}
 }
 
-func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection) {
+func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection, ctx context.Context) {
+	// NOTE: Create a log file for debug information
 	logFile, _ := tea.LogToFile("debug.log", "debug")
 
 	go func() {
@@ -84,6 +86,8 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection
 					bl.Beat(BeatMsg, playState, definition, cursor, sendFn)
 				case <-bl.DoneChannel:
 					return
+				case <-ctx.Done():
+					return
 				case err := <-bl.ErrChan:
 					_, logErr := fmt.Fprintf(logFile, "Error: %v", err)
 					if logErr != nil {
@@ -100,8 +104,14 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection
 			return
 		}
 		for {
-			midiMessage := <-bl.PlayQueue
-			midiSendFn(midiMessage)
+			select {
+			case midiMessage := <-bl.PlayQueue:
+				midiSendFn(midiMessage)
+			case <-ctx.Done():
+				midiConn.Close()
+				return
+			}
+
 		}
 	}()
 }

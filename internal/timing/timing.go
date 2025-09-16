@@ -1,6 +1,7 @@
 package timing
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -41,6 +42,7 @@ type Timing struct {
 	preRollBeats uint8
 	transmitting bool
 	beatsLooper  beats.BeatsLooper
+	ctx          context.Context
 }
 
 type MidiLoopMode uint8
@@ -61,8 +63,8 @@ func GetTimingChannel() chan TimingMsg {
 	return timingChannel
 }
 
-func Loop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan bool, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg)) error {
-	timing := Timing{beatsLooper: beatsLooper}
+func Loop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan bool, ctx context.Context, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg)) error {
+	timing := Timing{beatsLooper: beatsLooper, ctx: ctx}
 	switch mode {
 	case MlmStandAlone:
 		timing.StandAloneLoop(sendFn)
@@ -79,6 +81,8 @@ func Loop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan boo
 			go func() {
 				for {
 					select {
+					case <-ctx.Done():
+						return
 					case <-lockReceiverChannel:
 					case <-unlockReceiverChannel:
 					}
@@ -170,6 +174,8 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 	go func() {
 		for {
 			select {
+			case <-t.ctx.Done():
+				return
 			case command = <-timingChannel:
 				switch command := command.(type) {
 				case StartMsg:
@@ -318,6 +324,8 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 		inner:
 			for {
 				select {
+				case <-t.ctx.Done():
+					return
 				case <-lockReceiverChannel:
 					stopFn()
 					err := transmitPort.Close()
@@ -387,6 +395,8 @@ func (t *Timing) StandAloneLoop(sendFn func(tea.Msg)) {
 	go func() {
 		for {
 			select {
+			case <-t.ctx.Done():
+				return
 			case command = <-timingChannel:
 				switch command := command.(type) {
 				case StartMsg:

@@ -5,7 +5,7 @@
 package seqmidi
 
 import (
-	"fmt"
+	"context"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +25,7 @@ type MidiConnection struct {
 	Test        bool
 	midiChannel chan Message
 	TestQueue   *[]Message
+	Ctx         context.Context
 }
 
 type Message struct {
@@ -97,23 +98,27 @@ func (mc *MidiConnection) ConnectAndOpen() error {
 func (mc *MidiConnection) LoopMidi() {
 	go func() {
 		for {
-			msg := <-mc.midiChannel
-			if msg.Delay == 0 {
-				playMutex.Lock()
-				err := mc.outport.Send(msg.Msg)
-				playMutex.Unlock()
-				if err != nil {
-					panic(err)
-				}
-			} else {
-				time.AfterFunc(msg.Delay, func() {
+			select {
+			case <-mc.Ctx.Done():
+				return
+			case msg := <-mc.midiChannel:
+				if msg.Delay == 0 {
 					playMutex.Lock()
 					err := mc.outport.Send(msg.Msg)
 					playMutex.Unlock()
 					if err != nil {
 						panic(err)
 					}
-				})
+				} else {
+					time.AfterFunc(msg.Delay, func() {
+						playMutex.Lock()
+						err := mc.outport.Send(msg.Msg)
+						playMutex.Unlock()
+						if err != nil {
+							panic(err)
+						}
+					})
+				}
 			}
 		}
 	}()
@@ -154,7 +159,6 @@ func (mc MidiConnection) AcquireSendFunc() (SendFunc, error) {
 	if mc.Test {
 		return func(seqmidiMessage Message) {
 			(*mc.TestQueue) = append((*mc.TestQueue), seqmidiMessage)
-			fmt.Println("TEST SEND", mc, len(*mc.TestQueue), seqmidiMessage)
 		}, nil
 	}
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
@@ -99,6 +100,8 @@ type model struct {
 	visualSelection       VisualSelection
 	partSelectorIndex     int
 	needsWrite            int
+	ctx                   context.Context
+	cancel                context.CancelFunc
 	currentOverlay        *overlays.Overlay
 	logFile               *os.File
 	undoStack             UndoStack
@@ -763,7 +766,13 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 		err = logFileErr
 	}
 
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	midiConnection.Ctx = ctx
+
 	return model{
+		ctx:                   ctx,
+		cancel:                cancel,
 		transmitting:          true,
 		currentError:          err,
 		theme:                 theme,
@@ -856,15 +865,16 @@ func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template
 	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
 	model.ResetIterations()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
+	midiConnection.Ctx = model.ctx
 	beatsLooper = beats.InitBeatsLooper()
 	updateChannel = beatsLooper.UpdateChannel
 	SetupTimingLoop(model, beatsLooper, program.Send)
-	beatsLooper.Loop(program.Send, midiConnection)
+	beatsLooper.Loop(program.Send, midiConnection, model.ctx)
 	return program
 }
 
 func SetupTimingLoop(model model, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg)) {
-	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, beatsLooper, sendFn)
+	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.ctx, beatsLooper, sendFn)
 	if err != nil {
 		go func() {
 			sendFn(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
@@ -1575,6 +1585,8 @@ func (m *model) SyncBeatLoop() {
 func (m model) Quit() (tea.Model, tea.Cmd) {
 
 	timingChannel <- timing.QuitMsg{}
+	m.cancel()
+	beatsLooper.DoneChannel <- struct{}{}
 	err := m.logFile.Close()
 	if err != nil {
 		// NOTE: no good way to display this error when quitting, just panic
