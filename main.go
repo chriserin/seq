@@ -12,13 +12,15 @@ import (
 
 const VERSION = "0.1.0-alpha"
 
-var gridTemplate string
-var instrument string
-var transmitter bool
-var receiver bool
-var outport bool
-var theme string
-var midiout string
+var cliOptions struct {
+	gridTemplate string
+	instrument   string
+	transmitter  bool
+	receiver     bool
+	outport      bool
+	theme        string
+	midiout      string
+}
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -38,23 +40,23 @@ func main() {
 			}()
 
 			var err error
-			midiConnection, err := seqmidi.InitMidiConnection(outport, midiout)
+			midiConnection, err := seqmidi.InitMidiConnection(cliOptions.outport, cliOptions.midiout)
 			if err != nil {
 				fmt.Println("Midi Failure", err)
 				return
 			}
 			defer midiConnection.Close()
 			midiLoopMode := timing.MlmStandAlone
-			if transmitter {
+			if cliOptions.transmitter {
 				midiLoopMode = timing.MlmTransmitter
-			} else if receiver {
+			} else if cliOptions.receiver {
 				midiLoopMode = timing.MlmReceiver
 			}
 			var filename string
 			if len(args) > 0 {
 				filename = args[0]
 			}
-			p := RunProgram(filename, midiConnection, gridTemplate, instrument, midiLoopMode, theme)
+			p := RunProgram(filename, midiConnection, cliOptions.gridTemplate, cliOptions.instrument, midiLoopMode, cliOptions.theme)
 			_, err = p.Run()
 			if err != nil {
 				log.Fatal("Program Failure")
@@ -85,13 +87,13 @@ func main() {
 
 	rootCmd.AddCommand(cmdListOutports)
 	rootCmd.AddCommand(cmdVersion)
-	rootCmd.Flags().StringVar(&gridTemplate, "template", "Drums", "Choose a template (default: Drums)")
-	rootCmd.Flags().StringVar(&instrument, "instrument", "Standard", "Choose an instrument for CC integration (default: Standard)")
-	rootCmd.Flags().BoolVar(&transmitter, "transmitter", false, "Seq will run in transmitter mode")
-	rootCmd.Flags().BoolVar(&receiver, "receiver", false, "Seq will run in receiver mode")
-	rootCmd.Flags().BoolVar(&outport, "outport", false, "Seq will create an outport to send midi")
-	rootCmd.Flags().StringVar(&theme, "theme", "miles", "Choose an theme for the sequencer visual representation")
-	rootCmd.Flags().StringVar(&midiout, "midiout", "", "Choose a midi out port")
+	rootCmd.Flags().StringVar(&cliOptions.gridTemplate, "template", "Drums", "Choose a template (default: Drums)")
+	rootCmd.Flags().StringVar(&cliOptions.instrument, "instrument", "Standard", "Choose an instrument for CC integration (default: Standard)")
+	rootCmd.Flags().BoolVar(&cliOptions.transmitter, "transmitter", false, "Seq will run in transmitter mode")
+	rootCmd.Flags().BoolVar(&cliOptions.receiver, "receiver", false, "Seq will run in receiver mode")
+	rootCmd.Flags().BoolVar(&cliOptions.outport, "outport", false, "Seq will create an outport to send midi")
+	rootCmd.Flags().StringVar(&cliOptions.theme, "theme", "miles", "Choose an theme for the sequencer visual representation")
+	rootCmd.Flags().StringVar(&cliOptions.midiout, "midiout", "", "Choose a midi out port")
 
 	err := rootCmd.Execute()
 	if err != nil {

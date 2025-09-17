@@ -722,7 +722,7 @@ func (m *model) ToggleRatchetMute() {
 	m.currentOverlay.SetNote(m.gridCursor, currentNote)
 }
 
-func LoadFile(filename string, template string) (sequence.Sequence, error) {
+func LoadFile(filename string, template string, instrument string) (sequence.Sequence, error) {
 	var definition sequence.Sequence
 	var fileErr error
 	if filename != "" {
@@ -753,7 +753,7 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, template 
 	newCursor.BlinkSpeed = 600 * time.Millisecond
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
-	definition, err := LoadFile(filename, template)
+	definition, err := LoadFile(filename, template, instrument)
 
 	lockReceiverChannel := make(chan bool)
 	unlockReceiverChannel := make(chan bool)
@@ -3178,7 +3178,7 @@ func (m model) MonoModeLineBoundaries() (uint8, uint8) {
 func (m *model) ReloadFile() {
 	if m.filename != "" {
 		var err error
-		m.definition, err = LoadFile(m.filename, m.definition.Template)
+		m.definition, err = LoadFile(m.filename, m.definition.Template, m.definition.Instrument)
 		if err != nil {
 			m.SetCurrentError(fault.Wrap(err, fmsg.WithDesc("could not reload file", fmt.Sprintf("Could not reload file %s", m.filename))))
 		}
