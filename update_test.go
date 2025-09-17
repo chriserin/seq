@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,7 +14,6 @@ import (
 	"github.com/chriserin/seq/internal/operation"
 	"github.com/chriserin/seq/internal/overlaykey"
 	"github.com/chriserin/seq/internal/seqmidi"
-	"github.com/chriserin/seq/internal/timing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -97,9 +97,11 @@ func getKeyMsgs(command mappings.Command) []tea.KeyMsg {
 
 type modelFunc func(m *model) model
 
-func createTestModel(modelFns ...modelFunc) model {
+func createTestModel(ctx context.Context, modelFns ...modelFunc) model {
 
-	m := InitModel("", seqmidi.MidiConnection{}, "", "", timing.MlmStandAlone, "default")
+	options := ProgramOptions{}
+	fakeCancelFunc := func() {}
+	m := InitModel("", seqmidi.MidiConnection{}, options, ctx, fakeCancelFunc)
 	m.ResetIterations()
 
 	for _, fn := range modelFns {
@@ -177,7 +179,7 @@ func TestSave(t *testing.T) {
 			tempDir := t.TempDir()
 			testFilename := filepath.Join(tempDir, "test_save.seq")
 
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.filename = testFilename
 					return *m
@@ -229,7 +231,7 @@ func TestSaveBeforeFilename(t *testing.T) {
 			// Create a temporary filename
 			testFilename := filepath.Join(tempDir, "tsave.seq")
 
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			_, err := os.Stat(testFilename)
 			assert.True(t, os.IsNotExist(err), "File should not exist initially")
@@ -277,7 +279,7 @@ func TestSaveAs(t *testing.T) {
 			firstFilename := filepath.Join(tempDir, "tsave.seq")
 			expectedFilename := filepath.Join(tempDir, "tsave2.seq")
 
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.filename = firstFilename
 					return *m
@@ -315,7 +317,7 @@ func TestSaveBeforeFilenameEscape(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, "", m.filename, tt.description+" - filename should be empty after escape")
@@ -344,7 +346,7 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithNonRootOverlay(overlaykey.InitOverlayKey(2, 1)),
 			)
 
@@ -415,7 +417,7 @@ func TestNextPrevTheme(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.theme = tt.initialTheme
 					return *m
@@ -483,7 +485,7 @@ func TestClearLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -536,7 +538,7 @@ func TestRemoveOverlay(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithNonRootOverlay(overlayKey),
 			)
 
@@ -558,7 +560,7 @@ func TestRemoveOverlay(t *testing.T) {
 }
 
 func TestClearOverlay(t *testing.T) {
-	m := createTestModel()
+	m := createTestModel(t.Context())
 
 	commands := []any{
 		mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter,
@@ -644,7 +646,7 @@ func TestActionMappings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -684,7 +686,7 @@ func TestSelectKeyLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(tt.cursorPos),
 			)
 
@@ -728,7 +730,7 @@ func TestOverlayStackToggle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			assert.Equal(t, true, m.currentOverlay.PressUp, tt.description+" - Initial PressUp should be true")
 			assert.Equal(t, false, m.currentOverlay.PressDown, tt.description+" - Initial PressDown should be false")
@@ -774,7 +776,7 @@ func TestTogglePlayEdit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.playEditing = tt.initialPlayEditing
 					return *m
@@ -810,7 +812,7 @@ func TestReloadFile(t *testing.T) {
 			testFilename := filepath.Join(tempDir, "test_reload.seq")
 
 			// Create initial model and save it
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.filename = testFilename
 					return *m
@@ -852,7 +854,7 @@ func TestQuit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			// Verify initial state
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection indicator should be SelectNothing")
@@ -953,7 +955,7 @@ func TestYankAndPaste(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 

@@ -96,7 +96,7 @@ func TestAccentIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -196,7 +196,7 @@ func TestGateIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 			config.LongGates = config.GetGateLengths(1) // Create a shorter boundary
 
 			m, _ = processCommands(tt.commands, m)
@@ -291,7 +291,7 @@ func TestGateBigIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 			config.LongGates = config.GetGateLengths(tt.maxGateLength)
 
 			m, _ = processCommands(tt.commands, m)
@@ -392,7 +392,7 @@ func TestWaitIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -520,7 +520,7 @@ func TestRatchetIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -663,7 +663,7 @@ func TestRotate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(tt.initialPos),
 			)
 
@@ -740,7 +740,7 @@ func TestNoteAddRemoveAndOverlayRemoveOnRootOverlay(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(tt.initialPos),
 			)
 
@@ -818,7 +818,7 @@ func TestNoteAddRemoveAndOverlayRemoveOnNonRootOverlay(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(tt.initialPos),
 				WithNonRootOverlay(nonRootOverlayKey),
 			)
@@ -912,7 +912,7 @@ func TestNoteAddRemoveAndOverlayRemoveAcrossOverlays(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(tt.initialPos),
 			)
 
@@ -973,7 +973,7 @@ func TestRatchetInputSwitch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
@@ -1087,7 +1087,7 @@ func TestRatchetInputValues(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 			currentNote, exists := m.CurrentNote()
@@ -1246,7 +1246,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(tt.initialPos),
 			)
 

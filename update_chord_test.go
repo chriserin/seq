@@ -268,7 +268,7 @@ func TestChordTriads(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithPolyphony(),
 			)
 
@@ -310,7 +310,7 @@ func TestRemoveChord(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithPolyphony(),
 			)
 
@@ -337,7 +337,7 @@ func TestConvertToNotes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithPolyphony(),
 			)
 
@@ -399,7 +399,7 @@ func TestArpeggioMappings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithPolyphony(),
 			)
 

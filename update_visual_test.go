@@ -56,7 +56,7 @@ func TestToggleVisualMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(GK(2, 3)),
 				func(m *model) model {
 					m.visualSelection.visualMode = tt.initialVisualMode
@@ -125,7 +125,7 @@ func TestToggleVisualLineMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(GK(1, 4)),
 				func(m *model) model {
 					m.visualSelection.visualMode = tt.initialVisualMode
@@ -176,7 +176,7 @@ func TestVisualModeInteractions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(GK(0, 0)),
 			)
 
@@ -266,7 +266,7 @@ func TestVisualSelectionBounds(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(tt.cursorPos),
 				WithGridSize(16, 8),
 			)
@@ -307,7 +307,7 @@ func TestVisualModeAndYank(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(GK(0, 0)),
 			)
 
@@ -343,7 +343,7 @@ func TestVisualModeAndNoteRemove(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				WithGridCursor(GK(0, 0)),
 			)
 
@@ -355,4 +355,3 @@ func TestVisualModeAndNoteRemove(t *testing.T) {
 		})
 	}
 }
-

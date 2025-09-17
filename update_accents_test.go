@@ -35,7 +35,7 @@ func TestAccentInputSwitchDiffAndData(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -77,7 +77,7 @@ func TestAccentInputSwitchTarget(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -126,7 +126,7 @@ func TestAccentInputSwitchStartValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.definition.Accents.Start = tt.initialAccentStart
 					m.definition.Accents.End = 1

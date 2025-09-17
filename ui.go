@@ -746,40 +746,33 @@ func LoadFile(filename string, template string, instrument string) (sequence.Seq
 	return definition, fileErr
 }
 
-func InitModel(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode timing.MidiLoopMode, theme string) model {
-	logFile, logFileErr := tea.LogToFile("debug.log", "debug")
+func InitModel(filename string, midiConnection seqmidi.MidiConnection, options ProgramOptions, ctx context.Context, cancel context.CancelFunc) model {
 
 	newCursor := cursor.New()
 	newCursor.BlinkSpeed = 600 * time.Millisecond
 	newCursor.Style = lipgloss.NewStyle().Background(lipgloss.AdaptiveColor{Light: "255", Dark: "0"})
 
-	definition, err := LoadFile(filename, template, instrument)
-
 	lockReceiverChannel := make(chan bool)
 	unlockReceiverChannel := make(chan bool)
 	errorChannel := make(chan error)
 
-	themes.ChooseTheme(theme)
-
+	logFile, logFileErr := tea.LogToFile("debug.log", "debug")
+	definition, err := LoadFile(filename, options.gridTemplate, options.instrument)
 	if err == nil {
 		// No capacity for multiple errors currently
 		err = logFileErr
 	}
-
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	midiConnection.Ctx = ctx
 
 	return model{
 		ctx:                   ctx,
 		cancel:                cancel,
 		transmitting:          true,
 		currentError:          err,
-		theme:                 theme,
+		theme:                 options.theme,
 		filename:              filename,
 		textInput:             InitTextInput(),
 		partSelectorIndex:     -1,
-		midiLoopMode:          midiLoopMode,
+		midiLoopMode:          options.MidiLoopMode(),
 		lockReceiverChannel:   lockReceiverChannel,
 		unlockReceiverChannel: unlockReceiverChannel,
 		errChan:               errorChannel,
@@ -860,17 +853,25 @@ func (m *model) LogFromBeatTime() {
 
 var beatsLooper beats.BeatsLooper
 
-func RunProgram(filename string, midiConnection seqmidi.MidiConnection, template string, instrument string, midiLoopMode timing.MidiLoopMode, theme string) *tea.Program {
+func RunProgram(filename string, options ProgramOptions) (*tea.Program, error) {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	midiConnection, err := seqmidi.InitMidiConnection(options.outport, options.midiout, ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	config.Init()
-	model := InitModel(filename, midiConnection, template, instrument, midiLoopMode, theme)
+	themes.ChooseTheme(options.theme)
+	model := InitModel(filename, midiConnection, options, ctx, cancel)
 	model.ResetIterations()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
-	midiConnection.Ctx = model.ctx
 	beatsLooper = beats.InitBeatsLooper()
 	updateChannel = beatsLooper.UpdateChannel
 	SetupTimingLoop(model, beatsLooper, program.Send)
 	beatsLooper.Loop(program.Send, midiConnection, model.ctx)
-	return program
+	return program, nil
 }
 
 func SetupTimingLoop(model model, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg)) {
@@ -985,6 +986,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			var cmd tea.Cmd
 			cursor, cmd := m.cursor.Update(tea.FocusMsg{})
 			newModel.cursor = cursor
+			m.SyncBeatLoop()
 			return newModel, cmd
 		case mappings.ConfirmChangePart:
 			_, cmd := m.arrangement.Update(arrangement.ChangePart{Index: m.partSelectorIndex})
@@ -1752,12 +1754,24 @@ func (m *model) Escape() {
 }
 
 func (m model) NewSequence() model {
-	newModel := InitModel("", m.midiConnection, m.definition.Template, m.definition.Instrument, m.midiLoopMode, m.theme)
+	newModel := m
+
+	definition, _ := LoadFile("", m.definition.Template, m.definition.Instrument)
+	newModel.definition = definition
+	newModel.arrangement = arrangement.InitModel(definition.Arrangement, definition.Parts)
 	newModel.ResetIterations()
-	newModel.hasUIFocus = true
-	newModel.midiLoopMode = m.midiLoopMode
-	newModel.lockReceiverChannel = m.lockReceiverChannel
-	newModel.unlockReceiverChannel = m.unlockReceiverChannel
+	newModel.SetGridCursor(GK(0, 0))
+	newModel.undoStack = UndoStack{}
+	newModel.redoStack = UndoStack{}
+	newModel.activeChord = overlays.OverlayChord{}
+	newModel.currentOverlay = newModel.CurrentPart().Overlays
+	newModel.focus = operation.FocusGrid
+	newModel.selectionIndicator = operation.SelectGrid
+	newModel.patternMode = operation.PatternFill
+	newModel.partSelectorIndex = 0
+	newModel.needsWrite = 0
+	newModel.overlayKeyEdit.SetOverlayKey(overlaykey.ROOT)
+
 	return newModel
 }
 

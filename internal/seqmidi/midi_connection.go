@@ -37,7 +37,7 @@ type SendFunc func(Message)
 
 var OutputName string = "seq-cli-out"
 
-func InitMidiConnection(createOut bool, outportName string) (MidiConnection, error) {
+func InitMidiConnection(createOut bool, outportName string, ctx context.Context) (MidiConnection, error) {
 	if createOut {
 		driver, err := rtmididrv.New()
 		if err != nil {
@@ -48,9 +48,9 @@ func InitMidiConnection(createOut bool, outportName string) (MidiConnection, err
 			return MidiConnection{}, fault.Wrap(err, fmsg.With("cannot open virtual out"))
 		}
 
-		return MidiConnection{connected: true, outport: out, midiChannel: make(chan Message)}, nil
+		return MidiConnection{connected: true, outport: out, midiChannel: make(chan Message), Ctx: ctx}, nil
 	} else {
-		return MidiConnection{outportName: outportName, connected: false, midiChannel: make(chan Message)}, nil
+		return MidiConnection{outportName: outportName, connected: false, midiChannel: make(chan Message), Ctx: ctx}, nil
 	}
 }
 

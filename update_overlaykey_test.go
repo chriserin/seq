@@ -60,7 +60,7 @@ func TestUpdateOverlayKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -128,7 +128,7 @@ func TestModifyOverlayKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(func(m *model) model {
+			m := createTestModel(t.Context(), func(m *model) model {
 				(*m.definition.Parts)[0].Overlays.Add(overlaykey.InitOverlayKey(2, 1))
 				m.currentOverlay = m.CurrentPart().Overlays
 				m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)

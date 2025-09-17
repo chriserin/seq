@@ -92,7 +92,7 @@ func TestTempoChanges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.definition.Tempo = tt.initialTempo
 					return *m
@@ -152,7 +152,7 @@ func TestTempoInputSwitchEscapes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description)
@@ -200,7 +200,7 @@ func TestSubdivisionChanges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.definition.Subdivisions = tt.initialSubdivisions
 					return *m
@@ -253,7 +253,7 @@ func TestSetupInputSwitchWithIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.definition.Lines[m.gridCursor.Line].Channel = tt.initialSetupChannel
 					return *m
@@ -297,7 +297,7 @@ func TestSetupInputSwitchIncreaseAllChannels(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					for i := range m.definition.Lines {
 						m.definition.Lines[i].Channel = tt.initialSetupChannel
@@ -373,7 +373,7 @@ func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.definition.Lines[m.gridCursor.Line].MsgType = tt.initialMessageType
 					return *m
@@ -414,7 +414,7 @@ func TestSetupInputSwitchMessageTypeBackToGrid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel()
+			m := createTestModel(t.Context())
 
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
@@ -473,7 +473,7 @@ func TestSetupNoteChange(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.definition.Lines[m.gridCursor.Line].Note = tt.initialNote
 					return *m
@@ -513,7 +513,7 @@ func TestSetupNoteChangeAll(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					for i := range m.definition.Lines {
 						m.definition.Lines[i].Note = tt.initialStartingNote + uint8(i)
@@ -571,7 +571,7 @@ func TestSetupCCChange(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.definition.Lines[m.gridCursor.Line].Note = tt.initialCc
 					return *m
@@ -625,7 +625,7 @@ func TestBeatInputSwitch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					(*m.definition.Parts)[m.CurrentPartID()].Beats = tt.initialBeats
 					return *m
@@ -683,7 +683,7 @@ func TestBeatInputSwitchCyclesIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					currentNode := m.arrangement.Cursor.GetCurrentNode()
 					currentNode.Section.Cycles = tt.initialCycles
@@ -743,7 +743,7 @@ func TestBeatInputSwitchStartBeatsIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					currentNode := m.arrangement.Cursor.GetCurrentNode()
 					currentNode.Section.StartBeat = tt.initialStartBeats
@@ -802,7 +802,7 @@ func TestBeatInputSwitchStartCyclesIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					currentNode := m.arrangement.Cursor.GetCurrentNode()
 					currentNode.Section.StartCycles = tt.initialStartCycles
@@ -862,7 +862,7 @@ func TestNewLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					// Set up the last line with specific values for the second test
 					if tt.name == "Add new line with custom last line values" {
@@ -972,7 +972,7 @@ func TestMuteAndSolo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.playState = playstate.PlayState{LineStates: make([]playstate.LineState, len(m.definition.Lines))}
 					for i := range m.playState.LineStates {
@@ -1073,7 +1073,7 @@ func TestMuteAll(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.playState = playstate.PlayState{LineStates: make([]playstate.LineState, len(m.definition.Lines))}
 					// Initialize all lines to play state first

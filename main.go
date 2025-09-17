@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/chriserin/seq/internal/seqmidi"
 	"github.com/chriserin/seq/internal/timing"
 	"github.com/spf13/cobra"
 	midi "gitlab.com/gomidi/midi/v2"
@@ -12,7 +11,7 @@ import (
 
 const VERSION = "0.1.0-alpha"
 
-var cliOptions struct {
+type ProgramOptions struct {
 	gridTemplate string
 	instrument   string
 	transmitter  bool
@@ -21,6 +20,19 @@ var cliOptions struct {
 	theme        string
 	midiout      string
 }
+
+func (po ProgramOptions) MidiLoopMode() timing.MidiLoopMode {
+	midiLoopMode := timing.MlmStandAlone
+	if cliOptions.transmitter {
+		midiLoopMode = timing.MlmTransmitter
+	} else if cliOptions.receiver {
+		midiLoopMode = timing.MlmReceiver
+	}
+
+	return midiLoopMode
+}
+
+var cliOptions ProgramOptions
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -40,23 +52,11 @@ func main() {
 			}()
 
 			var err error
-			midiConnection, err := seqmidi.InitMidiConnection(cliOptions.outport, cliOptions.midiout)
-			if err != nil {
-				fmt.Println("Midi Failure", err)
-				return
-			}
-			defer midiConnection.Close()
-			midiLoopMode := timing.MlmStandAlone
-			if cliOptions.transmitter {
-				midiLoopMode = timing.MlmTransmitter
-			} else if cliOptions.receiver {
-				midiLoopMode = timing.MlmReceiver
-			}
 			var filename string
 			if len(args) > 0 {
 				filename = args[0]
 			}
-			p := RunProgram(filename, midiConnection, cliOptions.gridTemplate, cliOptions.instrument, midiLoopMode, cliOptions.theme)
+			p, err := RunProgram(filename, cliOptions)
 			_, err = p.Run()
 			if err != nil {
 				log.Fatal("Program Failure")

@@ -48,7 +48,7 @@ func TestToggleChordMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(
+			m := createTestModel(t.Context(),
 				func(m *model) model {
 					m.definition.TemplateSequencerType = tt.initialSequencerType
 					return *m
