@@ -6,6 +6,8 @@ package seqmidi
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -50,16 +52,16 @@ type Message struct {
 
 var OutputName string = "seq-cli-out"
 
-func InitMidiConnection(createOut bool, outportName string, ctx context.Context) (MidiConnection, error) {
+func InitMidiConnection(createOut bool, outportName string, ctx context.Context) (*MidiConnection, error) {
 	var midiConn MidiConnection
 	if createOut {
 		driver, err := rtmididrv.New()
 		if err != nil {
-			return MidiConnection{}, fault.Wrap(err, fmsg.With("midi driver error"))
+			return &MidiConnection{}, fault.Wrap(err, fmsg.With("midi driver error"))
 		}
 		out, err := driver.OpenVirtualOut(OutputName)
 		if err != nil {
-			return MidiConnection{}, fault.Wrap(err, fmsg.With("cannot open virtual out"))
+			return &MidiConnection{}, fault.Wrap(err, fmsg.With("cannot open virtual out"))
 		}
 
 		midiConn = MidiConnection{devices: []*DeviceInfo{{Out: out, Selected: true, IsOpen: true}}, midiChannel: make(chan Message)}
@@ -67,10 +69,7 @@ func InitMidiConnection(createOut bool, outportName string, ctx context.Context)
 		midiConn = MidiConnection{outportName: outportName, midiChannel: make(chan Message)}
 	}
 
-	midiConn.DeviceLoop(ctx)
-	midiConn.LoopMidi(ctx)
-
-	return midiConn, nil
+	return &midiConn, nil
 }
 
 var playMutex = sync.Mutex{}
@@ -150,17 +149,17 @@ func (mc *MidiConnection) Close() {
 
 var dawOutports = []string{"Logic Pro Virtual In", "TESTDAW"}
 
-func SendRecordMessage() error {
-	outports := midi.GetOutPorts()
+func (mc MidiConnection) SendRecordMessage() error {
 
 	var selectedOutport drivers.Out
 foundtheport:
-	for _, outport := range outports {
-		for _, name := range dawOutports {
-			if strings.Contains(outport.String(), name) {
-				selectedOutport = outport
+	for _, device := range mc.devices {
+		fmt.Fprintln(os.Stderr, "DAW CHECK", device.Name)
+		for _, dawName := range dawOutports {
+			if strings.Contains(device.Name, dawName) {
+				device.Open()
+				selectedOutport = device.Out
 				break foundtheport
-
 			}
 		}
 	}
@@ -169,16 +168,12 @@ foundtheport:
 		return fault.New("could not find daw outport", fmsg.WithDesc("could not find daw outport", "Could not find a daw outport, please ensure the DAW record destination is open and then restart seq"))
 	}
 
-	err := selectedOutport.Open()
-	if err != nil {
-		return fault.Wrap(err, fmsg.With("cannot open midi port"))
-	}
 	// NOTE: The record message must be configured in Logic.
 	// Logic Pro -> Control Surfaces -> Controller Assignments...
 	// Create a new zone (seq), a new Mode (commands), a new control
 	// Within the new control press "Learn" and then in seq use the PlayRecord mapping (`:<Space>`).
 	// Then Chose `Class: Key Command` `Command: Global Commands` and then `Record` in the unlabeled parameter list
-	err = selectedOutport.Send(midi.ControlChange(16, 127, 127))
+	err := selectedOutport.Send(midi.ControlChange(16, 127, 127))
 	if err != nil {
 		return fault.Wrap(err, fmsg.With("could not send record message"))
 	}

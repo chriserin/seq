@@ -52,7 +52,7 @@ func TestPatternModeAccentIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			// NOTE: Initial value for accent is 5
 			// and "increasing" accent index means moving to 4
@@ -122,7 +122,7 @@ func TestPatternModeRatchetIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -179,7 +179,7 @@ func TestPatternModeWaitIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -254,7 +254,7 @@ func TestPatternModeGateIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -294,7 +294,7 @@ func TestPatternModeNoteAccentIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(), func(m *model) model {
+			m := createTestModel(func(m *model) model {
 				m.currentOverlay.AddNote(grid.GK(0, 0), note{AccentIndex: 3})
 				m.currentOverlay.AddNote(grid.GK(0, 2), note{AccentIndex: 3})
 				m.currentOverlay.AddNote(grid.GK(0, 3), note{AccentIndex: 3})
@@ -347,7 +347,7 @@ func TestPatternModeNoteWaitIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(), func(m *model) model {
+			m := createTestModel(func(m *model) model {
 				m.currentOverlay.AddNote(grid.GK(0, 0), note{WaitIndex: 3})
 				m.currentOverlay.AddNote(grid.GK(0, 2), note{WaitIndex: 3})
 				m.currentOverlay.AddNote(grid.GK(0, 3), note{WaitIndex: 3})
@@ -400,7 +400,7 @@ func TestPatternModeNoteGateIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(), func(m *model) model {
+			m := createTestModel(func(m *model) model {
 				m.currentOverlay.AddNote(grid.GK(0, 0), note{GateIndex: 3})
 				m.currentOverlay.AddNote(grid.GK(0, 2), note{GateIndex: 3})
 				m.currentOverlay.AddNote(grid.GK(0, 3), note{GateIndex: 3})
@@ -455,7 +455,7 @@ func TestPatternModeNoteRatchetIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(), func(m *model) model {
+			m := createTestModel(func(m *model) model {
 				m.currentOverlay.AddNote(grid.GK(0, 0), note{AccentIndex: 1})
 				m.currentOverlay.AddNote(grid.GK(0, 2), note{AccentIndex: 1})
 				m.currentOverlay.AddNote(grid.GK(0, 3), note{AccentIndex: 1})
@@ -542,7 +542,7 @@ func TestPatternModeMonoSpaceIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(), WithGridSize(3, 2))
+			m := createTestModel(WithGridSize(3, 2))
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -589,7 +589,7 @@ func TestPatternModeMonoAccentIncreasePattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(), func(m *model) model {
+			m := createTestModel(func(m *model) model {
 				m.currentOverlay.AddNote(grid.GK(0, 0), note{AccentIndex: 5})
 				m.currentOverlay.AddNote(grid.GK(0, 1), note{AccentIndex: 5})
 				m.currentOverlay.AddNote(grid.GK(1, 2), note{AccentIndex: 5})
@@ -646,7 +646,7 @@ func TestPatternModeMonoGatePattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(), func(m *model) model {
+			m := createTestModel(func(m *model) model {
 				m.currentOverlay.AddNote(grid.GK(0, 0), note{AccentIndex: 5, GateIndex: 5})
 				m.currentOverlay.AddNote(grid.GK(0, 1), note{AccentIndex: 5, GateIndex: 5})
 				m.currentOverlay.AddNote(grid.GK(1, 2), note{AccentIndex: 5, GateIndex: 5})
@@ -703,7 +703,7 @@ func TestPatternNoteModeMonoAccentPattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(), func(m *model) model {
+			m := createTestModel(func(m *model) model {
 				m.currentOverlay.AddNote(grid.GK(0, 0), note{AccentIndex: 5})
 				m.currentOverlay.AddNote(grid.GK(1, 2), note{AccentIndex: 5})
 				m.currentOverlay.AddNote(grid.GK(1, 3), note{AccentIndex: 5})
@@ -767,7 +767,7 @@ func TestPatternModeFillSpace(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(), WithGridSize(3, 2))
+			m := createTestModel(WithGridSize(3, 2))
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -827,7 +827,7 @@ func TestPatternModeMonoFillSpace(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(), WithGridSize(3, 2))
+			m := createTestModel(WithGridSize(3, 2))
 
 			m, _ = processCommands(tt.commands, m)
 

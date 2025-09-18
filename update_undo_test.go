@@ -64,7 +64,7 @@ func TestUpdateUndoGridNote(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -100,9 +100,7 @@ func TestUpdateUndoLineGridNotes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(tt.cursorPos),
-			)
+			m := createTestModel(WithGridCursor(tt.cursorPos))
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -149,9 +147,7 @@ func TestUpdateUndoBounds(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(tt.cursorPos),
-			)
+			m := createTestModel(WithGridCursor(tt.cursorPos))
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -199,7 +195,7 @@ func TestUpdateUndoBeats(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -245,7 +241,7 @@ func TestUpdateUndoTempo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			// Verify initial tempo
 			assert.Equal(t, tt.initialTempo, m.definition.Tempo, "Initial tempo should match")
@@ -297,7 +293,7 @@ func TestUpdateUndoSubdivisions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			// Verify initial subdivisions
 			assert.Equal(t, tt.initialSubdivision, m.definition.Subdivisions, "Initial subdivisions should match")
@@ -336,9 +332,7 @@ func TestUpdateUndoNewOverlay(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithNonRootOverlay(overlayKey),
-			)
+			m := createTestModel(WithNonRootOverlay(overlayKey))
 
 			keys := make([]overlaykey.OverlayPeriodicity, 0)
 			m.CurrentPart().Overlays.CollectKeys(&keys)
@@ -395,7 +389,7 @@ func TestUndoArrangement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.setupCommands, m)
 
@@ -467,7 +461,7 @@ func TestUndoMultipleOperations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -501,7 +495,7 @@ func TestUndoWithArrangementCursor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.setupCommands, m)
 
@@ -542,7 +536,7 @@ func TestUndoEmptyStack(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -578,7 +572,7 @@ func TestUndoOverlayDiff(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -668,7 +662,7 @@ func TestUndoAccentInputSwitch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			// Verify initial accent values
 			assert.Equal(t, tt.expectedTarget, m.definition.Accents.Target, "Initial accent target should match")
@@ -761,7 +755,7 @@ func TestUndoSetupInputSwitch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			// Verify initial setup values
 			currentLine := m.definition.Lines[m.gridCursor.Line]
@@ -874,7 +868,7 @@ func TestUndoSongSectionAttributes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			// Verify initial SongSection values
 			currentNode := m.arrangement.Cursor.GetCurrentNode()

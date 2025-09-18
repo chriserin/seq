@@ -56,13 +56,10 @@ func TestToggleVisualMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(GK(2, 3)),
-				func(m *model) model {
-					m.visualSelection.visualMode = tt.initialVisualMode
-					return *m
-				},
-			)
+			m := createTestModel(WithGridCursor(GK(2, 3)), func(m *model) model {
+				m.visualSelection.visualMode = tt.initialVisualMode
+				return *m
+			})
 
 			assert.Equal(t, tt.initialVisualMode, m.visualSelection.visualMode, "Initial visual mode should match")
 
@@ -125,13 +122,10 @@ func TestToggleVisualLineMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(GK(1, 4)),
-				func(m *model) model {
-					m.visualSelection.visualMode = tt.initialVisualMode
-					return *m
-				},
-			)
+			m := createTestModel(WithGridCursor(GK(1, 4)), func(m *model) model {
+				m.visualSelection.visualMode = tt.initialVisualMode
+				return *m
+			})
 
 			assert.Equal(t, tt.initialVisualMode, m.visualSelection.visualMode, "Initial visual mode should match")
 
@@ -176,9 +170,7 @@ func TestVisualModeInteractions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(GK(0, 0)),
-			)
+			m := createTestModel(WithGridCursor(GK(0, 0)))
 
 			assert.Equal(t, operation.VisualNone, m.visualSelection.visualMode, "Initial visual mode should be VisualNone")
 
@@ -266,10 +258,7 @@ func TestVisualSelectionBounds(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(tt.cursorPos),
-				WithGridSize(16, 8),
-			)
+			m := createTestModel(WithGridCursor(tt.cursorPos), WithGridSize(16, 8))
 
 			assert.Equal(t, operation.VisualNone, m.visualSelection.visualMode, "Initial visual mode should be VisualNone")
 
@@ -307,9 +296,7 @@ func TestVisualModeAndYank(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(GK(0, 0)),
-			)
+			m := createTestModel(WithGridCursor(GK(0, 0)))
 
 			assert.Equal(t, operation.VisualNone, m.visualSelection.visualMode, "Initial visual mode should be VisualNone")
 
@@ -343,9 +330,7 @@ func TestVisualModeAndNoteRemove(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(GK(0, 0)),
-			)
+			m := createTestModel(WithGridCursor(GK(0, 0)))
 
 			assert.Equal(t, operation.VisualNone, m.visualSelection.visualMode, "Initial visual mode should be VisualNone")
 

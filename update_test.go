@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -97,11 +96,11 @@ func getKeyMsgs(command mappings.Command) []tea.KeyMsg {
 
 type modelFunc func(m *model) model
 
-func createTestModel(ctx context.Context, modelFns ...modelFunc) model {
+func createTestModel(modelFns ...modelFunc) model {
 
 	options := ProgramOptions{}
 	fakeCancelFunc := func() {}
-	m := InitModel("", seqmidi.MidiConnection{}, options, ctx, fakeCancelFunc)
+	m := InitModel("", &seqmidi.MidiConnection{}, options, fakeCancelFunc)
 	m.ResetIterations()
 
 	for _, fn := range modelFns {
@@ -179,12 +178,10 @@ func TestSave(t *testing.T) {
 			tempDir := t.TempDir()
 			testFilename := filepath.Join(tempDir, "test_save.seq")
 
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.filename = testFilename
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.filename = testFilename
+				return *m
+			})
 
 			_, err := os.Stat(testFilename)
 			assert.True(t, os.IsNotExist(err), "File should not exist initially")
@@ -231,7 +228,7 @@ func TestSaveBeforeFilename(t *testing.T) {
 			// Create a temporary filename
 			testFilename := filepath.Join(tempDir, "tsave.seq")
 
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			_, err := os.Stat(testFilename)
 			assert.True(t, os.IsNotExist(err), "File should not exist initially")
@@ -279,12 +276,10 @@ func TestSaveAs(t *testing.T) {
 			firstFilename := filepath.Join(tempDir, "tsave.seq")
 			expectedFilename := filepath.Join(tempDir, "tsave2.seq")
 
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.filename = firstFilename
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.filename = firstFilename
+				return *m
+			})
 
 			_, err := os.Stat(expectedFilename)
 			assert.True(t, os.IsNotExist(err), "File should not exist initially")
@@ -317,7 +312,7 @@ func TestSaveBeforeFilenameEscape(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, "", m.filename, tt.description+" - filename should be empty after escape")
@@ -346,9 +341,7 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithNonRootOverlay(overlaykey.InitOverlayKey(2, 1)),
-			)
+			m := createTestModel(WithNonRootOverlay(overlaykey.InitOverlayKey(2, 1)))
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -417,12 +410,10 @@ func TestNextPrevTheme(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.theme = tt.initialTheme
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.theme = tt.initialTheme
+				return *m
+			})
 
 			assert.Equal(t, tt.initialTheme, m.theme, "Initial theme should match")
 
@@ -485,7 +476,7 @@ func TestClearLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -538,9 +529,7 @@ func TestRemoveOverlay(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithNonRootOverlay(overlayKey),
-			)
+			m := createTestModel(WithNonRootOverlay(overlayKey))
 
 			initialOverlayKey := m.currentOverlay.Key
 			keys := make([]overlaykey.OverlayPeriodicity, 0)
@@ -560,7 +549,7 @@ func TestRemoveOverlay(t *testing.T) {
 }
 
 func TestClearOverlay(t *testing.T) {
-	m := createTestModel(t.Context())
+	m := createTestModel()
 
 	commands := []any{
 		mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter,
@@ -646,7 +635,7 @@ func TestActionMappings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -686,9 +675,7 @@ func TestSelectKeyLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(tt.cursorPos),
-			)
+			m := createTestModel(WithGridCursor(tt.cursorPos))
 
 			m, _ = processCommands([]any{mappings.SelectKeyLine}, m)
 
@@ -730,7 +717,7 @@ func TestOverlayStackToggle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			assert.Equal(t, true, m.currentOverlay.PressUp, tt.description+" - Initial PressUp should be true")
 			assert.Equal(t, false, m.currentOverlay.PressDown, tt.description+" - Initial PressDown should be false")
@@ -776,12 +763,10 @@ func TestTogglePlayEdit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.playEditing = tt.initialPlayEditing
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.playEditing = tt.initialPlayEditing
+				return *m
+			})
 
 			assert.Equal(t, tt.initialPlayEditing, m.playEditing, "Initial playEditing should match")
 
@@ -812,12 +797,10 @@ func TestReloadFile(t *testing.T) {
 			testFilename := filepath.Join(tempDir, "test_reload.seq")
 
 			// Create initial model and save it
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.filename = testFilename
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.filename = testFilename
+				return *m
+			})
 
 			m, _ = processCommand(mappings.NoteAdd, m)
 
@@ -854,7 +837,7 @@ func TestQuit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			// Verify initial state
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection indicator should be SelectNothing")
@@ -955,7 +938,7 @@ func TestYankAndPaste(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 

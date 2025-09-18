@@ -35,7 +35,6 @@ type AnticipatoryStop struct{}
 type BeatsLooper struct {
 	BeatChannel   chan BeatMsg
 	UpdateChannel chan ModelMsg
-	DoneChannel   chan struct{}
 	PlayQueue     chan seqmidi.Message
 	ErrChan       chan error
 }
@@ -43,20 +42,18 @@ type BeatsLooper struct {
 func InitBeatsLooper() BeatsLooper {
 	beatChannel := make(chan BeatMsg)
 	updateChannel := make(chan ModelMsg)
-	doneChannel := make(chan struct{})
 	playQueue := make(chan seqmidi.Message)
 	errChan := make(chan error)
 
 	return BeatsLooper{
 		BeatChannel:   beatChannel,
 		UpdateChannel: updateChannel,
-		DoneChannel:   doneChannel,
 		PlayQueue:     playQueue,
 		ErrChan:       errChan,
 	}
 }
 
-func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection, ctx context.Context) {
+func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn *seqmidi.MidiConnection, ctx context.Context) {
 	// NOTE: Create a log file for debug information
 	logFile, _ := tea.LogToFile("debug.log", "debug")
 
@@ -72,7 +69,7 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection
 					playState = modelMsg.PlayState
 					definition = modelMsg.Sequence
 					cursor = modelMsg.Cursor
-				case <-bl.DoneChannel:
+				case <-ctx.Done():
 					return
 				}
 			} else {
@@ -84,8 +81,6 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection
 					cursor = modelMsg.Cursor
 				case BeatMsg := <-bl.BeatChannel:
 					bl.Beat(BeatMsg, playState, definition, cursor, sendFn)
-				case <-bl.DoneChannel:
-					return
 				case <-ctx.Done():
 					return
 				case err := <-bl.ErrChan:

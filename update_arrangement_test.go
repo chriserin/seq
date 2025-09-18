@@ -71,7 +71,7 @@ func TestToggleArrangementViewSwitch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, tt.expectedFocus, m.focus, tt.description+" - arrangement view state")
@@ -96,7 +96,7 @@ func TestRenamePartCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			// Verify initial state
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
@@ -129,14 +129,12 @@ func TestSectionNavigationResetOverlay(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					nonRootKey := overlaykey.OverlayPeriodicity{Shift: 1, Interval: 2, Width: 1, StartCycle: 0}
-					(*m.definition.Parts)[0].Overlays = m.CurrentPart().Overlays.Add(nonRootKey)
-					m.currentOverlay = (*m.definition.Parts)[0].Overlays.FindOverlay(nonRootKey)
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				nonRootKey := overlaykey.OverlayPeriodicity{Shift: 1, Interval: 2, Width: 1, StartCycle: 0}
+				(*m.definition.Parts)[0].Overlays = m.CurrentPart().Overlays.Add(nonRootKey)
+				m.currentOverlay = (*m.definition.Parts)[0].Overlays.FindOverlay(nonRootKey)
+				return *m
+			})
 
 			rootKey := overlaykey.ROOT
 			assert.NotEqual(t, rootKey, m.currentOverlay.Key, "Should start with non-root overlay")
@@ -195,7 +193,7 @@ func TestChangePartAfterNewSectionAfter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -264,7 +262,7 @@ func TestNewSectionAfter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -313,7 +311,7 @@ func TestGroupKeybinding(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.setupCommands, m)
 

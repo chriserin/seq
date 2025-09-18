@@ -100,7 +100,6 @@ type model struct {
 	visualSelection       VisualSelection
 	partSelectorIndex     int
 	needsWrite            int
-	ctx                   context.Context
 	cancel                context.CancelFunc
 	currentOverlay        *overlays.Overlay
 	logFile               *os.File
@@ -119,7 +118,7 @@ type model struct {
 	overlayKeyEdit        overlaykey.Model
 	arrangement           arrangement.Model
 	textInput             textinput.Model
-	midiConnection        seqmidi.MidiConnection
+	midiConnection        *seqmidi.MidiConnection
 	activeChord           overlays.OverlayChord
 	temporaryState        temporaryState
 	// play state
@@ -746,7 +745,7 @@ func LoadFile(filename string, template string, instrument string) (sequence.Seq
 	return definition, fileErr
 }
 
-func InitModel(filename string, midiConnection seqmidi.MidiConnection, options ProgramOptions, ctx context.Context, cancel context.CancelFunc) model {
+func InitModel(filename string, midiConnection *seqmidi.MidiConnection, options ProgramOptions, cancel context.CancelFunc) model {
 
 	newCursor := cursor.New()
 	newCursor.BlinkSpeed = 600 * time.Millisecond
@@ -764,7 +763,6 @@ func InitModel(filename string, midiConnection seqmidi.MidiConnection, options P
 	}
 
 	return model{
-		ctx:                   ctx,
 		cancel:                cancel,
 		transmitting:          true,
 		currentError:          err,
@@ -864,18 +862,20 @@ func RunProgram(filename string, options ProgramOptions) (*tea.Program, error) {
 
 	config.Init()
 	themes.ChooseTheme(options.theme)
-	model := InitModel(filename, midiConnection, options, ctx, cancel)
+	model := InitModel(filename, midiConnection, options, cancel)
 	model.ResetIterations()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	beatsLooper = beats.InitBeatsLooper()
 	updateChannel = beatsLooper.UpdateChannel
-	SetupTimingLoop(model, beatsLooper, program.Send)
-	beatsLooper.Loop(program.Send, midiConnection, model.ctx)
+	SetupTimingLoop(model, beatsLooper, program.Send, ctx)
+	beatsLooper.Loop(program.Send, midiConnection, ctx)
+	midiConnection.DeviceLoop(ctx)
+	midiConnection.LoopMidi(ctx)
 	return program, nil
 }
 
-func SetupTimingLoop(model model, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg)) {
-	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, model.ctx, beatsLooper, sendFn)
+func SetupTimingLoop(model model, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg), ctx context.Context) {
+	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, ctx, beatsLooper, sendFn)
 	if err != nil {
 		go func() {
 			sendFn(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})
@@ -1171,7 +1171,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.PlayRecord:
 			if !m.playState.Playing {
 				m.playState.RecordPreRollBeats = 8
-				err := seqmidi.SendRecordMessage()
+				err := m.midiConnection.SendRecordMessage()
 				if err != nil {
 					m.SetCurrentError(err)
 				} else {
@@ -1588,7 +1588,6 @@ func (m model) Quit() (tea.Model, tea.Cmd) {
 
 	timingChannel <- timing.QuitMsg{}
 	m.cancel()
-	beatsLooper.DoneChannel <- struct{}{}
 	err := m.logFile.Close()
 	if err != nil {
 		// NOTE: no good way to display this error when quitting, just panic

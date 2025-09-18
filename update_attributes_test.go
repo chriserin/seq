@@ -92,12 +92,10 @@ func TestTempoChanges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.definition.Tempo = tt.initialTempo
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.definition.Tempo = tt.initialTempo
+				return *m
+			})
 			assert.Equal(t, tt.initialTempo, m.definition.Tempo, tt.description)
 			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, tt.expectedTempo, m.definition.Tempo, tt.description)
@@ -152,7 +150,7 @@ func TestTempoInputSwitchEscapes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, tt.expectedSelection, m.selectionIndicator, tt.description)
@@ -200,12 +198,10 @@ func TestSubdivisionChanges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.definition.Subdivisions = tt.initialSubdivisions
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.definition.Subdivisions = tt.initialSubdivisions
+				return *m
+			})
 			assert.Equal(t, tt.initialSubdivisions, m.definition.Subdivisions, tt.description)
 			m, _ = processCommands(tt.commands, m)
 			assert.Equal(t, tt.expectedSubdivisions, m.definition.Subdivisions, tt.description)
@@ -253,12 +249,10 @@ func TestSetupInputSwitchWithIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.definition.Lines[m.gridCursor.Line].Channel = tt.initialSetupChannel
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.definition.Lines[m.gridCursor.Line].Channel = tt.initialSetupChannel
+				return *m
+			})
 
 			assert.Equal(t, tt.initialSetupChannel, m.definition.Lines[m.gridCursor.Line].Channel, "Initial setup channel should match")
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
@@ -297,14 +291,12 @@ func TestSetupInputSwitchIncreaseAllChannels(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					for i := range m.definition.Lines {
-						m.definition.Lines[i].Channel = tt.initialSetupChannel
-					}
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				for i := range m.definition.Lines {
+					m.definition.Lines[i].Channel = tt.initialSetupChannel
+				}
+				return *m
+			})
 
 			assert.Equal(t, tt.initialSetupChannel, m.definition.Lines[m.gridCursor.Line].Channel, "Initial setup channel should match")
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
@@ -373,12 +365,10 @@ func TestSetupInputSwitchMessageTypeIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.definition.Lines[m.gridCursor.Line].MsgType = tt.initialMessageType
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.definition.Lines[m.gridCursor.Line].MsgType = tt.initialMessageType
+				return *m
+			})
 
 			assert.Equal(t, tt.initialMessageType, m.definition.Lines[m.gridCursor.Line].MsgType, "Initial message type should match")
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
@@ -414,7 +404,7 @@ func TestSetupInputSwitchMessageTypeBackToGrid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
@@ -473,12 +463,10 @@ func TestSetupNoteChange(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.definition.Lines[m.gridCursor.Line].Note = tt.initialNote
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.definition.Lines[m.gridCursor.Line].Note = tt.initialNote
+				return *m
+			})
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -513,14 +501,12 @@ func TestSetupNoteChangeAll(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					for i := range m.definition.Lines {
-						m.definition.Lines[i].Note = tt.initialStartingNote + uint8(i)
-					}
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				for i := range m.definition.Lines {
+					m.definition.Lines[i].Note = tt.initialStartingNote + uint8(i)
+				}
+				return *m
+			})
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -571,12 +557,10 @@ func TestSetupCCChange(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.definition.Lines[m.gridCursor.Line].Note = tt.initialCc
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.definition.Lines[m.gridCursor.Line].Note = tt.initialCc
+				return *m
+			})
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -625,12 +609,10 @@ func TestBeatInputSwitch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					(*m.definition.Parts)[m.CurrentPartID()].Beats = tt.initialBeats
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				(*m.definition.Parts)[m.CurrentPartID()].Beats = tt.initialBeats
+				return *m
+			})
 
 			assert.Equal(t, tt.initialBeats, m.CurrentPart().Beats, "Initial beats should match")
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
@@ -683,13 +665,11 @@ func TestBeatInputSwitchCyclesIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					currentNode := m.arrangement.Cursor.GetCurrentNode()
-					currentNode.Section.Cycles = tt.initialCycles
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				currentNode := m.arrangement.Cursor.GetCurrentNode()
+				currentNode.Section.Cycles = tt.initialCycles
+				return *m
+			})
 
 			assert.Equal(t, tt.initialCycles, m.CurrentSongSection().Cycles, "Initial cycles should match")
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
@@ -743,13 +723,11 @@ func TestBeatInputSwitchStartBeatsIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					currentNode := m.arrangement.Cursor.GetCurrentNode()
-					currentNode.Section.StartBeat = tt.initialStartBeats
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				currentNode := m.arrangement.Cursor.GetCurrentNode()
+				currentNode.Section.StartBeat = tt.initialStartBeats
+				return *m
+			})
 
 			assert.Equal(t, tt.initialStartBeats, m.CurrentSongSection().StartBeat, "Initial start beats should match")
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
@@ -802,13 +780,11 @@ func TestBeatInputSwitchStartCyclesIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					currentNode := m.arrangement.Cursor.GetCurrentNode()
-					currentNode.Section.StartCycles = tt.initialStartCycles
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				currentNode := m.arrangement.Cursor.GetCurrentNode()
+				currentNode.Section.StartCycles = tt.initialStartCycles
+				return *m
+			})
 
 			assert.Equal(t, tt.initialStartCycles, m.CurrentSongSection().StartCycles, "Initial start cycles should match")
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
@@ -862,16 +838,13 @@ func TestNewLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					// Set up the last line with specific values for the second test
-					if tt.name == "Add new line with custom last line values" {
-						m.definition.Lines[len(m.definition.Lines)-1].Channel = 5
-						m.definition.Lines[len(m.definition.Lines)-1].Note = 72
-					}
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				if tt.name == "Add new line with custom last line values" {
+					m.definition.Lines[len(m.definition.Lines)-1].Channel = 5
+					m.definition.Lines[len(m.definition.Lines)-1].Note = 72
+				}
+				return *m
+			})
 
 			// Verify initial state
 			assert.Equal(t, tt.initialLineCount, len(m.definition.Lines), "Initial line count should match")
@@ -972,15 +945,13 @@ func TestMuteAndSolo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.playState = playstate.PlayState{LineStates: make([]playstate.LineState, len(m.definition.Lines))}
-					for i := range m.playState.LineStates {
-						m.playState.LineStates[i] = playstate.InitLineState(playstate.PlayStatePlay, uint8(i), 0)
-					}
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.playState = playstate.PlayState{LineStates: make([]playstate.LineState, len(m.definition.Lines))}
+				for i := range m.playState.LineStates {
+					m.playState.LineStates[i] = playstate.InitLineState(playstate.PlayStatePlay, uint8(i), 0)
+				}
+				return *m
+			})
 
 			assert.Equal(t, playstate.PlayStatePlay, m.playState.LineStates[tt.cursorLine].GroupPlayState, "Initial play state should be PlayStatePlay")
 			assert.False(t, m.playState.HasSolo, "Initial hasSolo should be false")
@@ -1073,31 +1044,26 @@ func TestMuteAll(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.playState = playstate.PlayState{LineStates: make([]playstate.LineState, len(m.definition.Lines))}
-					// Initialize all lines to play state first
-					for i := range m.playState.LineStates {
-						m.playState.LineStates[i] = playstate.InitLineState(playstate.PlayStatePlay, uint8(i), 0)
+			m := createTestModel(func(m *model) model {
+				m.playState = playstate.PlayState{LineStates: make([]playstate.LineState, len(m.definition.Lines))}
+				for i := range m.playState.LineStates {
+					m.playState.LineStates[i] = playstate.InitLineState(playstate.PlayStatePlay, uint8(i), 0)
+				}
+				for _, lineIndex := range tt.initialMutedLines {
+					if int(lineIndex) < len(m.playState.LineStates) {
+						m.playState.LineStates[lineIndex].GroupPlayState = playstate.PlayStateMute
 					}
-					// Set initial muted lines
-					for _, lineIndex := range tt.initialMutedLines {
-						if int(lineIndex) < len(m.playState.LineStates) {
-							m.playState.LineStates[lineIndex].GroupPlayState = playstate.PlayStateMute
-						}
+				}
+				for _, lineIndex := range tt.initialSoloLines {
+					if int(lineIndex) < len(m.playState.LineStates) {
+						m.playState.LineStates[lineIndex].GroupPlayState = playstate.PlayStateSolo
 					}
-					// Set initial solo lines and solo state
-					for _, lineIndex := range tt.initialSoloLines {
-						if int(lineIndex) < len(m.playState.LineStates) {
-							m.playState.LineStates[lineIndex].GroupPlayState = playstate.PlayStateSolo
-						}
-					}
-					if len(tt.initialSoloLines) > 0 {
-						m.playState.HasSolo = true
-					}
-					return *m
-				},
-			)
+				}
+				if len(tt.initialSoloLines) > 0 {
+					m.playState.HasSolo = true
+				}
+				return *m
+			})
 
 			m, _ = processCommands(tt.commands, m)
 

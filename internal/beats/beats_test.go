@@ -328,7 +328,7 @@ func PlayTestLoop(sequence sequence.Sequence, cursor arrangement.ArrCursor, limi
 	beatChannel := beatsLooper.BeatChannel
 
 	midiConnection := seqmidi.MidiConnection{Test: true, TestQueue: &[]seqmidi.Message{}}
-	beatsLooper.Loop(sendFn, midiConnection, ctx)
+	beatsLooper.Loop(sendFn, &midiConnection, ctx)
 
 	iterations := make(map[*arrangement.Arrangement]int)
 	playstate.BuildIterationsMap(sequence.Arrangement, &iterations)
@@ -351,7 +351,6 @@ func PlayTestLoop(sequence sequence.Sequence, cursor arrangement.ArrCursor, limi
 		}
 		updateChannel <- ModelMsg{PlayState: update.PlayState, Sequence: sequence, Cursor: update.Cursor}
 	}
-	beatsLooper.DoneChannel <- struct{}{}
 
 	return beatsPlayedCounter, *midiConnection.TestQueue
 }

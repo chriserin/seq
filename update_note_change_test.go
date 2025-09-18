@@ -96,7 +96,7 @@ func TestAccentIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -196,7 +196,7 @@ func TestGateIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 			config.LongGates = config.GetGateLengths(1) // Create a shorter boundary
 
 			m, _ = processCommands(tt.commands, m)
@@ -291,7 +291,7 @@ func TestGateBigIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 			config.LongGates = config.GetGateLengths(tt.maxGateLength)
 
 			m, _ = processCommands(tt.commands, m)
@@ -392,7 +392,7 @@ func TestWaitIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -520,7 +520,7 @@ func TestRatchetIncrease(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 
@@ -663,9 +663,7 @@ func TestRotate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(tt.initialPos),
-			)
+			m := createTestModel(WithGridCursor(tt.initialPos))
 
 			m, _ = processCommand(mappings.NoteAdd, m)
 			initialNote, exists := m.currentOverlay.GetNote(tt.initialPos)
@@ -740,9 +738,7 @@ func TestNoteAddRemoveAndOverlayRemoveOnRootOverlay(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(tt.initialPos),
-			)
+			m := createTestModel(WithGridCursor(tt.initialPos))
 
 			initialNote, initialExists := m.CurrentNote()
 			assert.False(t, initialExists || initialNote != zeronote, "Should start with no note at position")
@@ -818,10 +814,7 @@ func TestNoteAddRemoveAndOverlayRemoveOnNonRootOverlay(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(tt.initialPos),
-				WithNonRootOverlay(nonRootOverlayKey),
-			)
+			m := createTestModel(WithGridCursor(tt.initialPos), WithNonRootOverlay(nonRootOverlayKey))
 
 			initialNote, initialExists := m.CurrentNote()
 			assert.False(t, initialExists || initialNote != zeronote, "Should start with no note at position")
@@ -912,9 +905,7 @@ func TestNoteAddRemoveAndOverlayRemoveAcrossOverlays(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(tt.initialPos),
-			)
+			m := createTestModel(WithGridCursor(tt.initialPos))
 
 			initialNote, initialExists := m.CurrentNote()
 			assert.False(t, initialExists || initialNote != zeronote, "Should start with no note at position")
@@ -973,7 +964,7 @@ func TestRatchetInputSwitch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			assert.Equal(t, operation.SelectGrid, m.selectionIndicator, "Initial selection should be nothing")
 
@@ -1087,7 +1078,7 @@ func TestRatchetInputValues(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context())
+			m := createTestModel()
 
 			m, _ = processCommands(tt.commands, m)
 			currentNote, exists := m.CurrentNote()
@@ -1246,9 +1237,7 @@ func TestSpecificValueActionAndCursorMovement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				WithGridCursor(tt.initialPos),
-			)
+			m := createTestModel(WithGridCursor(tt.initialPos))
 
 			// Run setup commands to configure the line
 			m, _ = processCommands(tt.setupCommands, m)

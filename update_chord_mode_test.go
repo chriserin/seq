@@ -48,12 +48,10 @@ func TestToggleChordMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := createTestModel(t.Context(),
-				func(m *model) model {
-					m.definition.TemplateSequencerType = tt.initialSequencerType
-					return *m
-				},
-			)
+			m := createTestModel(func(m *model) model {
+				m.definition.TemplateSequencerType = tt.initialSequencerType
+				return *m
+			})
 
 			assert.Equal(t, tt.initialSequencerType, m.definition.TemplateSequencerType, "Initial sequencer type should match")
 
