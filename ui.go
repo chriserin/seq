@@ -1820,15 +1820,13 @@ func (m *model) ResetIterations() {
 }
 
 func (m *model) Start(delay time.Duration) {
-	if !m.midiConnection.IsReady() {
-		err := m.midiConnection.ConnectAndOpen()
-		if err != nil {
-			m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot open midi connection")))
-			m.playState.Playing = false
-			m.playState.PlayMode = playstate.PlayStandard
-			return
-		}
-	}
+	m.midiConnection.EnsureConnection()
+	// if err != nil {
+	// 	m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot open midi connection")))
+	// 	m.playState.Playing = false
+	// 	m.playState.PlayMode = playstate.PlayStandard
+	// 	return
+	// }
 
 	m.ResetIterations()
 

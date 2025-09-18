@@ -98,17 +98,11 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn seqmidi.MidiConnection
 		}
 	}()
 	go func() {
-		midiSendFn, err := midiConn.AcquireSendFunc()
-		if err != nil {
-			bl.ErrChan <- err
-			return
-		}
 		for {
 			select {
 			case midiMessage := <-bl.PlayQueue:
-				midiSendFn(midiMessage)
+				midiConn.Send(midiMessage)
 			case <-ctx.Done():
-				midiConn.Close()
 				return
 			}
 
@@ -309,7 +303,6 @@ func (bl BeatsLooper) PlayBeat(beatInterval time.Duration, pattern grid.Pattern,
 
 func (bl BeatsLooper) ProcessRatchets(note grid.Note, beatInterval time.Duration, line grid.LineDefinition, definition sequence.Sequence) {
 	ratchetInterval := note.Ratchets.Interval(beatInterval)
-	fmt.Println("Ratchet Interval:", ratchetInterval, beatInterval)
 	for i := range note.Ratchets.Length + 1 {
 		if note.Ratchets.HitAt(i) {
 			shortGateLength := 20 * time.Millisecond

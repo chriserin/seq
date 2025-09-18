@@ -20,12 +20,27 @@ import (
 
 type MidiConnection struct {
 	outportName string
-	outport     drivers.Out
-	connected   bool
-	Test        bool
 	midiChannel chan Message
+	devices     []*DeviceInfo
 	TestQueue   *[]Message
-	Ctx         context.Context
+	Test        bool
+}
+
+func (mc *MidiConnection) EnsureConnection() {
+	if !mc.HasConnection() {
+		mc.devices[0].Open()
+	}
+}
+
+func (mc *MidiConnection) HasConnection() bool {
+	hasConnection := false
+	for _, device := range mc.devices {
+		if device.IsOpen {
+			hasConnection = true
+			break
+		}
+	}
+	return hasConnection
 }
 
 type Message struct {
@@ -33,11 +48,10 @@ type Message struct {
 	Msg   midi.Message
 }
 
-type SendFunc func(Message)
-
 var OutputName string = "seq-cli-out"
 
 func InitMidiConnection(createOut bool, outportName string, ctx context.Context) (MidiConnection, error) {
+	var midiConn MidiConnection
 	if createOut {
 		driver, err := rtmididrv.New()
 		if err != nil {
@@ -48,63 +62,29 @@ func InitMidiConnection(createOut bool, outportName string, ctx context.Context)
 			return MidiConnection{}, fault.Wrap(err, fmsg.With("cannot open virtual out"))
 		}
 
-		return MidiConnection{connected: true, outport: out, midiChannel: make(chan Message), Ctx: ctx}, nil
+		midiConn = MidiConnection{devices: []*DeviceInfo{{Out: out, Selected: true, IsOpen: true}}, midiChannel: make(chan Message)}
 	} else {
-		return MidiConnection{outportName: outportName, connected: false, midiChannel: make(chan Message), Ctx: ctx}, nil
+		midiConn = MidiConnection{outportName: outportName, midiChannel: make(chan Message)}
 	}
+
+	midiConn.DeviceLoop(ctx)
+	midiConn.LoopMidi(ctx)
+
+	return midiConn, nil
 }
 
-func (mc MidiConnection) HasConnection() bool {
-	return mc.connected
-}
+var playMutex = sync.Mutex{}
 
-func (mc *MidiConnection) Connect(portnumber int) error {
-	outport, err := midi.OutPort(portnumber)
-	if err != nil {
-		return fault.Wrap(err, fmsg.WithDesc("midi outport not available", "There are no midi out ports available."))
-	}
-	mc.outport = outport
-	return nil
-}
-
-func (mc *MidiConnection) ConnectAndOpen() error {
-	if !mc.connected {
-		outports := midi.GetOutPorts()
-		//NOTE: Default to 0 (the first midi outport) if not found or if empty string
-		var outportIndex = 0
-		for i, outport := range outports {
-			if mc.outportName != "" && strings.Contains(outport.String(), mc.outportName) {
-				outportIndex = i
-			}
-		}
-
-		err := mc.Connect(outportIndex)
-		if err != nil {
-			return fault.Wrap(err)
-		}
-		mc.connected = true
-	}
-	if !mc.outport.IsOpen() {
-		err := mc.outport.Open()
-		if err != nil {
-			return fault.Wrap(err, fmsg.With("cannot open midi port"))
-		}
-	} else {
-		mc.LoopMidi()
-	}
-	return nil
-}
-
-func (mc *MidiConnection) LoopMidi() {
+func (mc *MidiConnection) LoopMidi(ctx context.Context) {
 	go func() {
 		for {
 			select {
-			case <-mc.Ctx.Done():
+			case <-ctx.Done():
 				return
 			case msg := <-mc.midiChannel:
 				if msg.Delay == 0 {
 					playMutex.Lock()
-					err := mc.outport.Send(msg.Msg)
+					err := mc.SendMidi(msg.Msg)
 					playMutex.Unlock()
 					if err != nil {
 						panic(err)
@@ -112,7 +92,7 @@ func (mc *MidiConnection) LoopMidi() {
 				} else {
 					time.AfterFunc(msg.Delay, func() {
 						playMutex.Lock()
-						err := mc.outport.Send(msg.Msg)
+						err := mc.SendMidi(msg.Msg)
 						playMutex.Unlock()
 						if err != nil {
 							panic(err)
@@ -124,14 +104,35 @@ func (mc *MidiConnection) LoopMidi() {
 	}()
 }
 
+func (mc *MidiConnection) Send(msg Message) {
+	if mc.Test {
+		*mc.TestQueue = append(*mc.TestQueue, msg)
+	} else {
+		mc.midiChannel <- msg
+	}
+}
+
+func (mc MidiConnection) SendMidi(msg midi.Message) error {
+	// Send to all selected devices
+	for _, device := range mc.devices {
+		if device.Selected {
+			if device.Out.IsOpen() {
+				err := device.Out.Send(msg)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (mc *MidiConnection) Panic() error {
 	// NOTE: No connection means nothing to panic about
-	if mc.connected {
-		for i := range 127 {
-			err := mc.outport.Send(midi.NoteOff(0, uint8(i)))
-			if err != nil {
-				return fault.Wrap(err, fmsg.With("cannot send panic note off"))
-			}
+	for i := range 127 {
+		err := mc.SendMidi(midi.NoteOff(0, uint8(i)))
+		if err != nil {
+			return fault.Wrap(err, fmsg.With("cannot send panic note off"))
 		}
 	}
 
@@ -139,38 +140,12 @@ func (mc *MidiConnection) Panic() error {
 }
 
 func (mc *MidiConnection) Close() {
-	if mc.connected {
-		if mc.outport.IsOpen() {
-			err := mc.outport.Close()
-			if err != nil {
-				panic("Could not close connection")
-			}
+	for _, device := range mc.devices {
+		if device.IsOpen {
+			_ = device.Out.Close()
+			device.IsOpen = false
 		}
 	}
-}
-
-func (mc MidiConnection) IsReady() bool {
-	return mc.connected && mc.outport.IsOpen()
-}
-
-var playMutex = sync.Mutex{}
-
-func (mc MidiConnection) AcquireSendFunc() (SendFunc, error) {
-	if mc.Test {
-		return func(seqmidiMessage Message) {
-			(*mc.TestQueue) = append((*mc.TestQueue), seqmidiMessage)
-		}, nil
-	}
-
-	// Ensure connection is open
-	err := mc.ConnectAndOpen()
-	if err != nil {
-		return nil, fault.Wrap(err)
-	}
-	sendFn := func(msg Message) {
-		mc.midiChannel <- msg
-	}
-	return sendFn, nil
 }
 
 var dawOutports = []string{"Logic Pro Virtual In", "TESTDAW"}
