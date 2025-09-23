@@ -1,14 +1,11 @@
 package seqmidi
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"gitlab.com/gomidi/midi/v2/drivers"
-	"gitlab.com/gomidi/midi/v2/drivers/rtmididrv"
 )
 
 type DeviceInfo struct {
@@ -34,7 +31,7 @@ func (di *DeviceInfo) Open() {
 	}
 }
 
-func (mc *MidiConnection) UpdateDeviceList(driver *rtmididrv.Driver) error {
+func (mc *MidiConnection) UpdateDeviceList(driver drivers.Driver) error {
 	var newDevices []*DeviceInfo
 
 	outs, err := driver.Outs()
@@ -71,35 +68,10 @@ func (mc *MidiConnection) UpdateDeviceList(driver *rtmididrv.Driver) error {
 	return nil
 }
 
-func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
+func SeqOut() (drivers.Out, error) {
+	return OpenVirtualOut(OutputName)
+}
 
-	driver, err := rtmididrv.New()
-	if err != nil {
-		fmt.Printf("Can't open MIDI driver: %v\n", err)
-		return
-	}
-
-	err = mc.UpdateDeviceList(driver)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting device list: %v\n", err)
-		return
-	}
-
-	go func() {
-		// NOTE: Setup initially so we don't have to 3 seconds
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(3 * time.Second):
-				// go func() {
-				err := mc.UpdateDeviceList(driver)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error getting device list: %v\n", err)
-					return
-				}
-			}
-		}
-	}()
+func TransmitterOut() (drivers.Out, error) {
+	return OpenVirtualOut(OutputName)
 }

@@ -10,9 +10,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/chriserin/seq/internal/beats"
 	"github.com/chriserin/seq/internal/playstate"
+	"github.com/chriserin/seq/internal/seqmidi"
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
-	"gitlab.com/gomidi/midi/v2/drivers/rtmididrv"
 )
 
 func (t *Timing) BeatInterval() time.Duration {
@@ -136,18 +136,9 @@ func (tmtr Transmitter) ActiveSense() error {
 	return nil
 }
 
-const TransmitterName string = "seq-transmitter"
-
 func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 	var beatChannel = t.beatsLooper.BeatChannel
-	driver, err := rtmididrv.New()
-	if err != nil {
-		return fault.Wrap(err, fmsg.With("midi driver error"))
-	}
-	out, err := driver.OpenVirtualOut(TransmitterName)
-	if err != nil {
-		return fault.Wrap(err, fmsg.With("could not open virtual out"))
-	}
+	out, err := seqmidi.TransmitterOut()
 	transmitter := Transmitter{out}
 	err = transmitter.ActiveSense()
 	if err != nil {
@@ -265,7 +256,7 @@ type ListenFn func(msg []byte, milliseconds int32)
 func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, sendFn func(tea.Msg)) (receiverError error) {
 
 	var beatChannel = t.beatsLooper.BeatChannel
-	transmitPort, err := midi.FindInPort(TransmitterName)
+	transmitPort, err := seqmidi.FindTransmitterPort()
 	if err != nil {
 		receiverError = fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
 		return
@@ -278,7 +269,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 	go func() {
 		for {
 			// NOTE: transmitPort must be redeclared within to loop to avoid memory error
-			transmitPort, err = midi.FindInPort(TransmitterName)
+			transmitPort, err := seqmidi.FindTransmitterPort()
 			if err != nil {
 				receiverError = fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
 				return

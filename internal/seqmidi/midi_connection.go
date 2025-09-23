@@ -6,8 +6,6 @@ package seqmidi
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -16,9 +14,9 @@ import (
 	"github.com/Southclaws/fault/fmsg"
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
-
-	rtmididrv "gitlab.com/gomidi/midi/v2/drivers/rtmididrv"
 )
+
+const TransmitterName string = "seq-transmitter"
 
 type MidiConnection struct {
 	outportName string
@@ -31,6 +29,7 @@ type MidiConnection struct {
 func (mc *MidiConnection) EnsureConnection() {
 	if !mc.HasConnection() {
 		mc.devices[0].Open()
+		mc.devices[0].Selected = true
 	}
 }
 
@@ -55,15 +54,10 @@ var OutputName string = "seq-cli-out"
 func InitMidiConnection(createOut bool, outportName string, ctx context.Context) (*MidiConnection, error) {
 	var midiConn MidiConnection
 	if createOut {
-		driver, err := rtmididrv.New()
+		out, err := SeqOut()
 		if err != nil {
-			return &MidiConnection{}, fault.Wrap(err, fmsg.With("midi driver error"))
+			return nil, fault.Wrap(err, fmsg.With("cannot create seq midi out"))
 		}
-		out, err := driver.OpenVirtualOut(OutputName)
-		if err != nil {
-			return &MidiConnection{}, fault.Wrap(err, fmsg.With("cannot open virtual out"))
-		}
-
 		midiConn = MidiConnection{devices: []*DeviceInfo{{Out: out, Selected: true, IsOpen: true}}, midiChannel: make(chan Message)}
 	} else {
 		midiConn = MidiConnection{outportName: outportName, midiChannel: make(chan Message)}
@@ -154,7 +148,6 @@ func (mc MidiConnection) SendRecordMessage() error {
 	var selectedOutport drivers.Out
 foundtheport:
 	for _, device := range mc.devices {
-		fmt.Fprintln(os.Stderr, "DAW CHECK", device.Name)
 		for _, dawName := range dawOutports {
 			if strings.Contains(device.Name, dawName) {
 				device.Open()
@@ -178,4 +171,8 @@ foundtheport:
 		return fault.Wrap(err, fmsg.With("could not send record message"))
 	}
 	return nil
+}
+
+func FindTransmitterPort() (drivers.In, error) {
+	return midi.FindInPort(TransmitterName)
 }
