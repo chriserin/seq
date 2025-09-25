@@ -28,6 +28,16 @@ func OpenVirtualOut(name string) (drivers.Out, error) {
 
 func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 
+	driver, err := rtmididrv.New()
+	if err != nil {
+		fmt.Printf("Can't open MIDI driver: %v\n", err)
+		return
+	}
+	err = mc.UpdateDeviceList(driver)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting device list: %v\n", err)
+		return
+	}
 	go func() {
 		// NOTE: Setup initially so we don't have to 3 seconds
 
