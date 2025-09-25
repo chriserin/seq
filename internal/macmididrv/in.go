@@ -1,5 +1,4 @@
-//go:build !js
-// +build !js
+//go:build darwin
 
 package macmididrv
 
