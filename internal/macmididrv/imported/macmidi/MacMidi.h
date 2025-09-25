@@ -78,6 +78,7 @@
       MACMIDI_VERSION_PATCH)
 #endif
 
+#include <CoreMIDI/CoreMIDI.h>
 #include <exception>
 #include <iostream>
 #include <string>
@@ -149,6 +150,9 @@ protected:
 typedef void (*MacMidiErrorCallback)(MacMidiError::Type type,
                                      const std::string &errorText,
                                      void *userData);
+
+void createCoreMidiClientSingleton(const std::string &clientName,
+                                   MIDINotifyProc callback) throw();
 
 class MidiApi;
 

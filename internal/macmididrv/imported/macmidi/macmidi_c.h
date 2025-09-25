@@ -16,6 +16,7 @@
   \file rtmidi_c.h
  */
 
+#include <CoreMIDI/CoreMIDI.h>
 #include <stdbool.h>
 #include <stddef.h>
 #ifndef MACMIDI_C_H
@@ -214,6 +215,8 @@ MACMIDIAPI enum MacMidiApi macmidi_in_get_current_api(MacMidiPtr device);
 MACMIDIAPI void macmidi_in_set_callback(MacMidiInPtr device,
                                         MacMidiCCallback callback,
                                         void *userData);
+
+MACMIDIAPI void macmidi_set_notification_callback(MIDINotifyProc callback);
 
 //! \brief Cancel use of the current callback function (if one exists).
 //! See \ref MacMidiIn::cancelCallback().

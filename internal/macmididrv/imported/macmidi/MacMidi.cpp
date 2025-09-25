@@ -63,7 +63,6 @@
 #define __MACMIDI_DUMMY__
 #endif
 
-#if defined(__MACOSX_CORE__)
 #include <CoreMIDI/CoreMIDI.h>
 
 class MidiInCore : public MidiInApi {
@@ -104,8 +103,6 @@ protected:
   getCoreMidiClientSingleton(const std::string &clientName) throw();
   void initialize(const std::string &clientName);
 };
-
-#endif
 
 #if defined(__MACMIDI_DUMMY__)
 
@@ -632,8 +629,6 @@ MidiOutApi ::~MidiOutApi(void) {}
 //
 // *************************************************** //
 
-#if defined(__MACOSX_CORE__)
-
 // The CoreMIDI API is based on the use of a callback function for
 // MIDI input.  We convert the system specific time stamps to delta
 // time values.
@@ -656,6 +651,26 @@ struct CoreMidiData {
 };
 
 static MIDIClientRef CoreMidiClientSingleton = 0;
+
+void createCoreMidiClientSingleton(const std::string &clientName,
+                                   MIDINotifyProc callback) throw() {
+  if (CoreMidiClientSingleton == 0) {
+    // Set up our client.
+    MIDIClientRef client;
+
+    CFStringRef name = CFStringCreateWithCString(NULL, clientName.c_str(),
+                                                 kCFStringEncodingASCII);
+    OSStatus result = MIDIClientCreate(name, callback, NULL, &client);
+    if (result != noErr) {
+      std::cerr << "MacMidi: Error creating CoreMIDI client!" << std::endl;
+      exit(1);
+    }
+    CFRelease(name);
+
+    CoreMidiClientSingleton = client;
+  }
+  return;
+}
 
 void MacMidi_setCoreMidiClientSingleton(MIDIClientRef client) {
   CoreMidiClientSingleton = client;
@@ -1429,5 +1444,3 @@ void MidiOutCore ::sendMessage(const unsigned char *message, size_t size) {
     }
   }
 }
-
-#endif // __MACOSX_CORE__

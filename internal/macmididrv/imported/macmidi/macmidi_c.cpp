@@ -1,5 +1,5 @@
-#include "MacMidi.h"
 #include "macmidi_c.h"
+#include "MacMidi.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -247,6 +247,10 @@ void macmidi_in_set_callback(MacMidiInPtr device, MacMidiCCallback callback,
     delete (CallbackProxyUserData *)device->data;
     device->data = 0;
   }
+}
+
+void macmidi_set_notification_callback(MIDINotifyProc callback) {
+  createCoreMidiClientSingleton("MacMidiClient", callback);
 }
 
 void macmidi_in_cancel_callback(MacMidiInPtr device) {

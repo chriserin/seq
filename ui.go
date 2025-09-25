@@ -855,11 +855,7 @@ func RunProgram(filename string, options ProgramOptions) (*tea.Program, error) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	midiConnection, err := seqmidi.InitMidiConnection(options.outport, options.midiout, ctx)
-	if err != nil {
-		return nil, err
-	}
-
+	midiConnection := seqmidi.InitMidiConnection(options.outport, options.midiout, ctx)
 	config.Init()
 	themes.ChooseTheme(options.theme)
 	model := InitModel(filename, midiConnection, options, cancel)
@@ -867,10 +863,16 @@ func RunProgram(filename string, options ProgramOptions) (*tea.Program, error) {
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	beatsLooper = beats.InitBeatsLooper()
 	updateChannel = beatsLooper.UpdateChannel
+	midiConnection.DeviceLoop(ctx)
 	SetupTimingLoop(model, beatsLooper, program.Send, ctx)
 	beatsLooper.Loop(program.Send, midiConnection, ctx)
-	midiConnection.DeviceLoop(ctx)
 	midiConnection.LoopMidi(ctx)
+	if options.outport {
+		err := midiConnection.CreateOutport()
+		if err != nil {
+			return nil, err
+		}
+	}
 	return program, nil
 }
 
@@ -1819,13 +1821,14 @@ func (m *model) ResetIterations() {
 }
 
 func (m *model) Start(delay time.Duration) {
-	m.midiConnection.EnsureConnection()
-	// if err != nil {
-	// 	m.SetCurrentError(fault.Wrap(err, fmsg.With("cannot open midi connection")))
-	// 	m.playState.Playing = false
-	// 	m.playState.PlayMode = playstate.PlayStandard
-	// 	return
-	// }
+	if m.midiConnection.HasDevices() {
+		m.midiConnection.EnsureConnection()
+	} else {
+		m.SetCurrentError(fault.New("cannot open midi connection", fmsg.WithDesc("No MIDI devices found", "Please ensure a MIDI device is connected")))
+		m.playState.Playing = false
+		m.playState.PlayMode = playstate.PlayStandard
+		return
+	}
 
 	m.ResetIterations()
 

@@ -7,16 +7,15 @@ package macmidi
 #cgo CXXFLAGS: -g -std=c++11
 #cgo LDFLAGS: -g
 
-#cgo linux CXXFLAGS: -D__LINUX_ALSA__
-#cgo linux LDFLAGS: -lasound -pthread
-#cgo windows CXXFLAGS: -D__WINDOWS_MM__
-#cgo windows LDFLAGS: -luuid -lksuser -lwinmm -lole32
-#cgo darwin CXXFLAGS: -D__MACOSX_CORE__
+#cgo darwin CXXFLAGS: -D__MACOSX_CORE__ -I/System/Library/Frameworks/CoreMIDI.framework/Headers
 #cgo darwin LDFLAGS: -framework CoreServices -framework CoreAudio -framework CoreMIDI -framework CoreFoundation
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "macmidi_c.h"
+#include <CoreMIDI/CoreMIDI.h>
+#include <CoreFoundation/CoreFoundation.h>
 
 extern void goMIDIInCallback(double ts, unsigned char *msg, size_t msgsz, void *arg);
 
@@ -26,6 +25,44 @@ static inline void midiInCallback(double ts, const unsigned char *msg, size_t ms
 
 static inline void cgoSetCallback(MacMidiPtr in, int cb_id) {
 	macmidi_in_set_callback(in, midiInCallback, (void*)(uintptr_t) cb_id);
+}
+
+
+
+extern void goNotificationCallback(int messageID, char* objectName);
+
+static void notificationCallback(const MIDINotification *message, void *refCon) {
+    switch ((MIDINotificationMessageID)message->messageID) {
+        case kMIDIMsgObjectAdded:
+        case kMIDIMsgObjectRemoved:
+            if (message->messageSize >= sizeof(MIDIObjectAddRemoveNotification)) {
+                MIDIObjectAddRemoveNotification *addRemove = (MIDIObjectAddRemoveNotification*)message;
+
+                char nameBuf[256] = "";
+                CFStringRef nameRef;
+                OSStatus status = MIDIObjectGetStringProperty(addRemove->child, kMIDIPropertyName, &nameRef);
+                if (status == noErr && nameRef != NULL) {
+                    CFStringGetCString(nameRef, nameBuf, sizeof(nameBuf), kCFStringEncodingUTF8);
+                    CFRelease(nameRef);
+                }
+
+                // Call the Go callback
+								goNotificationCallback((int)message->messageID, nameBuf);
+            }
+            break;
+		}
+}
+
+static void cgoSetNotificationCallback() {
+	macmidi_set_notification_callback(notificationCallback);
+}
+
+static void something() {
+	printf("something\n");
+}
+
+static void pumpRunLoop() {
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true);
 }
 */
 import "C"
@@ -70,6 +107,30 @@ func (api API) String() string {
 		return "dummy"
 	}
 	return "?"
+}
+
+func SetNotificationCallback(callback NotificationCallback) {
+	goCallback = callback
+	C.cgoSetNotificationCallback()
+}
+
+type NotificationCallback func(messageID int, name string)
+
+var goCallback NotificationCallback
+
+//export goNotificationCallback
+func goNotificationCallback(messageID C.int, objectName *C.char) {
+	if goCallback != nil {
+		name := ""
+		if objectName != nil {
+			name = C.GoString(objectName)
+		}
+		goCallback(int(messageID), name)
+	}
+}
+
+func PumpRunLoop() {
+	C.pumpRunLoop()
 }
 
 // CompiledAPI determines the available compiled MIDI APIs.

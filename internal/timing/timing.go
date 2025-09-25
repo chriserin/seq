@@ -139,6 +139,9 @@ func (tmtr Transmitter) ActiveSense() error {
 func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 	var beatChannel = t.beatsLooper.BeatChannel
 	out, err := seqmidi.TransmitterOut()
+	if err != nil {
+		return fault.Wrap(err, fmsg.With("cannot open transmitter out"))
+	}
 	transmitter := Transmitter{out}
 	err = transmitter.ActiveSense()
 	if err != nil {

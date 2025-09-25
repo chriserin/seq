@@ -12,14 +12,6 @@ import (
 	"github.com/chriserin/seq/internal/macmididrv/imported/macmidi"
 )
 
-func init() {
-	drv, err := New()
-	if err != nil {
-		panic(fmt.Sprintf("could not register macmididrv: %s", err.Error()))
-	}
-	drivers.Register(drv)
-}
-
 type Driver struct {
 	opened []drivers.Port
 	//ignoreSysex       bool
@@ -75,10 +67,13 @@ func IgnoreActiveSense() Option {
 }
 */
 
-// New returns a driver based on the default macmidi in and out
 func New() (*Driver, error) {
 	d := &Driver{}
 	return d, nil
+}
+
+func SetNotificationCallback(deviceCallback macmidi.NotificationCallback) {
+	macmidi.SetNotificationCallback(deviceCallback)
 }
 
 // OpenVirtualIn opens and returns a virtual MIDI in. We can't get the port number, so set it to -1.

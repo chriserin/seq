@@ -45,6 +45,8 @@ func (mc *MidiConnection) UpdateDeviceList(driver drivers.Driver) error {
 		for _, currentDevice := range mc.devices {
 			if currentDevice.Name == out.String() {
 				foundDevice = currentDevice
+				foundDevice.Out = out
+				foundDevice.IsOpen = false
 				break
 			}
 		}
@@ -60,10 +62,12 @@ func (mc *MidiConnection) UpdateDeviceList(driver drivers.Driver) error {
 				newDevice.Selected = true
 			}
 			newDevices = append(newDevices, newDevice)
+		} else {
+			newDevices = append(newDevices, foundDevice)
 		}
 	}
 
-	mc.devices = append(mc.devices, newDevices...)
+	mc.devices = newDevices
 
 	return nil
 }

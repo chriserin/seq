@@ -20,10 +20,15 @@ const TransmitterName string = "seq-transmitter"
 
 type MidiConnection struct {
 	outportName string
+	seqOutport  drivers.Out
 	midiChannel chan Message
 	devices     []*DeviceInfo
 	TestQueue   *[]Message
 	Test        bool
+}
+
+func (mc *MidiConnection) HasDevices() bool {
+	return len(mc.devices) > 0
 }
 
 func (mc *MidiConnection) EnsureConnection() {
@@ -49,21 +54,15 @@ type Message struct {
 	Msg   midi.Message
 }
 
-var OutputName string = "seq-cli-out"
-
-func InitMidiConnection(createOut bool, outportName string, ctx context.Context) (*MidiConnection, error) {
+func InitMidiConnection(createOut bool, outportName string, ctx context.Context) *MidiConnection {
 	var midiConn MidiConnection
 	if createOut {
-		out, err := SeqOut()
-		if err != nil {
-			return nil, fault.Wrap(err, fmsg.With("cannot create seq midi out"))
-		}
-		midiConn = MidiConnection{devices: []*DeviceInfo{{Out: out, Selected: true, IsOpen: true}}, midiChannel: make(chan Message)}
+		midiConn = MidiConnection{midiChannel: make(chan Message)}
 	} else {
 		midiConn = MidiConnection{outportName: outportName, midiChannel: make(chan Message)}
 	}
 
-	return &midiConn, nil
+	return &midiConn
 }
 
 var playMutex = sync.Mutex{}
@@ -106,13 +105,22 @@ func (mc *MidiConnection) Send(msg Message) {
 }
 
 func (mc MidiConnection) SendMidi(msg midi.Message) error {
-	// Send to all selected devices
-	for _, device := range mc.devices {
-		if device.Selected {
-			if device.Out.IsOpen() {
-				err := device.Out.Send(msg)
-				if err != nil {
-					return err
+	if mc.seqOutport != nil {
+		if mc.seqOutport.IsOpen() {
+			err := mc.seqOutport.Send(msg)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		// Send to all selected devices
+		for _, device := range mc.devices {
+			if device.Selected {
+				if device.Out.IsOpen() {
+					err := device.Out.Send(msg)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -175,4 +183,15 @@ foundtheport:
 
 func FindTransmitterPort() (drivers.In, error) {
 	return midi.FindInPort(TransmitterName)
+}
+
+var OutputName string = "seq-cli-out"
+
+func (mc *MidiConnection) CreateOutport() error {
+	outport, err := OpenVirtualOut(OutputName)
+	if err != nil {
+		return fault.Wrap(err, fmsg.With("cannot create virtual outport"))
+	}
+	mc.seqOutport = outport
+	return nil
 }
