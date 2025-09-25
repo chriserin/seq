@@ -9,11 +9,12 @@ import (
 )
 
 type DeviceInfo struct {
+	IsOpen   bool
+	Selected bool
+	IsDaw    bool
 	Out      drivers.Out
 	Name     string
 	Type     string
-	IsOpen   bool
-	Selected bool
 }
 
 func (di DeviceInfo) Matches(name string) bool {
@@ -60,6 +61,12 @@ func (mc *MidiConnection) UpdateDeviceList(driver drivers.Driver) error {
 			if mc.outportName != "" && newDevice.Matches(mc.outportName) {
 				newDevice.Open()
 				newDevice.Selected = true
+			}
+			for _, dawName := range dawOutports {
+				if strings.Contains(newDevice.Name, dawName) {
+					newDevice.Open()
+					newDevice.IsDaw = true
+				}
 			}
 			newDevices = append(newDevices, newDevice)
 		} else {

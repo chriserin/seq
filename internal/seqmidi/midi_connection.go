@@ -6,7 +6,6 @@ package seqmidi
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"time"
 
@@ -41,7 +40,7 @@ func (mc *MidiConnection) EnsureConnection() {
 func (mc *MidiConnection) HasConnection() bool {
 	hasConnection := false
 	for _, device := range mc.devices {
-		if device.IsOpen {
+		if device.IsOpen && device.Selected {
 			hasConnection = true
 			break
 		}
@@ -154,14 +153,10 @@ var dawOutports = []string{"Logic Pro Virtual In", "TESTDAW"}
 func (mc MidiConnection) SendRecordMessage() error {
 
 	var selectedOutport drivers.Out
-foundtheport:
 	for _, device := range mc.devices {
-		for _, dawName := range dawOutports {
-			if strings.Contains(device.Name, dawName) {
-				device.Open()
-				selectedOutport = device.Out
-				break foundtheport
-			}
+		if device.IsDaw && device.IsOpen {
+			selectedOutport = device.Out
+			break
 		}
 	}
 
