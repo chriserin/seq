@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## [v0.1.0-alpha.9](https://github.com/chriserin/seq/compare/v0.1.0-alpha.8...v0.1.0-alpha.9) (2025-09-25)
+
+### Features
+
+* update midi devices as added/removed [7645eb1](https://github.com/chriserin/seq/commit/7645eb1) 
+* expose chord/mono mode in same place [e91e5a5](https://github.com/chriserin/seq/commit/e91e5a5) 
+* Fill open spaces with numpattern [499162b](https://github.com/chriserin/seq/commit/499162b) 
+* Visual mode line wise [9f2eeb6](https://github.com/chriserin/seq/commit/9f2eeb6) 
+* Mono Note pattern behaviour [ef9aba0](https://github.com/chriserin/seq/commit/ef9aba0) 
+* Mono Mode change pattern behaviour [2ef267c](https://github.com/chriserin/seq/commit/2ef267c) 
+* Toggle whether to transmit or not [5958e25](https://github.com/chriserin/seq/commit/5958e25) 
+* mute/unmute all [31f9f66](https://github.com/chriserin/seq/commit/31f9f66) 
+
+### Fixes
+
+* On linux get devices before loop start [9b277ef](https://github.com/chriserin/seq/commit/9b277ef) 
+* Get midi device for daw [98aea23](https://github.com/chriserin/seq/commit/98aea23) 
+* receiver uses tick interval [5459f49](https://github.com/chriserin/seq/commit/5459f49) 
+* s/off/on for midi mistake [7965c98](https://github.com/chriserin/seq/commit/7965c98) 
+* Visual rotate up/down [7ab2598](https://github.com/chriserin/seq/commit/7ab2598) 
+* long gate notes have correct bg [df81881](https://github.com/chriserin/seq/commit/df81881) 
+* Find better spot for mono indication [53801b3](https://github.com/chriserin/seq/commit/53801b3) 
+* fix ratchets with by fixing notereg [efd6e57](https://github.com/chriserin/seq/commit/efd6e57) 
+* preroll applies to receivers as well [571ee6e](https://github.com/chriserin/seq/commit/571ee6e) 
+* transmitter pulse adjustment [4ea3a54](https://github.com/chriserin/seq/commit/4ea3a54) 
+
+
 ## [v0.1.0-alpha.8](https://github.com/chriserin/seq/compare/v0.1.0-alpha.7...v0.1.0-alpha.8) (2025-09-08)
 
 ### Features
