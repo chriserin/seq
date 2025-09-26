@@ -286,6 +286,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 			tickChannel := make(chan Timing)
 			activeSenseChannel := make(chan bool)
 			var loopMode playstate.LoopMode
+			var timingClockTime time.Time
 			var ReceiverFunc ListenFn = func(msg []byte, milliseconds int32) {
 				midiMessage := midi.Message(msg)
 				switch midiMessage.Type() {
@@ -298,7 +299,15 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 				case midi.StopMsg:
 					receiverChannel <- StopMsg{}
 				case midi.TimingClockMsg:
-					tickChannel <- Timing{subdivisions: 24}
+					if timingClockTime.IsZero() {
+						timingClockTime = time.Now()
+						//NOTE: We don't have enough information to determine the tempo at this point, send a reasonable guess tempo
+						//TODO: Figure out how to communicate tempo between sender and receiver or how to play ratchets based on another heuristic
+						tickChannel <- Timing{subdivisions: 24, tempo: 120}
+					} else {
+						tickChannel <- Timing{subdivisions: 24, tempo: int((1 * time.Minute) / time.Since(timingClockTime) * 24)}
+						timingClockTime = time.Now()
+					}
 				case midi.ActiveSenseMsg:
 					activeSenseChannel <- true
 				default:
@@ -310,7 +319,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 			if err != nil {
 				sendFn(ErrorMsg{errors.New("error in setting up midi listener for transmitter")})
 			}
-			timer := time.AfterFunc(330*time.Millisecond, func() {
+			activeSenseTimer := time.AfterFunc(330*time.Millisecond, func() {
 				sendFn(TransmitterNotConnectedMsg{})
 				activeSenseChannel <- false
 			})
@@ -327,7 +336,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 						wrappedErr := fault.Wrap(err, fmsg.With("transmit port not closed"))
 						sendFn(ErrorMsg{wrappedErr})
 					}
-					timer.Stop()
+					activeSenseTimer.Stop()
 					<-unlockReceiverChannel
 					break inner
 				case command = <-receiverChannel:
@@ -349,19 +358,19 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 						t.tempo = command.Tempo
 						t.subdivisions = command.Subdivisions
 					case QuitMsg:
-						timer.Stop()
+						activeSenseTimer.Stop()
 						stopFn()
 					}
 				case pulseTiming := <-tickChannel:
-					timer.Reset(330 * time.Millisecond)
+					activeSenseTimer.Reset(330 * time.Millisecond)
 					if t.started {
 						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
-							beatChannel <- beats.BeatMsg{Interval: t.TickInterval()}
+							beatChannel <- beats.BeatMsg{Interval: pulseTiming.TickInterval()}
 						}
 						t.pulseCount++
 					}
 				case isGood := <-activeSenseChannel:
-					timer.Reset(330 * time.Millisecond)
+					activeSenseTimer.Reset(330 * time.Millisecond)
 					if isGood {
 						sendFn(TransmitterConnectedMsg{})
 					} else {
