@@ -577,12 +577,9 @@ func (m model) RatchetEditView() string {
 				ratchetsBuf.WriteString(themes.MutedStyle.Background(backgroundColor).Render("\u25C9"))
 			}
 			ratchetsBuf.WriteString(" ")
-		} else {
-
-			ratchetsBuf.WriteString("  ")
 		}
 	}
-	buf.WriteString(fmt.Sprintf("%*s", 32, ratchetsBuf.String()))
+	buf.WriteString(ensureStringLengthWc(ratchetsBuf.String(), 16, lipgloss.Left))
 	if m.selectionIndicator == operation.SelectRatchetSpan {
 		buf.WriteString(fmt.Sprintf(" Span %s ", themes.SelectedStyle.Render(strconv.Itoa(int(currentNote.Ratchets.GetSpan())))))
 	} else {
@@ -642,10 +639,15 @@ func KeyLineIndicator(k uint8, l uint8) string {
 
 var blackNotes = []uint8{1, 3, 6, 8, 10}
 
-func ensureStringLengthWc(s string, length int) string {
+func ensureStringLengthWc(s string, length int, pos lipgloss.Position) string {
 	if ansi.StringWidthWc(s) <= length {
 		padding := length - ansi.StringWidthWc(s)
-		return strings.Repeat(" ", padding) + s
+		switch pos {
+		case lipgloss.Left:
+			return s + strings.Repeat(" ", padding)
+		case lipgloss.Right:
+			return strings.Repeat(" ", padding) + s
+		}
 	}
 
 	return ansi.CutWc(s, 0, length)
@@ -681,7 +683,7 @@ func (m model) LineIndicator(lineNumber uint8) string {
 		lineName = themes.LineNumberStyle.Render(fmt.Sprintf("%2d", lineNumber))
 	}
 
-	return fmt.Sprintf("%3s%s%s", ensureStringLengthWc(lineName, 3), KeyLineIndicator(m.definition.Keyline, lineNumber), indicator)
+	return fmt.Sprintf("%3s%s%s", ensureStringLengthWc(lineName, 3, lipgloss.Right), KeyLineIndicator(m.definition.Keyline, lineNumber), indicator)
 
 }
 
