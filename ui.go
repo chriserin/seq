@@ -1119,11 +1119,13 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				Line: m.gridCursor.Line,
 				Beat: 0,
 			})
+			m.SetVisualArea()
 		case mappings.CursorLineEnd:
 			m.SetGridCursor(gridKey{
 				Line: m.gridCursor.Line,
 				Beat: m.CurrentPart().Beats - 1,
 			})
+			m.SetVisualArea()
 		case mappings.CursorLastLine:
 			var newLine uint8
 			if m.hideEmptyLines {
@@ -1137,6 +1139,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				Line: newLine,
 				Beat: m.gridCursor.Beat,
 			})
+			m.SetVisualArea()
 		case mappings.CursorFirstLine:
 			var newLine uint8
 			if m.hideEmptyLines {
@@ -1150,6 +1153,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				Line: newLine,
 				Beat: m.gridCursor.Beat,
 			})
+			m.SetVisualArea()
 		case mappings.Escape:
 			m.PushUndoableDefinitionState()
 			m.Escape()
