@@ -21,20 +21,20 @@ const (
 	DeviceRemoved = 3
 )
 
-func deviceCallback(messageID int, name string) {
-	fmt.Printf("Message %d %s\n", messageID, name)
-	switch messageID {
-	case DeviceAdded:
-		fmt.Printf("Device added\n")
-	case DeviceRemoved:
-		fmt.Printf("Device removed\n")
-	default:
-		fmt.Printf("Unknown message %d", messageID)
-	}
+var deviceChannel chan struct{}
+
+func init() {
+	deviceChannel = make(chan struct{})
+}
+
+func driver() (*macmididrv.Driver, error) {
+	deviceChannel <- struct{}{}
+	driver, err := macmididrv.New()
+	return driver, err
 }
 
 func OpenVirtualOut(name string) (drivers.Out, error) {
-	driver, err := macmididrv.New()
+	driver, err := driver()
 	if err != nil {
 		return nil, fault.Wrap(err, fmsg.With("midi driver error"))
 	}
@@ -68,6 +68,8 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 
 		for {
 			select {
+			case <-deviceChannel:
+			// NOTE: block on this channel until loop is started
 			case <-ctx.Done():
 				return
 			case <-time.After(1 * time.Second):
@@ -75,4 +77,16 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+func GetIns() ([]drivers.In, error) {
+	driver, err := driver()
+	if err != nil {
+		return nil, fmt.Errorf("can't open MIDI driver: %v", err)
+	}
+	ins, err := driver.Ins()
+	if err != nil {
+		return nil, fmt.Errorf("can't get MIDI ins: %v", err)
+	}
+	return ins, nil
 }

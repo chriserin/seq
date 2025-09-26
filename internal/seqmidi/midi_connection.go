@@ -6,6 +6,7 @@ package seqmidi
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -177,7 +178,20 @@ func (mc MidiConnection) SendRecordMessage() error {
 }
 
 func FindTransmitterPort() (drivers.In, error) {
-	return midi.FindInPort(TransmitterName)
+	return FindInPort(TransmitterName)
+}
+
+func FindInPort(inPortName string) (drivers.In, error) {
+	ins, err := GetIns()
+	if err != nil {
+		return nil, fault.Wrap(err, fmsg.With("cannot get midi ins"))
+	}
+	for _, in := range ins {
+		if strings.Contains(in.String(), inPortName) {
+			return in, nil
+		}
+	}
+	return nil, fault.New("cannot find transmitter port", fmsg.With("cannot find transmitter port"))
 }
 
 var OutputName string = "seq-cli-out"

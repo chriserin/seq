@@ -46,7 +46,6 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-time.After(3 * time.Second):
-				// go func() {
 				go func() {
 
 					driver, err := rtmididrv.New()
@@ -68,4 +67,16 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+func GetIns() ([]drivers.In, error) {
+	driver, err := rtmididrv.New()
+	if err != nil {
+		return nil, fmt.Errorf("can't open MIDI driver: %v", err)
+	}
+	ins, err := driver.Ins()
+	if err != nil {
+		return nil, fmt.Errorf("can't get MIDI ins: %v", err)
+	}
+	return ins, nil
 }

@@ -84,5 +84,5 @@ func SeqOut() (drivers.Out, error) {
 }
 
 func TransmitterOut() (drivers.Out, error) {
-	return OpenVirtualOut(OutputName)
+	return OpenVirtualOut(TransmitterName)
 }
