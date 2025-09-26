@@ -1023,20 +1023,23 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.selectionIndicator = operation.SelectGrid
 			return m, nil
 		case mappings.ConfirmOverlayKey:
+			currentKey := m.currentOverlay.Key
 			m.focus = operation.FocusGrid
 			m.overlayKeyEdit.Focus(false)
 			m.EnsureOverlay()
-			undoable := UndoNewOverlay{
-				overlayKey:     m.overlayKeyEdit.GetKey(),
-				cursorPosition: m.gridCursor,
-				ArrCursor:      m.arrangement.Cursor,
+			if currentKey != m.currentOverlay.Key {
+				undoable := UndoNewOverlay{
+					overlayKey:     m.overlayKeyEdit.GetKey(),
+					cursorPosition: m.gridCursor,
+					ArrCursor:      m.arrangement.Cursor,
+				}
+				redoable := UndoRemoveOverlay{
+					overlayKey:     m.overlayKeyEdit.GetKey(),
+					cursorPosition: m.gridCursor,
+					ArrCursor:      m.arrangement.Cursor,
+				}
+				m.PushUndoables(undoable, redoable)
 			}
-			redoable := UndoRemoveOverlay{
-				overlayKey:     m.overlayKeyEdit.GetKey(),
-				cursorPosition: m.gridCursor,
-				ArrCursor:      m.arrangement.Cursor,
-			}
-			m.PushUndoables(undoable, redoable)
 		case mappings.RemoveOverlay:
 			undoable := UndoRemoveOverlay{
 				overlay:        m.currentOverlay,
