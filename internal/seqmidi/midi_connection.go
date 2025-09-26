@@ -33,8 +33,10 @@ func (mc *MidiConnection) HasDevices() bool {
 
 func (mc *MidiConnection) EnsureConnection() {
 	if !mc.HasConnection() {
-		mc.devices[0].Open()
-		mc.devices[0].Selected = true
+		if len(mc.devices) > 0 {
+			mc.devices[0].Open()
+			mc.devices[0].Selected = true
+		}
 	}
 }
 

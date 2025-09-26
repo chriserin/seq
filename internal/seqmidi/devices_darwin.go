@@ -47,7 +47,7 @@ func OpenVirtualOut(name string) (drivers.Out, error) {
 
 func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 	go func() {
-		//NOTE: The client notification will only be called on the same thread as the client inittialization, we have to "pump the run loop" on that thread.
+		//NOTE: The client notification will only be called on the same thread as the client initialization, we have to "pump the run loop" on that thread.
 		runtime.LockOSThread()
 
 		// NOTE: Currently this New call does some C singleton initialization and is called here explicitly for that.

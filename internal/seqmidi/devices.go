@@ -73,6 +73,7 @@ func (mc *MidiConnection) UpdateDeviceList(driver drivers.Driver) error {
 	}
 
 	mc.devices = newDevices
+	mc.EnsureConnection()
 
 	return nil
 }
