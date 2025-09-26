@@ -311,7 +311,7 @@ func DeepCopy(ol *Overlay) *Overlay {
 		Key:       ol.Key,
 		Notes:     make(grid.Pattern),
 		Chords:    make([]*GridChord, 0, len(ol.Chords)),
-		blockers:  make([]grid.GridKey, len(ol.blockers)),
+		blockers:  make([]*GridChord, len(ol.blockers)),
 		PressUp:   ol.PressUp,
 		PressDown: ol.PressDown,
 	}
@@ -336,7 +336,22 @@ func DeepCopy(ol *Overlay) *Overlay {
 	}
 
 	// Deep copy the blockers slice
-	copy(clone.blockers, ol.blockers)
+	for i, blocker := range ol.blockers {
+		if blocker != nil {
+			blockerCopy := &GridChord{
+				Chord:    blocker.Chord,
+				Root:     blocker.Root,
+				Arpeggio: blocker.Arpeggio,
+				Double:   blocker.Double,
+			}
+
+			// Deep copy the Notes slice in GridChord
+			blockerCopy.Notes = make([]BeatNote, len(blocker.Notes))
+			copy(blockerCopy.Notes, blocker.Notes)
+
+			clone.blockers[i] = blockerCopy
+		}
+	}
 
 	return clone
 }

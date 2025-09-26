@@ -336,7 +336,10 @@ func TestDeepCopy(t *testing.T) {
 
 		// Add a blocker
 		blocker := grid.GridKey{Beat: 3, Line: 3}
-		original.blockers = append(original.blockers, blocker)
+		original.blockers = append(original.blockers, &GridChord{Root: blocker, Notes: []BeatNote{}})
+
+		// Verify the blocker was added
+		assert.Greater(t, len(original.blockers), 0, "Blocker should have been added")
 
 		clone := DeepCopy(original)
 
@@ -345,7 +348,7 @@ func TestDeepCopy(t *testing.T) {
 		assert.Equal(t, original.blockers[0], clone.blockers[0])
 
 		// Modify original and check that clone is unchanged
-		original.blockers[0] = grid.GridKey{Beat: 5, Line: 5}
+		(*original.blockers[0]).Root = grid.GridKey{Beat: 5, Line: 5}
 		assert.NotEqual(t, original.blockers[0], clone.blockers[0])
 	})
 }
