@@ -3147,7 +3147,7 @@ func (m *model) Modify(modifyFunc func(gridKey, note)) {
 
 	var bounds Boundable
 	currentChord := m.CurrentChord()
-	if (m.visualSelection.visualMode == operation.VisualBlock || m.visualSelection.visualMode == operation.VisualLine) && currentChord.HasValue() {
+	if m.visualSelection.visualMode == operation.VisualNone && currentChord.HasValue() {
 		bounds = currentChord.GridChord
 	} else {
 		bounds = m.YankBounds()

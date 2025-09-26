@@ -412,3 +412,49 @@ func TestArpeggioMappings(t *testing.T) {
 		})
 	}
 }
+
+func TestGateBigIncreaseInChordMode(t *testing.T) {
+	tests := []struct {
+		name         string
+		commands     []any
+		expectedGate int16
+		description  string
+	}{
+		{
+			name:         "GateBigIncrease increases gate for all notes in chord",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.GateBigIncrease},
+			expectedGate: 8,
+			description:  "Should increase gate by 8 for all notes in major triad chord",
+		},
+		{
+			name:         "GateBigIncrease from non-zero gate in chord",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.GateIncrease, mappings.GateBigIncrease},
+			expectedGate: 9,
+			description:  "Should increase gate by 8 from existing gate value of 1",
+		},
+		{
+			name:         "Multiple GateBigIncrease in chord",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.GateBigIncrease, mappings.GateBigIncrease},
+			expectedGate: 16,
+			description:  "Should increase gate by 16 for all notes in chord",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(WithPolyphony())
+
+			m, _ = processCommands(tt.commands, m)
+
+			chord := m.CurrentChord()
+			assert.True(t, chord.HasValue(), tt.description+" - chord should exist")
+
+			gridPattern := make(grid.Pattern)
+			m.currentOverlay.CombinePattern(&gridPattern, 1)
+
+			for key, note := range gridPattern {
+				assert.Equal(t, tt.expectedGate, note.GateIndex, tt.description+" - gate should be "+strconv.Itoa(int(tt.expectedGate))+" for note at "+key.String())
+			}
+		})
+	}
+}
