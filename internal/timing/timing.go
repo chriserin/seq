@@ -293,7 +293,6 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 					println(midiMessage.Type().String())
 				}
 			}
-			midiConnection.WaitUntilDevicesQueried()
 			err := midiConnection.ListenToTransmitter(ReceiverFunc)
 			if err != nil {
 				sendFn(ErrorMsg{errors.New("error in setting up midi listener for transmitter")})

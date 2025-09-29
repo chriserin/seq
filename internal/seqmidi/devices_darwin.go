@@ -96,6 +96,8 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 			}
 		}
 	}()
+
+	mc.WaitUntilDevicesQueried()
 }
 
 func GetIns() ([]drivers.In, error) {
