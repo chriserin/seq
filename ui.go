@@ -857,7 +857,7 @@ func RunProgram(filename string, options ProgramOptions) (*tea.Program, error) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	midiConnection := seqmidi.InitMidiConnection(options.outport, options.midiout, ctx)
+	midiConnection := seqmidi.InitMidiConnection(options.outport, options.midiout, options.transmitter, ctx)
 	config.Init()
 	themes.ChooseTheme(options.theme)
 	model := InitModel(filename, midiConnection, options, cancel)
@@ -879,7 +879,7 @@ func RunProgram(filename string, options ProgramOptions) (*tea.Program, error) {
 }
 
 func SetupTimingLoop(model model, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg), ctx context.Context) {
-	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, ctx, beatsLooper, sendFn)
+	err := timing.Loop(model.midiLoopMode, model.lockReceiverChannel, model.unlockReceiverChannel, ctx, beatsLooper, sendFn, model.midiConnection)
 	if err != nil {
 		go func() {
 			sendFn(errorMsg{fault.Wrap(err, fmsg.With("could not setup midi event loop"))})

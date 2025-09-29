@@ -19,30 +19,38 @@ import (
 const TransmitterName string = "seq-transmitter"
 
 type MidiConnection struct {
-	outportName string
-	seqOutport  drivers.Out
-	midiChannel chan Message
-	devices     []*DeviceInfo
-	TestQueue   *[]Message
-	Test        bool
+	IsTransmitter bool
+	outportName   string
+	seqOutport    drivers.Out
+	midiChannel   chan Message
+	outDevices    []*OutDeviceInfo
+	inDevices     []*InDeviceInfo
+	TestQueue     *[]Message
+	Test          bool
+	StopFn        func()
+	ReceiverFunc  ReceiverFunc
+}
+
+func (mc MidiConnection) StopReceivingFromTransmitter() {
+	mc.StopFn()
 }
 
 func (mc *MidiConnection) HasDevices() bool {
-	return len(mc.devices) > 0
+	return len(mc.outDevices) > 0
 }
 
 func (mc *MidiConnection) EnsureConnection() {
 	if !mc.HasConnection() {
-		if len(mc.devices) > 0 {
-			mc.devices[0].Open()
-			mc.devices[0].Selected = true
+		if len(mc.outDevices) > 0 {
+			mc.outDevices[0].Open()
+			mc.outDevices[0].Selected = true
 		}
 	}
 }
 
 func (mc *MidiConnection) HasConnection() bool {
 	hasConnection := false
-	for _, device := range mc.devices {
+	for _, device := range mc.outDevices {
 		if device.IsOpen && device.Selected {
 			hasConnection = true
 			break
@@ -56,12 +64,12 @@ type Message struct {
 	Msg   midi.Message
 }
 
-func InitMidiConnection(createOut bool, outportName string, ctx context.Context) *MidiConnection {
+func InitMidiConnection(createOut bool, outportName string, isTransmitter bool, ctx context.Context) *MidiConnection {
 	var midiConn MidiConnection
 	if createOut {
-		midiConn = MidiConnection{midiChannel: make(chan Message)}
+		midiConn = MidiConnection{midiChannel: make(chan Message), IsTransmitter: isTransmitter}
 	} else {
-		midiConn = MidiConnection{outportName: outportName, midiChannel: make(chan Message)}
+		midiConn = MidiConnection{outportName: outportName, midiChannel: make(chan Message), IsTransmitter: isTransmitter}
 	}
 
 	return &midiConn
@@ -116,7 +124,7 @@ func (mc MidiConnection) SendMidi(msg midi.Message) error {
 		}
 	} else {
 		// Send to all selected devices
-		for _, device := range mc.devices {
+		for _, device := range mc.outDevices {
 			if device.Selected {
 				if device.Out.IsOpen() {
 					err := device.Out.Send(msg)
@@ -143,7 +151,7 @@ func (mc *MidiConnection) Panic() error {
 }
 
 func (mc *MidiConnection) Close() {
-	for _, device := range mc.devices {
+	for _, device := range mc.outDevices {
 		if device.IsOpen {
 			_ = device.Out.Close()
 			device.IsOpen = false
@@ -156,7 +164,7 @@ var dawOutports = []string{"Logic Pro Virtual In", "TESTDAW"}
 func (mc MidiConnection) SendRecordMessage() error {
 
 	var selectedOutport drivers.Out
-	for _, device := range mc.devices {
+	for _, device := range mc.outDevices {
 		if device.IsDaw && device.IsOpen {
 			selectedOutport = device.Out
 			break

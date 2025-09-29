@@ -14,6 +14,9 @@ import (
 	"gitlab.com/gomidi/midi/v2/drivers/rtmididrv"
 )
 
+func (mc MidiConnection) WaitUntilDevicesQueried() {
+}
+
 func OpenVirtualOut(name string) (drivers.Out, error) {
 	driver, err := rtmididrv.New()
 	if err != nil {
@@ -33,7 +36,7 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 		fmt.Printf("Can't open MIDI driver: %v\n", err)
 		return
 	}
-	err = mc.UpdateDeviceList(driver)
+	err = mc.UpdateOutDeviceList(driver)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting device list: %v\n", err)
 		return
@@ -53,7 +56,7 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 						fmt.Printf("Can't open MIDI driver: %v\n", err)
 						return
 					}
-					err = mc.UpdateDeviceList(driver)
+					err = mc.UpdateOutDeviceList(driver)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error getting device list: %v\n", err)
 						return

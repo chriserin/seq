@@ -3,6 +3,7 @@ package timing
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Southclaws/fault"
@@ -63,7 +64,7 @@ func GetTimingChannel() chan TimingMsg {
 	return timingChannel
 }
 
-func Loop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan bool, ctx context.Context, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg)) error {
+func Loop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan bool, ctx context.Context, beatsLooper beats.BeatsLooper, sendFn func(tea.Msg), midiConnection *seqmidi.MidiConnection) error {
 	timing := Timing{beatsLooper: beatsLooper, ctx: ctx}
 	switch mode {
 	case MlmStandAlone:
@@ -74,7 +75,7 @@ func Loop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan boo
 			return fault.Wrap(err, fmsg.With("cannot start transmitter loop"))
 		}
 	case MlmReceiver:
-		err := timing.ReceiverLoop(lockReceiverChannel, unlockReceiverChannel, sendFn)
+		err := timing.ReceiverLoop(lockReceiverChannel, unlockReceiverChannel, sendFn, midiConnection)
 		timing.StandAloneLoop(sendFn)
 		if err != nil {
 			// NOTE: In case the receiver loop was not setup correctly, swallow the lock/unlock messages
@@ -113,6 +114,7 @@ func (tmtr Transmitter) Start(loopMode playstate.LoopMode) error {
 }
 
 func (tmtr Transmitter) Stop() error {
+	fmt.Println("Stopping transmitter")
 	err := tmtr.out.Send(midi.Stop())
 	if err != nil {
 		return fault.Wrap(err, fmsg.With("cannot send midi stop"))
@@ -254,40 +256,16 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
 	return nil
 }
 
-type ListenFn func(msg []byte, milliseconds int32)
-
-func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, sendFn func(tea.Msg)) (receiverError error) {
-
-	var beatChannel = t.beatsLooper.BeatChannel
-	transmitPort, err := seqmidi.FindTransmitterPort()
-	if err != nil {
-		receiverError = fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
-		return
-	}
-	err = transmitPort.Open()
-	if err != nil {
-		receiverError = fault.Wrap(err, fmsg.WithDesc("cannot open transmitport", "Could not open a transmitter.  Start a seq program with the --transmit flag before starting a receiver"))
-		return
-	}
+func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, sendFn func(tea.Msg), midiConnection *seqmidi.MidiConnection) (receiverError error) {
 	go func() {
 		for {
-			// NOTE: transmitPort must be redeclared within to loop to avoid memory error
-			transmitPort, err := seqmidi.FindTransmitterPort()
-			if err != nil {
-				receiverError = fault.Wrap(err, fmsg.WithDesc("cannot find transmitport", "Could not find a transmitter. Start a seq program with the --transmit flag before starting a receiver"))
-				return
-			}
-			err = transmitPort.Open()
-			if err != nil {
-				receiverError = fault.Wrap(err, fmsg.WithDesc("cannot open transmitport", "Could not open a transmitter.  Start a seq program with the --transmit flag before starting a receiver"))
-				return
-			}
+			var beatChannel = t.beatsLooper.BeatChannel
 			receiverChannel := make(chan TimingMsg)
 			tickChannel := make(chan Timing)
 			activeSenseChannel := make(chan bool)
 			var loopMode playstate.LoopMode
 			var timingClockTime time.Time
-			var ReceiverFunc ListenFn = func(msg []byte, milliseconds int32) {
+			var ReceiverFunc seqmidi.ReceiverFunc = func(msg []byte, milliseconds int32) {
 				midiMessage := midi.Message(msg)
 				switch midiMessage.Type() {
 				case midi.SPPMsg:
@@ -315,7 +293,8 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 					println(midiMessage.Type().String())
 				}
 			}
-			stopFn, err := transmitPort.Listen(ReceiverFunc, drivers.ListenConfig{TimeCode: true, ActiveSense: true})
+			midiConnection.WaitUntilDevicesQueried()
+			err := midiConnection.ListenToTransmitter(ReceiverFunc)
 			if err != nil {
 				sendFn(ErrorMsg{errors.New("error in setting up midi listener for transmitter")})
 			}
@@ -330,14 +309,10 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 				case <-t.ctx.Done():
 					return
 				case <-lockReceiverChannel:
-					stopFn()
-					err := transmitPort.Close()
-					if err != nil {
-						wrappedErr := fault.Wrap(err, fmsg.With("transmit port not closed"))
-						sendFn(ErrorMsg{wrappedErr})
-					}
+					midiConnection.StopFn()
 					activeSenseTimer.Stop()
 					<-unlockReceiverChannel
+					midiConnection.ListenToTransmitter(ReceiverFunc)
 					break inner
 				case command = <-receiverChannel:
 					switch command := command.(type) {
@@ -359,7 +334,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 						t.subdivisions = command.Subdivisions
 					case QuitMsg:
 						activeSenseTimer.Stop()
-						stopFn()
+						midiConnection.StopFn()
 					}
 				case pulseTiming := <-tickChannel:
 					activeSenseTimer.Reset(330 * time.Millisecond)

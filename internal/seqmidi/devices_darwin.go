@@ -6,6 +6,7 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime"
 	"time"
 
@@ -25,6 +26,10 @@ var deviceChannel chan struct{}
 
 func init() {
 	deviceChannel = make(chan struct{})
+}
+
+func (mc MidiConnection) WaitUntilDevicesQueried() {
+	deviceChannel <- struct{}{}
 }
 
 func driver() (*macmididrv.Driver, error) {
@@ -53,16 +58,30 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 		// NOTE: Currently this New call does some C singleton initialization and is called here explicitly for that.
 		driver, err := macmididrv.New()
 		deviceCallback := func(messageID int, name string) {
-			mc.UpdateDeviceList(driver)
+			err := mc.UpdateOutDeviceList(driver)
+			if err != nil {
+				fmt.Printf("Can't update MIDI out device list: %v\n", err)
+				return
+			}
+			err = mc.UpdateInDeviceList(driver)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Can't update MIDI in device list: %v\n", err)
+				return
+			}
 		}
 		macmididrv.SetNotificationCallback(deviceCallback)
 		if err != nil {
 			fmt.Printf("Can't open MIDI driver: %v\n", err)
 			return
 		}
-		err = mc.UpdateDeviceList(driver)
+		err = mc.UpdateOutDeviceList(driver)
 		if err != nil {
-			fmt.Printf("Can't update MIDI device list: %v\n", err)
+			fmt.Printf("Can't update MIDI out device list: %v\n", err)
+			return
+		}
+		err = mc.UpdateInDeviceList(driver)
+		if err != nil {
+			fmt.Printf("Can't update MIDI in device list: %v\n", err)
 			return
 		}
 
