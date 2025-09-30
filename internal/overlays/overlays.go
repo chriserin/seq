@@ -121,6 +121,10 @@ func (oc OverlayChord) BelongsTo(anotherOverlay *Overlay) bool {
 func (ol *Overlay) FindChord(position grid.GridKey) (OverlayChord, bool) {
 	var currentOverlay *Overlay
 	for currentOverlay = ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
+		_, isBlocked := currentOverlay.Blockers.FindChord(position)
+		if isBlocked {
+			return OverlayChord{}, false
+		}
 		gridChord, exists := currentOverlay.Chords.FindChord(position)
 		if exists {
 			return OverlayChord{currentOverlay, gridChord}, true

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"maps"
 	"slices"
 	"strconv"
 	"testing"
@@ -454,6 +455,158 @@ func TestGateBigIncreaseInChordMode(t *testing.T) {
 
 			for key, note := range gridPattern {
 				assert.Equal(t, tt.expectedGate, note.GateIndex, tt.description+" - gate should be "+strconv.Itoa(int(tt.expectedGate))+" for note at "+key.String())
+			}
+		})
+	}
+}
+
+func TestRotateMappings(t *testing.T) {
+	tests := []struct {
+		name         string
+		commands     []any
+		expectedKeys []grid.GridKey
+		description  string
+	}{
+		{
+			name:         "RotateRight moves chord to the right",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.RotateRight},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 1}, {Line: 19, Beat: 1}, {Line: 16, Beat: 1}},
+			description:  "Should move major triad chord one beat to the right",
+		},
+		{
+			name:         "RotateLeft moves chord to the left",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.RotateRight, mappings.RotateLeft},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
+			description:  "Should move major triad chord back to original position",
+		},
+		{
+			name:         "RotateUp moves chord up",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.RotateUp},
+			expectedKeys: []grid.GridKey{{Line: 22, Beat: 0}, {Line: 18, Beat: 0}, {Line: 15, Beat: 0}},
+			description:  "Should move major triad chord one line up",
+		},
+		{
+			name:         "RotateDown moves chord down",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.RotateUp, mappings.RotateDown},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
+			description:  "Should move major triad chord back to original position",
+		},
+		{
+			name:         "Multiple RotateRight moves chord multiple beats",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.RotateRight, mappings.RotateRight},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 2}, {Line: 19, Beat: 2}, {Line: 16, Beat: 2}},
+			description:  "Should move major triad chord two beats to the right",
+		},
+		{
+			name:         "Multiple RotateUp moves chord multiple lines",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.RotateUp, mappings.RotateUp},
+			expectedKeys: []grid.GridKey{{Line: 21, Beat: 0}, {Line: 17, Beat: 0}, {Line: 14, Beat: 0}},
+			description:  "Should move major triad chord two lines up",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(WithPolyphony())
+
+			m, _ = processCommands(tt.commands, m)
+
+			chord := m.CurrentChord()
+			assert.True(t, chord.HasValue(), tt.description+" - chord should exist")
+
+			gridPattern := make(grid.Pattern)
+			m.currentOverlay.CombinePattern(&gridPattern, 1)
+
+			for key := range gridPattern {
+				assert.Contains(t, tt.expectedKeys, key, tt.description+" - expected key should exist in pattern")
+			}
+			for _, key := range tt.expectedKeys {
+				assert.Contains(t, gridPattern, key, tt.description+" - pattern should contain expected key "+key.String())
+			}
+		})
+	}
+}
+
+func TestRotateChordOnNewOverlay(t *testing.T) {
+	tests := []struct {
+		name                 string
+		initialCommands      []any
+		overlayCommands      []any
+		expectedOriginalKeys []grid.GridKey
+		expectedNewKeys      []grid.GridKey
+		description          string
+	}{
+		{
+			name:                 "Create chord on overlay 0, rotate right on overlay 1",
+			initialCommands:      []any{mappings.CursorLastLine, mappings.MajorTriad},
+			overlayCommands:      []any{mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.RotateRight},
+			expectedOriginalKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
+			expectedNewKeys:      []grid.GridKey{{Line: 23, Beat: 1}, {Line: 19, Beat: 1}, {Line: 16, Beat: 1}},
+			description:          "Should create chord on overlay 0 and rotate it right on overlay 1",
+		},
+		{
+			name:                 "Create chord on overlay 0, rotate up on overlay 1",
+			initialCommands:      []any{mappings.CursorLastLine, mappings.MajorTriad},
+			overlayCommands:      []any{mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.RotateUp},
+			expectedOriginalKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
+			expectedNewKeys:      []grid.GridKey{{Line: 22, Beat: 0}, {Line: 18, Beat: 0}, {Line: 15, Beat: 0}},
+			description:          "Should create chord on overlay 0 and rotate it up on overlay 1",
+		},
+		{
+			name:                 "Create minor chord on overlay 0, rotate left on overlay 1",
+			initialCommands:      []any{mappings.CursorLastLine, mappings.MinorTriad},
+			overlayCommands:      []any{mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.RotateRight, mappings.RotateLeft},
+			expectedOriginalKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 20, Beat: 0}, {Line: 16, Beat: 0}},
+			expectedNewKeys:      []grid.GridKey{{Line: 23, Beat: 0}, {Line: 20, Beat: 0}, {Line: 16, Beat: 0}},
+			description:          "Should create minor chord on overlay 0 and move it right then left on overlay 1",
+		},
+		{
+			name:                 "Create minor chord on overlay 0, rotate left on overlay 1, original should be blocked from rotating",
+			initialCommands:      []any{mappings.CursorLastLine, mappings.MinorTriad},
+			overlayCommands:      []any{mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter, mappings.RotateRight, mappings.CursorLeft, mappings.RotateUp},
+			expectedOriginalKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 20, Beat: 0}, {Line: 16, Beat: 0}},
+			expectedNewKeys:      []grid.GridKey{{Line: 23, Beat: 1}, {Line: 20, Beat: 1}, {Line: 16, Beat: 1}},
+			description:          "Should create minor chord on overlay 0 and move it right then left on overlay 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(WithPolyphony())
+
+			// Create chord on first overlay
+			m, _ = processCommands(tt.initialCommands, m)
+
+			// Verify original chord exists
+			chord := m.CurrentChord()
+			assert.True(t, chord.HasValue(), tt.description+" - original chord should exist")
+
+			// Check original overlay pattern
+			originalPattern := make(grid.Pattern)
+			m.currentOverlay.CombinePattern(&originalPattern, 1)
+
+			for _, key := range tt.expectedOriginalKeys {
+				assert.Contains(t, originalPattern, key, tt.description+" - original pattern should contain expected key "+key.String())
+			}
+
+			// Execute commands on new overlay
+			m, _ = processCommands(tt.overlayCommands, m)
+
+			// Check new overlay pattern
+			newPattern := make(grid.Pattern)
+			m.currentOverlay.CombinePattern(&newPattern, 2)
+
+			for key := range maps.Keys(newPattern) {
+				assert.Contains(t, tt.expectedNewKeys, key, tt.description+" - new pattern should contain expected key "+key.String())
+			}
+
+			// Verify original overlay is unchanged
+			m, _ = processCommands([]any{mappings.PrevOverlay}, m)
+			originalPatternCheck := make(grid.Pattern)
+			m.currentOverlay.CombinePattern(&originalPatternCheck, 1)
+
+			for _, key := range tt.expectedOriginalKeys {
+				assert.Contains(t, originalPatternCheck, key, tt.description+" - original overlay should remain unchanged at "+key.String())
 			}
 		})
 	}
