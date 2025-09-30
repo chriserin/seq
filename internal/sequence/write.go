@@ -245,6 +245,7 @@ func writeOverlays(w io.Writer, overlay *overlays.Overlay) error {
 
 		for _, gridChord := range overlay.Chords {
 			fmt.Fprintln(w, "------------------------ CHORD --------------------------")
+			fmt.Fprintln(w, "ID:", fmt.Sprintf("%p", gridChord))
 			fmt.Fprintf(w, "GridKey(%d,%d): Arpeggio=%d, Double=%d, Notes=%d, Inversion=%d\n", gridChord.Root.Line, gridChord.Root.Beat, gridChord.Arpeggio, gridChord.Double, gridChord.Chord.Notes, gridChord.Chord.Inversion)
 
 			fmt.Fprintln(w, "------------------------ BEATNOTES --------------------------")
@@ -255,6 +256,19 @@ func writeOverlays(w io.Writer, overlay *overlays.Overlay) error {
 					note.AccentIndex, note.Ratchets.Hits, note.Ratchets.Length, note.Ratchets.Span,
 					note.Action, note.GateIndex, note.WaitIndex)
 			}
+		}
+	} else {
+		fmt.Fprintln(w, "(empty)")
+	}
+
+	fmt.Fprintln(w, "------------------------ BLOCKERS --------------------------")
+	if len(overlay.Blockers) > 0 {
+		slices.SortFunc(overlay.Chords, func(a, b *overlays.GridChord) int {
+			return grid.Compare(a.Root, b.Root)
+		})
+
+		for _, gridChord := range overlay.Blockers {
+			fmt.Fprintln(w, "ID:", fmt.Sprintf("%p", gridChord))
 		}
 	} else {
 		fmt.Fprintln(w, "(empty)")

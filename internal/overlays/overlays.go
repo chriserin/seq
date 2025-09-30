@@ -16,13 +16,13 @@ import (
 type Key = overlaykey.OverlayPeriodicity
 
 type Overlay struct {
+	PressUp   bool
+	PressDown bool
 	Key       Key
 	Below     *Overlay
 	Notes     grid.Pattern
 	Chords    Chords
-	blockers  []*GridChord
-	PressUp   bool
-	PressDown bool
+	Blockers  Chords
 }
 
 func (ol Overlay) String() string {
@@ -79,7 +79,7 @@ func (ol Overlay) Remove(key Key) *Overlay {
 func (ol *Overlay) Clear() {
 	ol.Notes = make(grid.Pattern)
 	ol.Chords = []*GridChord{}
-	ol.blockers = []*GridChord{}
+	ol.Blockers = []*GridChord{}
 }
 
 func (ol *Overlay) ClearRecursive() {
@@ -215,7 +215,7 @@ func (ol *Overlay) combine(keyCycles int, addFunc AddFunc) {
 				}
 			}
 
-			for _, gridChord := range currentOverlay.blockers {
+			for _, gridChord := range currentOverlay.Blockers {
 				blockedChords[(*gridChord).Root] = struct{}{}
 			}
 
@@ -343,7 +343,7 @@ func (ol *Overlay) SetNote(gridKey grid.GridKey, note grid.Note) {
 }
 
 func (ol *Overlay) SetChord(gridChord *GridChord) *GridChord {
-	ol.blockers = append(ol.blockers, gridChord)
+	ol.Blockers = append(ol.Blockers, gridChord)
 	newGridChord := *gridChord
 	chordRef := &newGridChord
 	ol.Chords = append(ol.Chords, chordRef)
@@ -363,7 +363,7 @@ func (ol *Overlay) RemoveChord(overlayChord OverlayChord) {
 	if overlayChord.Overlay == ol {
 		ol.Chords = ol.Chords.Remove(overlayChord.GridChord)
 	} else {
-		ol.blockers = append(ol.blockers, overlayChord.GridChord)
+		ol.Blockers = append(ol.Blockers, overlayChord.GridChord)
 	}
 }
 

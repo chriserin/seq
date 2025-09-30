@@ -2,7 +2,11 @@ package sequence
 
 import (
 	"bufio"
+	"fmt"
+	"maps"
 	"os"
+	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -59,6 +63,9 @@ func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 	var currentOverlay *overlays.Overlay
 	var currentChord *overlays.GridChord
 
+	var blockersList = make(map[overlaykey.OverlayPeriodicity][]string)
+	var chordsList = make(map[string]*overlays.GridChord)
+
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -86,6 +93,14 @@ func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 				currentSection = "PARTS"
 			case strings.Contains(sectionLine, "PART "):
 				currentSection = "PART"
+
+				if currentPart != nil {
+					finalizePreviousPart(currentPart, blockersList, chordsList)
+
+					blockersList = make(map[overlaykey.OverlayPeriodicity][]string)
+					chordsList = make(map[string]*overlays.GridChord)
+				}
+
 				partName := strings.TrimPrefix(sectionLine, "PART ")
 				partName = strings.TrimSpace(partName)
 
@@ -140,6 +155,9 @@ func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 				currentSection = "CHORD"
 				currentChord = &overlays.GridChord{}
 				currentOverlay.Chords = append(currentOverlay.Chords, currentChord)
+
+			case strings.Contains(sectionLine, "BLOCKERS"):
+				currentSection = "BLOCKERS"
 
 			case strings.Contains(sectionLine, "ARRANGEMENT"):
 				currentSection = "ARRANGEMENT"
@@ -392,7 +410,21 @@ func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 
 		case "ARRANGEMENT":
 			// This is just the arrangement header section, handled in section detection
+		case "BLOCKERS":
+			if line == "(empty)" {
+				continue
+			} else {
+				id := GetID(line)
+				blockersList[currentOverlay.Key] = append(blockersList[currentOverlay.Key], id)
+			}
 		case "CHORD":
+			id := GetID(line)
+			if id != "" {
+				fmt.Fprintln(os.Stderr, "Adding chord", id)
+				chordsList[id] = currentChord
+				scanner.Scan()
+				line = scanner.Text()
+			}
 			gridKey, coordEnd := GetGridKey(line)
 			currentChord.Root = gridKey
 			propStr := line[coordEnd+2:] // "AccentIndex=Z, ..."
@@ -432,7 +464,42 @@ func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 		}
 	}
 
+	if currentPart != nil {
+		finalizePreviousPart(currentPart, blockersList, chordsList)
+	}
+
 	return sequence
+}
+
+func finalizePreviousPart(currentPart *arrangement.Part, blockersList map[overlaykey.OverlayPeriodicity][]string, chordsList map[string]*overlays.GridChord) {
+	currentOverlay := currentPart.Overlays
+	for currentOverlay != nil {
+		if ids, exists := blockersList[currentOverlay.Key]; exists {
+			for _, id := range ids {
+				blocker := chordsList[id]
+				fmt.Fprintln(os.Stderr, "KEYS", slices.Collect(maps.Keys(chordsList)))
+				fmt.Fprintln(os.Stderr, "Adding blocker", id, "to overlay", currentOverlay.Key, "blocker:", blocker)
+				currentOverlay.Blockers = append(currentOverlay.Blockers, blocker)
+			}
+		}
+		currentOverlay = currentOverlay.Below
+	}
+}
+
+func GetID(line string) string {
+	parts := strings.SplitN(line, ":", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+
+	key := strings.TrimSpace(parts[0])
+	value := strings.TrimSpace(parts[1])
+
+	if key != "ID" {
+		return ""
+	}
+
+	return value
 }
 
 func ScanArrangement(scanner *bufio.Scanner, currentArrangement *arrangement.Arrangement, indentLevel int) bool {

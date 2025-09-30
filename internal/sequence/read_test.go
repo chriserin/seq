@@ -362,3 +362,18 @@ func TestReadFileError(t *testing.T) {
 	_, err := Read("/nonexistent/path/to/file.txt")
 	assert.Error(t, err)
 }
+
+func TestReadFileWithBlockers(t *testing.T) {
+	// Test reading the checkchord.seq file which contains chord definitions
+	readDef, err := Read("testdata/checkblockers.seq")
+	assert.NoError(t, err)
+	assert.NotNil(t, readDef)
+
+	// verify blockers
+	overlay := (*readDef.Parts)[0].Overlays
+	rootOverlay := overlay.Below
+	blockedChord := rootOverlay.Chords[0]
+	blocker := overlay.Blockers[0]
+
+	assert.Equal(t, blockedChord, blocker)
+}
