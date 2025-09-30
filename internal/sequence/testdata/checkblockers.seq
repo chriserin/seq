@@ -1,0 +1,105 @@
+------------------------ GLOBAL SETTINGS ------------------------
+Tempo: 120
+Subdivisions: 2
+Keyline: 0
+Instrument: Standard
+Template: Piano2
+TemplateUIStyle: blackwhite
+
+------------------------- LINES -------------------------
+Line 0: Channel=1, Note=60, MessageType=0, Name=
+Line 1: Channel=1, Note=59, MessageType=0, Name=
+Line 2: Channel=1, Note=58, MessageType=0, Name=
+Line 3: Channel=1, Note=57, MessageType=0, Name=
+Line 4: Channel=1, Note=56, MessageType=0, Name=
+Line 5: Channel=1, Note=55, MessageType=0, Name=
+Line 6: Channel=1, Note=54, MessageType=0, Name=
+Line 7: Channel=1, Note=53, MessageType=0, Name=
+Line 8: Channel=1, Note=52, MessageType=0, Name=
+Line 9: Channel=1, Note=51, MessageType=0, Name=
+Line 10: Channel=1, Note=50, MessageType=0, Name=
+Line 11: Channel=1, Note=49, MessageType=0, Name=
+Line 12: Channel=1, Note=48, MessageType=0, Name=
+Line 13: Channel=1, Note=47, MessageType=0, Name=
+Line 14: Channel=1, Note=46, MessageType=0, Name=
+Line 15: Channel=1, Note=45, MessageType=0, Name=
+Line 16: Channel=1, Note=44, MessageType=0, Name=
+Line 17: Channel=1, Note=43, MessageType=0, Name=
+Line 18: Channel=1, Note=42, MessageType=0, Name=
+Line 19: Channel=1, Note=41, MessageType=0, Name=
+Line 20: Channel=1, Note=40, MessageType=0, Name=
+Line 21: Channel=1, Note=39, MessageType=0, Name=
+Line 22: Channel=1, Note=38, MessageType=0, Name=
+Line 23: Channel=1, Note=37, MessageType=0, Name=
+Line 24: Channel=1, Note=36, MessageType=0, Name=
+
+------------------------- ACCENTS -------------------------
+Target: VELOCITY
+Start: 120
+End: 15
+----------------------- ACCENT DATA -----------------------
+Accent 0: Value=0
+Accent 1: Value=120
+Accent 2: Value=105
+Accent 3: Value=90
+Accent 4: Value=75
+Accent 5: Value=60
+Accent 6: Value=45
+Accent 7: Value=30
+Accent 8: Value=15
+
+--------------------------- PARTS ---------------------------
+------------------------ PART Part 1 ------------------------
+Name: Part 1
+Beats: 32
+----------------------- OVERLAY -------------------------
+Shift: 2
+Interval: 1
+Width: 1
+StartCycle: 0
+PressUp: false
+PressDown: false
+------------------------ CHORDS --------------------------
+------------------------ CHORD --------------------------
+ID: 0x140004a21c0
+GridKey(23,1): Arpeggio=0, Double=0, Notes=137, Inversion=0
+------------------------ BEATNOTES --------------------------
+Beat(0): AccentIndex=5, Ratchets={Hits:1,Length:0,Span:0}, Action=0, GateIndex=0, WaitIndex=0
+Beat(0): AccentIndex=5, Ratchets={Hits:1,Length:0,Span:0}, Action=0, GateIndex=0, WaitIndex=0
+Beat(0): AccentIndex=5, Ratchets={Hits:1,Length:0,Span:0}, Action=0, GateIndex=0, WaitIndex=0
+------------------------ BLOCKERS --------------------------
+ID: 0x1400042eb40
+------------------------ NOTES --------------------------
+(empty)
+----------------------- OVERLAY -------------------------
+Shift: 1
+Interval: 1
+Width: 1
+StartCycle: 0
+PressUp: true
+PressDown: false
+------------------------ CHORDS --------------------------
+------------------------ CHORD --------------------------
+ID: 0x1400042eb40
+GridKey(24,0): Arpeggio=0, Double=0, Notes=137, Inversion=0
+------------------------ BEATNOTES --------------------------
+Beat(0): AccentIndex=5, Ratchets={Hits:1,Length:0,Span:0}, Action=0, GateIndex=0, WaitIndex=0
+Beat(0): AccentIndex=5, Ratchets={Hits:1,Length:0,Span:0}, Action=0, GateIndex=0, WaitIndex=0
+Beat(0): AccentIndex=5, Ratchets={Hits:1,Length:0,Span:0}, Action=0, GateIndex=0, WaitIndex=0
+------------------------ BLOCKERS --------------------------
+(empty)
+------------------------ NOTES --------------------------
+(empty)
+
+------------------------ ARRANGEMENT ------------------------
+------------------------ ROOT NODE ------------------------
+Iterations: 1
+Children: 1
+------------------------ CHILDREN ------------------------
+  ------------------------ SECTION #1 NODE ------------------------
+  Iterations: 1
+  Part: 0
+  Cycles: 1
+  StartBeat: 0
+  StartCycles: 1
+  KeepCycles: false
