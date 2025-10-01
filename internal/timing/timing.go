@@ -3,7 +3,6 @@ package timing
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/Southclaws/fault"
@@ -114,7 +113,6 @@ func (tmtr Transmitter) Start(loopMode playstate.LoopMode) error {
 }
 
 func (tmtr Transmitter) Stop() error {
-	fmt.Println("Stopping transmitter")
 	err := tmtr.out.Send(midi.Stop())
 	if err != nil {
 		return fault.Wrap(err, fmsg.With("cannot send midi stop"))
