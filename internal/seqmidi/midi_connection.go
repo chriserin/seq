@@ -31,8 +31,11 @@ type MidiConnection struct {
 	ReceiverFunc  ReceiverFunc
 }
 
-func (mc MidiConnection) StopReceivingFromTransmitter() {
-	mc.StopFn()
+func (mc *MidiConnection) StopReceivingFromTransmitter() {
+	if mc.StopFn != nil {
+		mc.StopFn()
+		mc.StopFn = nil
+	}
 }
 
 func (mc *MidiConnection) HasDevices() bool {

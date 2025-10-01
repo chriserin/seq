@@ -306,10 +306,9 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 				case <-t.ctx.Done():
 					return
 				case <-lockReceiverChannel:
-					midiConnection.StopFn()
+					midiConnection.StopReceivingFromTransmitter()
 					activeSenseTimer.Stop()
 					<-unlockReceiverChannel
-					midiConnection.ListenToTransmitter(ReceiverFunc)
 					break inner
 				case command = <-receiverChannel:
 					switch command := command.(type) {
