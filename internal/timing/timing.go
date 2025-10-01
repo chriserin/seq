@@ -69,7 +69,7 @@ func Loop(mode MidiLoopMode, lockReceiverChannel, unlockReceiverChannel chan boo
 	case MlmStandAlone:
 		timing.StandAloneLoop(sendFn)
 	case MlmTransmitter:
-		err := timing.TransmitterLoop(sendFn)
+		err := timing.TransmitterLoop(sendFn, midiConnection)
 		if err != nil {
 			return fault.Wrap(err, fmsg.With("cannot start transmitter loop"))
 		}
@@ -136,9 +136,9 @@ func (tmtr Transmitter) ActiveSense() error {
 	return nil
 }
 
-func (t *Timing) TransmitterLoop(sendFn func(tea.Msg)) error {
+func (t *Timing) TransmitterLoop(sendFn func(tea.Msg), midiConnection *seqmidi.MidiConnection) error {
 	var beatChannel = t.beatsLooper.BeatChannel
-	out, err := seqmidi.TransmitterOut()
+	out, err := midiConnection.TransmitterOut()
 	if err != nil {
 		return fault.Wrap(err, fmsg.With("cannot open transmitter out"))
 	}

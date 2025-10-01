@@ -185,6 +185,11 @@ func SeqOut() (drivers.Out, error) {
 	return OpenVirtualOut(OutputName)
 }
 
-func TransmitterOut() (drivers.Out, error) {
-	return OpenVirtualOut(TransmitterName)
+func (mc *MidiConnection) TransmitterOut() (drivers.Out, error) {
+	out, err := OpenVirtualOut(TransmitterName)
+	if err != nil {
+		return nil, fault.Wrap(err, fmsg.With("cannot open virtual out"))
+	}
+	mc.IsTransmitter = true
+	return out, nil
 }

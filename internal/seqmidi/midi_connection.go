@@ -32,6 +32,15 @@ type MidiConnection struct {
 	ReceiverFunc  ReceiverFunc
 }
 
+func (mc *MidiConnection) HasTransmitter() bool {
+	for _, device := range mc.inDevices {
+		if device.IsTransmitter {
+			return true
+		}
+	}
+	return false
+}
+
 func (mc *MidiConnection) StopReceivingFromTransmitter() {
 	if mc.StopFn != nil {
 		mc.StopFn()
@@ -68,12 +77,12 @@ type Message struct {
 	Msg   midi.Message
 }
 
-func InitMidiConnection(createOut bool, outportName string, isTransmitter bool, ctx context.Context) *MidiConnection {
+func InitMidiConnection(createOut bool, outportName string, ctx context.Context) *MidiConnection {
 	var midiConn MidiConnection
 	if createOut {
-		midiConn = MidiConnection{midiChannel: make(chan Message), IsTransmitter: isTransmitter}
+		midiConn = MidiConnection{midiChannel: make(chan Message)}
 	} else {
-		midiConn = MidiConnection{outportName: outportName, midiChannel: make(chan Message), IsTransmitter: isTransmitter}
+		midiConn = MidiConnection{outportName: outportName, midiChannel: make(chan Message)}
 	}
 
 	return &midiConn

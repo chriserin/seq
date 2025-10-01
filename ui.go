@@ -772,7 +772,6 @@ func InitModel(filename string, midiConnection *seqmidi.MidiConnection, options 
 		filename:              filename,
 		textInput:             InitTextInput(),
 		partSelectorIndex:     -1,
-		midiLoopMode:          options.MidiLoopMode(),
 		lockReceiverChannel:   lockReceiverChannel,
 		unlockReceiverChannel: unlockReceiverChannel,
 		errChan:               errorChannel,
@@ -857,15 +856,21 @@ func RunProgram(filename string, options ProgramOptions) (*tea.Program, error) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	midiConnection := seqmidi.InitMidiConnection(options.outport, options.midiout, options.transmitter, ctx)
+	midiConnection := seqmidi.InitMidiConnection(options.outport, options.midiout, ctx)
 	config.Init()
 	themes.ChooseTheme(options.theme)
 	model := InitModel(filename, midiConnection, options, cancel)
 	model.ResetIterations()
-	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	beatsLooper = beats.InitBeatsLooper()
 	updateChannel = beatsLooper.UpdateChannel
 	midiConnection.DeviceLoop(ctx)
+
+	if model.midiConnection.HasTransmitter() {
+		model.midiLoopMode = timing.MlmReceiver
+	} else {
+		model.midiLoopMode = timing.MlmTransmitter
+	}
+	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	SetupTimingLoop(model, beatsLooper, program.Send, ctx)
 	beatsLooper.Loop(program.Send, midiConnection, ctx)
 	midiConnection.LoopMidi(ctx)

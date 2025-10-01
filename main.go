@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/chriserin/seq/internal/timing"
 	"github.com/spf13/cobra"
 	midi "gitlab.com/gomidi/midi/v2"
 )
@@ -14,22 +13,9 @@ const VERSION = "0.1.0-alpha"
 type ProgramOptions struct {
 	gridTemplate string
 	instrument   string
-	transmitter  bool
-	receiver     bool
 	outport      bool
 	theme        string
 	midiout      string
-}
-
-func (po ProgramOptions) MidiLoopMode() timing.MidiLoopMode {
-	midiLoopMode := timing.MlmStandAlone
-	if cliOptions.transmitter {
-		midiLoopMode = timing.MlmTransmitter
-	} else if cliOptions.receiver {
-		midiLoopMode = timing.MlmReceiver
-	}
-
-	return midiLoopMode
 }
 
 var cliOptions ProgramOptions
@@ -89,8 +75,6 @@ func main() {
 	rootCmd.AddCommand(cmdVersion)
 	rootCmd.Flags().StringVar(&cliOptions.gridTemplate, "template", "Drums", "Choose a template (default: Drums)")
 	rootCmd.Flags().StringVar(&cliOptions.instrument, "instrument", "Standard", "Choose an instrument for CC integration (default: Standard)")
-	rootCmd.Flags().BoolVar(&cliOptions.transmitter, "transmitter", false, "Seq will run in transmitter mode")
-	rootCmd.Flags().BoolVar(&cliOptions.receiver, "receiver", false, "Seq will run in receiver mode")
 	rootCmd.Flags().BoolVar(&cliOptions.outport, "outport", false, "Seq will create an outport to send midi")
 	rootCmd.Flags().StringVar(&cliOptions.theme, "theme", "miles", "Choose an theme for the sequencer visual representation")
 	rootCmd.Flags().StringVar(&cliOptions.midiout, "midiout", "", "Choose a midi out port")
