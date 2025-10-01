@@ -757,11 +757,6 @@ static void midiInputCallback(const MIDIPacketList *list, void *procRef,
           MacMidiIn::MacMidiCallback callback =
               (MacMidiIn::MacMidiCallback)data->userCallback;
           callback(message.timeStamp, &message.bytes, data->userData);
-        } else {
-          // As long as we haven't reached our queue size limit, push the
-          // message.
-          if (!data->queue.push(message))
-            std::cerr << "\nMidiInCore: message queue limit reached!!\n\n";
         }
         message.bytes.clear();
       }
@@ -821,11 +816,6 @@ static void midiInputCallback(const MIDIPacketList *list, void *procRef,
               MacMidiIn::MacMidiCallback callback =
                   (MacMidiIn::MacMidiCallback)data->userCallback;
               callback(message.timeStamp, &message.bytes, data->userData);
-            } else {
-              // As long as we haven't reached our queue size limit, push the
-              // message.
-              if (!data->queue.push(message))
-                std::cerr << "\nMidiInCore: message queue limit reached!!\n\n";
             }
             message.bytes.clear();
           }
