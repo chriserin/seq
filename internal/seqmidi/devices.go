@@ -121,7 +121,7 @@ func (mc *MidiConnection) UpdateInDeviceList(driver drivers.Driver) error {
 
 	mc.inDevices = newDevices
 
-	if mc.ReceiverFunc != nil {
+	if mc.ReceiverFunc != nil && !mc.DoNotListen {
 		err := mc.ListenToTransmitter(mc.ReceiverFunc)
 		if err != nil {
 			return fault.Wrap(err, fmsg.With("cannot listen to transmitter"))

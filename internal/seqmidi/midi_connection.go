@@ -20,6 +20,7 @@ const TransmitterName string = "seq-transmitter"
 
 type MidiConnection struct {
 	IsTransmitter bool
+	DoNotListen   bool
 	outportName   string
 	seqOutport    drivers.Out
 	midiChannel   chan Message
