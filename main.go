@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/chriserin/seq/internal/seqmidi"
 	"github.com/spf13/cobra"
-	midi "gitlab.com/gomidi/midi/v2"
 )
 
 const VERSION = "0.1.0-alpha"
@@ -64,7 +64,7 @@ func main() {
 		Use:   "list",
 		Short: "List available midi outports",
 		Run: func(cmd *cobra.Command, args []string) {
-			outports := midi.GetOutPorts()
+			outports, _ := seqmidi.Outs()
 			for i, outport := range outports {
 				fmt.Printf("%d) %s\n", i+1, outport)
 			}

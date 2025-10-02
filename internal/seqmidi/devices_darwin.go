@@ -111,3 +111,11 @@ func GetIns() ([]drivers.In, error) {
 	}
 	return ins, nil
 }
+
+func Outs() ([]drivers.Out, error) {
+	driver, err := macmididrv.New()
+	if err != nil {
+		return nil, fmt.Errorf("can't open MIDI driver: %v", err)
+	}
+	return driver.Outs()
+}
