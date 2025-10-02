@@ -552,6 +552,17 @@ func TestRotate(t *testing.T) {
 			description: "Should rotate pattern down by one line",
 		},
 		{
+			name: "Rotate down at boundary on next overlay",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter,
+				mappings.RotateDown,
+			},
+			initialPos:  grid.GridKey{Line: 0, Beat: 0},
+			expectedPos: grid.GridKey{Line: 1, Beat: 0},
+			description: "Should rotate pattern down wrapping to top",
+		},
+		{
 			name: "Rotate down at boundary",
 			commands: []any{
 				mappings.NoteAdd,
@@ -579,6 +590,17 @@ func TestRotate(t *testing.T) {
 			},
 			initialPos:  grid.GridKey{Line: 0, Beat: 4},
 			expectedPos: grid.GridKey{Line: 7, Beat: 4},
+			description: "Should rotate pattern up wrapping to bottom",
+		},
+		{
+			name: "Rotate up at boundary on next overlay",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter,
+				mappings.RotateUp,
+			},
+			initialPos:  grid.GridKey{Line: 7, Beat: 0},
+			expectedPos: grid.GridKey{Line: 6, Beat: 0},
 			description: "Should rotate pattern up wrapping to bottom",
 		},
 		{
@@ -677,8 +699,8 @@ func TestRotate(t *testing.T) {
 			assert.Equal(t, initialNote, rotatedNote, tt.description+" - note should be the same")
 
 			if tt.initialPos != tt.expectedPos {
-				_, stillExists := m.currentOverlay.GetNote(tt.initialPos)
-				assert.False(t, stillExists, tt.description+" - note should not exist at initial position")
+				note, stillExists := m.currentOverlay.GetNote(tt.initialPos)
+				assert.True(t, !stillExists || note == zeronote, tt.description+" - note should not exist at initial position")
 			}
 		})
 	}

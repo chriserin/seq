@@ -2540,18 +2540,13 @@ func (m *model) RotateUp() {
 			}
 			if l != lineStart {
 				newKey := GK(uint8(l-1), beat)
-				note, exists := pattern[key]
-				if exists {
-					m.currentOverlay.SetNote(newKey, note)
-				}
-			} else {
-				newKey := GK(lineEnd, beat)
-				note, exists := pattern[key]
-				if exists {
-					m.currentOverlay.SetNote(newKey, note)
-				}
+				note := pattern[key]
+				m.currentOverlay.SetNote(newKey, note)
 			}
 		}
+		newKey := GK(lineEnd, beat)
+		note := pattern[GK(lineStart, beat)]
+		m.currentOverlay.SetNote(newKey, note)
 	}
 }
 
@@ -2569,18 +2564,14 @@ func (m *model) RotateDown() {
 			index := l + 1
 			if index <= int(lineEnd) {
 				newKey := GK(uint8(index), beat)
-				note, exists := pattern[key]
-				if exists {
-					m.currentOverlay.SetNote(newKey, note)
-				}
-			} else {
-				newKey := GK(lineStart, beat)
-				note, exists := pattern[key]
-				if exists {
-					m.currentOverlay.SetNote(newKey, note)
-				}
+				note := pattern[key]
+				m.currentOverlay.SetNote(newKey, note)
 			}
 		}
+
+		newKey := GK(lineStart, beat)
+		note := pattern[GK(lineEnd, beat)]
+		m.currentOverlay.SetNote(newKey, note)
 	}
 }
 
