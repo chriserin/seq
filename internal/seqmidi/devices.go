@@ -147,7 +147,7 @@ func (mc *MidiConnection) UpdateOutDeviceList(driver drivers.Driver) error {
 				foundDevice = currentDevice
 				foundDevice.Out = out
 				foundDevice.IsOpen = false
-				if mc.outportName != "" && foundDevice.Matches(mc.outportName) {
+				if (mc.outportName != "" && foundDevice.Matches(mc.outportName)) || foundDevice.IsDaw {
 					foundDevice.Open()
 				}
 				break
