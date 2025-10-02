@@ -271,6 +271,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 					midiMessage.GetSPP(&ref)
 					loopMode = playstate.LoopMode(ref)
 				case midi.StartMsg:
+					timingClockTime = time.Time{}
 					receiverChannel <- StartMsg{LoopMode: loopMode}
 				case midi.StopMsg:
 					receiverChannel <- StopMsg{}
