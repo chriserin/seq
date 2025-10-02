@@ -27,6 +27,10 @@ func (t Timing) TickInterval() time.Duration {
 	return time.Minute / time.Duration(t.tempo*t.subdivisions)
 }
 
+func (t Timing) ReceiverBeatInterval(subdivisions int) time.Duration {
+	return time.Minute / time.Duration(t.tempo*subdivisions)
+}
+
 func (t Timing) PulseInterval() time.Duration {
 	return time.Minute / time.Duration(t.tempo*24)
 }
@@ -282,7 +286,10 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 						//TODO: Figure out how to communicate tempo between sender and receiver or how to play ratchets based on another heuristic
 						tickChannel <- Timing{subdivisions: 24, tempo: 120}
 					} else {
-						tickChannel <- Timing{subdivisions: 24, tempo: int((1 * time.Minute) / time.Since(timingClockTime) * 24)}
+						interval := time.Since(timingClockTime)
+						division := interval * 24
+						tempo := (1 * time.Minute) / division
+						tickChannel <- Timing{subdivisions: 24, tempo: int(tempo)}
 						timingClockTime = time.Now()
 					}
 				case midi.ActiveSenseMsg:
@@ -339,7 +346,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 					activeSenseTimer.Reset(330 * time.Millisecond)
 					if t.started {
 						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
-							beatChannel <- beats.BeatMsg{Interval: pulseTiming.TickInterval()}
+							beatChannel <- beats.BeatMsg{Interval: pulseTiming.ReceiverBeatInterval(t.subdivisions)}
 						}
 						t.pulseCount++
 					}
