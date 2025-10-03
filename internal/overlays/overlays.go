@@ -393,6 +393,9 @@ func (gc GridChord) ChordNotes(pattern *grid.Pattern) {
 
 func (gc GridChord) ArpeggiatedPattern(pattern *grid.Pattern) {
 	for i, interval := range gc.ArpeggioIntervals() {
+		if len(gc.Notes) <= i {
+			break
+		}
 		beatnote := gc.Notes[i]
 		(*pattern)[gc.Key(interval, beatnote)] = beatnote.Note
 	}
