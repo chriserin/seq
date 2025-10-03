@@ -1835,7 +1835,9 @@ func (m *model) ResetIterations() {
 }
 
 func (m *model) Start(delay time.Duration) {
-	if m.midiConnection.HasDevices() {
+	if m.midiConnection.HasOutport() {
+		// DO NOTHING
+	} else if m.midiConnection.HasDevices() {
 		m.midiConnection.EnsureConnection()
 	} else {
 		m.SetCurrentError(fault.New("cannot open midi connection", fmsg.WithDesc("No MIDI devices found", "Please ensure a MIDI device is connected")))

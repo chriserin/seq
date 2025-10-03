@@ -48,6 +48,10 @@ func (mc *MidiConnection) StopReceivingFromTransmitter() {
 	}
 }
 
+func (mc *MidiConnection) HasOutport() bool {
+	return mc.seqOutport != nil
+}
+
 func (mc *MidiConnection) HasDevices() bool {
 	return len(mc.outDevices) > 0
 }
