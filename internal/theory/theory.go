@@ -5,22 +5,13 @@
 // and harmonic analysis for polyphonic sequencing.
 package theory
 
-import (
-	"slices"
-)
-
 func InitChord(alteration uint32) Chord {
 	return Chord{Notes: alteration}
 }
 
 type Chord struct {
-	Notes     uint32
-	Inversion int8
-	score     int
-}
-
-func (c Chord) Score() int {
-	return c.score - int(c.Inversion)
+	Notes uint32
+	score int
 }
 
 // Individual note constants in the chromatic scale (relative to root)
@@ -242,6 +233,24 @@ func (c Chord) UninvertedNotes() []uint8 {
 	return notes
 }
 
+func (c Chord) FirstInterval() uint8 {
+	for i := uint8(0); i < 32; i++ {
+		if c.Notes&(1<<i) != 0 {
+			return uint8(i)
+		}
+	}
+	return 33
+}
+
+func (c Chord) LastInterval() uint8 {
+	for i := uint8(31); i >= 0; i-- {
+		if c.Notes&(1<<i) != 0 {
+			return uint8(i)
+		}
+	}
+	return 33
+}
+
 func (c Chord) NamedIntervals() []string {
 	notes := make([]string, 0)
 	for i := 31; i >= 0; i-- {
@@ -288,27 +297,7 @@ func interval(n int) string {
 // If the chord has an inversion value, the appropriate number of notes
 // from the bottom of the chord are moved to the top
 func (c Chord) Intervals() []uint8 {
-	// First collect all notes without considering inversion
 	notes := c.UninvertedNotes()
-
-	// Apply inversion if needed
-	noteCount := len(notes)
-	if noteCount > 0 && c.Inversion > 0 && int(c.Inversion) < noteCount {
-		// Move the first 'inversion' notes to the end, raising them by an octave
-		invertedNotes := make([]uint8, 0, noteCount)
-
-		// Add the remaining notes first (notes after the inversion point)
-		invertedNotes = append(invertedNotes, notes[c.Inversion:]...)
-
-		// Add the inverted notes (notes before the inversion point), raised by an octave (12 semitones)
-		for i := 0; i < int(c.Inversion); i++ {
-			// For the second inversion of a C major triad (0,4,7),
-			// we want to move 0 and 4 up an octave, resulting in (7,12,16)
-			invertedNotes = append(invertedNotes, notes[i]+12)
-		}
-		slices.Sort(invertedNotes)
-		return invertedNotes
-	}
 
 	return notes
 }
@@ -317,23 +306,34 @@ func ContainsBits(source, pattern uint32) bool {
 	return (source & pattern) == pattern
 }
 
-// NextInversion increases the inversion by 1, but not beyond the number of notes
 func (c *Chord) NextInversion() {
-	noteCount := len(c.Intervals())
-	if noteCount > 0 {
-		c.Inversion = (c.Inversion + 1) % int8(noteCount)
+	firstInterval := c.FirstInterval()
+	firstNoteBit := uint32(1 << firstInterval)
+	upOctaveBit := firstNoteBit << 12
+	if upOctaveBit < (1 << 31) {
+		c.AddNotes(upOctaveBit)
+		c.OmitInterval(firstInterval)
 	}
 }
 
 // PreviousInversion decreases the inversion by 1, cycling back to the highest possible value if at 0
 func (c *Chord) PreviousInversion() {
+	lastInterval := c.LastInterval()
+	lastNoteBit := uint32(1 << lastInterval)
+	downOctaveBit := lastNoteBit >> 12
+	if downOctaveBit > 0 {
+		c.AddNotes(downOctaveBit)
+		c.OmitInterval(lastInterval)
+	}
+}
 
-	noteCount := len(c.Intervals())
-	if noteCount > 0 {
-		if c.Inversion == 0 {
-			c.Inversion = int8(noteCount - 1)
-		} else {
-			c.Inversion--
+func (c Chord) Inversions() int {
+	// Count the number of notes in the chord above 12 semitones
+	count := 0
+	for i := uint8(12); i < 32; i++ {
+		if c.Notes&(1<<i) != 0 {
+			count++
 		}
 	}
+	return count
 }

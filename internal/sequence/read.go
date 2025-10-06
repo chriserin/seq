@@ -451,10 +451,6 @@ func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 					if notes, err := strconv.ParseUint(value, 10, 32); err == nil {
 						currentChord.Chord.Notes = uint32(notes)
 					}
-				case "Inversion":
-					if inversion, err := strconv.ParseUint(value, 10, 8); err == nil {
-						currentChord.Chord.Inversion = int8(inversion)
-					}
 				}
 			}
 

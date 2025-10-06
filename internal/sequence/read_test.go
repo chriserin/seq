@@ -320,7 +320,6 @@ func TestReadFileWithChords(t *testing.T) {
 	assert.Equal(t, overlays.Arp(2), chord.Arpeggio)
 	assert.Equal(t, uint8(3), chord.Double)
 	assert.Equal(t, uint32(137), chord.Chord.Notes)
-	assert.Equal(t, int8(0), chord.Chord.Inversion)
 
 	// Verify chord has beat notes
 	assert.Len(t, chord.Notes, 6)

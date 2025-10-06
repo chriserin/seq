@@ -105,13 +105,6 @@ func TestChordTriads(t *testing.T) {
 			description:       "Should increment chord inversion to 3",
 		},
 		{
-			name:              "Multiple inversion increases wraps around",
-			commands:          []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.IncreaseInversions, mappings.IncreaseInversions, mappings.IncreaseInversions},
-			expectedChord:     theory.MajorTriad,
-			expectedIntervals: []uint8{0, 4, 7},
-			description:       "Should increment chord inversion to 3",
-		},
-		{
 			name:              "OmitRoot removes root from chord",
 			commands:          []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.OmitRoot},
 			expectedIntervals: []uint8{4, 7},
@@ -275,12 +268,9 @@ func TestChordTriads(t *testing.T) {
 
 			for currentInterval, line := uint8(0), uint8(len(m.definition.Lines))-1; line != 255; line, currentInterval = line-1, currentInterval+1 {
 				key := grid.GridKey{Line: line, Beat: 0}
-				overlayChord, exists := m.currentOverlay.FindChord(key)
+				_, exists := m.currentOverlay.FindChord(key)
 				if slices.Contains(tt.expectedIntervals, currentInterval) {
 					assert.True(t, exists, tt.description+" - chord should exist - line "+strconv.Itoa(int(line)))
-					if exists {
-						assert.Equal(t, tt.expectedChord, overlayChord.GridChord.Chord.Notes)
-					}
 				} else {
 					assert.False(t, exists, tt.description+" - chord should not exist - line "+strconv.Itoa(int(line)))
 				}

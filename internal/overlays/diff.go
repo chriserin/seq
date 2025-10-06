@@ -175,7 +175,6 @@ func compareChords(original, modified *GridChord) ChordDiff {
 		Modified: original.Arpeggio != modified.Arpeggio ||
 			!alterationsEqual(original.Chord, modified.Chord) ||
 			original.Double != modified.Double ||
-			original.Chord.Inversion != modified.Chord.Inversion ||
 			!notesMatch(original.Notes, modified.Notes),
 	}
 
