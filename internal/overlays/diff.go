@@ -174,7 +174,6 @@ func compareChords(original, modified *GridChord) ChordDiff {
 		OldChord: modified.DeepCopy(),
 		Modified: original.Arpeggio != modified.Arpeggio ||
 			!alterationsEqual(original.Chord, modified.Chord) ||
-			original.Double != modified.Double ||
 			!notesMatch(original.Notes, modified.Notes),
 	}
 
@@ -324,7 +323,6 @@ func DeepCopy(ol *Overlay) *Overlay {
 			Chord:    chord.Chord,
 			Root:     chord.Root,
 			Arpeggio: chord.Arpeggio,
-			Double:   chord.Double,
 		}
 
 		// Deep copy the Notes slice in GridChord
@@ -341,7 +339,6 @@ func DeepCopy(ol *Overlay) *Overlay {
 				Chord:    blocker.Chord,
 				Root:     blocker.Root,
 				Arpeggio: blocker.Arpeggio,
-				Double:   blocker.Double,
 			}
 
 			// Deep copy the Notes slice in GridChord

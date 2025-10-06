@@ -182,20 +182,6 @@ func TestChordTriads(t *testing.T) {
 			description:       "Should remove seventh note from major seventh chord",
 		},
 		{
-			name:              "Double four times wraps around",
-			commands:          []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.NextDouble, mappings.NextDouble, mappings.NextDouble, mappings.NextDouble},
-			expectedIntervals: []uint8{0, 4, 7},
-			expectedChord:     theory.MajorTriad,
-			description:       "Should remove seventh note from major seventh chord",
-		},
-		{
-			name:              "Prev Double wraps around to max doubles",
-			commands:          []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.PrevDouble},
-			expectedIntervals: []uint8{0, 4, 7, 12, 16, 19},
-			expectedChord:     theory.MajorTriad,
-			description:       "Should remove seventh note from major seventh chord",
-		},
-		{
 			name:              "MinorSecond adds minor second interval to chord",
 			commands:          []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.MinorSecond},
 			expectedIntervals: []uint8{0, 1, 4, 7},

@@ -251,6 +251,28 @@ func (c Chord) LastInterval() uint8 {
 	return 33
 }
 
+func (c *Chord) FirstIntervalNotDoubled() uint8 {
+	for i := range uint8(32) {
+		if c.Notes&(1<<i) != 0 {
+			if !ContainsBits(c.Notes, 1<<(i+12)) {
+				return i
+			}
+		}
+	}
+	return 33
+}
+
+func (c *Chord) LastIntervalDoubled() uint8 {
+	for i := uint8(31); i >= 0; i-- {
+		if c.Notes&(1<<i) != 0 {
+			if ContainsBits(c.Notes, 1<<(i-12)) {
+				return i
+			}
+		}
+	}
+	return 33
+}
+
 func (c Chord) NamedIntervals() []string {
 	notes := make([]string, 0)
 	for i := 31; i >= 0; i-- {
@@ -316,7 +338,6 @@ func (c *Chord) NextInversion() {
 	}
 }
 
-// PreviousInversion decreases the inversion by 1, cycling back to the highest possible value if at 0
 func (c *Chord) PreviousInversion() {
 	lastInterval := c.LastInterval()
 	lastNoteBit := uint32(1 << lastInterval)
@@ -336,4 +357,20 @@ func (c Chord) Inversions() int {
 		}
 	}
 	return count
+}
+
+func (c *Chord) NextDouble() {
+	firstInterval := c.FirstIntervalNotDoubled()
+	firstNoteBit := uint32(1 << firstInterval)
+	upOctaveBit := firstNoteBit << 12
+	if upOctaveBit < (1 << 31) {
+		c.AddNotes(upOctaveBit)
+	}
+}
+
+func (c *Chord) PreviousDouble() {
+	lastInterval := c.LastIntervalDoubled()
+	if lastInterval >= 12 && lastInterval < 32 {
+		c.OmitInterval(lastInterval)
+	}
 }

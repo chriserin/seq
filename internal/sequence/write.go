@@ -246,7 +246,7 @@ func writeOverlays(w io.Writer, overlay *overlays.Overlay) error {
 		for _, gridChord := range overlay.Chords {
 			fmt.Fprintln(w, "------------------------ CHORD --------------------------")
 			fmt.Fprintln(w, "ID:", fmt.Sprintf("%p", gridChord))
-			fmt.Fprintf(w, "GridKey(%d,%d): Arpeggio=%d, Double=%d, Notes=%d\n", gridChord.Root.Line, gridChord.Root.Beat, gridChord.Arpeggio, gridChord.Double, gridChord.Chord.Notes)
+			fmt.Fprintf(w, "GridKey(%d,%d): Arpeggio=%d, Notes=%d\n", gridChord.Root.Line, gridChord.Root.Beat, gridChord.Arpeggio, gridChord.Chord.Notes)
 
 			fmt.Fprintln(w, "------------------------ BEATNOTES --------------------------")
 			for _, beatNote := range gridChord.Notes {

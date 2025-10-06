@@ -14,7 +14,6 @@ type GridChord struct {
 	Notes    []BeatNote
 	Root     grid.GridKey
 	Arpeggio Arp
-	Double   uint8
 }
 
 func (gc GridChord) InBounds(gridKey grid.GridKey) bool {
@@ -151,18 +150,12 @@ func (gc *GridChord) PrevArp() {
 }
 
 func (gc *GridChord) NextDouble() {
-	gc.Double = (gc.Double + 1) % (uint8(len(gc.Chord.Intervals())) + 1)
+	gc.Chord.NextDouble()
 	gc.ApplyArpeggiation()
 }
 
 func (gc *GridChord) PrevDouble() {
-	var newDouble uint8
-	if gc.Double == 0 {
-		newDouble = uint8(len(gc.Chord.Intervals()))
-	} else {
-		newDouble = gc.Double - 1
-	}
-	gc.Double = newDouble
+	gc.Chord.PreviousDouble()
 	gc.ApplyArpeggiation()
 }
 
@@ -189,27 +182,16 @@ func (gc *GridChord) ApplyArpeggiation() {
 
 func (gc GridChord) ArpeggioIntervals() []uint8 {
 	intervals := gc.Chord.Intervals()
-	doubledIntervals := gc.ApplyDoubles(intervals)
 	switch gc.Arpeggio {
 	case ArpNothing:
-		return doubledIntervals
+		return intervals
 	case ArpUp:
-		return doubledIntervals
+		return intervals
 	case ArpReverse:
-		slices.Reverse(doubledIntervals)
-		return doubledIntervals
+		slices.Reverse(intervals)
+		return intervals
 	}
-	return doubledIntervals
-}
-
-func (gc GridChord) ApplyDoubles(intervals []uint8) []uint8 {
-	grownIntervals := slices.Grow(intervals, int(gc.Double))
-	for i := range gc.Double {
-		if int(i) < len(intervals) {
-			grownIntervals = append(grownIntervals, intervals[i]+12)
-		}
-	}
-	return grownIntervals
+	return intervals
 }
 
 // DeepCopy creates a deep copy of the GridChord
@@ -219,7 +201,6 @@ func (gc GridChord) DeepCopy() GridChord {
 		Root:     gc.Root,     // GridKey is a simple struct, so a direct copy is fine
 		Chord:    gc.Chord,    // Direct copy of the Chord
 		Arpeggio: gc.Arpeggio, // arp is just an int, so direct copy is fine
-		Double:   gc.Double,   // uint8 is a simple type, so direct copy is fine
 	}
 
 	// Deep copy the Notes slice

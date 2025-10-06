@@ -312,7 +312,6 @@ func TestDeepCopy(t *testing.T) {
 		chord := original.Chords[0]
 
 		// Modify the chord
-		chord.Double = 2
 		chord.Arpeggio = ArpUp
 
 		clone := DeepCopy(original)
@@ -321,12 +320,7 @@ func TestDeepCopy(t *testing.T) {
 		assert.Equal(t, len(original.Chords), len(clone.Chords))
 		assert.NotSame(t, original.Chords[0], clone.Chords[0])
 		assert.Equal(t, original.Chords[0].Root, clone.Chords[0].Root)
-		assert.Equal(t, original.Chords[0].Double, clone.Chords[0].Double)
 		assert.Equal(t, original.Chords[0].Arpeggio, clone.Chords[0].Arpeggio)
-
-		// Modify original chord and verify clone is unchanged
-		original.Chords[0].Double = 3
-		assert.NotEqual(t, original.Chords[0].Double, clone.Chords[0].Double)
 	})
 
 	// Test with blockers

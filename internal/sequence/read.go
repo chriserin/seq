@@ -443,10 +443,6 @@ func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 					if arppegio, err := strconv.ParseInt(value, 10, 8); err == nil {
 						currentChord.Arpeggio = overlays.Arp(arppegio)
 					}
-				case "Double":
-					if double, err := strconv.ParseUint(value, 10, 8); err == nil {
-						currentChord.Double = uint8(double)
-					}
 				case "Notes":
 					if notes, err := strconv.ParseUint(value, 10, 32); err == nil {
 						currentChord.Chord.Notes = uint32(notes)
