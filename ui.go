@@ -2474,9 +2474,14 @@ func (m *model) RotateRight() {
 			previousKey = currentKey
 		}
 		noteToMove := lastNote
-		moves = append(moves, func() {
-			m.currentOverlay.MoveNoteTo(firstKey, noteToMove)
-		})
+		chord, chordExists := m.currentOverlay.Chords.FindChordWithNote(previousKey)
+		if chordExists {
+			chord.Move(previousKey, firstKey)
+		} else {
+			moves = append(moves, func() {
+				m.currentOverlay.MoveNoteTo(firstKey, noteToMove)
+			})
+		}
 
 		for _, moveFn := range moves {
 			if moveFn != nil {
@@ -2517,9 +2522,16 @@ func (m *model) RotateLeft() {
 			previousKey = currentKey
 		}
 
-		moves = append(moves, func() {
-			m.currentOverlay.MoveNoteTo(GK(l, end), firstNote)
-		})
+		chord, chordExists := m.currentOverlay.Chords.FindChordWithNote(previousKey)
+		if chordExists {
+			moves = append(moves, func() {
+				chord.Move(GK(l, start), GK(l, end))
+			})
+		} else {
+			moves = append(moves, func() {
+				m.currentOverlay.MoveNoteTo(GK(l, end), firstNote)
+			})
+		}
 
 		for _, moveFn := range moves {
 			if moveFn != nil {
