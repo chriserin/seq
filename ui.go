@@ -2530,7 +2530,38 @@ func (m *model) RotateLeft() {
 }
 
 func (m *model) RotateUp() {
-	pattern := m.CombinedEditPattern(m.currentOverlay)
+	m.RotateNotesUp()
+	m.RotateChordsUp()
+}
+
+func (m *model) RotateChordsUp() {
+	chordPattern := make(overlays.ChordPattern)
+	m.currentOverlay.CombineChords(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle())
+
+	lineStart, lineEnd := m.MonoModeLineBoundaries()
+	beatStart, beatEnd := m.PatternActionBeatBoundaries()
+	for beat := beatStart; beat <= beatEnd; beat++ {
+		for l := lineStart; l <= lineEnd; l++ {
+			key := GK(uint8(l), beat)
+			chord, exists := chordPattern[key]
+			if exists {
+				var gridChord = chord.GridChord
+				if !chord.BelongsTo(m.currentOverlay) {
+					gridChord = m.currentOverlay.SetChord(chord.GridChord)
+				}
+				index := l - 1
+				if l != lineStart {
+					gridChord.Root.Line = uint8(index)
+				} else {
+					gridChord.Root.Line = lineEnd
+				}
+			}
+		}
+	}
+}
+
+func (m *model) RotateNotesUp() {
+	pattern := m.CombinedNotePattern(m.currentOverlay)
 	lineStart, lineEnd := m.MonoModeLineBoundaries()
 	beatStart, beatEnd := m.PatternActionBeatBoundaries()
 	for beat := beatStart; beat <= beatEnd; beat++ {
@@ -2543,17 +2574,48 @@ func (m *model) RotateUp() {
 			if l != lineStart {
 				newKey := GK(uint8(l-1), beat)
 				note := pattern[key]
-				m.currentOverlay.SetNote(newKey, note)
+				m.currentOverlay.MoveNoteTo(newKey, note)
 			}
 		}
 		newKey := GK(lineEnd, beat)
 		note := pattern[GK(lineStart, beat)]
-		m.currentOverlay.SetNote(newKey, note)
+		m.currentOverlay.MoveNoteTo(newKey, note)
 	}
 }
 
 func (m *model) RotateDown() {
-	pattern := m.CombinedEditPattern(m.currentOverlay)
+	m.RotateNotesDown()
+	m.RotateChordsDown()
+}
+
+func (m *model) RotateChordsDown() {
+	chordPattern := make(overlays.ChordPattern)
+	m.currentOverlay.CombineChords(&chordPattern, m.currentOverlay.Key.GetMinimumKeyCycle())
+
+	lineStart, lineEnd := m.MonoModeLineBoundaries()
+	beatStart, beatEnd := m.PatternActionBeatBoundaries()
+	for beat := beatStart; beat <= beatEnd; beat++ {
+		for l := int(lineEnd); l >= int(lineStart); l-- {
+			key := GK(uint8(l), beat)
+			chord, exists := chordPattern[key]
+			if exists {
+				var gridChord = chord.GridChord
+				if !chord.BelongsTo(m.currentOverlay) {
+					gridChord = m.currentOverlay.SetChord(chord.GridChord)
+				}
+				index := l + 1
+				if index <= int(lineEnd) {
+					gridChord.Root.Line = uint8(index)
+				} else {
+					gridChord.Root.Line = lineStart
+				}
+			}
+		}
+	}
+}
+
+func (m *model) RotateNotesDown() {
+	pattern := m.CombinedNotePattern(m.currentOverlay)
 	lineStart, lineEnd := m.MonoModeLineBoundaries()
 	beatStart, beatEnd := m.PatternActionBeatBoundaries()
 	for beat := beatStart; beat <= beatEnd; beat++ {
@@ -2567,13 +2629,13 @@ func (m *model) RotateDown() {
 			if index <= int(lineEnd) {
 				newKey := GK(uint8(index), beat)
 				note := pattern[key]
-				m.currentOverlay.SetNote(newKey, note)
+				m.currentOverlay.MoveNoteTo(newKey, note)
 			}
 		}
 
 		newKey := GK(lineStart, beat)
 		note := pattern[GK(lineEnd, beat)]
-		m.currentOverlay.SetNote(newKey, note)
+		m.currentOverlay.MoveNoteTo(newKey, note)
 	}
 }
 
@@ -2747,7 +2809,13 @@ func (m model) PlayingOverlayKeys() []overlayKey {
 
 func (m model) CombinedEditPattern(overlay *overlays.Overlay) grid.Pattern {
 	pattern := make(grid.Pattern)
-	overlay.CombinePattern(&pattern, overlay.Key.GetMinimumKeyCycle())
+	overlay.CombineGridPattern(&pattern, overlay.Key.GetMinimumKeyCycle(), overlays.CombineTypeAll)
+	return pattern
+}
+
+func (m model) CombinedNotePattern(overlay *overlays.Overlay) grid.Pattern {
+	pattern := make(grid.Pattern)
+	overlay.CombineGridPattern(&pattern, overlay.Key.GetMinimumKeyCycle(), overlays.CombineTypeNotes)
 	return pattern
 }
 
@@ -2799,7 +2867,7 @@ func (m *model) EveryMonoSpace(every uint8, everyFn func(gridKey)) {
 	}
 
 	pattern := make(grid.Pattern)
-	m.currentOverlay.CombinedNotePattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle(), lines)
+	m.currentOverlay.CombinedLineGridPattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle(), lines)
 
 	keys := slices.Collect(maps.Keys(pattern))
 
@@ -2836,7 +2904,7 @@ func (m *model) EveryMonoNote(every uint8, everyFn func(gridKey)) {
 	}
 
 	pattern := make(grid.Pattern)
-	m.currentOverlay.CombinedNotePattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle(), lines)
+	m.currentOverlay.CombinedLineGridPattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle(), lines)
 
 	keys := slices.Collect(maps.Keys(pattern))
 
@@ -2896,7 +2964,7 @@ func (m *model) EveryMonoOpenSpace(every uint8, everyFn func(gridKey)) {
 	}
 
 	pattern := make(grid.Pattern)
-	m.currentOverlay.CombinedNotePattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle(), lines)
+	m.currentOverlay.CombinedLineGridPattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle(), lines)
 
 	keys := slices.Collect(maps.Keys(pattern))
 
@@ -2925,7 +2993,7 @@ func (m *model) EveryOpenSpace(every uint8, everyFn func(gridKey)) {
 	start, end := m.PatternActionBeatBoundaries()
 
 	pattern := make(grid.Pattern)
-	m.currentOverlay.CombinePattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle())
+	m.currentOverlay.CombineGridPattern(&pattern, m.currentOverlay.Key.GetMinimumKeyCycle(), overlays.CombineTypeAll)
 
 	keys := slices.Collect(maps.Keys(pattern))
 
