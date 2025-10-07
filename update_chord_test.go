@@ -487,10 +487,22 @@ func TestRotateMappings(t *testing.T) {
 			description:  "Should move major triad chord one line up",
 		},
 		{
+			name:         "RotateUp moves chord up in trigger mode",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.ToggleChordMode, mappings.RotateUp, mappings.ToggleChordMode},
+			expectedKeys: []grid.GridKey{{Line: 22, Beat: 0}, {Line: 18, Beat: 0}, {Line: 15, Beat: 0}},
+			description:  "Should move major triad chord one line up",
+		},
+		{
 			name:         "RotateDown moves chord down",
 			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.RotateUp, mappings.RotateDown},
 			expectedKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
 			description:  "Should move major triad chord back to original position",
+		},
+		{
+			name:         "RotateDown moves chord down in trigger mode",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.ToggleChordMode, mappings.RotateUp, mappings.RotateDown, mappings.ToggleChordMode},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
+			description:  "Should move major triad chord one line up",
 		},
 		{
 			name:         "Multiple RotateRight moves chord multiple beats",
