@@ -8,6 +8,7 @@ import (
 
 	"github.com/chriserin/seq/internal/grid"
 	"github.com/chriserin/seq/internal/mappings"
+	"github.com/chriserin/seq/internal/overlays"
 	"github.com/chriserin/seq/internal/theory"
 	"github.com/stretchr/testify/assert"
 )
@@ -378,7 +379,7 @@ func TestArpeggioMappings(t *testing.T) {
 			assert.True(t, chord.HasValue(), tt.description+" - chord should exist")
 
 			gridPattern := make(grid.Pattern)
-			m.currentOverlay.CombineGridPattern(&gridPattern, 1)
+			m.currentOverlay.CombineGridPattern(&gridPattern, 1, overlays.CombineTypeAll)
 
 			for key := range gridPattern {
 				assert.Contains(t, tt.expectedKeys, key, tt.description+" - expected key should exist in pattern")
@@ -427,7 +428,7 @@ func TestGateBigIncreaseInChordMode(t *testing.T) {
 			assert.True(t, chord.HasValue(), tt.description+" - chord should exist")
 
 			gridPattern := make(grid.Pattern)
-			m.currentOverlay.CombineGridPattern(&gridPattern, 1)
+			m.currentOverlay.CombineGridPattern(&gridPattern, 1, overlays.CombineTypeAll)
 
 			for key, note := range gridPattern {
 				assert.Equal(t, tt.expectedGate, note.GateIndex, tt.description+" - gate should be "+strconv.Itoa(int(tt.expectedGate))+" for note at "+key.String())
@@ -450,9 +451,33 @@ func TestRotateMappings(t *testing.T) {
 			description:  "Should move major triad chord one beat to the right",
 		},
 		{
+			name:         "RotateRight in trigger mode moves chord note to the right",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.ToggleChordMode, mappings.RotateRight, mappings.ToggleChordMode},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 1}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
+			description:  "Should move major triad chord one beat to the right",
+		},
+		{
+			name:         "RotateRight in trigger mode moves chord note to the right at end",
+			commands:     []any{mappings.CursorLastLine, mappings.CursorLineEnd, mappings.MajorTriad, mappings.ToggleChordMode, mappings.CursorLineStart, mappings.RotateRight, mappings.ToggleChordMode},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 31}, {Line: 16, Beat: 31}},
+			description:  "Should move major triad chord one beat to the right",
+		},
+		{
 			name:         "RotateLeft moves chord to the left",
 			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.RotateRight, mappings.RotateLeft},
 			expectedKeys: []grid.GridKey{{Line: 23, Beat: 0}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
+			description:  "Should move major triad chord back to original position",
+		},
+		{
+			name:         "RotateLeft in trigger mode moves chord note to the left",
+			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.ToggleChordMode, mappings.RotateLeft, mappings.ToggleChordMode},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 31}, {Line: 19, Beat: 0}, {Line: 16, Beat: 0}},
+			description:  "Should move major triad chord back to original position",
+		},
+		{
+			name:         "RotateLeft in trigger mode moves chord note to the left at end",
+			commands:     []any{mappings.CursorLastLine, mappings.CursorLineEnd, mappings.MajorTriad, mappings.ToggleChordMode, mappings.CursorLeft, mappings.RotateLeft, mappings.ToggleChordMode},
+			expectedKeys: []grid.GridKey{{Line: 23, Beat: 30}, {Line: 19, Beat: 31}, {Line: 16, Beat: 31}},
 			description:  "Should move major triad chord back to original position",
 		},
 		{
@@ -491,7 +516,8 @@ func TestRotateMappings(t *testing.T) {
 			assert.True(t, chord.HasValue(), tt.description+" - chord should exist")
 
 			gridPattern := make(grid.Pattern)
-			m.currentOverlay.CombineGridPattern(&gridPattern, 1)
+			m.currentOverlay.CombineGridPattern(&gridPattern, 1, overlays.CombineTypeAll)
+			assert.Len(t, m.currentOverlay.Notes, 0)
 
 			for key := range gridPattern {
 				assert.Contains(t, tt.expectedKeys, key, tt.description+" - expected key should exist in pattern")
@@ -559,7 +585,7 @@ func TestRotateChordOnNewOverlay(t *testing.T) {
 
 			// Check original overlay pattern
 			originalPattern := make(grid.Pattern)
-			m.currentOverlay.CombineGridPattern(&originalPattern, 1)
+			m.currentOverlay.CombineGridPattern(&originalPattern, 1, overlays.CombineTypeAll)
 
 			for _, key := range tt.expectedOriginalKeys {
 				assert.Contains(t, originalPattern, key, tt.description+" - original pattern should contain expected key "+key.String())
@@ -570,7 +596,7 @@ func TestRotateChordOnNewOverlay(t *testing.T) {
 
 			// Check new overlay pattern
 			newPattern := make(grid.Pattern)
-			m.currentOverlay.CombineGridPattern(&newPattern, 2)
+			m.currentOverlay.CombineGridPattern(&newPattern, 2, overlays.CombineTypeAll)
 
 			for key := range maps.Keys(newPattern) {
 				assert.Contains(t, tt.expectedNewKeys, key, tt.description+" - new pattern should contain expected key "+key.String())
@@ -579,7 +605,7 @@ func TestRotateChordOnNewOverlay(t *testing.T) {
 			// Verify original overlay is unchanged
 			m, _ = processCommands([]any{mappings.PrevOverlay}, m)
 			originalPatternCheck := make(grid.Pattern)
-			m.currentOverlay.CombineGridPattern(&originalPatternCheck, 1)
+			m.currentOverlay.CombineGridPattern(&originalPatternCheck, 1, overlays.CombineTypeAll)
 
 			for _, key := range tt.expectedOriginalKeys {
 				assert.Contains(t, originalPatternCheck, key, tt.description+" - original overlay should remain unchanged at "+key.String())
