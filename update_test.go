@@ -472,6 +472,21 @@ func TestClearLine(t *testing.T) {
 			cursorPos:   grid.GridKey{Line: 0, Beat: 2},
 			description: "Should keep notes before cursor position and clear only the cursor position",
 		},
+		{
+			name: "Clear line from middle cursor position on next overlay",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.CursorRight,
+				mappings.NoteAdd,
+				mappings.OverlayInputSwitch, TestKey{Keys: "2"}, mappings.Enter,
+				mappings.CursorLeft,
+				mappings.ClearLine,
+			},
+			cursorPos:   grid.GridKey{Line: 0, Beat: 1},
+			description: "Should keep notes before cursor position and clear from cursor to end",
+		},
 	}
 
 	for _, tt := range tests {
@@ -482,12 +497,12 @@ func TestClearLine(t *testing.T) {
 
 			for beat := uint8(0); beat < m.CurrentPart().Beats; beat++ {
 				m.gridCursor = grid.GridKey{Line: tt.cursorPos.Line, Beat: beat}
-				_, exists := m.CurrentNote()
+				note, exists := m.CurrentNote()
 
 				if beat < tt.cursorPos.Beat {
-					assert.True(t, exists, tt.description+" - note should exist before cursor at beat %d", beat)
+					assert.True(t, exists && note != zeronote, tt.description+" - note should exist before cursor at beat %d", beat)
 				} else {
-					assert.False(t, exists, tt.description+" - note should not exist at or after cursor at beat %d", beat)
+					assert.False(t, exists && note != zeronote, tt.description+" - note should not exist at or after cursor at beat %d", beat)
 				}
 			}
 		})

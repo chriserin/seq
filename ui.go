@@ -2415,7 +2415,7 @@ func (m *model) NextOverlay(direction int) {
 func (m *model) ClearOverlayLine() {
 	start := m.gridCursor.Beat
 	for i := start; i < m.CurrentPart().Beats; i++ {
-		m.currentOverlay.RemoveNote(GK(m.gridCursor.Line, i))
+		m.currentOverlay.SetNote(GK(m.gridCursor.Line, i), zeronote)
 	}
 }
 
