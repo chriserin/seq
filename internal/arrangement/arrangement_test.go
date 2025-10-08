@@ -1350,3 +1350,146 @@ func TestMoveNodeUp(t *testing.T) {
 		assert.Equal(t, node1, cursor[1], "Cursor should still point to node1")
 	})
 }
+
+func TestAllLastSiblings(t *testing.T) {
+	// Setup test arrangement tree
+	root := &Arrangement{
+		Iterations: 1,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	nodeA := &Arrangement{
+		Section:    SongSection{Part: 0, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations: 1,
+	}
+
+	nodeB := &Arrangement{
+		Section:    SongSection{Part: 1, Cycles: 2, StartBeat: 4, StartCycles: 2},
+		Iterations: 1,
+	}
+
+	nodeC := &Arrangement{
+		Section:    SongSection{Part: 2, Cycles: 1, StartBeat: 0, StartCycles: 1},
+		Iterations: 1,
+	}
+
+	nodeD := &Arrangement{
+		Section:    SongSection{Part: 3, Cycles: 3, StartBeat: 2, StartCycles: 0},
+		Iterations: 1,
+	}
+
+	group1 := &Arrangement{
+		Iterations: 2,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	group2 := &Arrangement{
+		Iterations: 1,
+		Nodes:      make([]*Arrangement, 0),
+	}
+
+	// Define test cases
+	tests := []struct {
+		name     string
+		setup    func()
+		cursor   ArrCursor
+		expected bool
+	}{
+		{
+			name: "single node cursor (root only) should return true",
+			setup: func() {
+				root.Nodes = []*Arrangement{nodeA}
+			},
+			cursor:   ArrCursor{root},
+			expected: true,
+		},
+		{
+			name: "cursor pointing to last sibling at one level should return true",
+			setup: func() {
+				root.Nodes = []*Arrangement{nodeA, nodeB, nodeC}
+			},
+			cursor:   ArrCursor{root, nodeC},
+			expected: true,
+		},
+		{
+			name: "cursor pointing to non-last sibling should return false",
+			setup: func() {
+				root.Nodes = []*Arrangement{nodeA, nodeB, nodeC}
+			},
+			cursor:   ArrCursor{root, nodeA},
+			expected: false,
+		},
+		{
+			name: "cursor pointing to last sibling in nested structure (all last siblings)",
+			setup: func() {
+				group1.Nodes = []*Arrangement{nodeA, nodeB}
+				group2.Nodes = []*Arrangement{nodeC, nodeD}
+				root.Nodes = []*Arrangement{group1, group2}
+			},
+			cursor:   ArrCursor{root, group2, nodeD},
+			expected: true,
+		},
+		{
+			name: "cursor pointing to last sibling but parent is not last sibling",
+			setup: func() {
+				group1.Nodes = []*Arrangement{nodeA, nodeB}
+				group2.Nodes = []*Arrangement{nodeC, nodeD}
+				root.Nodes = []*Arrangement{group1, group2}
+			},
+			cursor:   ArrCursor{root, group1, nodeB},
+			expected: false,
+		},
+		{
+			name: "cursor pointing to non-last sibling in nested structure",
+			setup: func() {
+				group1.Nodes = []*Arrangement{nodeA, nodeB}
+				root.Nodes = []*Arrangement{group1, nodeC}
+			},
+			cursor:   ArrCursor{root, group1, nodeA},
+			expected: false,
+		},
+		{
+			name: "deeply nested - all are last siblings",
+			setup: func() {
+				group2.Nodes = []*Arrangement{nodeC, nodeD}
+				group1.Nodes = []*Arrangement{nodeA, group2}
+				root.Nodes = []*Arrangement{nodeB, group1}
+			},
+			cursor:   ArrCursor{root, group1, group2, nodeD},
+			expected: true,
+		},
+		{
+			name: "deeply nested - not all are last siblings",
+			setup: func() {
+				group2.Nodes = []*Arrangement{nodeC, nodeD}
+				group1.Nodes = []*Arrangement{nodeA, group2}
+				root.Nodes = []*Arrangement{nodeB, group1}
+			},
+			cursor:   ArrCursor{root, group1, group2, nodeC},
+			expected: false,
+		},
+		{
+			name: "empty cursor should return true",
+			setup: func() {
+				// No setup needed
+			},
+			cursor:   ArrCursor{},
+			expected: true,
+		},
+	}
+
+	// Run test cases
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Reset the tree structure for each test
+			root.Nodes = make([]*Arrangement, 0)
+			group1.Nodes = make([]*Arrangement, 0)
+			group2.Nodes = make([]*Arrangement, 0)
+
+			tc.setup()
+
+			result := tc.cursor.AllLastSiblings()
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}

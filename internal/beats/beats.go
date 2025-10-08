@@ -105,8 +105,10 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn *seqmidi.MidiConnectio
 	}()
 }
 
-func IsDone(playState playstate.PlayState, currentNode *arrangement.Arrangement, currentSection arrangement.SongSection) bool {
-	return playState.LoopedArrangement != currentNode && currentSection.Cycles+currentSection.StartCycles <= (*playState.Iterations)[currentNode]
+func IsDone(playState playstate.PlayState, currentNode *arrangement.Arrangement, currentSection arrangement.SongSection, cursor *arrangement.ArrCursor) bool {
+	return playState.LoopedArrangement != currentNode &&
+		currentSection.Cycles+currentSection.StartCycles <= (*playState.Iterations)[currentNode] &&
+		!(cursor.AllLastSiblings() && playState.PlayMode == playstate.PlayReceiver)
 }
 
 func (bl BeatsLooper) Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, sendFn func(tea.Msg)) {
@@ -193,7 +195,7 @@ func AdvancePlayState(playState *playstate.PlayState, definition sequence.Sequen
 		if playState.AllowAdvance {
 			advanceCurrentBeat(currentCycles, *playingOverlay, playState.LineStates, currentPart.Beats)
 			advanceKeyCycle(definition.Keyline, playState.LineStates, playState.LoopMode, currentNode, playState.Iterations)
-			if IsDone(*playState, currentNode, currentSection) && playState.LoopMode != playstate.LoopOverlay {
+			if IsDone(*playState, currentNode, currentSection, cursor) && playState.LoopMode != playstate.LoopOverlay {
 				if PlayMove(cursor, playState.Iterations, playState.LoopedArrangement) || playState.PlayMode == playstate.PlayReceiver {
 					currentSection = (*cursor)[len(*cursor)-1].Section
 					currentNode = (*cursor)[len(*cursor)-1]

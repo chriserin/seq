@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/Southclaws/fault"
@@ -48,6 +49,59 @@ func OpenVirtualOut(name string) (drivers.Out, error) {
 		return nil, fault.Wrap(err, fmsg.With("cannot open virtual out"))
 	}
 	return out, nil
+}
+
+func (mc *MidiConnection) UpdateInDeviceList(driver drivers.Driver) error {
+	var newDevices []*InDeviceInfo
+
+	ins, err := driver.Ins()
+	if err != nil {
+		return fmt.Errorf("failed to get input ports: %v", err)
+	}
+
+	for _, in := range ins {
+		// Check if we already have this device
+		var foundDevice *InDeviceInfo
+		for _, currentDevice := range mc.inDevices {
+			if currentDevice.Name == in.String() {
+				foundDevice = currentDevice
+				foundDevice.In = in
+				foundDevice.IsOpen = false
+				if foundDevice.IsTransmitter {
+					foundDevice.Open()
+				}
+				break
+			}
+		}
+
+		if foundDevice == nil {
+			// NOTE: Don't connect to ourself
+			if !(mc.IsTransmitter && strings.Contains(in.String(), TransmitterName)) {
+				newDevice := &InDeviceInfo{
+					Name: in.String(),
+					In:   in,
+				}
+				if newDevice.Matches(TransmitterName) {
+					newDevice.IsTransmitter = true
+					newDevice.Open()
+				}
+				newDevices = append(newDevices, newDevice)
+			}
+		} else {
+			newDevices = append(newDevices, foundDevice)
+		}
+	}
+
+	mc.inDevices = newDevices
+
+	if mc.ReceiverFunc != nil && !mc.DoNotListen {
+		err := mc.ListenToTransmitter(mc.ReceiverFunc)
+		if err != nil {
+			return fault.Wrap(err, fmsg.With("cannot listen to transmitter"))
+		}
+	}
+
+	return nil
 }
 
 func (mc *MidiConnection) DeviceLoop(ctx context.Context) {

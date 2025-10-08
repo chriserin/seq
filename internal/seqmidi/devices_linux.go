@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Southclaws/fault"
@@ -41,6 +42,11 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 		fmt.Fprintf(os.Stderr, "Error getting device list: %v\n", err)
 		return
 	}
+	err = mc.UpdateInDeviceList(driver)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Can't update MIDI in device list: %v\n", err)
+		return
+	}
 	go func() {
 		// NOTE: Setup initially so we don't have to 3 seconds
 
@@ -61,6 +67,11 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 						fmt.Fprintf(os.Stderr, "Error getting device list: %v\n", err)
 						return
 					}
+					err = mc.UpdateInDeviceList(driver)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Can't update MIDI in device list: %v\n", err)
+						return
+					}
 					err = driver.Close()
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error closing driver: %v\n", err)
@@ -70,6 +81,56 @@ func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+func (mc *MidiConnection) UpdateInDeviceList(driver drivers.Driver) error {
+	var newDevices []*InDeviceInfo
+
+	ins, err := driver.Ins()
+	if err != nil {
+		return fmt.Errorf("failed to get input ports: %v", err)
+	}
+
+	for _, in := range ins {
+		// Check if we already have this device
+		var foundDevice *InDeviceInfo
+		for _, currentDevice := range mc.inDevices {
+			if currentDevice.Name == in.String() {
+				foundDevice = currentDevice
+				break
+			}
+		}
+
+		if foundDevice == nil {
+			// NOTE: Don't connect to ourself
+			if !(mc.IsTransmitter && strings.Contains(in.String(), TransmitterName)) {
+				newDevice := &InDeviceInfo{
+					Name: in.String(),
+					In:   in,
+				}
+				if newDevice.Matches(TransmitterName) {
+					newDevice.IsTransmitter = true
+					newDevice.Open()
+				}
+				newDevices = append(newDevices, newDevice)
+			}
+		} else {
+			newDevices = append(newDevices, foundDevice)
+		}
+	}
+
+	mc.inDevices = newDevices
+
+	if mc.ReceiverFunc != nil && !mc.DoNotListen {
+		if !mc.HasTransmitter() {
+			err := mc.ListenToTransmitter(mc.ReceiverFunc)
+			if err != nil {
+				return fault.Wrap(err, fmsg.With("cannot listen to transmitter"))
+			}
+		}
+	}
+
+	return nil
 }
 
 func GetIns() ([]drivers.In, error) {

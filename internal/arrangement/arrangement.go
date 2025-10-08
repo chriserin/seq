@@ -109,6 +109,18 @@ func (a *Arrangement) CursorForNodeRecursive(node *Arrangement, cursor ArrCursor
 
 type ArrCursor []*Arrangement
 
+func (ac *ArrCursor) AllLastSiblings() bool {
+	copyCursor := make(ArrCursor, len(*ac))
+	copy(copyCursor, *ac)
+	for len(copyCursor) > 1 {
+		if !copyCursor.IsLastSibling() {
+			return false
+		}
+		copyCursor.Up()
+	}
+	return true
+}
+
 func (ac ArrCursor) Equals(other ArrCursor) bool {
 	if len(ac) != len(other) {
 		return false
