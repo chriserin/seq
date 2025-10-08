@@ -720,7 +720,8 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		overlayNote, hasNote := visualCombinedPattern[currentGridKey]
 
 		var backgroundSeqColor lipgloss.Color
-		if m.playState.Playing && m.playState.LineStates[lineNumber].CurrentBeat == i {
+		var isCurrentBeat = m.playState.Playing && m.playState.LineStates[lineNumber].CurrentBeat == i
+		if isCurrentBeat {
 			backgroundSeqColor = themes.SeqCursorColor
 		} else if m.visualSelection.visualMode != operation.VisualNone && m.InVisualSelection(currentGridKey) {
 			backgroundSeqColor = themes.SeqVisualColor
@@ -754,7 +755,11 @@ func lineView(lineNumber uint8, m model, visualCombinedPattern overlays.OverlayP
 		} else if m.visualSelection.visualMode != operation.VisualNone && m.InVisualSelection(currentGridKey) {
 			style = style.Foreground(themes.Black)
 		} else if hasGateTail {
-			style = style.Foreground(gateSpace.Color)
+			if isCurrentBeat {
+				style = style.Foreground(backgroundSeqColor)
+			} else {
+				style = style.Foreground(gateSpace.Color)
+			}
 		} else {
 			style = style.Foreground(foregroundColor)
 		}
