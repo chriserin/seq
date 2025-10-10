@@ -1577,10 +1577,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		if msg.PerformStop {
 			m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, 0)
 			m.SafeStop()
+			m.SyncBeatLoop()
 		}
 		m.ResetCurrentOverlay()
 		m.arrangement.ResetDepth()
-		m.SyncBeatLoop()
 		return m, nil
 	case beats.AnticipatoryStop:
 		if m.midiLoopMode == timing.MlmTransmitter {

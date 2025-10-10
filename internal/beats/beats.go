@@ -121,7 +121,12 @@ func (bl BeatsLooper) Beat(msg BeatMsg, playState playstate.PlayState, definitio
 		return
 	} else {
 		bl.PlaySequence(&playState, definition, cursor, msg)
-		sendFn(ModelPlayedMsg{PlayState: playState, Cursor: cursor})
+		go func() {
+			sendFn(ModelPlayedMsg{PlayState: playState, Cursor: cursor})
+		}()
+		go func() {
+			bl.UpdateChannel <- ModelMsg{PlayState: playState, Sequence: definition, Cursor: cursor}
+		}()
 	}
 
 	// NOTE: Looking at future state to determine if we need to prevent sending the
