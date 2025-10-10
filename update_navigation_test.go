@@ -243,3 +243,115 @@ func TestOverlayInputSwitch(t *testing.T) {
 		})
 	}
 }
+
+func TestNavigateWithHiddenLines(t *testing.T) {
+	tests := []struct {
+		name           string
+		initialPos     grid.GridKey
+		notesOnLines   []uint8
+		commands       []any
+		expectedPos    grid.GridKey
+		expectedHidden bool
+		description    string
+	}{
+		{
+			name:           "Cursor Down With Hidden Lines",
+			initialPos:     grid.GridKey{Line: 0, Beat: 0},
+			notesOnLines:   []uint8{0, 2, 5},
+			commands:       []any{mappings.ToggleHideLines, mappings.CursorDown},
+			expectedPos:    grid.GridKey{Line: 2, Beat: 0},
+			expectedHidden: true,
+			description:    "Should skip hidden line 1 and move to line 2",
+		},
+		{
+			name:           "Cursor Up With Hidden Lines",
+			initialPos:     grid.GridKey{Line: 5, Beat: 0},
+			notesOnLines:   []uint8{0, 2, 5},
+			commands:       []any{mappings.ToggleHideLines, mappings.CursorUp},
+			expectedPos:    grid.GridKey{Line: 2, Beat: 0},
+			expectedHidden: true,
+			description:    "Should skip hidden lines 3 and 4 and move to line 2",
+		},
+		{
+			name:           "Multiple Cursor Down With Hidden Lines",
+			initialPos:     grid.GridKey{Line: 0, Beat: 0},
+			notesOnLines:   []uint8{0, 2, 5},
+			commands:       []any{mappings.ToggleHideLines, mappings.CursorDown, mappings.CursorDown},
+			expectedPos:    grid.GridKey{Line: 5, Beat: 0},
+			expectedHidden: true,
+			description:    "Should skip all hidden lines and move to line 5",
+		},
+		{
+			name:           "Cursor First Line With Hidden Lines",
+			initialPos:     grid.GridKey{Line: 5, Beat: 0},
+			notesOnLines:   []uint8{2, 5},
+			commands:       []any{mappings.ToggleHideLines, mappings.CursorFirstLine},
+			expectedPos:    grid.GridKey{Line: 2, Beat: 0},
+			expectedHidden: true,
+			description:    "Should move to first visible line (2)",
+		},
+		{
+			name:           "Cursor Last Line With Hidden Lines",
+			initialPos:     grid.GridKey{Line: 0, Beat: 0},
+			notesOnLines:   []uint8{0, 2, 5},
+			commands:       []any{mappings.ToggleHideLines, mappings.CursorLastLine},
+			expectedPos:    grid.GridKey{Line: 5, Beat: 0},
+			expectedHidden: true,
+			description:    "Should move to last visible line (5)",
+		},
+		{
+			name:           "Toggle Hide Lines On Empty Line",
+			initialPos:     grid.GridKey{Line: 3, Beat: 0},
+			notesOnLines:   []uint8{0, 2, 5},
+			commands:       []any{mappings.ToggleHideLines},
+			expectedPos:    grid.GridKey{Line: 2, Beat: 0},
+			expectedHidden: true,
+			description:    "Should move cursor to nearest visible line when toggling hide on empty line",
+		},
+		{
+			name:           "Toggle Hide Lines Off",
+			initialPos:     grid.GridKey{Line: 2, Beat: 0},
+			notesOnLines:   []uint8{0, 2, 5},
+			commands:       []any{mappings.ToggleHideLines, mappings.ToggleHideLines},
+			expectedPos:    grid.GridKey{Line: 2, Beat: 0},
+			expectedHidden: false,
+			description:    "Should restore all lines when toggling hide off",
+		},
+		{
+			name:           "Toggle Hide Line Moves Cursor",
+			initialPos:     grid.GridKey{Line: 0, Beat: 0},
+			notesOnLines:   []uint8{2},
+			commands:       []any{mappings.ToggleHideLines},
+			expectedPos:    grid.GridKey{Line: 2, Beat: 0},
+			expectedHidden: true,
+			description:    "Should restore all lines when toggling hide off",
+		},
+		{
+			name:           "Toggle Hide Line Moves Cursor note on 5",
+			initialPos:     grid.GridKey{Line: 0, Beat: 0},
+			notesOnLines:   []uint8{5},
+			commands:       []any{mappings.ToggleHideLines},
+			expectedPos:    grid.GridKey{Line: 5, Beat: 0},
+			expectedHidden: true,
+			description:    "Should restore all lines when toggling hide off",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(WithGridCursor(tt.initialPos))
+
+			// Add notes to specific lines to make them visible
+			for _, lineNum := range tt.notesOnLines {
+				key := grid.GridKey{Line: lineNum, Beat: 0}
+				m.currentOverlay.AddNote(key, grid.InitNote())
+			}
+
+			m, _ = processCommands(tt.commands, m)
+
+			assert.Equal(t, tt.expectedPos.Line, m.gridCursor.Line, tt.description+" - line position")
+			assert.Equal(t, tt.expectedPos.Beat, m.gridCursor.Beat, tt.description+" - beat position")
+			assert.Equal(t, tt.expectedHidden, m.hideEmptyLines, tt.description+" - hide state")
+		})
+	}
+}

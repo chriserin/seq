@@ -1620,8 +1620,8 @@ func (m *model) CursorDown() {
 	pattern := m.CombinedOverlayPattern(m.currentOverlay)
 	showLines := GetShowLines(len(m.definition.Lines), pattern, m.CurrentPart().Beats)
 	if m.gridCursor.Line < uint8(len(m.definition.Lines)-1) {
-		for i := range m.gridCursor.Line + 1 {
-			newLine := m.gridCursor.Line + (1 + i)
+		for i := range len(m.definition.Lines) - int(m.gridCursor.Line) {
+			newLine := m.gridCursor.Line + (1 + uint8(i))
 			if slices.Contains(showLines, newLine) || !m.hideEmptyLines {
 				m.SetGridCursor(gridKey{
 					Line: newLine,
@@ -1654,18 +1654,21 @@ func (m *model) CursorValid() {
 	pattern := m.CombinedOverlayPattern(m.currentOverlay)
 	showLines := GetShowLines(len(m.definition.Lines), pattern, m.CurrentPart().Beats)
 	if !slices.Contains(showLines, m.gridCursor.Line) {
-		keeper := int(m.gridCursor.Line)
-		for i := range len(m.definition.Lines) + 1 {
-			var direction int
+		center := int(m.gridCursor.Line)
+		max := len(m.definition.Lines)
+		for i := range 2 * max {
+			var index int
 			if i%2 == 0 {
-				direction = 1
+				index = center + (i / 2)
 			} else {
-				direction = -1
+				index = center - ((i + 1) / 2)
 			}
-			keeper = abs(keeper - (i * direction))
-			if slices.Contains(showLines, uint8(keeper)) || !m.hideEmptyLines {
+			if index < 0 || index >= max {
+				continue
+			}
+			if slices.Contains(showLines, uint8(index)) || !m.hideEmptyLines {
 				m.SetGridCursor(gridKey{
-					Line: uint8(keeper),
+					Line: uint8(index),
 					Beat: m.gridCursor.Beat,
 				})
 				return
