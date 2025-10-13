@@ -1,5 +1,46 @@
 # CHANGELOG
 
+## [v0.1.0-alpha.10](https://github.com/chriserin/seq/compare/v0.1.0-alpha.9...v0.1.0-alpha.10) (2025-10-10)
+
+### Features
+
+* allow rec to continue to acc iters [6584526](https://github.com/chriserin/seq/commit/6584526) 
+* automatic rec/trans determination [a3a7242](https://github.com/chriserin/seq/commit/a3a7242) 
+* Write/Read blockers from file [cb0a576](https://github.com/chriserin/seq/commit/cb0a576) 
+* Move Wait for devices to after go func [34c2b1f](https://github.com/chriserin/seq/commit/34c2b1f) 
+* Re-connect transmitter+receiver [8ccb46c](https://github.com/chriserin/seq/commit/8ccb46c) 
+
+### Fixes
+
+* cursor moves when toggle hide lines [44c956b](https://github.com/chriserin/seq/commit/44c956b) 
+* Remove render loop work/wait [15b8f13](https://github.com/chriserin/seq/commit/15b8f13) 
+* show playCursor above gate long tail [6870ff7](https://github.com/chriserin/seq/commit/6870ff7) 
+* Clear line of below notes on overlay [517d662](https://github.com/chriserin/seq/commit/517d662) 
+* gridmode RotateL/R for chords at bounds [c6ca0db](https://github.com/chriserin/seq/commit/c6ca0db) 
+* gridmode RotateUp/Down for chords [7aa7bee](https://github.com/chriserin/seq/commit/7aa7bee) 
+* prevent error when notes != definition [1706b38](https://github.com/chriserin/seq/commit/1706b38) 
+* use outport if outport flag present [937287d](https://github.com/chriserin/seq/commit/937287d) 
+* keep daw connection open [0dfc434](https://github.com/chriserin/seq/commit/0dfc434) 
+* Rotate note down + up w/overlays [0eb81e1](https://github.com/chriserin/seq/commit/0eb81e1) 
+* get math order of operations right [eb61d7b](https://github.com/chriserin/seq/commit/eb61d7b) 
+* list cmd lists the midi outputs [e18eeb5](https://github.com/chriserin/seq/commit/e18eeb5) 
+* Reset time rec clock time at start [664f78a](https://github.com/chriserin/seq/commit/664f78a) 
+* Donot listen while playing in standby [d843961](https://github.com/chriserin/seq/commit/d843961) 
+* only listen to midi w active callback [a67b340](https://github.com/chriserin/seq/commit/a67b340) 
+* Only reset transmitter once [2b11261](https://github.com/chriserin/seq/commit/2b11261) 
+* Remove debug code [21cb3aa](https://github.com/chriserin/seq/commit/21cb3aa) 
+* Cannot move blocked chord [b8289c8](https://github.com/chriserin/seq/commit/b8289c8) 
+* Ensure connection after update [4a15270](https://github.com/chriserin/seq/commit/4a15270) 
+* don't destroy connection [8ad40d0](https://github.com/chriserin/seq/commit/8ad40d0) 
+* Note value increase on whole chord [74e81ed](https://github.com/chriserin/seq/commit/74e81ed) 
+* blockers should move with blocked chord [41ee54a](https://github.com/chriserin/seq/commit/41ee54a) 
+* don't set overlaykey if focused [1db888d](https://github.com/chriserin/seq/commit/1db888d) 
+* move selection on last/first line [f527d3e](https://github.com/chriserin/seq/commit/f527d3e) 
+* Ratchet edit view render bug [a1a1640](https://github.com/chriserin/seq/commit/a1a1640) 
+* No undo unless key is different [35c9370](https://github.com/chriserin/seq/commit/35c9370) 
+* Driver must wait for devices loop [5782ee9](https://github.com/chriserin/seq/commit/5782ee9) 
+
+
 ## [v0.1.0-alpha.9](https://github.com/chriserin/seq/compare/v0.1.0-alpha.8...v0.1.0-alpha.9) (2025-09-25)
 
 ### Features
