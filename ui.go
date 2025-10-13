@@ -1893,10 +1893,7 @@ func (m *model) Stop() {
 
 	notes := notereg.Clear()
 	for _, n := range notes {
-		switch n := n.(type) {
-		case beats.NoteMsg:
-			beatsLooper.PlayMessage(time.Duration(0), n.OffMessage())
-		}
+		beatsLooper.PlayMessage(time.Duration(0), n)
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/Southclaws/fault"
 	"github.com/Southclaws/fault/fmsg"
+	"github.com/chriserin/seq/internal/notereg"
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
 )
@@ -102,6 +103,10 @@ func (mc *MidiConnection) LoopMidi(ctx context.Context) {
 				return
 			case msg := <-mc.midiChannel:
 				if msg.Delay == 0 {
+					key := notereg.GetKey(msg.Msg)
+					if msg.Msg.Type().Is(midi.NoteOnMsg) && !notereg.HasKey(key) {
+						notereg.AddKey(key)
+					}
 					playMutex.Lock()
 					err := mc.SendMidi(msg.Msg)
 					playMutex.Unlock()
@@ -109,14 +114,20 @@ func (mc *MidiConnection) LoopMidi(ctx context.Context) {
 						panic(err)
 					}
 				} else {
-					time.AfterFunc(msg.Delay, func() {
+					key := notereg.GetKey(msg.Msg)
+					timer := time.AfterFunc(msg.Delay, func() {
+						if msg.Msg.Type().Is(midi.NoteOffMsg) && !notereg.HasKey(key) {
+							return
+						}
 						playMutex.Lock()
 						err := mc.SendMidi(msg.Msg)
 						playMutex.Unlock()
+						notereg.RemoveKey(key)
 						if err != nil {
 							panic(err)
 						}
 					})
+					notereg.AddTimer(key, timer)
 				}
 			}
 		}

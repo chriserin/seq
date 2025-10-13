@@ -321,7 +321,12 @@ func (bl BeatsLooper) PlayMessage(delay time.Duration, message midi.Message) {
 }
 
 func (bl BeatsLooper) PlayOnMessage(nm NoteMsg) {
-	bl.PlayQueue <- seqmidi.Message{Msg: nm.GetOnMidi(), Delay: nm.delay}
+	if notereg.Has(nm) {
+		bl.PlayQueue <- seqmidi.Message{Msg: nm.GetOffMidi(), Delay: nm.delay}
+		bl.PlayQueue <- seqmidi.Message{Msg: nm.GetOnMidi(), Delay: nm.delay}
+	} else {
+		bl.PlayQueue <- seqmidi.Message{Msg: nm.GetOnMidi(), Delay: nm.delay}
+	}
 }
 
 func (bl BeatsLooper) PlayOffMessage(nm NoteMsg) {
