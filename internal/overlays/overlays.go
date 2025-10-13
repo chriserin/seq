@@ -330,8 +330,8 @@ func (ol *Overlay) FindAboveOverlay(key Key) *Overlay {
 	return nil
 }
 
-func (ol Overlay) HighestMatchingOverlay(keyCycle int) *Overlay {
-	for currentOverlay := &ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
+func (ol *Overlay) HighestMatchingOverlay(keyCycle int) *Overlay {
+	for currentOverlay := ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
 		if currentOverlay.Key.DoesMatch(keyCycle) {
 			return currentOverlay
 		}
