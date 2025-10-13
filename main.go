@@ -45,7 +45,7 @@ func main() {
 			p, err := RunProgram(filename, cliOptions)
 			_, err = p.Run()
 			if err != nil {
-				log.Fatal("Program Failure")
+				log.Fatalf("Program Failure: %v\n", err)
 			} else {
 				return
 			}
