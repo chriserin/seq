@@ -420,27 +420,27 @@ func (m model) SeqView(showLines []uint8) string {
 	currentNote := visualCombinedPattern[m.gridCursor]
 
 	buf.WriteString(m.WriteView())
-	if m.patternMode == operation.PatternAccent {
+	if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternAccent {
 		buf.WriteString(PatternMode(" Accent "))
-	} else if m.patternMode == operation.PatternNoteAccent {
+	} else if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternNoteAccent {
 		mode = " Accent Note "
 		buf.WriteString(PatternMode(mode))
-	} else if m.patternMode == operation.PatternGate {
+	} else if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternGate {
 		mode = " Gate "
 		buf.WriteString(PatternMode(mode))
-	} else if m.patternMode == operation.PatternNoteGate {
+	} else if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternNoteGate {
 		mode = " Gate Note "
 		buf.WriteString(PatternMode(mode))
-	} else if m.patternMode == operation.PatternWait {
+	} else if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternWait {
 		mode = " Wait "
 		buf.WriteString(PatternMode(mode))
-	} else if m.patternMode == operation.PatternNoteWait {
+	} else if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternNoteWait {
 		mode = " Wait Note "
 		buf.WriteString(PatternMode(mode))
-	} else if m.patternMode == operation.PatternRatchet {
+	} else if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternRatchet {
 		mode = " Ratchet "
 		buf.WriteString(PatternMode(mode))
-	} else if m.patternMode == operation.PatternNoteRatchet {
+	} else if m.selectionIndicator == operation.SelectGrid && m.patternMode == operation.PatternNoteRatchet {
 		mode = " Ratchet Note "
 		buf.WriteString(PatternMode(mode))
 	} else if m.selectionIndicator == operation.SelectRatchets || m.selectionIndicator == operation.SelectRatchetSpan {
