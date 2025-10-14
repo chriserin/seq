@@ -194,7 +194,9 @@ func (m *model) ResetCurrentOverlay() {
 	if currentNode != nil && currentNode.IsEndNode() {
 		partID := currentNode.Section.Part
 		if len(*m.definition.Parts) > partID {
-			m.currentOverlay = (*m.definition.Parts)[partID].Overlays
+			currentCycles := (*m.playState.Iterations)[m.arrangement.CurrentNode()]
+			playingOverlay := m.CurrentPart().Overlays.HighestMatchingOverlay(currentCycles)
+			m.currentOverlay = playingOverlay
 			if m.focus != operation.FocusOverlayKey {
 				m.overlayKeyEdit.SetOverlayKey(m.currentOverlay.Key)
 			}
@@ -1588,10 +1590,12 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		m.arrangement.Cursor = msg.Cursor
 		if msg.PerformStop {
 			m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, 0)
+			m.ResetIterations()
 			m.SafeStop()
 			m.SyncBeatLoop()
+		} else {
+			m.ResetCurrentOverlay()
 		}
-		m.ResetCurrentOverlay()
 		m.arrangement.ResetDepth()
 		return m, nil
 	case beats.AnticipatoryStop:
@@ -2441,7 +2445,7 @@ func (m *model) RemoveOverlay() {
 }
 
 func (m *model) ClearOverlay() {
-	(*m.definition.Parts)[m.CurrentPartID()].Overlays.Clear()
+	m.currentOverlay.Clear()
 }
 
 func (m *model) ClearAllOverlays() {
