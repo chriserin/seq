@@ -989,7 +989,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				channels = append(channels, line.Channel)
 			}
 			err := m.midiConnection.Panic(channels)
-			m.SetCurrentError(err)
+			if err != nil {
+				m.SetCurrentError(err)
+			}
 		case mappings.ToggleHideLines:
 			m.hideEmptyLines = !m.hideEmptyLines
 			if m.hideEmptyLines {
