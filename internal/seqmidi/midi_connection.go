@@ -128,10 +128,16 @@ func (mc *MidiConnection) LoopMidi(ctx context.Context) {
 						if msg.Msg.Type().Is(midi.NoteOffMsg) && !notereg.HasKey(key) {
 							return
 						}
+						if msg.Msg.Type().Is(midi.NoteOnMsg) && !notereg.HasKey(key) {
+							notereg.AddKey(key)
+						}
 						playMutex.Lock()
 						err := mc.SendMidi(msg.Msg)
 						playMutex.Unlock()
-						notereg.RemoveKey(key)
+						if msg.Msg.Type().Is(midi.NoteOffMsg) {
+
+							notereg.RemoveKey(key)
+						}
 						if err != nil {
 							panic(err)
 						}
