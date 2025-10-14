@@ -3,6 +3,9 @@ package timing
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/Southclaws/fault"
@@ -170,6 +173,12 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg), midiConnection *seqmidi.M
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(os.Stderr, "Recovered in timing transmitter loop from panic: %v\n", r)
+				debug.PrintStack()
+			}
+		}()
 		for {
 			select {
 			case <-t.ctx.Done():
@@ -260,6 +269,12 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg), midiConnection *seqmidi.M
 
 func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bool, sendFn func(tea.Msg), midiConnection *seqmidi.MidiConnection) (receiverError error) {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(os.Stderr, "Recovered in timing receiver loop from panic: %v\n", r)
+				debug.PrintStack()
+			}
+		}()
 		for {
 			var beatChannel = t.beatsLooper.BeatChannel
 			receiverChannel := make(chan TimingMsg)
@@ -377,6 +392,12 @@ func (t *Timing) StandAloneLoop(sendFn func(tea.Msg)) {
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(os.Stderr, "Recovered in timing standalone loop from panic: %v\n", r)
+				debug.PrintStack()
+			}
+		}()
 		for {
 			select {
 			case <-t.ctx.Done():

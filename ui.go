@@ -870,6 +870,7 @@ func RunProgram(filename string, options ProgramOptions) (*tea.Program, error) {
 	} else {
 		model.midiLoopMode = timing.MlmTransmitter
 	}
+
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithReportFocus())
 	SetupTimingLoop(model, beatsLooper, program.Send, ctx)
 	beatsLooper.Loop(program.Send, midiConnection, ctx)
@@ -959,6 +960,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
+		case mappings.PurposePanic:
+			return m, func() tea.Msg { panic("Panic") }
 		case mappings.ToggleTransmitting:
 			m.transmitting = !m.transmitting
 		case mappings.DecreaseAllChannels:

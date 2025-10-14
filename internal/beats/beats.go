@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
+	"runtime/debug"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -58,6 +60,12 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn *seqmidi.MidiConnectio
 	logFile, _ := tea.LogToFile("debug.log", "debug")
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(os.Stderr, "Recovered in beats loop from panic: %v\n", r)
+				debug.PrintStack()
+			}
+		}()
 		var playState playstate.PlayState
 		var definition sequence.Sequence
 		var cursor arrangement.ArrCursor
@@ -94,6 +102,12 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn *seqmidi.MidiConnectio
 	}()
 	go func() {
 		for {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Fprintf(os.Stderr, "Recovered in beats loop -> midiConn from panic: %v\n", r)
+					debug.PrintStack()
+				}
+			}()
 			select {
 			case midiMessage := <-bl.PlayQueue:
 				midiConn.Send(midiMessage)

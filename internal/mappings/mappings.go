@@ -183,6 +183,7 @@ const (
 	IncreaseAllNote
 	DecreaseAllNote
 	ToggleTransmitting
+	PurposePanic
 )
 
 type mappingKey [3]string
@@ -316,6 +317,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("n", "G")}:                                                                   ToggleGateNoteMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "r")}:                                                                   ToggleRatchetMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "R")}:                                                                   ToggleRatchetNoteMode,
+	OperationKey{focus: operation.FocusGrid, key: k("n", "P")}:                                                                   PurposePanic,
 	OperationKey{focus: operation.FocusGrid, key: k("p")}:                                                                        Paste,
 	OperationKey{focus: operation.FocusAny, key: k("q")}:                                                                         Quit,
 	OperationKey{focus: operation.FocusGrid, key: k("r")}:                                                                        RatchetDecrease,

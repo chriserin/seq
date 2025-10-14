@@ -6,6 +6,9 @@ package seqmidi
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -97,6 +100,12 @@ var playMutex = sync.Mutex{}
 
 func (mc *MidiConnection) LoopMidi(ctx context.Context) {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(os.Stderr, "Recovered in MIDI send loop from panic: %v\n", r)
+				debug.PrintStack()
+			}
+		}()
 		for {
 			select {
 			case <-ctx.Done():

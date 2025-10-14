@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -106,6 +107,13 @@ func (mc *MidiConnection) UpdateInDeviceList(driver drivers.Driver) error {
 
 func (mc *MidiConnection) DeviceLoop(ctx context.Context) {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(os.Stderr, "Recovered in MIDI device loop from panic: %v\n", r)
+				debug.PrintStack()
+			}
+		}()
+
 		//NOTE: The client notification will only be called on the same thread as the client initialization, we have to "pump the run loop" on that thread.
 		runtime.LockOSThread()
 
