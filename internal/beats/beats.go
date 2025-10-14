@@ -335,7 +335,8 @@ func (bl BeatsLooper) PlayMessage(delay time.Duration, message midi.Message) {
 }
 
 func (bl BeatsLooper) PlayOnMessage(nm NoteMsg) {
-	if notereg.Has(nm) {
+	key := notereg.GetKey(nm.GetOnMidi())
+	if notereg.HasKey(key) {
 		bl.PlayQueue <- seqmidi.Message{Msg: nm.GetOffMidi(), Delay: nm.delay}
 		bl.PlayQueue <- seqmidi.Message{Msg: nm.GetOnMidi(), Delay: nm.delay}
 	} else {

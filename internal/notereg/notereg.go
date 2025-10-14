@@ -17,11 +17,6 @@ type NoteRegKey struct {
 	Note    uint8
 }
 
-type Keyable interface {
-	GetKey() NoteRegKey
-	GetID() int
-}
-
 var noteMutex = &sync.Mutex{}
 
 type NoteReg map[NoteRegKey]struct{}
@@ -29,18 +24,6 @@ type TimerReg map[NoteRegKey]*time.Timer
 
 var noteReg = make(NoteReg)
 var timerReg = make(TimerReg)
-
-func Add(note Keyable) error {
-	noteMutex.Lock()
-	defer noteMutex.Unlock()
-	nrk := note.GetKey()
-	_, existing := noteReg[nrk]
-	if existing {
-		return errors.New("note already exists")
-	}
-	noteReg[nrk] = struct{}{}
-	return nil
-}
 
 func AddKey(key NoteRegKey) error {
 	noteMutex.Lock()
@@ -64,17 +47,16 @@ func AddTimer(key NoteRegKey, timer *time.Timer) error {
 	return nil
 }
 
-func Has(note Keyable) bool {
-	_, existing := noteReg[note.GetKey()]
-	return existing
-}
-
 func HasKey(key NoteRegKey) bool {
+	noteMutex.Lock()
+	defer noteMutex.Unlock()
 	_, existing := noteReg[key]
 	return existing
 }
 
 func GetKey(msg midi.Message) NoteRegKey {
+	noteMutex.Lock()
+	defer noteMutex.Unlock()
 	var channel uint8
 	var note uint8
 	var velocity uint8
@@ -96,18 +78,12 @@ func GetKey(msg midi.Message) NoteRegKey {
 
 func RemoveKey(key NoteRegKey) {
 	noteMutex.Lock()
+	defer noteMutex.Unlock()
 	_, exists := timerReg[key]
 	if exists {
 		delete(timerReg, key)
 	}
-	defer noteMutex.Unlock()
 	delete(noteReg, key)
-}
-
-func Remove(note Keyable) {
-	noteMutex.Lock()
-	defer noteMutex.Unlock()
-	delete(noteReg, note.GetKey())
 }
 
 func Clear() []midi.Message {
