@@ -978,7 +978,14 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.definition.Lines[i].IncrementNote()
 			}
 		case mappings.MidiPanic:
-			err := m.midiConnection.Panic()
+			channels := make([]uint8, 0)
+			for _, line := range m.definition.Lines {
+				if slices.Contains(channels, line.Channel) {
+					continue
+				}
+				channels = append(channels, line.Channel)
+			}
+			err := m.midiConnection.Panic(channels)
 			m.SetCurrentError(err)
 		case mappings.ToggleHideLines:
 			m.hideEmptyLines = !m.hideEmptyLines
