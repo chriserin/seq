@@ -178,7 +178,7 @@ func (mc MidiConnection) SendMidi(msg midi.Message) error {
 func (mc *MidiConnection) Panic(channels []uint8) error {
 	// NOTE: No connection means nothing to panic about
 	for _, channel := range channels {
-		for i := range 2 {
+		for i := range 127 {
 			err := mc.SendMidi(midi.NoteOff(channel-1, uint8(i)))
 			if err != nil {
 				return fault.Wrap(err, fmsg.With("cannot send panic note off"))
