@@ -25,7 +25,7 @@ func TestUpdateArrangementFocus(t *testing.T) {
 			Keyline:     0,
 		}
 
-		iterations := make(map[*arrangement.Arrangement]int)
+		iterations := make(playstate.Iterations)
 		playstate.BuildIterationsMap(arr, &iterations)
 		m := model{
 			arrangement: arrangement.InitModel(def.Arrangement, def.Parts),

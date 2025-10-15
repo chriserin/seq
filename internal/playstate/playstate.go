@@ -8,6 +8,8 @@ import (
 	"github.com/chriserin/seq/internal/grid"
 )
 
+type Iterations map[*arrangement.Arrangement]int
+
 type PlayState struct {
 	Playing            bool
 	AllowAdvance       bool
@@ -17,8 +19,37 @@ type PlayState struct {
 	LoopMode           LoopMode
 	BeatTime           time.Time
 	LineStates         []LineState
-	Iterations         *map[*arrangement.Arrangement]int
+	Iterations         *Iterations
 	LoopedArrangement  *arrangement.Arrangement
+}
+
+func (i *Iterations) IsFull(cursor *arrangement.ArrCursor) bool {
+	for index, node := range *cursor {
+		if index == 0 {
+			continue
+		}
+		if node.IsGroup() {
+			count := (*i)[node]
+			if node.Iterations > count+1 {
+				return false
+			}
+		} else {
+			section := node.Section
+			count := (*i)[node]
+			if section.Cycles+section.StartCycles > count {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (i *Iterations) ResetIterations(cursor arrangement.ArrCursor) {
+	for _, arrRef := range cursor {
+		if (*i)[arrRef] == arrRef.Iterations {
+			(*i)[arrRef] = 0
+		}
+	}
 }
 
 type PlayMode uint8
@@ -165,7 +196,7 @@ func (ls *LineState) AdvancePlayState(combinedPattern grid.Pattern, lineIndex in
 	return true
 }
 
-func BuildIterationsMap(arr *arrangement.Arrangement, iterations *map[*arrangement.Arrangement]int) {
+func BuildIterationsMap(arr *arrangement.Arrangement, iterations *Iterations) {
 	if arr.IsGroup() {
 		(*iterations)[arr] = 0
 	} else {
@@ -177,7 +208,7 @@ func BuildIterationsMap(arr *arrangement.Arrangement, iterations *map[*arrangeme
 }
 
 func Copy(playState PlayState) PlayState {
-	newIterations := make(map[*arrangement.Arrangement]int)
+	newIterations := make(Iterations)
 	maps.Copy(newIterations, *playState.Iterations)
 	playState.Iterations = &newIterations
 

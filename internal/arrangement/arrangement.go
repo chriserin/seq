@@ -167,14 +167,6 @@ func (ac *ArrCursor) Up() {
 	*ac = (*ac)[:len(*ac)-1]
 }
 
-func (ac *ArrCursor) ResetIterations(iterations *map[*Arrangement]int) {
-	for _, arrRef := range *ac {
-		if (*iterations)[arrRef] == arrRef.Iterations {
-			(*iterations)[arrRef] = 0
-		}
-	}
-}
-
 // GetCurrentNode returns the current node based on the cursor path
 func (ac ArrCursor) GetCurrentNode() *Arrangement {
 	if len(ac) == 0 {

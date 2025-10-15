@@ -122,7 +122,7 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn *seqmidi.MidiConnectio
 func IsDone(playState playstate.PlayState, currentNode *arrangement.Arrangement, currentSection arrangement.SongSection, cursor *arrangement.ArrCursor) bool {
 	return playState.LoopedArrangement != currentNode &&
 		currentSection.Cycles+currentSection.StartCycles <= (*playState.Iterations)[currentNode] &&
-		!(cursor.AllLastSiblings() && playState.PlayMode == playstate.PlayReceiver)
+		!(cursor.AllLastSiblings() && playState.Iterations.IsFull(cursor) && playState.PlayMode == playstate.PlayReceiver && playState.LoopMode != playstate.LoopWholeSequence)
 }
 
 func (bl BeatsLooper) Beat(msg BeatMsg, playState playstate.PlayState, definition sequence.Sequence, cursor arrangement.ArrCursor, sendFn func(tea.Msg)) {
@@ -251,13 +251,13 @@ func advanceCurrentBeat(keyCycles int, playingOverlay overlays.Overlay, lineStat
 	}
 }
 
-func advanceKeyCycle(keyline uint8, lineStates []playstate.LineState, loopMode playstate.LoopMode, node *arrangement.Arrangement, iterations *map[*arrangement.Arrangement]int) {
+func advanceKeyCycle(keyline uint8, lineStates []playstate.LineState, loopMode playstate.LoopMode, node *arrangement.Arrangement, iterations *playstate.Iterations) {
 	if lineStates[keyline].CurrentBeat == 0 && loopMode != playstate.LoopOverlay {
 		(*iterations)[node]++
 	}
 }
 
-func PlayMove(cursor *arrangement.ArrCursor, iterations *map[*arrangement.Arrangement]int, loopNode *arrangement.Arrangement) bool {
+func PlayMove(cursor *arrangement.ArrCursor, iterations *playstate.Iterations, loopNode *arrangement.Arrangement) bool {
 	if cursor.IsRoot() {
 		cursor.MoveNext()
 		return false
@@ -270,13 +270,13 @@ func PlayMove(cursor *arrangement.ArrCursor, iterations *map[*arrangement.Arrang
 				cursor.MoveNext()
 			}
 		} else {
-			cursor.ResetIterations(iterations)
+			iterations.ResetIterations(*cursor)
 			cursor.Up()
 			return PlayMove(cursor, iterations, loopNode)
 		}
 	} else {
 		cursor.MoveToSibling()
-		cursor.ResetIterations(iterations)
+		iterations.ResetIterations(*cursor)
 	}
 	return true
 }

@@ -330,7 +330,7 @@ func PlayTestLoop(sequence sequence.Sequence, cursor arrangement.ArrCursor, limi
 	midiConnection := seqmidi.MidiConnection{Test: true, TestQueue: &[]seqmidi.Message{}}
 	beatsLooper.Loop(sendFn, &midiConnection, ctx)
 
-	iterations := make(map[*arrangement.Arrangement]int)
+	iterations := make(playstate.Iterations)
 	playstate.BuildIterationsMap(sequence.Arrangement, &iterations)
 	playState.LineStates = playstate.InitLineStates(1, []playstate.LineState{}, 0)
 	playState.Iterations = &iterations

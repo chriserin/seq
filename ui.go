@@ -1848,7 +1848,7 @@ func (m *model) PrevSection() {
 }
 
 func (m *model) ResetIterations() {
-	iterations := make(map[*arrangement.Arrangement]int)
+	iterations := make(playstate.Iterations)
 	playstate.BuildIterationsMap(m.arrangement.Root, &iterations)
 	m.playState.Iterations = &iterations
 }
