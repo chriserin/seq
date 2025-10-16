@@ -50,6 +50,7 @@ const (
 	PlayLoop
 	PlayOverlayLoop
 	PlayRecord
+	PlayAlong
 	TempoInputSwitch
 	OverlayInputSwitch
 	ModifyKeyInputSwitch
@@ -230,6 +231,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusAny, key: k(" ")}:                                                                         PlayStop,
 	OperationKey{focus: operation.FocusAny, key: k("'", " ")}:                                                                    PlayOverlayLoop,
 	OperationKey{focus: operation.FocusAny, key: k(":", " ")}:                                                                    PlayRecord,
+	OperationKey{focus: operation.FocusAny, key: k(";", " ")}:                                                                    PlayAlong,
 	OperationKey{focus: operation.FocusGrid, key: k("+")}:                                                                        Increase,
 	OperationKey{focus: operation.FocusGrid, key: k("=")}:                                                                        Increase,
 	OperationKey{focus: operation.FocusGrid, key: k("-")}:                                                                        Decrease,

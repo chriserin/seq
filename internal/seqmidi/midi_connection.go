@@ -206,15 +206,27 @@ func (mc *MidiConnection) Close() {
 
 var dawOutports = []string{"Logic Pro Virtual In", "TESTDAW"}
 
-func (mc MidiConnection) SendRecordMessage() error {
+func (mc MidiConnection) SendPlayMessage() error {
+	var selectedOutport = mc.GetDawOutport()
 
-	var selectedOutport drivers.Out
-	for _, device := range mc.outDevices {
-		if device.IsDaw && device.IsOpen {
-			selectedOutport = device.Out
-			break
-		}
+	if selectedOutport == nil {
+		return fault.New("could not find daw outport", fmsg.WithDesc("could not find daw outport", "Could not find a daw outport, please ensure the DAW record destination is open and then restart seq"))
 	}
+
+	// NOTE: The record message must be configured in Logic.
+	// Logic Pro -> Control Surfaces -> Controller Assignments...
+	// Create a new zone (seq), a new Mode (commands), a new control
+	// Within the new control press "Learn" and then in seq use the PlayRecord mapping (`:<Space>`).
+	// Then Chose `Class: Key Command` `Command: Global Commands` and then `Record` in the unlabeled parameter list
+	err := selectedOutport.Send(midi.ControlChange(16, 127, 126))
+	if err != nil {
+		return fault.Wrap(err, fmsg.With("could not send record message"))
+	}
+	return nil
+}
+
+func (mc MidiConnection) SendRecordMessage() error {
+	var selectedOutport = mc.GetDawOutport()
 
 	if selectedOutport == nil {
 		return fault.New("could not find daw outport", fmsg.WithDesc("could not find daw outport", "Could not find a daw outport, please ensure the DAW record destination is open and then restart seq"))
@@ -226,6 +238,29 @@ func (mc MidiConnection) SendRecordMessage() error {
 	// Within the new control press "Learn" and then in seq use the PlayRecord mapping (`:<Space>`).
 	// Then Chose `Class: Key Command` `Command: Global Commands` and then `Record` in the unlabeled parameter list
 	err := selectedOutport.Send(midi.ControlChange(16, 127, 127))
+	if err != nil {
+		return fault.Wrap(err, fmsg.With("could not send record message"))
+	}
+	return nil
+}
+
+func (mc *MidiConnection) GetDawOutport() drivers.Out {
+	for _, device := range mc.outDevices {
+		if device.IsDaw && device.IsOpen {
+			return device.Out
+		}
+	}
+	return nil
+}
+
+func (mc *MidiConnection) SendStopMessage() error {
+	var selectedOutport = mc.GetDawOutport()
+
+	if selectedOutport == nil {
+		return nil
+	}
+
+	err := selectedOutport.Send(midi.ControlChange(16, 127, 125))
 	if err != nil {
 		return fault.Wrap(err, fmsg.With("could not send record message"))
 	}

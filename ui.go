@@ -1181,6 +1181,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.PlayStop:
 			if !m.playState.Playing {
 				m.playState.LoopMode = playstate.OneTimeWholeSequence
+			} else {
+				err := m.midiConnection.SendStopMessage()
+				if err != nil {
+					m.SetCurrentError(err)
+				}
 			}
 			m.StartStop(0)
 		case mappings.PlayPart:
@@ -1198,6 +1203,18 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				m.playState.LoopMode = playstate.LoopOverlay
 			}
 			m.StartStop(0)
+		case mappings.PlayAlong:
+			if !m.playState.Playing {
+				m.playState.RecordPreRollBeats = 8
+				err := m.midiConnection.SendPlayMessage()
+				if err != nil {
+					m.SetCurrentError(err)
+				} else {
+					m.StartStop(28650 * time.Microsecond)
+				}
+			} else {
+				m.StartStop(0)
+			}
 		case mappings.PlayRecord:
 			if !m.playState.Playing {
 				m.playState.RecordPreRollBeats = 8
