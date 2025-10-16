@@ -153,7 +153,7 @@ seq.addinstrument({
 	controlchanges = {
 		{ 1, 127, "Assignable Output" },
 		{ 5, 127, "Portamento Time" },
-		{ 65, 1, "Portamento On/Off" },
-		{ 64, 1, "Sustain" },
+		{ 65, 127, "Portamento On/Off" },
+		{ 64, 127, "Sustain" },
 	},
 })
