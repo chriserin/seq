@@ -419,7 +419,6 @@ func Scan(scanner *bufio.Scanner, sequence Sequence) Sequence {
 		case "CHORD":
 			id := GetID(line)
 			if id != "" {
-				fmt.Fprintln(os.Stderr, "Adding chord", id)
 				chordsList[id] = currentChord
 				scanner.Scan()
 				line = scanner.Text()
