@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [v0.1.0-alpha.11](https://github.com/chriserin/seq/compare/v0.1.0-alpha.10...v0.1.0-alpha.11) (2025-10-17)
+
+### Features
+
+* daw+midi play/stop [83d35fe](https://github.com/chriserin/seq/commit/83d35fe) 
+
+### Fixes
+
+* Mother-32 on/off ccs [1c677dd](https://github.com/chriserin/seq/commit/1c677dd) 
+* Loop whole seq before last node loop [9aad138](https://github.com/chriserin/seq/commit/9aad138) 
+* Ensure correct overlay for clear [f2181fc](https://github.com/chriserin/seq/commit/f2181fc) 
+* Protect all map access with mutex [8144bbb](https://github.com/chriserin/seq/commit/8144bbb) 
+* handle on/off correctly [1cca991](https://github.com/chriserin/seq/commit/1cca991) 
+* midi panic for all notes [342f0a2](https://github.com/chriserin/seq/commit/342f0a2) 
+* nil check for err [0886f86](https://github.com/chriserin/seq/commit/0886f86) 
+* midi panic for all relevant channels [dbce256](https://github.com/chriserin/seq/commit/dbce256) 
+* Return correct reference from find [6a9da56](https://github.com/chriserin/seq/commit/6a9da56) 
+* Ensure confirmations are always shown [6179d13](https://github.com/chriserin/seq/commit/6179d13) 
+* Kill noteoffs ensure note off at stop [aeeffc2](https://github.com/chriserin/seq/commit/aeeffc2) 
+
+
 ## [v0.1.0-alpha.10](https://github.com/chriserin/seq/compare/v0.1.0-alpha.9...v0.1.0-alpha.10) (2025-10-10)
 
 ### Features
