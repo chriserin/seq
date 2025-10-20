@@ -74,7 +74,8 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn *seqmidi.MidiConnectio
 				// NOTE: Wait for a model update that puts us into a playing state.
 				select {
 				case modelMsg := <-bl.UpdateChannel:
-					playState = modelMsg.PlayState
+					copiedPlayState := playstate.Copy(modelMsg.PlayState)
+					playState = copiedPlayState
 					definition = modelMsg.Sequence
 					cursor = modelMsg.Cursor
 				case <-ctx.Done():

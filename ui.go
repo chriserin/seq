@@ -1604,8 +1604,10 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 	case arrangement.Undo:
 		m.PushArrUndo(msg)
 	case beats.ModelPlayedMsg:
-		m.playState = msg.PlayState
-		m.arrangement.Cursor = msg.Cursor
+		if m.playState.Playing {
+			m.playState = msg.PlayState
+			m.arrangement.Cursor = msg.Cursor
+		}
 		if msg.PerformStop {
 			m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, 0)
 			m.ResetIterations()
