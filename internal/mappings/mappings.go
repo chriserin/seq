@@ -116,7 +116,6 @@ const (
 	ActionAddLineResetAll
 	ActionAddLineReverse
 	ActionAddSkipBeat
-	ActionAddSkipBeatAll
 	ActionAddLineBounce
 	ActionAddLineBounceAll
 	ActionAddLineDelay
@@ -328,7 +327,6 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("s", "b")}:                                                                   ActionAddLineBounce,
 	OperationKey{focus: operation.FocusGrid, key: k("s", "B")}:                                                                   ActionAddLineBounceAll,
 	OperationKey{focus: operation.FocusGrid, key: k("s", "k")}:                                                                   ActionAddSkipBeat,
-	OperationKey{focus: operation.FocusGrid, key: k("s", "K")}:                                                                   ActionAddSkipBeatAll,
 	OperationKey{focus: operation.FocusGrid, key: k("s", "r")}:                                                                   ActionAddLineReverse,
 	OperationKey{focus: operation.FocusGrid, key: k("s", "z")}:                                                                   ActionAddLineDelay,
 	OperationKey{focus: operation.FocusAny, key: k("u")}:                                                                         Undo,

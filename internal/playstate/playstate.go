@@ -181,16 +181,6 @@ func (ls *LineState) AdvancePlayState(combinedPattern grid.Pattern, lineIndex in
 			lineStates[i].Direction = -1
 		}
 		return false
-	case grid.ActionLineSkipBeatAll:
-		for i := range lineStates {
-			if i <= lineIndex {
-				ls.AdvancePlayState(combinedPattern, i, beats, lineStates)
-			} else {
-				ls.AdvancePlayState(combinedPattern, i, beats, lineStates)
-				ls.AdvancePlayState(combinedPattern, i, beats, lineStates)
-			}
-		}
-		return false
 	}
 
 	return true

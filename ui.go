@@ -72,9 +72,10 @@ type VisualSelection struct {
 }
 
 func (va VisualSelection) Bounds(totalBeats uint8) grid.Bounds {
-	if va.visualMode == operation.VisualBlock {
+	switch va.visualMode {
+	case operation.VisualBlock:
 		return grid.InitBounds(va.anchor, va.lead)
-	} else if va.visualMode == operation.VisualLine {
+	case operation.VisualLine:
 		return grid.InitBounds(GK(va.anchor.Line, 0), GK(va.lead.Line, totalBeats-1))
 	}
 	panic(fmt.Sprintf("no visual area for mode: %d", va.visualMode))
@@ -1710,13 +1711,6 @@ func (m *model) CursorValid() {
 	}
 }
 
-func abs(i int) int {
-	if i < 0 {
-		return -i
-	}
-	return i
-}
-
 func (m *model) CursorRight() {
 	if m.gridCursor.Beat < m.CurrentPart().Beats-1 {
 		m.SetGridCursor(gridKey{
@@ -2030,8 +2024,6 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.AddAction(grid.ActionLineReverse)
 	case mappings.ActionAddSkipBeat:
 		m.AddAction(grid.ActionLineSkipBeat)
-	case mappings.ActionAddSkipBeatAll:
-		m.AddAction(grid.ActionLineSkipBeatAll)
 	case mappings.ActionAddLineResetAll:
 		m.AddAction(grid.ActionLineResetAll)
 	case mappings.ActionAddLineBounce:

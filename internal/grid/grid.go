@@ -18,7 +18,6 @@ const (
 	ActionLineReverse
 	// ActionLineReverseAll
 	ActionLineSkipBeat
-	ActionLineSkipBeatAll
 	ActionLineBounce
 	ActionLineBounceAll
 	ActionLineDelay
