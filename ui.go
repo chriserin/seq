@@ -1366,6 +1366,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			default:
 				m.IncreaseTempo(5)
 			}
+			m.SyncBeatLoop()
 		case mappings.Decrease:
 			switch m.selectionIndicator {
 			case operation.SelectTempo:
@@ -1412,6 +1413,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			default:
 				m.DecreaseTempo(5)
 			}
+			m.SyncBeatLoop()
 		case mappings.ToggleGateMode:
 			m.SetPatternMode(operation.PatternGate)
 		case mappings.ToggleGateNoteMode:
