@@ -1979,7 +1979,7 @@ func AdvanceSelectionState(states []operation.Selection, currentSelection operat
 
 func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	if !m.activeChord.HasValue() {
-		chord, exists := m.currentOverlay.FindChord(m.gridCursor)
+		chord, exists := m.currentOverlay.FindChord(m.gridCursor, m.currentOverlay.Key.GetMinimumKeyCycle())
 		if exists {
 			m.activeChord = chord
 		}
@@ -2253,7 +2253,7 @@ func (m model) CurrentChord() overlays.OverlayChord {
 	if m.definition.TemplateSequencerType == operation.SeqModeLine {
 		return overlays.OverlayChord{}
 	}
-	overlayChord, exists := m.currentOverlay.FindChord(m.gridCursor)
+	overlayChord, exists := m.currentOverlay.FindChord(m.gridCursor, m.currentOverlay.Key.GetMinimumKeyCycle())
 	if exists {
 		return overlayChord
 	} else if m.activeChord.GridChord != nil {

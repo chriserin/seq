@@ -255,7 +255,7 @@ func TestChordTriads(t *testing.T) {
 
 			for currentInterval, line := uint8(0), uint8(len(m.definition.Lines))-1; line != 255; line, currentInterval = line-1, currentInterval+1 {
 				key := grid.GridKey{Line: line, Beat: 0}
-				_, exists := m.currentOverlay.FindChord(key)
+				_, exists := m.currentOverlay.FindChord(key, m.currentOverlay.Key.GetMinimumKeyCycle())
 				if slices.Contains(tt.expectedIntervals, currentInterval) {
 					assert.True(t, exists, tt.description+" - chord should exist - line "+strconv.Itoa(int(line)))
 				} else {

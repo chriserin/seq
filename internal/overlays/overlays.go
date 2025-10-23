@@ -118,16 +118,24 @@ func (oc OverlayChord) BelongsTo(anotherOverlay *Overlay) bool {
 	return oc.Overlay == anotherOverlay
 }
 
-func (ol *Overlay) FindChord(position grid.GridKey) (OverlayChord, bool) {
+func (ol *Overlay) FindChord(position grid.GridKey, keyCycles int) (OverlayChord, bool) {
+	previousPressDown := false
+	firstMatch := false
 	var currentOverlay *Overlay
 	for currentOverlay = ol; currentOverlay != nil; currentOverlay = currentOverlay.Below {
-		_, isBlocked := currentOverlay.Blockers.FindChord(position)
-		if isBlocked {
-			return OverlayChord{}, false
-		}
-		gridChord, exists := currentOverlay.Chords.FindChord(position)
-		if exists {
-			return OverlayChord{currentOverlay, gridChord}, true
+		if previousPressDown ||
+			(!firstMatch && currentOverlay.Key.DoesMatch(keyCycles)) ||
+			(currentOverlay.PressUp && currentOverlay.Key.DoesMatch(keyCycles)) {
+			firstMatch = true
+			_, isBlocked := currentOverlay.Blockers.FindChord(position)
+			if isBlocked {
+				return OverlayChord{}, false
+			}
+			gridChord, exists := currentOverlay.Chords.FindChord(position)
+			if exists {
+				return OverlayChord{currentOverlay, gridChord}, true
+			}
+			previousPressDown = currentOverlay.PressDown
 		}
 	}
 	return OverlayChord{}, false

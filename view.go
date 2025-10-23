@@ -58,7 +58,8 @@ func (m model) View() (output string) {
 		sideView = m.AccentKeyView()
 	} else if (m.CurrentPart().Overlays.Key == overlaykey.ROOT && m.CurrentPart().Overlays.IsFresh() && len(*m.definition.Parts) == 1 && m.CurrentPartID() == 0) ||
 		slices.Contains([]operation.Selection{operation.SelectSetupValue, operation.SelectSetupMessageType, operation.SelectSetupChannel}, m.selectionIndicator) {
-		// NOTE: We want to show the setupView on the very initial screen, before any sequencing has begun OR a setup value is selected
+		// NOTE: We want to show the setupView on the very initial screen,
+		// before any sequencing has begun OR a setup value is selected
 		sideView = m.SetupView(showLines)
 	} else {
 		sideView = m.OverlaysView()
