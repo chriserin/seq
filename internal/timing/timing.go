@@ -18,6 +18,10 @@ import (
 	"gitlab.com/gomidi/midi/v2/drivers"
 )
 
+// NOTE: PPQN is Pulses Per Quarter Note
+// NOTE: 840 is the common multiple of 2, 3, 5, 7, 8. The allowable subdivisions.
+var PPQN = 840
+
 func (t *Timing) BeatInterval() time.Duration {
 	tickInterval := t.TickInterval()
 	adjuster := time.Since(t.playTime) - t.trackTime
@@ -30,12 +34,16 @@ func (t Timing) TickInterval() time.Duration {
 	return time.Minute / time.Duration(t.tempo*t.subdivisions)
 }
 
-func (t Timing) ReceiverBeatInterval(subdivisions int) time.Duration {
+func (t Tick) ReceiverBeatInterval(subdivisions int) time.Duration {
 	return time.Minute / time.Duration(t.tempo*subdivisions)
 }
 
 func (t Timing) PulseInterval() time.Duration {
-	return time.Minute / time.Duration(t.tempo*24)
+	return time.Minute / time.Duration(t.tempo*PPQN)
+}
+
+type Tick struct {
+	tempo int
 }
 
 type Timing struct {
@@ -155,14 +163,14 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg), midiConnection *seqmidi.M
 		return fault.Wrap(err)
 	}
 
-	tickChannel := make(chan Timing)
+	tickChannel := make(chan Tick)
 	activeSenseChannel := make(chan bool)
 	var command TimingMsg
 
 	var tickTimer *time.Timer
 	pulse := func(adjustedInterval time.Duration) {
 		tickTimer = time.AfterFunc(adjustedInterval, func() {
-			tickChannel <- Timing{subdivisions: 24}
+			tickChannel <- Tick{}
 		})
 	}
 
@@ -213,13 +221,13 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg), midiConnection *seqmidi.M
 					//This will result in a race condition on the receiver end.  Instead, we anticipate stopping
 					//and set a limit on the pulses that will be accumulated, preventing the final pulse.
 					if t.pulseLimit == 0 {
-						t.pulseLimit = t.pulseCount + ((24 / t.subdivisions) - 1)
+						t.pulseLimit = t.pulseCount + ((PPQN / t.subdivisions) - 1)
 					}
 				case TempoMsg:
 					t.tempo = command.Tempo
 					t.subdivisions = command.Subdivisions
 				}
-			case pulseTiming := <-tickChannel:
+			case <-tickChannel:
 				if t.started {
 					if t.preRollBeats == 0 {
 						if t.pulseLimit == 0 || t.pulseCount < t.pulseLimit {
@@ -231,11 +239,12 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg), midiConnection *seqmidi.M
 								}
 							}
 						}
-						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
-							beatChannel <- beats.BeatMsg{Interval: t.TickInterval()}
+						if t.pulseCount%(PPQN/t.subdivisions) == 0 {
+							tickInterval := t.TickInterval()
+							beatChannel <- beats.BeatMsg{Interval: tickInterval}
 						}
 					} else {
-						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
+						if t.pulseCount%(PPQN/t.subdivisions) == 0 {
 							t.preRollBeats--
 							if t.preRollBeats == 0 {
 								t.pulseCount = -1
@@ -275,10 +284,12 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 				debug.PrintStack()
 			}
 		}()
+		// only store last 3 intervals then average them for tempo calculation
+		var intervals []time.Duration
 		for {
 			var beatChannel = t.beatsLooper.BeatChannel
 			receiverChannel := make(chan TimingMsg)
-			tickChannel := make(chan Timing)
+			tickChannel := make(chan Tick)
 			activeSenseChannel := make(chan bool)
 			var loopMode playstate.LoopMode
 			var timingClockTime time.Time
@@ -299,12 +310,20 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 						timingClockTime = time.Now()
 						//NOTE: We don't have enough information to determine the tempo at this point, send a reasonable guess tempo
 						//TODO: Figure out how to communicate tempo between sender and receiver or how to play ratchets based on another heuristic
-						tickChannel <- Timing{subdivisions: 24, tempo: 120}
+						tickChannel <- Tick{tempo: 120}
 					} else {
-						interval := time.Since(timingClockTime)
-						division := interval * 24
+						intervals = append(intervals, time.Since(timingClockTime))
+						if len(intervals) > 3 {
+							intervals = intervals[1:]
+						}
+						var total time.Duration
+						for _, inter := range intervals {
+							total += inter
+						}
+						averageInterval := total / time.Duration(len(intervals))
+						division := averageInterval * time.Duration(PPQN)
 						tempo := (1 * time.Minute) / division
-						tickChannel <- Timing{subdivisions: 24, tempo: int(tempo)}
+						tickChannel <- Tick{tempo: int(tempo)}
 						timingClockTime = time.Now()
 					}
 				case midi.ActiveSenseMsg:
@@ -360,7 +379,7 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 				case pulseTiming := <-tickChannel:
 					activeSenseTimer.Reset(330 * time.Millisecond)
 					if t.started {
-						if t.pulseCount%(pulseTiming.subdivisions/t.subdivisions) == 0 {
+						if t.pulseCount%(PPQN/t.subdivisions) == 0 {
 							beatChannel <- beats.BeatMsg{Interval: pulseTiming.ReceiverBeatInterval(t.subdivisions)}
 						}
 						t.pulseCount++
@@ -381,13 +400,13 @@ func (t *Timing) ReceiverLoop(lockReceiverChannel, unlockReceiverChannel chan bo
 
 func (t *Timing) StandAloneLoop(sendFn func(tea.Msg)) {
 	var beatChannel = t.beatsLooper.BeatChannel
-	tickChannel := make(chan Timing)
+	tickChannel := make(chan Tick)
 	var command TimingMsg
 
 	var tickTimer *time.Timer
 	tick := func(adjustedInterval time.Duration) {
 		tickTimer = time.AfterFunc(adjustedInterval, func() {
-			tickChannel <- Timing{}
+			tickChannel <- Tick{}
 		})
 	}
 

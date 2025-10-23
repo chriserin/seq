@@ -145,7 +145,7 @@ func (bl BeatsLooper) Beat(msg BeatMsg, playState playstate.PlayState, definitio
 	}
 
 	// NOTE: Looking at future state to determine if we need to prevent sending the
-	// receiver a final pulse via an AnticipatoryStop
+	// receiver a final pulse
 	copiedPlayState := playstate.Copy(playState)
 	copiedCursor := make(arrangement.ArrCursor, len(cursor))
 	copy(copiedCursor, cursor)
