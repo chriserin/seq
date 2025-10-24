@@ -90,6 +90,7 @@ type model struct {
 	hideEmptyLines        bool
 	modifyKey             bool
 	transmitting          bool
+	clockPreRoll          bool
 	ratchetCursor         uint8
 	temporaryNoteValue    uint8
 	focus                 operation.Focus
@@ -967,6 +968,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			return m, func() tea.Msg { panic("Panic") }
 		case mappings.ToggleTransmitting:
 			m.transmitting = !m.transmitting
+		case mappings.ToggleClockPreRoll:
+			m.clockPreRoll = !m.clockPreRoll
 		case mappings.DecreaseAllChannels:
 			for i := range m.definition.Lines {
 				m.definition.Lines[i].DecrementChannel()
@@ -1181,6 +1184,9 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.Escape()
 		case mappings.PlayStop:
 			if !m.playState.Playing {
+				if m.clockPreRoll {
+					m.playState.RecordPreRollBeats = 1
+				}
 				m.playState.LoopMode = playstate.OneTimeWholeSequence
 			} else {
 				err := m.midiConnection.SendStopMessage()
@@ -1191,16 +1197,25 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.StartStop(0)
 		case mappings.PlayPart:
 			if !m.playState.Playing {
+				if m.clockPreRoll {
+					m.playState.RecordPreRollBeats = 1
+				}
 				m.playState.LoopMode = playstate.LoopPart
 			}
 			m.StartStop(0)
 		case mappings.PlayLoop:
 			if !m.playState.Playing {
+				if m.clockPreRoll {
+					m.playState.RecordPreRollBeats = 1
+				}
 				m.playState.LoopMode = playstate.LoopWholeSequence
 			}
 			m.StartStop(0)
 		case mappings.PlayOverlayLoop:
 			if !m.playState.Playing {
+				if m.clockPreRoll {
+					m.playState.RecordPreRollBeats = 1
+				}
 				m.playState.LoopMode = playstate.LoopOverlay
 			}
 			m.StartStop(0)

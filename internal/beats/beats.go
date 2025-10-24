@@ -35,6 +35,7 @@ type ModelPlayedMsg struct {
 type AnticipatoryStop struct{}
 
 type BeatsLooper struct {
+	ClockChannel  chan ClockMsg
 	BeatChannel   chan BeatMsg
 	UpdateChannel chan ModelMsg
 	PlayQueue     chan seqmidi.Message
@@ -43,11 +44,13 @@ type BeatsLooper struct {
 
 func InitBeatsLooper() BeatsLooper {
 	beatChannel := make(chan BeatMsg)
+	clockChannel := make(chan ClockMsg)
 	updateChannel := make(chan ModelMsg)
 	playQueue := make(chan seqmidi.Message)
 	errChan := make(chan error)
 
 	return BeatsLooper{
+		ClockChannel:  clockChannel,
 		BeatChannel:   beatChannel,
 		UpdateChannel: updateChannel,
 		PlayQueue:     playQueue,
@@ -82,12 +85,14 @@ func (bl BeatsLooper) Loop(sendFn func(tea.Msg), midiConn *seqmidi.MidiConnectio
 					return
 				}
 			} else {
-				// NOTE: In a plyaing state, respond to beat messages
+				// NOTE: In a playing state, respond to beat messages
 				select {
 				case modelMsg := <-bl.UpdateChannel:
 					playState = modelMsg.PlayState
 					definition = modelMsg.Sequence
 					cursor = modelMsg.Cursor
+				case <-bl.ClockChannel:
+					bl.PlayQueue <- seqmidi.Message{Msg: midi.TimingClock(), Delay: 0}
 				case BeatMsg := <-bl.BeatChannel:
 					bl.Beat(BeatMsg, playState, definition, cursor, sendFn)
 				case <-ctx.Done():
@@ -352,6 +357,8 @@ func (bl BeatsLooper) PlayOffMessage(nm NoteMsg) {
 type BeatMsg struct {
 	Interval time.Duration
 }
+
+type ClockMsg struct{}
 
 func NoteMessages(l grid.LineDefinition, accentValue uint8, gateLength time.Duration, accentTarget sequence.AccentTarget, delay time.Duration) (NoteMsg, NoteMsg) {
 	var noteValue uint8

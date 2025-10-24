@@ -153,6 +153,7 @@ func (tmtr Transmitter) ActiveSense() error {
 
 func (t *Timing) TransmitterLoop(sendFn func(tea.Msg), midiConnection *seqmidi.MidiConnection) error {
 	var beatChannel = t.beatsLooper.BeatChannel
+	var clockChannel = t.beatsLooper.ClockChannel
 	out, err := midiConnection.TransmitterOut()
 	if err != nil {
 		return fault.Wrap(err, fmsg.With("cannot open transmitter out"))
@@ -229,6 +230,9 @@ func (t *Timing) TransmitterLoop(sendFn func(tea.Msg), midiConnection *seqmidi.M
 				}
 			case <-tickChannel:
 				if t.started {
+					if t.pulseCount%(PPQN/24) == 0 {
+						clockChannel <- beats.ClockMsg{}
+					}
 					if t.preRollBeats == 0 {
 						if t.pulseLimit == 0 || t.pulseCount < t.pulseLimit {
 							if t.transmitting {

@@ -183,6 +183,7 @@ const (
 	IncreaseAllNote
 	DecreaseAllNote
 	ToggleTransmitting
+	ToggleClockPreRoll
 	PurposePanic
 )
 
@@ -252,6 +253,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("b", "f")}:                                                                   CursorFirstLine,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "h")}:                                                                   ToggleHideLines,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "t")}:                                                                   ToggleTransmitting,
+	OperationKey{focus: operation.FocusGrid, key: k("b", "c")}:                                                                   ToggleClockPreRoll,
 	OperationKey{focus: operation.FocusGrid, key: k("A")}:                                                                        AccentIncrease,
 	OperationKey{focus: operation.FocusGrid, key: k("C")}:                                                                        ClearOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "C")}:                                                                   ClearAllOverlays,
