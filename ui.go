@@ -1580,6 +1580,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			m.SetSelectionIndicator(operation.SelectGrid)
 		case mappings.ClearAllOverlays:
 			m.ClearAllOverlays()
+			m.UnsetActiveChord()
 		default:
 			// NOTE: Assuming that every other mapping updates the definition
 			m = m.UpdateDefinition(mapping)
@@ -1993,12 +1994,8 @@ func AdvanceSelectionState(states []operation.Selection, currentSelection operat
 }
 
 func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
-	if !m.activeChord.HasValue() {
-		chord, exists := m.currentOverlay.FindChord(m.gridCursor, m.currentOverlay.Key.GetMinimumKeyCycle())
-		if exists {
-			m.activeChord = chord
-		}
-	}
+	chord, _ := m.currentOverlay.FindChord(m.gridCursor, m.currentOverlay.Key.GetMinimumKeyCycle())
+	m.activeChord = chord
 	switch mapping.Command {
 	case mappings.NoteAdd:
 		m.AddNote()
@@ -2032,6 +2029,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		}
 	case mappings.ClearOverlay:
 		m.ClearOverlay()
+		m.UnsetActiveChord()
 	case mappings.RatchetIncrease:
 		m.RatchetModify(1)
 	case mappings.RatchetDecrease:
