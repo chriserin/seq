@@ -331,7 +331,7 @@ seq.addinstrument({
 		{ 105, 127, "ENV5 Release" },
 		{ 106, 127, "ARP Division" },
 		{ 107, 127, "ARP Gate" },
-		{ 108, 127, "ARP Mode" },
+		{ 108, 7, "ARP Mode" },
 		{ 109, 127, "ARP Ratchet" },
 		{ 110, 127, "ARP Chance" },
 		{ 111, 127, "OSC1 Cent" },
@@ -343,7 +343,8 @@ seq.addinstrument({
 		{ 117, 127, "ST Width" },
 		{ 118, 127, "OSC1 F Rate" },
 		{ 119, 127, "OSC2 F Rate" },
-		{ 120, 127, "ARP Octave" },
+		{ 120, 8, "ARP Octave" }, -- 1 - 1 Octave, 2 - 2 Octaves, 3 - 3 Octaves, 4 - 4 Octaves
+		{ 121, 127, "LFO1 Sync" },
 		{ 122, 127, "ARP Length" },
 		{ 123, 127, "Note OFF" },
 		{ 124, 127, "ENV4 Release" },
