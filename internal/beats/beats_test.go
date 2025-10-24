@@ -553,3 +553,150 @@ func PartGroupSiblingSequence() (sequence.Sequence, arrangement.ArrCursor) {
 
 	return testSequence, arrangement.ArrCursor{root, nodeB}
 }
+
+func TestCCMessage(t *testing.T) {
+	tests := []struct {
+		name          string
+		line          grid.LineDefinition
+		note          grid.Note
+		accents       []config.Accent
+		delay         time.Duration
+		instrument    string
+		expectedChan  uint8
+		expectedCtrl  uint8
+		expectedValue uint8
+		expectedDelay time.Duration
+	}{
+		{
+			name:          "Specific value action",
+			line:          grid.LineDefinition{Channel: 1, Note: 10},
+			note:          grid.Note{Action: grid.ActionSpecificValue, AccentIndex: 42},
+			accents:       []config.Accent{0, 30, 60, 90, 120},
+			delay:         100 * time.Millisecond,
+			instrument:    "",
+			expectedChan:  0,
+			expectedCtrl:  10,
+			expectedValue: 42,
+			expectedDelay: 100 * time.Millisecond,
+		},
+		{
+			name:          "Accent-based value mid-range",
+			line:          grid.LineDefinition{Channel: 3, Note: 7},
+			note:          grid.Note{Action: grid.ActionNothing, AccentIndex: 2},
+			accents:       []config.Accent{0, 30, 60, 90, 120},
+			delay:         0,
+			instrument:    "",
+			expectedChan:  2,
+			expectedCtrl:  7,
+			expectedValue: 95, // (5-2)/4 * 127 = 95.25 -> 95
+			expectedDelay: 0,
+		},
+		{
+			name:          "Accent-based value at end",
+			line:          grid.LineDefinition{Channel: 4, Note: 11},
+			note:          grid.Note{Action: grid.ActionNothing, AccentIndex: 4},
+			accents:       []config.Accent{0, 30, 60, 90, 120},
+			delay:         10 * time.Millisecond,
+			instrument:    "",
+			expectedChan:  3,
+			expectedCtrl:  11,
+			expectedValue: 31, // (5-4)/4 * 127 = 31.75 -> 31
+			expectedDelay: 10 * time.Millisecond,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := CCMessage(tt.line, tt.note, tt.accents, tt.delay, true, tt.instrument)
+
+			assert.Equal(t, tt.expectedChan, result.channel, "Channel")
+			assert.Equal(t, tt.expectedCtrl, result.control, "Control")
+			assert.Equal(t, tt.expectedValue, result.ccValue, "CC Value")
+			assert.Equal(t, tt.expectedDelay, result.delay, "Delay")
+
+			// Test that MidiMessage generates correct MIDI message
+			msg := result.MidiMessage()
+			var channel, control, value uint8
+			assert.True(t, msg.GetControlChange(&channel, &control, &value), "MIDI message should be control change")
+			assert.Equal(t, tt.expectedChan, channel, "MIDI channel")
+			assert.Equal(t, tt.expectedCtrl, control, "MIDI control")
+			assert.Equal(t, tt.expectedValue, value, "MIDI value")
+		})
+	}
+}
+
+func TestPCMessage(t *testing.T) {
+	tests := []struct {
+		name          string
+		line          grid.LineDefinition
+		note          grid.Note
+		accents       []config.Accent
+		delay         time.Duration
+		instrument    string
+		expectedChan  uint8
+		expectedValue uint8
+		expectedDelay time.Duration
+	}{
+		{
+			name:          "Specific value action",
+			line:          grid.LineDefinition{Channel: 1, Note: 10},
+			note:          grid.Note{Action: grid.ActionSpecificValue, AccentIndex: 64},
+			accents:       []config.Accent{0, 30, 60, 90, 120},
+			delay:         100 * time.Millisecond,
+			instrument:    "",
+			expectedChan:  0,
+			expectedValue: 64,
+			expectedDelay: 100 * time.Millisecond,
+		},
+		{
+			name:          "Accent-based value mid-range",
+			line:          grid.LineDefinition{Channel: 3, Note: 30},
+			note:          grid.Note{Action: grid.ActionNothing, AccentIndex: 2},
+			accents:       []config.Accent{0, 30, 60, 90, 120},
+			delay:         0,
+			instrument:    "",
+			expectedChan:  2,
+			expectedValue: 95, // (5-2)/4 * 127 = 95.25 -> 95
+			expectedDelay: 0,
+		},
+		{
+			name:          "Accent-based value at end",
+			line:          grid.LineDefinition{Channel: 4, Note: 40},
+			note:          grid.Note{Action: grid.ActionNothing, AccentIndex: 4},
+			accents:       []config.Accent{0, 30, 60, 90, 120},
+			delay:         10 * time.Millisecond,
+			instrument:    "",
+			expectedChan:  3,
+			expectedValue: 31, // (5-4)/4 * 127 = 31.75 -> 31
+			expectedDelay: 10 * time.Millisecond,
+		},
+		{
+			name:          "Zero delay",
+			line:          grid.LineDefinition{Channel: 5, Note: 50},
+			note:          grid.Note{Action: grid.ActionNothing, AccentIndex: 1},
+			accents:       []config.Accent{0, 30, 60, 90, 120},
+			delay:         0,
+			instrument:    "",
+			expectedChan:  4,
+			expectedValue: 127, // (5-1)/4 * 127 = 127 exactly
+			expectedDelay: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := PCMessage(tt.line, tt.note, tt.accents, tt.delay, true, tt.instrument)
+
+			assert.Equal(t, tt.expectedChan, result.channel, "Channel")
+			assert.Equal(t, tt.expectedValue, result.pcValue, "PC Value")
+			assert.Equal(t, tt.expectedDelay, result.delay, "Delay")
+
+			// Test that MidiMessage generates correct MIDI message
+			msg := result.MidiMessage()
+			var channel, value uint8
+			assert.True(t, msg.GetProgramChange(&channel, &value), "MIDI message should be program change")
+			assert.Equal(t, tt.expectedChan, channel, "MIDI channel")
+			assert.Equal(t, tt.expectedValue, value, "MIDI value")
+		})
+	}
+}

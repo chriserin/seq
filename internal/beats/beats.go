@@ -395,7 +395,8 @@ func PCMessage(l grid.LineDefinition, note grid.Note, accents []config.Accent, d
 	if note.Action == grid.ActionSpecificValue {
 		return programChangeMsg{l.Channel - 1, note.AccentIndex, delay}
 	} else {
-		return programChangeMsg{l.Channel - 1, l.Note - 1, delay}
+		pcValue := uint8((float32((len(accents))-int(note.AccentIndex)) / float32(len(accents)-1)) * float32(127))
+		return programChangeMsg{l.Channel - 1, pcValue, delay}
 	}
 }
 
