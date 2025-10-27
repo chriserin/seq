@@ -2153,15 +2153,19 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	case mappings.IncreaseInversions:
 		m.EnsureChord()
 		m.NextInversion()
+		m.MoveCursorToChord()
 	case mappings.DecreaseInversions:
 		m.EnsureChord()
 		m.PreviousInversion()
+		m.MoveCursorToChord()
 	case mappings.NextArpeggio:
 		m.EnsureChord()
 		m.NextArpeggio()
+		m.MoveCursorToChord()
 	case mappings.PrevArpeggio:
 		m.EnsureChord()
 		m.PrevArpeggio()
+		m.MoveCursorToChord()
 	case mappings.NextDouble:
 		m.EnsureChord()
 		m.NextDouble()
@@ -2250,6 +2254,15 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	}
 
 	return m
+}
+
+func (m *model) MoveCursorToChord() {
+	pattern := make(grid.Pattern)
+	m.activeChord.GridChord.ArpeggiatedPattern(&pattern)
+	keys := maps.Keys(pattern)
+	collectedKeys := slices.Collect(keys)
+	slices.SortFunc(collectedKeys, grid.Compare)
+	m.gridCursor = collectedKeys[len(collectedKeys)-1]
 }
 
 func (m *model) EnsureChord() {
