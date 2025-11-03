@@ -8,6 +8,8 @@ if [ -z "$tag" ]; then
     exit 1
 fi
 
+sed -i '' "s/const VERSION = \"[^\"]*\"/const VERSION = \"$tag\"/" main.go
+
 git tag "$tag"
 changeLogEntry=$(./changelog.sh)
 
