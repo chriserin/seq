@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## [v0.1.0-alpha.12](https://github.com/chriserin/seq/compare/v0.1.0-alpha.11...v0.1.0-alpha.12) (2025-10-27)
+
+### Features
+
+* Move cursor to chord on chord change [3c807a3](https://github.com/chriserin/seq/commit/3c807a3) 
+* Clocks on preroll to set ext tempo [02ca259](https://github.com/chriserin/seq/commit/02ca259) 
+* Order same beat notes for mono modify [a8ece7f](https://github.com/chriserin/seq/commit/a8ece7f) 
+* calc program value based on accent [f58b504](https://github.com/chriserin/seq/commit/f58b504) 
+* Add hydrasynth instrument [51abdf8](https://github.com/chriserin/seq/commit/51abdf8) 
+* Extract ppqn to constant set to 840 [bb9335e](https://github.com/chriserin/seq/commit/bb9335e) 
+* Add sub phatty instrument [cef1505](https://github.com/chriserin/seq/commit/cef1505) 
+* Remove skip all action [08832e2](https://github.com/chriserin/seq/commit/08832e2) 
+
+### Fixes
+
+* Update arp ccs for hydrasynth [3e40ddd](https://github.com/chriserin/seq/commit/3e40ddd) 
+* Always set chord before change [d2017fb](https://github.com/chriserin/seq/commit/d2017fb) 
+* prefer vector for variable size list [36ac1e4](https://github.com/chriserin/seq/commit/36ac1e4) 
+* Find chord with matching key [551b618](https://github.com/chriserin/seq/commit/551b618) 
+* +/- Sync beat loop while playing [a1c8be3](https://github.com/chriserin/seq/commit/a1c8be3) 
+* Prevent on stop race conditions [311657e](https://github.com/chriserin/seq/commit/311657e) 
+
+
 ## [v0.1.0-alpha.11](https://github.com/chriserin/seq/compare/v0.1.0-alpha.10...v0.1.0-alpha.11) (2025-10-17)
 
 ### Features
