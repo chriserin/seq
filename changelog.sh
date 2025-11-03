@@ -76,7 +76,16 @@ if [ -n "$fixes" ]; then
     echo ""
     while IFS= read -r line; do
         commit_hash=$(echo "$line" | awk '{print $1}')
+        commit_type=$(echo "$line" | awk '{print $2}')
         commit_message=$(echo "$line" | cut -d' ' -f3-)
+
+        # Extract scope if present (e.g., fix(system) -> system)
+        regex='fix\(([^)]+)\)'
+        if [[ $commit_type =~ $regex ]]; then
+            scope="${BASH_REMATCH[1]}"
+            commit_message="${scope}: ${commit_message}"
+        fi
+
         echo "* $commit_message [${commit_hash}](https://github.com/chriserin/seq/commit/${commit_hash}) "
     done <<<"$fixes"
 else
