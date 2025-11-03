@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/chriserin/seq/internal/mappings"
 	"github.com/chriserin/seq/internal/seqmidi"
 	"github.com/spf13/cobra"
 )
@@ -71,8 +72,20 @@ func main() {
 		},
 	}
 
+	cmdMappings := &cobra.Command{
+		Use:   "mappings",
+		Short: "List all keyboard mappings with descriptions",
+		Run: func(cmd *cobra.Command, args []string) {
+			allMappings := mappings.GetAllMappings()
+			for _, m := range allMappings {
+				fmt.Printf("%-20s %-30s %s\n", m.GetKeys(), m.Name, m.Description)
+			}
+		},
+	}
+
 	rootCmd.AddCommand(cmdListOutports)
 	rootCmd.AddCommand(cmdVersion)
+	rootCmd.AddCommand(cmdMappings)
 	rootCmd.Flags().StringVar(&cliOptions.gridTemplate, "template", "Drums", "Choose a template (default: Drums)")
 	rootCmd.Flags().StringVar(&cliOptions.instrument, "instrument", "Standard", "Choose an instrument for CC integration (default: Standard)")
 	rootCmd.Flags().BoolVar(&cliOptions.outport, "outport", false, "Seq will create an outport to send midi")
