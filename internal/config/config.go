@@ -5,8 +5,10 @@
 package config
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aarzilli/golua/lua"
@@ -20,6 +22,9 @@ type Config struct {
 	C1          int
 	LineActions map[grid.Action]lineaction
 }
+
+//go:embed init.lua
+var initialConfig string
 
 type Accent uint8
 
@@ -246,6 +251,11 @@ func ProcessConfig(configFilePath string) {
 	L.OpenLibs()
 	L.RegisterLibrary("seq", seqFunctions)
 
+	// Set CONFIG_DIR global for Lua scripts
+	configDir := filepath.Dir(configFilePath)
+	L.PushString(configDir)
+	L.SetGlobal("CONFIG_DIR")
+
 	if fileExists(configFilePath) {
 		err := L.DoFile(configFilePath)
 		if err != nil {
@@ -263,6 +273,9 @@ func findConfigFile() (string, bool) {
 
 	filename := "init.lua"
 	xdgConfigDir := os.Getenv("XDG_CONFIG_HOME")
+	if xdgConfigDir == "" {
+		xdgConfigDir = homeDir + "/.config"
+	}
 
 	possibleDirs := []string{
 		"./",
@@ -276,6 +289,25 @@ func findConfigFile() (string, bool) {
 		if fileExists(filePath) {
 			return filePath, true
 		}
+	}
+
+	writePath := xdgConfigDir + "/seq"
+	if _, err := os.Stat(writePath); os.IsNotExist(err) {
+		err := os.Mkdir(writePath, 0755)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Could not create config directory:", writePath)
+			return "", false
+		}
+	}
+
+	configFilePath := writePath + "/" + filename
+	if !fileExists(configFilePath) {
+		err := os.WriteFile(configFilePath, []byte(initialConfig), 0644)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Could not write initial config:", writePath)
+			return "", false
+		}
+		return configFilePath, true
 	}
 
 	return "", false
