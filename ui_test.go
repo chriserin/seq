@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chriserin/seq/internal/arrangement"
-	"github.com/chriserin/seq/internal/operation"
-	"github.com/chriserin/seq/internal/overlaykey"
-	"github.com/chriserin/seq/internal/playstate"
-	"github.com/chriserin/seq/internal/sequence"
+	"github.com/chriserin/sq/internal/arrangement"
+	"github.com/chriserin/sq/internal/operation"
+	"github.com/chriserin/sq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/playstate"
+	"github.com/chriserin/sq/internal/sequence"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -4,8 +4,8 @@ import (
 	"maps"
 	"time"
 
-	"github.com/chriserin/seq/internal/arrangement"
-	"github.com/chriserin/seq/internal/grid"
+	"github.com/chriserin/sq/internal/arrangement"
+	"github.com/chriserin/sq/internal/grid"
 )
 
 type Iterations map[*arrangement.Arrangement]int

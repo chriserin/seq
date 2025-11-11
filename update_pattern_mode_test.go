@@ -4,8 +4,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/mappings"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/mappings"
 	"github.com/stretchr/testify/assert"
 )
 

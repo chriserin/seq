@@ -3,9 +3,9 @@ package main
 import (
 	"testing"
 
-	"github.com/chriserin/seq/internal/mappings"
-	"github.com/chriserin/seq/internal/operation"
-	"github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/mappings"
+	"github.com/chriserin/sq/internal/operation"
+	"github.com/chriserin/sq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
 

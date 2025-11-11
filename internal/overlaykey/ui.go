@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chriserin/seq/internal/themes"
+	"github.com/chriserin/sq/internal/themes"
 
 	"github.com/charmbracelet/bubbles/key"
 )

@@ -1,6 +1,6 @@
-local seq = require("seq")
+local sq = require("sq")
 
-seq.addinstrument({
+sq.addinstrument({
 	name = "Prophet 10",
 	controlchanges = {
 		{ 1, 127, "Mod Wheel" },
@@ -70,7 +70,7 @@ seq.addinstrument({
 	},
 })
 
-seq.addinstrument({
+sq.addinstrument({
 	name = "Mother-32",
 	controlchanges = {
 		{ 1, 127, "Assignable Output" },
@@ -80,7 +80,7 @@ seq.addinstrument({
 	},
 })
 
-seq.addinstrument({
+sq.addinstrument({
 	name = "Sub Phatty",
 	controlchanges = {
 		{ 1, 127, "Modulation wheel" },
@@ -152,7 +152,7 @@ seq.addinstrument({
 	},
 })
 
-seq.addinstrument({
+sq.addinstrument({
 	name = "Hydrasynth",
 	controlchanges = {
 		{ 1, 127, "Mod wheel" },

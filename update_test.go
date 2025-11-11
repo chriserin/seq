@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/mappings"
-	"github.com/chriserin/seq/internal/operation"
-	"github.com/chriserin/seq/internal/overlaykey"
-	"github.com/chriserin/seq/internal/seqmidi"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/mappings"
+	"github.com/chriserin/sq/internal/operation"
+	"github.com/chriserin/sq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/seqmidi"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -176,7 +176,7 @@ func TestSave(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a temporary filename
 			tempDir := t.TempDir()
-			testFilename := filepath.Join(tempDir, "test_save.seq")
+			testFilename := filepath.Join(tempDir, "test_save.sq")
 
 			m := createTestModel(func(m *model) model {
 				m.filename = testFilename
@@ -226,7 +226,7 @@ func TestSaveBeforeFilename(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a temporary filename
-			testFilename := filepath.Join(tempDir, "tsave.seq")
+			testFilename := filepath.Join(tempDir, "tsave.sq")
 
 			m := createTestModel()
 
@@ -273,8 +273,8 @@ func TestSaveAs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a temporary filename
-			firstFilename := filepath.Join(tempDir, "tsave.seq")
-			expectedFilename := filepath.Join(tempDir, "tsave2.seq")
+			firstFilename := filepath.Join(tempDir, "tsave.sq")
+			expectedFilename := filepath.Join(tempDir, "tsave2.sq")
 
 			m := createTestModel(func(m *model) model {
 				m.filename = firstFilename
@@ -809,7 +809,7 @@ func TestReloadFile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a temporary filename and save initial content
 			tempDir := t.TempDir()
-			testFilename := filepath.Join(tempDir, "test_reload.seq")
+			testFilename := filepath.Join(tempDir, "test_reload.sq")
 
 			// Create initial model and save it
 			m := createTestModel(func(m *model) model {

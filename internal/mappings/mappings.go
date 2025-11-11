@@ -12,7 +12,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chriserin/seq/internal/operation"
+	"github.com/chriserin/sq/internal/operation"
 )
 
 var Keycombo = make([]tea.KeyMsg, 0, 3)
@@ -227,7 +227,7 @@ var CommandDescriptions = map[Command]string{
 	ToggleRatchetNoteMode:  "Toggle ratchet note mode",
 	NextOverlay:            "Move to next overlay",
 	PrevOverlay:            "Move to previous overlay",
-	Save:                   "Save the current sequence. If not previously saved, you will be prompted to name the new file. The file will be saved in the directory from which you opened seq",
+	Save:                   "Save the current sequence. If not previously saved, you will be prompted to name the new file. The file will be saved in the directory from which you opened sq",
 	SaveAs:                 "Save the current sequence with a new name",
 	Undo:                   "Undo last action",
 	Redo:                   "Redo last undone action",
@@ -242,8 +242,8 @@ var CommandDescriptions = map[Command]string{
 	ChangePart:             "Change the part of the section to either an existing part or a new part",
 	NextSection:            "Move to the next section within the arrangement. If the next section is a group, then this mapping will move to the first section within that group",
 	PrevSection:            "Move to the previous section. Move to the next section within the arrangement. If the previous section is a group, then this mapping will move to the last section within that group",
-	NextTheme:              "Switch to next theme. A theme consists of the set of colors used to draw the seq application and the set of icons used to represent different accent levels",
-	PrevTheme:              "Move to the previous theme. A theme consists of the set of colors used to draw the seq application and the set of icons used to represent different accent levels",
+	NextTheme:              "Switch to next theme. A theme consists of the set of colors used to draw the sq application and the set of icons used to represent different accent levels",
+	PrevTheme:              "Move to the previous theme. A theme consists of the set of colors used to draw the sq application and the set of icons used to represent different accent levels",
 	Yank:                   "Copy current selection to buffer. Copies all values of a visual selection or the value under cursor if no visual selection",
 	Mute:                   "Mute the current line. Midi messages will not be sent from this line when the line is muted",
 	MuteAll:                "Mute all lines",

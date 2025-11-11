@@ -6,12 +6,12 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chriserin/seq/internal/arrangement"
-	"github.com/chriserin/seq/internal/config"
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/playstate"
-	"github.com/chriserin/seq/internal/seqmidi"
-	"github.com/chriserin/seq/internal/sequence"
+	"github.com/chriserin/sq/internal/arrangement"
+	"github.com/chriserin/sq/internal/config"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/playstate"
+	"github.com/chriserin/sq/internal/seqmidi"
+	"github.com/chriserin/sq/internal/sequence"
 	"github.com/stretchr/testify/assert"
 	midi "gitlab.com/gomidi/midi/v2"
 )

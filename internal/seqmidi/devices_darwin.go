@@ -14,8 +14,8 @@ import (
 
 	"github.com/Southclaws/fault"
 	"github.com/Southclaws/fault/fmsg"
-	"github.com/chriserin/seq/internal/macmididrv"
-	"github.com/chriserin/seq/internal/macmididrv/imported/macmidi"
+	"github.com/chriserin/sq/internal/macmididrv"
+	"github.com/chriserin/sq/internal/macmididrv/imported/macmidi"
 	"gitlab.com/gomidi/midi/v2/drivers"
 )
 

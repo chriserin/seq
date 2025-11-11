@@ -1,4 +1,4 @@
-# SEQ Project Guidelines
+# sq Project Guidelines
 
 ## Build & Test Commands
 
@@ -8,7 +8,7 @@
 - Run single test: `go test -tags lua54 -run TestName ./package/path`
 - Run specific test function: `go test -tags lua54 -run TestName/SubTest ./package/path`
 - Run with verbose output: `go test -tags lua54 -v ./...`
-- Build: `go build -tags lua54 -o seq`
+- Build: `go build -tags lua54 -o sq`
 - Format code: `go fmt ./...`
 
 ## Code Style
@@ -28,4 +28,3 @@
 - Main application: root directory
 - Internal libraries: `/internal` directory
 - Configuration: Lua files in `/config`
-

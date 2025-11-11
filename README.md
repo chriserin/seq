@@ -1,12 +1,12 @@
-[![Tests](https://github.com/chriserin/seq/actions/workflows/test.yml/badge.svg)](https://github.com/chriserin/seq/actions/workflows/test.yml)
+[![Tests](https://github.com/chriserin/sq/actions/workflows/test.yml/badge.svg)](https://github.com/chriserin/sq/actions/workflows/test.yml)
 
-# SEQ
+# sq
 
 A powerful MIDI sequencer designed for the command line
 
 ## Overview
 
-SEQ is a terminal-based MIDI sequencer that brings midi sequencer capabilities to your CLI. Built with Go and designed for efficiency, SEQ offers rapid beat creation, complex arrangements, and advanced pattern manipulation through an intuitive keyboard-driven interface.
+sq is a terminal-based MIDI sequencer that brings midi sequencer capabilities to your CLI. Built with Go and designed for efficiency, sq offers rapid beat creation, complex arrangements, and advanced pattern manipulation through an intuitive keyboard-driven interface.
 
 ## Key Features
 
@@ -19,7 +19,7 @@ SEQ is a terminal-based MIDI sequencer that brings midi sequencer capabilities t
 
 ## Install from package
 
-Pre-built packages for macOS and Linux are found on the [Releases](https://github.com/chriserin/seq/releases) page.
+Pre-built packages for macOS and Linux are found on the [Releases](https://github.com/chriserin/sq/releases) page.
 
 ## Install from Source
 
@@ -39,14 +39,14 @@ sudo apt-get install libasound2-dev
 
 ```bash
 # Clone the repository
-git clone https://github.com/chriserin/seq.git
-cd seq
+git clone https://github.com/chriserin/sq.git
+cd sq
 
 # Build with Lua support
-go build -tags lua54 -o seq
+go build -tags lua54 -o sq
 
 # Run
-./seq
+./sq
 ```
 
 ### Requirements
@@ -56,7 +56,7 @@ go build -tags lua54 -o seq
 
 ## Quick Start
 
-1. **Launch SEQ**: `./seq`
+1. **Launch sq**: `./sq`
 2. **Create a beat**: Move cursor with `hjkl`, press `1` for notes on every beat
 3. **Play**: Press `Space` to play/stop
 4. **Save**: `Ctrl+s` to save your sequence
@@ -64,12 +64,13 @@ go build -tags lua54 -o seq
 ### Basic Beat Creation Example
 
 ```
-BDK┤▧       ▧       ▧       ▧         
+BDK┤▧       ▧       ▧       ▧
 SN │    ▧       ▧       ▧       ▧
 H1 │▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧
 ```
 
 Created with just 6 keystrokes:
+
 - Bass drum: cursor on BD line, press `8` (note every 8 beats)
 - Snare: `j` (down), `4` then `8` (note every 8 beats starting at beat 5)
 - Hi-hat: `j` (down), `1` (note every beat)
@@ -79,6 +80,7 @@ Created with just 6 keystrokes:
 ### Pattern Creation
 
 **Pattern Mode** enables rapid beat creation:
+
 - **Numbers (1-9)**: Add/remove notes every N beats
 - **Pattern Mode - Value**: `na` (accent), `nw` (wait), `ng` (gate), `nr` (ratchet)
 - **Shift+Numbers**: Increase values, Numbers alone decrease values
@@ -99,11 +101,13 @@ Each note has four modifiable properties:
 ### Key Cycles and Arrangements
 
 **Key Cycles** track sequence iterations and drive both arrangements and overlays:
+
 - Key line (marked with `K`) determines when cycles advance
 - Arrangements use key cycles to switch between sections
 - Overlays use key cycles to determine when variations apply
 
 **Arrangements** structure your songs:
+
 - **Sections**: Containers that reference parts with playback attributes
 - **Parts**: The actual musical content
 - **Groups**: Collections of sections that can repeat
@@ -126,6 +130,7 @@ Complex overlay keys support width, start delays, and stacking behaviors.
 ### Actions
 
 **Actions** manipulate playback cursors:
+
 - **Line Reset** (`ss`): Reset cursor to first beat
 - **Line Bounce** (`sb`): Bounce between first beat and action
 - **Line Skip** (`sk`): Skip current beat
@@ -139,23 +144,27 @@ Some actions have "All" variants (`sS`, `sB`, `sK`) that affect all playback cur
 ## Key Bindings
 
 ### Navigation
+
 - `hjkl`: Move cursor (left/down/up/right)
 - `<>`: Jump to line start/end
 - `bf`/`bl`: Jump to first/last line
 
 ### Playback
+
 - `Space`: Play/stop arrangement once
 - `Alt+Space`: Loop arrangement
 - `'+Space`: Loop current overlay
 - `Ctrl+@`: Loop current part
 
 ### Pattern Creation
+
 - `1-9`: Add/remove notes every N beats
 - `f`: Add single note
 - `d`: Remove note
 - `c`: Clear line from cursor to end
 
 ### Note Modification
+
 - `A`/`a`: Increase/decrease accent
 - `G`/`g`: Increase/decrease gate
 - `R`/`r`: Increase/decrease ratchet
@@ -163,12 +172,14 @@ Some actions have "All" variants (`sS`, `sB`, `sK`) that affect all playback cur
 - `E`/`e`: Long gate increase/decrease
 
 ### Arrangement
+
 - `Ctrl+a`: Toggle arrangement view
 - `Ctrl+]`: New section after current
 - `Ctrl+p`: New section before current
 - `]s`/`[s`: Next/previous section
 
 ### Advanced Features
+
 - `o`: Toggle chord mode
 - `v`: Visual selection mode
 - `y`/`p`: Yank/paste
@@ -176,6 +187,7 @@ Some actions have "All" variants (`sS`, `sB`, `sK`) that affect all playback cur
 - `u`/`U`: Undo/redo
 
 ### Input Modes
+
 - `Ctrl+t`: Tempo controls
 - `Ctrl+k`: Cycles input controls
 - `Ctrl+b`: Beat input controls
@@ -190,6 +202,7 @@ Some actions have "All" variants (`sS`, `sB`, `sK`) that affect all playback cur
 ### Chord Mode (`o`)
 
 Create and manipulate chords with dedicated key bindings:
+
 - `tM`/`tm`: Major/minor triads
 - `7M`/`7m`: Major/minor sevenths
 - `]i`/`[i`: Invert chords
@@ -199,6 +212,7 @@ Create and manipulate chords with dedicated key bindings:
 ### Visual Mode (`v`)
 
 Select and manipulate regions:
+
 - `v`: Enter visual mode
 - `hjkl`: Expand selection
 - `y`: Yank selection
@@ -207,6 +221,7 @@ Select and manipulate regions:
 ### Pattern Rotation
 
 Rotate patterns in any direction:
+
 - `HJKL`: Rotate left/down/up/right
 - Works on current line or column
 
@@ -219,7 +234,7 @@ Rotate patterns in any direction:
 
 ## Configuration
 
-SEQ uses Lua for configuration. Configuration files are located in the `/config` directory:
+sq uses Lua for configuration. Configuration files are located in the `/config` directory:
 
 - `config/init.lua`: Main configuration file
 - Templates and instruments can be added via Lua scripts
@@ -230,8 +245,8 @@ SEQ uses Lua for configuration. Configuration files are located in the `/config`
 
 ```bash
 
-# All commands must use -tags lua54 
-go build -tags lua54 -o seq
+# All commands must use -tags lua54
+go build -tags lua54 -o sq
 go test -tags lua54 ./...
 go fmt ./...
 
@@ -242,7 +257,7 @@ export GOFLAGS="-tags=lua54"
 ### Project Structure
 
 ```
-seq/
+sq/
 ├── main.go              # Main application entry
 ├── ui.go               # Bubble Tea UI implementation
 ├── internal/           # Internal packages

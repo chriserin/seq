@@ -3,8 +3,8 @@ package overlays
 import (
 	"testing"
 
-	"github.com/chriserin/seq/internal/grid"
-	overlaykey "github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/grid"
+	overlaykey "github.com/chriserin/sq/internal/overlaykey"
 	"github.com/stretchr/testify/assert"
 )
 

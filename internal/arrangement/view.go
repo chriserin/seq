@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	themes "github.com/chriserin/seq/internal/themes"
+	themes "github.com/chriserin/sq/internal/themes"
 )
 
 func (m Model) View(loopingNode *Arrangement) string {

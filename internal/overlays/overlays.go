@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/overlaykey"
 )
 
 type Key = overlaykey.OverlayPeriodicity

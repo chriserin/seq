@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"maps"
 
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/theory"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/theory"
 )
 
 // OverlayDiff represents the differences between two overlays

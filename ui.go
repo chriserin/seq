@@ -21,21 +21,21 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/chriserin/seq/internal/arrangement"
-	"github.com/chriserin/seq/internal/beats"
-	"github.com/chriserin/seq/internal/config"
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/mappings"
-	"github.com/chriserin/seq/internal/notereg"
-	"github.com/chriserin/seq/internal/operation"
-	"github.com/chriserin/seq/internal/overlaykey"
-	"github.com/chriserin/seq/internal/overlays"
-	"github.com/chriserin/seq/internal/playstate"
-	"github.com/chriserin/seq/internal/seqmidi"
-	"github.com/chriserin/seq/internal/sequence"
-	themes "github.com/chriserin/seq/internal/themes"
-	"github.com/chriserin/seq/internal/theory"
-	"github.com/chriserin/seq/internal/timing"
+	"github.com/chriserin/sq/internal/arrangement"
+	"github.com/chriserin/sq/internal/beats"
+	"github.com/chriserin/sq/internal/config"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/mappings"
+	"github.com/chriserin/sq/internal/notereg"
+	"github.com/chriserin/sq/internal/operation"
+	"github.com/chriserin/sq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/overlays"
+	"github.com/chriserin/sq/internal/playstate"
+	"github.com/chriserin/sq/internal/seqmidi"
+	"github.com/chriserin/sq/internal/sequence"
+	themes "github.com/chriserin/sq/internal/themes"
+	"github.com/chriserin/sq/internal/theory"
+	"github.com/chriserin/sq/internal/timing"
 )
 
 var timingChannel chan timing.TimingMsg
@@ -1033,7 +1033,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			return m, cmd
 		case mappings.ConfirmFileName:
 			if m.textInput.Value() != "" {
-				m.filename = fmt.Sprintf("%s.seq", m.textInput.Value())
+				m.filename = fmt.Sprintf("%s.sq", m.textInput.Value())
 				m.textInput.Reset()
 				m.selectionIndicator = operation.SelectGrid
 				m.Save()

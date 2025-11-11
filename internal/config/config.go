@@ -13,8 +13,8 @@ import (
 
 	"github.com/aarzilli/golua/lua"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/operation"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/operation"
 )
 
 type Config struct {
@@ -249,7 +249,7 @@ func ProcessConfig(configFilePath string) {
 
 	L.OpenPackage()
 	L.OpenLibs()
-	L.RegisterLibrary("seq", seqFunctions)
+	L.RegisterLibrary("sq", seqFunctions)
 
 	// Set CONFIG_DIR global for Lua scripts
 	configDir := filepath.Dir(configFilePath)
@@ -280,8 +280,8 @@ func findConfigFile() (string, bool) {
 	possibleDirs := []string{
 		"./",
 		"./config",
-		homeDir + "/.seq",
-		xdgConfigDir + "/seq",
+		homeDir + "/.sq",
+		xdgConfigDir + "/sq",
 	}
 
 	for _, dir := range possibleDirs {
@@ -291,7 +291,7 @@ func findConfigFile() (string, bool) {
 		}
 	}
 
-	writePath := xdgConfigDir + "/seq"
+	writePath := xdgConfigDir + "/sq"
 	if _, err := os.Stat(writePath); os.IsNotExist(err) {
 		err := os.Mkdir(writePath, 0755)
 		if err != nil {

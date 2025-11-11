@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/chriserin/seq/internal/arrangement"
-	"github.com/chriserin/seq/internal/config"
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/overlaykey"
-	"github.com/chriserin/seq/internal/overlays"
+	"github.com/chriserin/sq/internal/arrangement"
+	"github.com/chriserin/sq/internal/config"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/overlays"
 )
 
 // Read loads the model's sequence struct from a file

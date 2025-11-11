@@ -1,10 +1,10 @@
-local seq = require("seq")
+local sq = require("sq")
 
 local Channel = 10
 local C1 = 36
 local MessageType = "Note"
 
-seq.addtemplate({
+sq.addtemplate({
 	name = "Drums",
 	maxgatelength = 32,
 	lines = {

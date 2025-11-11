@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/chriserin/seq/internal/macmididrv/imported/macmidi"
+	"github.com/chriserin/sq/internal/macmididrv/imported/macmidi"
 	"gitlab.com/gomidi/midi/v2/drivers"
 )
 

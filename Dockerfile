@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for static compilation of seq with Lua and RtMidi
+# Multi-stage Dockerfile for static compilation of sq with Lua and RtMidi
 FROM golang:1.24-alpine AS builder
 
 # Install build dependencies
@@ -37,10 +37,10 @@ ENV CGO_LDFLAGS="-L/usr/lib/lua5.4 -Wl,-Bstatic -llua5.4 -Wl,-Bdynamic -lm"
 # Build the application
 RUN go build -tags lua54 \
     -ldflags "-s -w" \
-    -o seq
+    -o sq
 
 # Verify linking
-RUN ldd seq
+RUN ldd sq
 
 # Final stage - runtime image with ALSA only (Lua is static)
 FROM alpine:latest
@@ -52,7 +52,7 @@ RUN apk add --no-cache \
     libgcc
 
 # Copy the binary
-COPY --from=builder /app/seq /seq
+COPY --from=builder /app/sq /sq
 
 # Set the binary as the entrypoint
-ENTRYPOINT ["/seq"]
+ENTRYPOINT ["/sq"]

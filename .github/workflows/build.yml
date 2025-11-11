@@ -25,21 +25,21 @@ jobs:
 
       - name: Build with Docker
         run: |
-          docker build -t seq-builder .
-          docker create --name seq-temp seq-builder
-          docker cp seq-temp:/seq ./seq-linux-amd64
-          docker rm seq-temp
-          chmod +x seq-linux-amd64
+          docker build -t sq-builder .
+          docker create --name sq-temp sq-builder
+          docker cp sq-temp:/sq ./sq-linux-amd64
+          docker rm sq-temp
+          chmod +x sq-linux-amd64
 
       - name: Test binary
         run: |
-          ./seq-linux-amd64 --version || echo "Linux binary test completed"
+          ./sq-linux-amd64 --version || echo "Linux binary test completed"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: seq-linux-amd64-${{ github.sha }}
-          path: seq-linux-amd64
+          name: sq-linux-amd64-${{ github.sha }}
+          path: sq-linux-amd64
 
   # build macOS
   build-macos:
@@ -125,22 +125,22 @@ jobs:
           pkg-config --libs lua5.4 || echo "Failed to get libs"
 
           # Build the binary
-          go build -tags lua54 -ldflags "-s -w" -o seq-darwin-${{ matrix.arch }}
+          go build -tags lua54 -ldflags "-s -w" -o sq-darwin-${{ matrix.arch }}
 
           # Verify the binary architecture
-          file seq-darwin-${{ matrix.arch }}
-          lipo -info seq-darwin-${{ matrix.arch }}
+          file sq-darwin-${{ matrix.arch }}
+          lipo -info sq-darwin-${{ matrix.arch }}
 
       - name: Verify binary
         run: |
-          file seq-darwin-${{ matrix.arch }}
-          otool -L seq-darwin-${{ matrix.arch }} || true
+          file sq-darwin-${{ matrix.arch }}
+          otool -L sq-darwin-${{ matrix.arch }} || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: seq-darwin-${{ matrix.arch }}-${{ github.sha }}
-          path: seq-darwin-${{ matrix.arch }}
+          name: sq-darwin-${{ matrix.arch }}-${{ github.sha }}
+          path: sq-darwin-${{ matrix.arch }}
 
   release:
     needs: [build-linux, build-macos]
@@ -163,25 +163,25 @@ jobs:
 
       - name: Verify artifacts
         run: |
-          ls -la seq-*
-          file seq-* || true
+          ls -la sq-*
+          file sq-* || true
 
       - name: Create release directories
         run: |
-          mkdir -p output/seq-linux-X86_64/bin
-          mkdir -p output/seq-darwin-X86_64/bin
-          mkdir -p output/seq-darwin-arm64/bin
+          mkdir -p output/sq-linux-X86_64/bin
+          mkdir -p output/sq-darwin-X86_64/bin
+          mkdir -p output/sq-darwin-arm64/bin
 
-          mv seq-linux-amd64 output/seq-linux-X86_64/bin/seq
-          mv seq-darwin-amd64 output/seq-darwin-X86_64/bin/seq
-          mv seq-darwin-arm64 output/seq-darwin-arm64/bin/seq
+          mv sq-linux-amd64 output/sq-linux-X86_64/bin/sq
+          mv sq-darwin-amd64 output/sq-darwin-X86_64/bin/sq
+          mv sq-darwin-arm64 output/sq-darwin-arm64/bin/sq
           #
           # Make them executable
-          chmod +x output/*/bin/seq
+          chmod +x output/*/bin/sq
 
-          tar -cvzf seq-linux-X86_64.tar.gz -C output seq-linux-X86_64
-          tar -cvzf seq-darwin-X86_64.tar.gz -C output seq-darwin-X86_64
-          tar -cvzf seq-darwin-arm64.tar.gz -C output seq-darwin-arm64
+          tar -cvzf sq-linux-X86_64.tar.gz -C output sq-linux-X86_64
+          tar -cvzf sq-darwin-X86_64.tar.gz -C output sq-darwin-X86_64
+          tar -cvzf sq-darwin-arm64.tar.gz -C output sq-darwin-arm64
 
           ./changelog.sh WITHINSTALL > release-notes.md
           # if the github_ref has alpha or beta make this a prerelease

@@ -1,4 +1,4 @@
-local seq = require("seq")
+local sq = require("sq")
 local instruments_path = CONFIG_DIR .. "/instruments.lua"
 local chunk = loadfile(instruments_path)
 if chunk then
@@ -10,7 +10,7 @@ local C1 = 36
 local C3 = 60
 local MessageType = "Note"
 
-seq.addtemplate({
+sq.addtemplate({
 	name = "Drums",
 	maxgatelength = 32,
 	uistyle = "plain",
@@ -26,7 +26,7 @@ seq.addtemplate({
 	},
 })
 
-seq.addtemplate({
+sq.addtemplate({
 	name = "VMNA",
 	maxgatelength = 1,
 	uistyle = "plain",
@@ -52,7 +52,7 @@ for noteValue = C3, C1, -1 do
 	index = index + 1
 end
 
-seq.addtemplate({
+sq.addtemplate({
 	name = "Piano2",
 	seqtype = "polyphony",
 	maxgatelength = 32,

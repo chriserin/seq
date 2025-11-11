@@ -5,17 +5,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/chriserin/seq/internal/arrangement"
-	"github.com/chriserin/seq/internal/config"
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/overlaykey"
-	"github.com/chriserin/seq/internal/overlays"
+	"github.com/chriserin/sq/internal/arrangement"
+	"github.com/chriserin/sq/internal/config"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/overlays"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestReadWrite(t *testing.T) {
 	// Create temp directory for test files
-	tempDir, err := os.MkdirTemp("", "seq-readwrite-test")
+	tempDir, err := os.MkdirTemp("", "sq-readwrite-test")
 	if err != nil {
 		t.Fatalf("failed to create temp directory: %v", err)
 	}
@@ -279,12 +279,12 @@ func TestReadWrite(t *testing.T) {
 }
 
 func TestReadFileWithChords(t *testing.T) {
-	// Test reading the checkchord.seq file which contains chord definitions
-	readDef, err := Read("testdata/checkchord.seq")
+	// Test reading the checkchord.sq file which contains chord definitions
+	readDef, err := Read("testdata/checkchord.sq")
 	assert.NoError(t, err)
 	assert.NotNil(t, readDef)
 
-	// Verify basic settings from checkchord.seq
+	// Verify basic settings from checkchord.sq
 	assert.Equal(t, 120, readDef.Tempo)
 	assert.Equal(t, 2, readDef.Subdivisions)
 	assert.Equal(t, uint8(0), readDef.Keyline)
@@ -314,7 +314,7 @@ func TestReadFileWithChords(t *testing.T) {
 	assert.Len(t, overlay.Chords, 1)
 	chord := overlay.Chords[0]
 
-	// Verify chord properties from checkchord.seq
+	// Verify chord properties from checkchord.sq
 	expectedGridKey := grid.GridKey{Line: 24, Beat: 0}
 	assert.Equal(t, expectedGridKey, chord.Root)
 	assert.Equal(t, overlays.Arp(2), chord.Arpeggio)
@@ -362,8 +362,8 @@ func TestReadFileError(t *testing.T) {
 }
 
 func TestReadFileWithBlockers(t *testing.T) {
-	// Test reading the checkchord.seq file which contains chord definitions
-	readDef, err := Read("testdata/checkblockers.seq")
+	// Test reading the checkchord.sq file which contains chord definitions
+	readDef, err := Read("testdata/checkblockers.sq")
 	assert.NoError(t, err)
 	assert.NotNil(t, readDef)
 

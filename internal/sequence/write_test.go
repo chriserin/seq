@@ -6,16 +6,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chriserin/seq/internal/arrangement"
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/overlaykey"
-	"github.com/chriserin/seq/internal/overlays"
+	"github.com/chriserin/sq/internal/arrangement"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/overlays"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestWrite(t *testing.T) {
 	// Create temp directory for test files
-	tempDir, err := os.MkdirTemp("", "seq-write-test")
+	tempDir, err := os.MkdirTemp("", "sq-write-test")
 	if err != nil {
 		t.Fatalf("failed to create temp directory: %v", err)
 	}

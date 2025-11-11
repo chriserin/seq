@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/chriserin/seq/internal/arrangement"
+	"github.com/chriserin/sq/internal/arrangement"
 )
 
 func View(playState PlayState, cursor arrangement.ArrCursor) string {

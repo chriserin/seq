@@ -12,16 +12,16 @@ import (
 	"github.com/Southclaws/fault/ftag"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/chriserin/seq/internal/config"
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/mappings"
-	"github.com/chriserin/seq/internal/operation"
-	"github.com/chriserin/seq/internal/overlaykey"
-	"github.com/chriserin/seq/internal/overlays"
-	"github.com/chriserin/seq/internal/playstate"
-	"github.com/chriserin/seq/internal/sequence"
-	themes "github.com/chriserin/seq/internal/themes"
-	"github.com/chriserin/seq/internal/timing"
+	"github.com/chriserin/sq/internal/config"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/mappings"
+	"github.com/chriserin/sq/internal/operation"
+	"github.com/chriserin/sq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/overlays"
+	"github.com/chriserin/sq/internal/playstate"
+	"github.com/chriserin/sq/internal/sequence"
+	themes "github.com/chriserin/sq/internal/themes"
+	"github.com/chriserin/sq/internal/timing"
 	midi "gitlab.com/gomidi/midi/v2"
 )
 
@@ -471,11 +471,11 @@ func (m model) SeqView(showLines []uint8) string {
 	} else if m.playState.Playing {
 		buf.WriteString(playstate.View(m.playState, m.arrangement.Cursor))
 	} else if len(*m.definition.Parts) > 1 {
-		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
+		buf.WriteString(themes.AppTitleStyle.Render(" sq "))
 		buf.WriteString(themes.AppDescriptorStyle.Render(fmt.Sprintf("- %s", m.CurrentPart().GetName())))
 		buf.WriteString("\n")
 	} else {
-		buf.WriteString(themes.AppTitleStyle.Render(" Seq "))
+		buf.WriteString(themes.AppTitleStyle.Render(" sq "))
 		buf.WriteString(themes.AppDescriptorStyle.Render("- A sequencer for your cli"))
 		buf.WriteString("\n")
 	}

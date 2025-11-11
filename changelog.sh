@@ -25,30 +25,30 @@ if [ "$1" == "WITHINSTALL" ]; then
 
 ### macOS (x86_64)
 
-1. Download seq-macos-x86_64.tar.gz
-2. Run xattr -c ./seq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-x86_64.tar.gz
-4. Run ./seq-macos-x86_64/bin/seq
+1. Download sq-macos-x86_64.tar.gz
+2. Run xattr -c ./sq-macos-x86_64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf sq-macos-x86_64.tar.gz
+4. Run ./sq-macos-x86_64/bin/sq
 
 ### macOS (arm64)
 
-1. Download seq-macos-arm64.tar.gz
-2. Run xattr -c ./seq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
-3. Extract: tar xzvf seq-macos-arm64.tar.gz
-4. Run ./seq-macos-arm64/bin/seq
+1. Download sq-macos-arm64.tar.gz
+2. Run xattr -c ./sq-macos-arm64.tar.gz (to avoid "unknown developer" warning)
+3. Extract: tar xzvf sq-macos-arm64.tar.gz
+4. Run ./sq-macos-arm64/bin/sq
 
 ### Linux (x86_64)
 
-1. Download seq-linux-x86_64.tar.gz
-2. Extract: tar xzvf seq-linux-x86_64.tar.gz
-3. Run ./seq-linux-x86_64/bin/seq
+1. Download sq-linux-x86_64.tar.gz
+2. Extract: tar xzvf sq-linux-x86_64.tar.gz
+3. Run ./sq-linux-x86_64/bin/sq
 
 EOF
 fi
 
 date=$(git log -1 --format=%cd --date=short "$startTag")
 
-echo "## [${startTag}](https://github.com/chriserin/seq/compare/${lastTag}...${startTag}) ($date)"
+echo "## [${startTag}](https://github.com/chriserin/sq/compare/${lastTag}...${startTag}) ($date)"
 echo ""
 
 features=$(git log --oneline "${startTag}"..."${lastTag}" | awk ' $2 ~ /^feat/ {print}')
@@ -59,7 +59,7 @@ if [ -n "$features" ]; then
     while IFS= read -r line; do
         commit_hash=$(echo "$line" | awk '{print $1}')
         commit_message=$(echo "$line" | cut -d' ' -f3-)
-        echo "* $commit_message [${commit_hash}](https://github.com/chriserin/seq/commit/${commit_hash}) "
+        echo "* $commit_message [${commit_hash}](https://github.com/chriserin/sq/commit/${commit_hash}) "
     done <<<"$features"
 else
     echo "### Features"
@@ -86,7 +86,7 @@ if [ -n "$fixes" ]; then
             commit_message="${scope}: ${commit_message}"
         fi
 
-        echo "* $commit_message [${commit_hash}](https://github.com/chriserin/seq/commit/${commit_hash}) "
+        echo "* $commit_message [${commit_hash}](https://github.com/chriserin/sq/commit/${commit_hash}) "
     done <<<"$fixes"
 else
     echo "### Fixes"

@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"github.com/chriserin/seq/internal/grid"
+	"github.com/chriserin/sq/internal/grid"
 	"github.com/stretchr/testify/assert"
 )
 

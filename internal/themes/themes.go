@@ -6,7 +6,7 @@ package themes
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/chriserin/seq/internal/grid"
+	"github.com/chriserin/sq/internal/grid"
 )
 
 type Theme struct {

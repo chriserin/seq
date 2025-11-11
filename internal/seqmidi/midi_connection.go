@@ -15,12 +15,12 @@ import (
 
 	"github.com/Southclaws/fault"
 	"github.com/Southclaws/fault/fmsg"
-	"github.com/chriserin/seq/internal/notereg"
+	"github.com/chriserin/sq/internal/notereg"
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
 )
 
-const TransmitterName string = "seq-transmitter"
+const TransmitterName string = "sq-transmitter"
 
 type MidiConnection struct {
 	IsTransmitter bool
@@ -210,13 +210,13 @@ func (mc MidiConnection) SendPlayMessage() error {
 	var selectedOutport = mc.GetDawOutport()
 
 	if selectedOutport == nil {
-		return fault.New("could not find daw outport", fmsg.WithDesc("could not find daw outport", "Could not find a daw outport, please ensure the DAW record destination is open and then restart seq"))
+		return fault.New("could not find daw outport", fmsg.WithDesc("could not find daw outport", "Could not find a daw outport, please ensure the DAW record destination is open and then restart sq"))
 	}
 
 	// NOTE: The record message must be configured in Logic.
 	// Logic Pro -> Control Surfaces -> Controller Assignments...
-	// Create a new zone (seq), a new Mode (commands), a new control
-	// Within the new control press "Learn" and then in seq use the PlayRecord mapping (`:<Space>`).
+	// Create a new zone (sq), a new Mode (commands), a new control
+	// Within the new control press "Learn" and then in sq use the PlayRecord mapping (`:<Space>`).
 	// Then Chose `Class: Key Command` `Command: Global Commands` and then `Record` in the unlabeled parameter list
 	err := selectedOutport.Send(midi.ControlChange(16, 127, 126))
 	if err != nil {
@@ -229,13 +229,13 @@ func (mc MidiConnection) SendRecordMessage() error {
 	var selectedOutport = mc.GetDawOutport()
 
 	if selectedOutport == nil {
-		return fault.New("could not find daw outport", fmsg.WithDesc("could not find daw outport", "Could not find a daw outport, please ensure the DAW record destination is open and then restart seq"))
+		return fault.New("could not find daw outport", fmsg.WithDesc("could not find daw outport", "Could not find a daw outport, please ensure the DAW record destination is open and then restart sq"))
 	}
 
 	// NOTE: The record message must be configured in Logic.
 	// Logic Pro -> Control Surfaces -> Controller Assignments...
-	// Create a new zone (seq), a new Mode (commands), a new control
-	// Within the new control press "Learn" and then in seq use the PlayRecord mapping (`:<Space>`).
+	// Create a new zone (sq), a new Mode (commands), a new control
+	// Within the new control press "Learn" and then in sq use the PlayRecord mapping (`:<Space>`).
 	// Then Chose `Class: Key Command` `Command: Global Commands` and then `Record` in the unlabeled parameter list
 	err := selectedOutport.Send(midi.ControlChange(16, 127, 127))
 	if err != nil {
@@ -284,7 +284,7 @@ func FindInPort(inPortName string) (drivers.In, error) {
 	return nil, fault.New("cannot find transmitter port", fmsg.With("cannot find transmitter port"))
 }
 
-var OutputName string = "seq-cli-out"
+var OutputName string = "sq-cli-out"
 
 func (mc *MidiConnection) CreateOutport() error {
 	outport, err := OpenVirtualOut(OutputName)

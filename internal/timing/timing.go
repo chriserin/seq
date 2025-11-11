@@ -11,9 +11,9 @@ import (
 	"github.com/Southclaws/fault"
 	"github.com/Southclaws/fault/fmsg"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chriserin/seq/internal/beats"
-	"github.com/chriserin/seq/internal/playstate"
-	"github.com/chriserin/seq/internal/seqmidi"
+	"github.com/chriserin/sq/internal/beats"
+	"github.com/chriserin/sq/internal/playstate"
+	"github.com/chriserin/sq/internal/seqmidi"
 	midi "gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
 )

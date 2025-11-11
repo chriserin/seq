@@ -3,9 +3,9 @@ package overlays
 import (
 	"testing"
 
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/overlaykey"
-	"github.com/chriserin/seq/internal/theory"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/theory"
 	"github.com/stretchr/testify/assert"
 )
 

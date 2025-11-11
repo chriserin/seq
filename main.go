@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/chriserin/seq/internal/mappings"
-	"github.com/chriserin/seq/internal/seqmidi"
+	"github.com/chriserin/sq/internal/mappings"
+	"github.com/chriserin/sq/internal/seqmidi"
 	"github.com/spf13/cobra"
 )
 
@@ -23,12 +23,12 @@ var cliOptions ProgramOptions
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:   "seq",
+		Use:   "sq",
 		Short: "A sequencer for your cli",
 		Long:  "A sequencer for your cli",
 		Args:  cobra.MaximumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			return []string{"seq"}, cobra.ShellCompDirectiveFilterFileExt
+			return []string{"sq"}, cobra.ShellCompDirectiveFilterFileExt
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
@@ -57,7 +57,7 @@ func main() {
 		Use:   "version",
 		Short: "Version",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("seq v%s\n", VERSION)
+			fmt.Printf("sq v%s\n", VERSION)
 		},
 	}
 
@@ -88,7 +88,7 @@ func main() {
 	rootCmd.AddCommand(cmdMappings)
 	rootCmd.Flags().StringVar(&cliOptions.gridTemplate, "template", "Drums", "Choose a template (default: Drums)")
 	rootCmd.Flags().StringVar(&cliOptions.instrument, "instrument", "Standard", "Choose an instrument for CC integration (default: Standard)")
-	rootCmd.Flags().BoolVar(&cliOptions.outport, "outport", false, "Seq will create an outport to send midi")
+	rootCmd.Flags().BoolVar(&cliOptions.outport, "outport", false, "sq will create an outport to send midi")
 	rootCmd.Flags().StringVar(&cliOptions.theme, "theme", "miles", "Choose an theme for the sequencer visual representation")
 	rootCmd.Flags().StringVar(&cliOptions.midiout, "midiout", "", "Choose a midi out port")
 

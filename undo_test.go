@@ -3,12 +3,12 @@ package main
 import (
 	"testing"
 
-	"github.com/chriserin/seq/internal/arrangement"
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/overlaykey"
-	"github.com/chriserin/seq/internal/overlays"
-	"github.com/chriserin/seq/internal/playstate"
-	"github.com/chriserin/seq/internal/sequence"
+	"github.com/chriserin/sq/internal/arrangement"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/overlaykey"
+	"github.com/chriserin/sq/internal/overlays"
+	"github.com/chriserin/sq/internal/playstate"
+	"github.com/chriserin/sq/internal/sequence"
 	"github.com/stretchr/testify/assert"
 )
 

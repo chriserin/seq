@@ -1,8 +1,8 @@
 print("In test fixture AddTemplate.lua")
 
-local seq = require("seq")
+local sq = require("sq")
 
-seq.addinstrument({
+sq.addinstrument({
 	name = "Prophet 10",
 	controlchanges = {
 		{ 3, 120, "OSC A FREQUENCY" },

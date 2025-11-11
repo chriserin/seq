@@ -4,10 +4,10 @@ import (
 	"math"
 	"slices"
 
-	"github.com/chriserin/seq/internal/arrangement"
-	"github.com/chriserin/seq/internal/config"
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/operation"
+	"github.com/chriserin/sq/internal/arrangement"
+	"github.com/chriserin/sq/internal/config"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/operation"
 )
 
 type Sequence struct {

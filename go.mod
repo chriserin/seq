@@ -1,4 +1,4 @@
-module github.com/chriserin/seq
+module github.com/chriserin/sq
 
 go 1.24.2
 

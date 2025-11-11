@@ -3,10 +3,10 @@ package main
 import (
 	"testing"
 
-	"github.com/chriserin/seq/internal/grid"
-	"github.com/chriserin/seq/internal/mappings"
-	"github.com/chriserin/seq/internal/operation"
-	"github.com/chriserin/seq/internal/playstate"
+	"github.com/chriserin/sq/internal/grid"
+	"github.com/chriserin/sq/internal/mappings"
+	"github.com/chriserin/sq/internal/operation"
+	"github.com/chriserin/sq/internal/playstate"
 	"github.com/stretchr/testify/assert"
 )
 
