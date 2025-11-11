@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [v0.1.0-alpha.13](https://github.com/chriserin/sq/compare/v0.1.0-alpha.12...v0.1.0-alpha.13) (2025-11-11)
+
+### Features
+
+* write config if not exists [668bc08](https://github.com/chriserin/sq/commit/668bc08) 
+* Print mappings with [5019db5](https://github.com/chriserin/sq/commit/5019db5) 
+
+### Fixes
+
+* grid: cannot add line if it exists [cc60af3](https://github.com/chriserin/sq/commit/cc60af3) 
+
+
 ## [v0.1.0-alpha.12](https://github.com/chriserin/seq/compare/v0.1.0-alpha.11...v0.1.0-alpha.12) (2025-10-27)
 
 ### Features
