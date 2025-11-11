@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [v0.1.0-alpha.14](https://github.com/chriserin/sq/compare/v0.1.0-alpha.13...v0.1.0-alpha.14) (2025-11-11)
+
+### Features
+
+No new features.
+
+### Fixes
+
+No bug fixes.
+
+
 ## [v0.1.0-alpha.13](https://github.com/chriserin/sq/compare/v0.1.0-alpha.12...v0.1.0-alpha.13) (2025-11-11)
 
 ### Features
