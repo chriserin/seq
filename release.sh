@@ -24,6 +24,7 @@ currentChangeLog=$(tail -n +2 CHANGELOG.md)
 } >CHANGELOG.md
 
 git add CHANGELOG.md
+git add main.go
 git commit -m "chore: Update CHANGELOG.md for release $tag"
 
 git tag --delete "$tag"
