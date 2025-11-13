@@ -1,6 +1,6 @@
 # Beat Pattern Creation
 
-Creating beat patterns is simple and quick in sq with pattern mode. sq begins in pattern mode - fill, where number keys correspond to beat intervals.
+Creating beat patterns is simple and quick in sq with pattern mode. sq begins in pattern mode — fill, where number keys correspond to beat intervals.
 
 ## Example
 
@@ -41,8 +41,8 @@ For the high hat, move down one line with `j` and press `1` to create a high hat
 
 6 keystrokes to create a very simple beat.
 
-To create some accents on the high hats, press `na` to enter Pattern Mode -
-Accent and `shift+2` to increase the velocity of the high hat hit on every
+To create some accents on the high hats, press `na` to enter Pattern Mode — Accent
+and `shift+2` to increase the velocity of the high hat hit on every
 other beat. Press `enter` to escape from this mode.
 
 ```
@@ -52,5 +52,4 @@ other beat. Press `enter` to escape from this mode.
 
 ```
 
-That's t
-additional key strokes to create that accent pattern.
+That's 4 additional key strokes to create that accent pattern.

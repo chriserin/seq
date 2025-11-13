@@ -5,11 +5,11 @@ shown when pressing `ctrl+a`.
 
 ## Sections and Parts
 
-An arrangement consists of sections.  These sections are sequenced one after
-the other as listed in the Arrangement View.  Each section contains a part that
-could be the same or different than other sections.
+An arrangement consists of sections. These sections are sequenced one after
+the other as listed in the Arrangement View. Each section contains a part that
+could be the same or different from other sections.
 
-Initially, there is one section and one part.  In the arrangement view that
+Initially, there is one section and one part. In the arrangement view that
 looks like this:
 
 ```
@@ -19,7 +19,7 @@ Section ────────────────────⟳ Amount�
 ```
 
 To create another section press `ctrl+]` and accept the "Choose Part" prompt
-with `enter`.  Now there are two sections in the arrangement view:
+with `enter`. Now there are two sections in the arrangement view:
 
 ```
  Section ────────────────────⟳ Amount─────⟳ Start──Start Beat──────⟳ Keep
@@ -29,9 +29,9 @@ with `enter`.  Now there are two sections in the arrangement view:
 ```
 
 "Part 1" will play for 1 key cycle and "Part 2" will also play for one key
-cycle.  You can add another section but choose an already existing part by
+cycle. You can add another section but choose an already existing part by
 pressing `ctlr+]` and selecting an existing part with `+` before accepting
-with `enter`.  This will create an arrangement that looks like this:
+with `enter`. This will create an arrangement that looks like this:
 
 ```
  Section ────────────────────⟳ Amount─────⟳ Start──Start Beat──────⟳ Keep
@@ -48,12 +48,12 @@ Move the section selection down and up with `j` and `k`.
 
 ## Groups
 
-A group can be used to iterate over a sequence of parts multiple times.  When
+A group can be used to iterate over a sequence of parts multiple times. When
 the Arrangement View is focused, press `g` to create a group that consists of
-the currently focused section and the section after it, if a following section
+the now focused section and the section after it, if a following section
 exists.
 
-When "Part 2" of our working example is currently selected, pressing `g` will
+When "Part 2" of our working example is now selected, pressing `g` will
 alter an arrangement to look like this:
 
 ```
@@ -71,39 +71,38 @@ Creating a group has the effect of creating an arrangement tree.
 ## Section Attributes
 
 Each section has four attributes, Cycle Amount, Cycle Start, Start Beat and
-Cycle Keep.  Move left and right between these attributes with `h` and `l`.
+Cycle Keep. Move left and right between these attributes with `h` and `l`.
 
-
-### Cycles Amount  /  ⟳ Amount
+### Cycles Amount / ⟳ Amount
 
 The number of Key Cycles a section will play is determined by the Cycles
-Amount.  This defaults to 1 as a way to force a more considered choice for the
-sequence.  The Cycles Amount is the left most attribute and is selected by
+Amount. This defaults to 1 as a way to force a more considered choice for the
+sequence. The Cycles Amount is the left most attribute and is selected by
 default when the arrangement view is focused initially, allowing quick
 selections of higher Cycle Amount values with the `+` key.
 
-### Cycles Start  /  ⟳ Start
+### Cycles Start / ⟳ Start
 
-The current number of Key Cycles determines which Overlay is active.  A section
+The current number of Key Cycles determines the active Overlay. A section
 can differ from another section playing the same part by using a different Key
-Cycle at the start.  By starting with a key cycle of 2 rather than 1, a part
+Cycle at the start. By starting with a key cycle of 2 rather than 1, a part
 will begin with overlay `2/1`.
 
 ### Start Beat
 
-A part does not need to start at the first beat.  Using the start beat
-attribute, a section can start at any beat of the part.  This can be used to
+A part does not need to start at the first beat. Using the start beat
+attribute, a section can start at any beat of the part. This can be used to
 inject oddly timed breaks between sections or to create fills at the starts of
 sections.
 
 ### Keep Cycles
 
-If a section is within a group and the group iterates multiple times, it is
-possible to maintain the Key Cycles between plays within a group.  A "✔" as a
+If a section is within a group, and the group iterates multiple times, it is
+possible to maintain the Key Cycles between plays within a group. A "✔" as a
 Keep Cycles value indicates that Key Cycles for that section will persist
 between group plays.
 
-For the following arrangement: 
+For the following arrangement:
 
 ```
  Section ────────────────────⟳ Amount─────⟳ Start──Start Beat──────⟳ Keep
@@ -115,16 +114,15 @@ For the following arrangement:
 ```
 
 The group will play twice for a sequence of "Part 2", "Part 1", "Part 2", "Part
-1".  The first time "Part 2" plays the Key Cycles start with a value of 1.  The
+1". The first time "Part 2" plays the Key Cycles start with a value of 1. The
 second time "Part 2" plays the Key Cycles start with a value of 2.
 
+### Moving Sections
 
-### Moving Sections 
-
-When there are multiple sections it is possible to move the currently selected
-section up or down within the arrangement tree with `J` or `K`.  When a group
+When there are multiple sections it is possible to move the now selected
+section up or down within the arrangement tree with `J` or `K`. When a group
 follows a section that you want to move down then pressing `J` will move the
-section _into_ the group.  To arrange the section so that the section follows
+section _into_ the group. To arrange the section so that the section follows
 the group keep press `J` until the section is below and exists at the same tree
 level.
 

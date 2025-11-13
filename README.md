@@ -154,22 +154,23 @@ Some actions have "All" variants (`sS`, `sB`, `sK`) that affect all playback cur
 - `Space`: Play/stop arrangement once
 - `Alt+Space`: Loop arrangement
 - `'+Space`: Loop current overlay
-- `Ctrl+@`: Loop current part
+- `Ctrl+Space`: Loop current part
 
 ### Pattern Creation
 
-- `1-9`: Add/remove notes every N beats
 - `f`: Add single note
 - `d`: Remove note
+- `1-9`: Add/remove notes every N beats
+- `shift+1-9`: Add note every N empty spaces
 - `c`: Clear line from cursor to end
 
 ### Note Modification
 
 - `A`/`a`: Increase/decrease accent
-- `G`/`g`: Increase/decrease gate
 - `R`/`r`: Increase/decrease ratchet
+- `G`/`g`: Increase/decrease gate by eighth of beat
+- `E`/`e`: Increase/decrease gate by whole beat
 - `W`/`w`: Increase/decrease wait
-- `E`/`e`: Long gate increase/decrease
 
 ### Arrangement
 
@@ -195,6 +196,8 @@ Some actions have "All" variants (`sS`, `sB`, `sK`) that affect all playback cur
 - `Ctrl+o`: Overlay key controls
 - `Ctrl+d`: MIDI setup controls
 
+Use +/- to increase/decrease values for each control. In MIDI setup controls use K/J to change increase/decrease values of every line.
+
 > 📖 **Complete Reference**: [Key Mappings Documentation](docs/key-mappings.md)
 
 ## Advanced Features
@@ -214,6 +217,7 @@ Create and manipulate chords with dedicated key bindings:
 Select and manipulate regions:
 
 - `v`: Enter visual mode
+- `V`: Enter visual mode by selecting entire current line
 - `hjkl`: Expand selection
 - `y`: Yank selection
 - `p`: Paste at cursor
@@ -224,20 +228,34 @@ Rotate patterns in any direction:
 
 - `HJKL`: Rotate left/down/up/right
 - Works on current line or column
+- Works in conjunction with visual mode selection
 
 ## File Operations
 
 - `Ctrl+n`: New sequence
 - `Ctrl+s`: Save sequence
+- `Ctrl+w`: Save As sequence
 - `br`: Reload file (lose unsaved changes)
 - `q`: Quit
 
 ## Configuration
 
-sq uses Lua for configuration. Configuration files are located in the `/config` directory:
+sq uses Lua for configuration. Configuration files can be located in 4 different locations: `./`, `./config/`, `~/.sq/`, `~/.config/sq/`,
 
-- `config/init.lua`: Main configuration file
 - Templates and instruments can be added via Lua scripts
+- If a configuration file is not found, an initial configuration is written to `~/.confing/init.lua`
+
+## Documentation
+
+### Complete Documentation Index
+
+- **[Beat Creation](docs/beat-creation.md)** - Pattern mode and rapid beat creation techniques
+- **[Note Alteration](docs/note-alteration.md)** - Accent, gate, ratchet, and wait controls
+- **[Key Cycles](docs/key-cycles.md)** - Understanding sequence iteration and timing
+- **[Arrangement System](docs/arrangement.md)** - Sections, parts, groups, and song structure
+- **[Overlay System](docs/overlay-key.md)** - Mathematical variations and overlay keys
+- **[Actions](docs/actions.md)** - Playback cursor manipulation and sequencer actions
+- **[Key Mappings](docs/key-mappings.md)** - Complete keyboard shortcut reference
 
 ## Development
 
@@ -254,34 +272,6 @@ go fmt ./...
 export GOFLAGS="-tags=lua54"
 ```
 
-### Project Structure
-
-```
-sq/
-├── main.go              # Main application entry
-├── ui.go               # Bubble Tea UI implementation
-├── internal/           # Internal packages
-│   ├── arrangement/    # Arrangement logic and views
-│   ├── overlays/       # Overlay system and chord handling
-│   ├── overlaykey/     # Overlay key parsing and UI
-│   ├── theory/         # Music theory utilities
-│   ├── seqmidi/        # MIDI connection handling
-│   └── themes/         # Color themes and display
-└── docs/              # Documentation
-```
-
-## Documentation
-
-### Complete Documentation Index
-
-- **[Beat Creation](docs/beat-creation.md)** - Pattern mode and rapid beat creation techniques
-- **[Note Alteration](docs/note-alteration.md)** - Accent, gate, ratchet, and wait controls
-- **[Key Cycles](docs/key-cycles.md)** - Understanding sequence iteration and timing
-- **[Arrangement System](docs/arrangement.md)** - Sections, parts, groups, and song structure
-- **[Overlay System](docs/overlay-key.md)** - Mathematical variations and overlay keys
-- **[Actions](docs/actions.md)** - Playback cursor manipulation and sequencer actions
-- **[Key Mappings](docs/key-mappings.md)** - Complete keyboard shortcut reference
-
 ## Contributing
 
 1. Fork the repository
@@ -292,15 +282,14 @@ sq/
 
 ### Code Style
 
-- Use Go 1.24+ features
+- Use Go 1.25+ features
 - Follow standard Go naming conventions
 - Use `stretchr/testify/assert` for tests
 - Run `go fmt` before committing
-- Include `-tags lua54` in all go commands
 
 ## License
 
-[License information to be added]
+MIT License in `LICENSE`
 
 ## Support
 
