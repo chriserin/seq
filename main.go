@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const VERSION = "v0.1.0-alpha.14"
+const VERSION = "v0.1.0-alpha.15"
 
 type ProgramOptions struct {
 	gridTemplate string

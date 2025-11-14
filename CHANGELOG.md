@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [v0.1.0-alpha.15](https://github.com/chriserin/sq/compare/v0.1.0-alpha.14...v0.1.0-alpha.15) (2025-11-13)
+
+### Features
+
+No new features.
+
+
+### Fixes
+
+* tests: rename test files [4193842](https://github.com/chriserin/sq/commit/4193842) 
+
+
 ## [v0.1.0-alpha.14](https://github.com/chriserin/sq/compare/v0.1.0-alpha.13...v0.1.0-alpha.14) (2025-11-11)
 
 ### Features
