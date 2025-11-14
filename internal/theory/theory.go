@@ -11,7 +11,6 @@ func InitChord(alteration uint32) Chord {
 
 type Chord struct {
 	Notes uint32
-	score int
 }
 
 // Individual note constants in the chromatic scale (relative to root)
@@ -225,7 +224,7 @@ func (c *Chord) Replace(oldNotes uint32, newNotes uint32) {
 
 func (c Chord) UninvertedNotes() []uint8 {
 	notes := make([]uint8, 0)
-	for i := uint8(0); i < 32; i++ {
+	for i := range uint8(32) {
 		if c.Notes&(1<<i) != 0 {
 			notes = append(notes, i)
 		}
@@ -234,7 +233,7 @@ func (c Chord) UninvertedNotes() []uint8 {
 }
 
 func (c Chord) FirstInterval() uint8 {
-	for i := uint8(0); i < 32; i++ {
+	for i := range uint8(32) {
 		if c.Notes&(1<<i) != 0 {
 			return uint8(i)
 		}
@@ -311,6 +310,30 @@ func interval(n int) string {
 		return "M7"
 	case 12:
 		return "P8"
+	case 13:
+		return "m9"
+	case 14:
+		return "M9"
+	case 15:
+		return "m10"
+	case 16:
+		return "M10"
+	case 17:
+		return "P11"
+	case 18:
+		return "d12"
+	case 19:
+		return "P12"
+	case 20:
+		return "m13"
+	case 21:
+		return "M13"
+	case 22:
+		return "m14"
+	case 23:
+		return "M14"
+	case 24:
+		return "P15"
 	}
 	return ""
 }
