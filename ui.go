@@ -82,6 +82,7 @@ func (va VisualSelection) Bounds(totalBeats uint8) grid.Bounds {
 }
 
 type model struct {
+	firstDigitApplied     bool
 	hasUIFocus            bool
 	transmitterConnected  bool
 	logFileAvailable      bool
@@ -1263,6 +1264,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			}
 		case mappings.TempoInputSwitch:
 			states := []operation.Selection{operation.SelectGrid, operation.SelectTempo, operation.SelectTempoSubdivision}
+			m.ClampAndSyncTempo()
 			if m.selectionIndicator == states[0] {
 				m.CaptureTemporaryState()
 			}
@@ -1753,6 +1755,7 @@ func (m *model) CursorLeft() {
 func (m *model) SetSelectionIndicator(desiredIndicator operation.Selection) {
 	m.patternMode = operation.PatternFill
 	m.selectionIndicator = desiredIndicator
+	m.firstDigitApplied = false
 }
 
 func (m *model) PushUndoableDefinitionState() {
@@ -1808,6 +1811,8 @@ func (m *model) Escape() {
 		m.visualSelection.visualMode = operation.VisualNone
 	}
 
+	m.ClampAndSyncTempo()
+
 	if m.selectionIndicator == operation.SelectGrid {
 		m.focus = operation.FocusGrid
 		m.arrangement.Escape()
@@ -1817,6 +1822,13 @@ func (m *model) Escape() {
 	m.textInput.Reset()
 
 	m.overlayKeyEdit.Escape(m.currentOverlay.Key)
+}
+
+func (m *model) ClampAndSyncTempo() {
+	if m.selectionIndicator == operation.SelectTempo {
+		m.definition.Tempo = max(min(m.definition.Tempo, 300), 20)
+		m.SyncTempo()
+	}
 }
 
 func (m model) NewSequence() model {
@@ -1997,6 +2009,39 @@ func AdvanceSelectionState(states []operation.Selection, currentSelection operat
 func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	chord, _ := m.currentOverlay.FindChord(m.gridCursor, m.currentOverlay.Key.GetMinimumKeyCycle())
 	m.activeChord = chord
+
+	if operation.IsNumberSelection(m.selectionIndicator) && mapping.Command == mappings.NumberPattern {
+		number, isNumber := mappings.MappingToNumber(mapping)
+		if isNumber {
+			switch m.selectionIndicator {
+			case operation.SelectSpecificValue:
+				note, _ := m.CurrentNote()
+				m.SetSpecificValue(note, number)
+			case operation.SelectStartBeats:
+				m.SetStartBeats(number)
+			case operation.SelectStartCycles:
+				m.SetStartCycles(number)
+			case operation.SelectBeats:
+				m.SetBeats(number)
+			case operation.SelectCycles:
+				m.SetCycles(number)
+			case operation.SelectTempo:
+				m.SetTempo(number)
+			case operation.SelectTempoSubdivision:
+				m.SetTempoSubdivision(number)
+			case operation.SelectSetupChannel:
+				m.SetSetupChannel(number)
+			case operation.SelectSetupValue:
+				m.SetSetupValue(number)
+			case operation.SelectAccentStart:
+				m.SetAccentStart(number)
+			case operation.SelectAccentEnd:
+				m.SetAccentEnd(number)
+			}
+		}
+		return m
+	}
+
 	switch mapping.Command {
 	case mappings.NoteAdd:
 		m.AddNote()
@@ -2230,7 +2275,7 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		}
 	}
 
-	if IsShiftSymbol(mapping.LastValue) {
+	if mappings.IsShiftSymbol(mapping.LastValue) {
 		beatInterval := convertSymbolToInt(mapping.LastValue)
 		switch m.patternMode {
 		case operation.PatternFill:
@@ -2255,6 +2300,98 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	}
 
 	return m
+}
+
+func (m *model) SetAccentEnd(number int) {
+	m.definition.Accents.End =
+		uint8(m.clamp(m.UnshiftDigit(int(m.definition.Accents.End), number), 0, int(m.definition.Accents.Start)))
+	m.definition.Accents.ReCalc()
+}
+
+func (m *model) SetAccentStart(number int) {
+	m.definition.Accents.Start =
+		uint8(m.clamp(m.UnshiftDigit(int(m.definition.Accents.Start), number), int(m.definition.Accents.End), 127))
+	m.definition.Accents.ReCalc()
+}
+
+func (m *model) SetSetupValue(number int) {
+	m.definition.Lines[m.gridCursor.Line].Note =
+		uint8(m.clamp(m.UnshiftDigit(int(m.definition.Lines[m.gridCursor.Line].Note), number), 1, 127))
+}
+
+func (m *model) SetSetupChannel(number int) {
+	m.definition.Lines[m.gridCursor.Line].Channel =
+		uint8(m.clamp(m.UnshiftDigit(int(m.definition.Lines[m.gridCursor.Line].Channel), number), 1, 16))
+}
+
+func (m *model) SetTempoSubdivision(number int) {
+	m.definition.Subdivisions = m.clamp(number, 1, 8)
+}
+
+func (m *model) SetTempo(number int) {
+	m.definition.Tempo = m.clamp(m.UnshiftDigit(m.definition.Tempo, number), 1, 300)
+}
+
+func (m *model) SetStartCycles(number int) {
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	value := currentNode.Section.StartCycles
+	newValue := m.UnshiftDigit(value, number)
+	clampedValue := m.clamp(newValue, 0, 127)
+	currentNode.Section.StartCycles = clampedValue
+}
+
+func (m *model) SetBeats(number int) {
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	partId := currentNode.Section.Part
+	value := (*m.definition.Parts)[partId].Beats
+	newValue := m.UnshiftDigit(int(value), number)
+	clampedValue := m.clamp(newValue, 0, 127)
+	(*m.definition.Parts)[partId].Beats = uint8(clampedValue)
+}
+
+func (m *model) SetCycles(number int) {
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	value := currentNode.Section.Cycles
+	newValue := m.UnshiftDigit(value, number)
+	clampedValue := m.clamp(newValue, 0, 127)
+	currentNode.Section.Cycles = clampedValue
+}
+
+func (m *model) SetStartBeats(number int) {
+	currentNode := m.arrangement.Cursor.GetCurrentNode()
+	value := currentNode.Section.StartBeat
+	newValue := m.UnshiftDigit(value, number)
+	clampedValue := m.clamp(newValue, 0, 127)
+	currentNode.Section.StartBeat = clampedValue
+}
+
+func (m *model) SetSpecificValue(note note, number int) {
+	value := note.AccentIndex
+	newValue := m.UnshiftDigit(int(value), number)
+	clampedValue := m.clamp(newValue, 0, 127)
+	note.AccentIndex = uint8(clampedValue)
+	m.currentOverlay.SetNote(m.gridCursor, note)
+}
+
+func (m *model) clamp(value, min, max int) int {
+	if value < min {
+		m.firstDigitApplied = false
+		return min
+	} else if value > max {
+		m.firstDigitApplied = false
+		return max
+	} else {
+		return value
+	}
+}
+
+func (m *model) UnshiftDigit(digits int, newDigit int) int {
+	if m.firstDigitApplied {
+		return (int(digits)%100)*10 + newDigit
+	} else {
+		m.firstDigitApplied = true
+		return newDigit
+	}
 }
 
 func (m *model) MoveCursorToChord() {
@@ -2358,10 +2495,6 @@ func (m *model) PrevDouble() {
 	if m.activeChord.HasValue() {
 		m.activeChord.GridChord.PrevDouble()
 	}
-}
-
-func IsShiftSymbol(symbol string) bool {
-	return slices.Contains([]string{"!", "@", "#", "$", "%", "^", "&", "*", "("}, symbol)
 }
 
 func convertSymbolToInt(symbol string) int64 {

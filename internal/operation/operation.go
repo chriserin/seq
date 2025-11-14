@@ -1,6 +1,8 @@
 // Package operation defines the types and values used to represent the operational state of the application.
 package operation
 
+import "slices"
+
 type SequencerMode uint8
 
 const (
@@ -92,3 +94,21 @@ const (
 	EveryBeat EveryMode = iota
 	EveryNote
 )
+
+var NumberSelections = []Selection{
+	SelectBeats,
+	SelectCycles,
+	SelectStartBeats,
+	SelectStartCycles,
+	SelectSpecificValue,
+	SelectTempo,
+	SelectTempoSubdivision,
+	SelectSetupChannel,
+	SelectSetupValue,
+	SelectAccentStart,
+	SelectAccentEnd,
+}
+
+func IsNumberSelection(sel Selection) bool {
+	return slices.Contains(NumberSelections, sel)
+}
