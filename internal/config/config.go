@@ -203,6 +203,14 @@ func GetTemplate(name string) (Template, bool) {
 	return Template{}, false
 }
 
+func GetTemplateNames() []string {
+	names := make([]string, len(templates))
+	for i, template := range templates {
+		names[i] = template.Name
+	}
+	return names
+}
+
 func GetDefaultTemplate() Template {
 	defaultTemplate := InitTemplate("DEFAULT", "plain", 32, "trigger")
 	initNote := uint8(60)

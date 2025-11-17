@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/chriserin/sq/internal/config"
 	"github.com/chriserin/sq/internal/mappings"
 	"github.com/chriserin/sq/internal/seqmidi"
 	"github.com/chriserin/sq/internal/themes"
@@ -93,8 +94,17 @@ func main() {
 	rootCmd.Flags().StringVar(&cliOptions.theme, "theme", "miles", "Choose an theme for the sequencer visual representation")
 	rootCmd.Flags().StringVar(&cliOptions.midiout, "midiout", "", "Choose a midi out port")
 
+	// Register completion function for template flag
+	err := rootCmd.RegisterFlagCompletionFunc("template", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		config.Init()
+		return config.GetTemplateNames(), cobra.ShellCompDirectiveNoFileComp
+	})
+	if err != nil {
+		log.Fatal("Failed to register template completion")
+	}
+
 	// Register completion function for theme flag
-	err := rootCmd.RegisterFlagCompletionFunc("theme", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	err = rootCmd.RegisterFlagCompletionFunc("theme", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return themes.Themes, cobra.ShellCompDirectiveNoFileComp
 	})
 	if err != nil {
