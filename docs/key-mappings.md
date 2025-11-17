@@ -57,7 +57,7 @@
 
 Use +/- to increase/decrease values for each control, use numbers 0 -9 to directly input a particular number. In MIDI setup controls use K/J to change increase/decrease values of every line.
 
-This document lists all keyboard mappings for the sequencer application.
+## Complete Reference
 
 | Mapping                | Key Binding  | Description                                                                                                                                                                                                                                                                            |
 | ---------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -50,7 +50,7 @@ Created with just 6 keystrokes:
 
 ## Documentation
 
-- Core Concepts -
+- [Core Concepts](docs/core-concepts.md) - A summary of the important concepts
 - **[Beat Creation](docs/beat-creation.md)** — Pattern mode and rapid beat creation techniques
 - **[Note Alteration](docs/note-alteration.md)** — Accent, gate, ratchet and wait controls
 - **[Key Cycles](docs/key-cycles.md)** — Understanding sequence iteration and timing

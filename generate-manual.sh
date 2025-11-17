@@ -4,6 +4,18 @@
 
 set -e
 
+# Function to replace documentation links with internal anchors
+replace_doc_links() {
+    sed -E 's/\[([^]]+)\]\(docs\/beat-creation\.md\)/[\1](#beat-creation)/g;
+        s/\[([^]]+)\]\(docs\/note-alteration\.md\)/[\1](#note-alteration)/g;
+        s/\[([^]]+)\]\(docs\/key-cycles\.md\)/[\1](#key-cycles)/g;
+        s/\[([^]]+)\]\(docs\/arrangement\.md\)/[\1](#arrangement)/g;
+        s/\[([^]]+)\]\(docs\/overlay-key\.md\)/[\1](#overlay-key)/g;
+        s/\[([^]]+)\]\(docs\/actions\.md\)/[\1](#actions-reference)/g;
+        s/\[([^]]+)\]\(docs\/key-mappings\.md\)/[\1](#key-mappings)/g;
+        s/\[([^]]+)\]\(docs\/core-concepts\.md\)/[\1](#core-concepts)/g'
+}
+
 # Check if pandoc is installed
 if ! command -v pandoc &>/dev/null; then
     echo "Error: pandoc is not installed."
@@ -48,19 +60,14 @@ BEGIN { skip = 0 }
 /^## / && skip == 1 { skip = 0 }
 skip == 0 && NR > 1 { print }
 ' README.md |
-    sed -E 's/\[([^]]+)\]\(docs\/beat-creation\.md\)/[\1](#beat-creation)/g;
-        s/\[([^]]+)\]\(docs\/note-alteration\.md\)/[\1](#note-alteration)/g;
-        s/\[([^]]+)\]\(docs\/key-cycles\.md\)/[\1](#key-cycles)/g;
-        s/\[([^]]+)\]\(docs\/arrangement\.md\)/[\1](#arrangement)/g;
-        s/\[([^]]+)\]\(docs\/overlay-key\.md\)/[\1](#overlay-key)/g;
-        s/\[([^]]+)\]\(docs\/actions\.md\)/[\1](#actions)/g;
-        s/\[([^]]+)\]\(docs\/key-mappings\.md\)/[\1](#key-mappings)/g' |
+    replace_doc_links |
     awk '{print} /^```/ {print ""}' \
         >>"$TEMP_MD"
 echo -e "\n\n" >>"$TEMP_MD"
 
 # Add documentation files in logical order
 DOCS=(
+    "docs/core-concepts.md"
     "docs/key-mappings.md"
     "docs/beat-creation.md"
     "docs/note-alteration.md"
@@ -86,49 +93,25 @@ for doc in "${DOCS[@]}"; do
             }
             { print }
             ' "$doc" |
-                sed -E 's/\[([^]]+)\]\(docs\/beat-creation\.md\)/[\1](#beat-creation)/g;
-                    s/\[([^]]+)\]\(docs\/note-alteration\.md\)/[\1](#note-alteration)/g;
-                    s/\[([^]]+)\]\(docs\/key-cycles\.md\)/[\1](#key-cycles)/g;
-                    s/\[([^]]+)\]\(docs\/arrangement\.md\)/[\1](#arrangement)/g;
-                    s/\[([^]]+)\]\(docs\/overlay-key\.md\)/[\1](#overlay-key)/g;
-                    s/\[([^]]+)\]\(docs\/actions\.md\)/[\1](#actions-reference)/g;
-                    s/\[([^]]+)\]\(docs\/key-mappings\.md\)/[\1](#key-mappings)/g' |
+                replace_doc_links |
                 awk '{print} /^```/ {print ""}' \
                     >>"$TEMP_MD"
         elif [ "$doc" = "docs/actions.md" ]; then
             # Add custom anchor to Actions to avoid conflict with README subsection
             cat "$doc" |
-                sed -E 's/^# Actions$/# Actions {#actions-reference}/;
-                    s/\[([^]]+)\]\(docs\/beat-creation\.md\)/[\1](#beat-creation)/g;
-                    s/\[([^]]+)\]\(docs\/note-alteration\.md\)/[\1](#note-alteration)/g;
-                    s/\[([^]]+)\]\(docs\/key-cycles\.md\)/[\1](#key-cycles)/g;
-                    s/\[([^]]+)\]\(docs\/arrangement\.md\)/[\1](#arrangement)/g;
-                    s/\[([^]]+)\]\(docs\/overlay-key\.md\)/[\1](#overlay-key)/g;
-                    s/\[([^]]+)\]\(docs\/actions\.md\)/[\1](#actions-reference)/g;
-                    s/\[([^]]+)\]\(docs\/key-mappings\.md\)/[\1](#key-mappings)/g' |
+                sed -E 's/^# Actions$/# Actions {#actions-reference}/' |
+                replace_doc_links |
                 awk '{print} /^```/ {print ""}' \
                     >>"$TEMP_MD"
         elif [ "$doc" = "docs/arrangement.md" ]; then
             # Special handling for arrangement.md to preserve code blocks with unicode
             cat "$doc" |
-                sed -E 's/\[([^]]+)\]\(docs\/beat-creation\.md\)/[\1](#beat-creation)/g;
-                    s/\[([^]]+)\]\(docs\/note-alteration\.md\)/[\1](#note-alteration)/g;
-                    s/\[([^]]+)\]\(docs\/key-cycles\.md\)/[\1](#key-cycles)/g;
-                    s/\[([^]]+)\]\(docs\/arrangement\.md\)/[\1](#arrangement)/g;
-                    s/\[([^]]+)\]\(docs\/overlay-key\.md\)/[\1](#overlay-key)/g;
-                    s/\[([^]]+)\]\(docs\/actions\.md\)/[\1](#actions-reference)/g;
-                    s/\[([^]]+)\]\(docs\/key-mappings\.md\)/[\1](#key-mappings)/g' |
+                replace_doc_links |
                 awk '{print} /^```/ {print ""}' \
                     >>"$TEMP_MD"
         else
             cat "$doc" |
-                sed -E 's/\[([^]]+)\]\(docs\/beat-creation\.md\)/[\1](#beat-creation)/g;
-                    s/\[([^]]+)\]\(docs\/note-alteration\.md\)/[\1](#note-alteration)/g;
-                    s/\[([^]]+)\]\(docs\/key-cycles\.md\)/[\1](#key-cycles)/g;
-                    s/\[([^]]+)\]\(docs\/arrangement\.md\)/[\1](#arrangement)/g;
-                    s/\[([^]]+)\]\(docs\/overlay-key\.md\)/[\1](#overlay-key)/g;
-                    s/\[([^]]+)\]\(docs\/actions\.md\)/[\1](#actions-reference)/g;
-                    s/\[([^]]+)\]\(docs\/key-mappings\.md\)/[\1](#key-mappings)/g' |
+                replace_doc_links |
                 awk '{print} /^```/ {print ""}' \
                     >>"$TEMP_MD"
         fi
@@ -159,8 +142,10 @@ pandoc "$TEMP_MD" \
     -V header-includes='\usepackage{pdflscape}' \
     -V header-includes='\usepackage{fancyvrb}' \
     -V header-includes='\usepackage{upquote}' \
+    -V header-includes='\usepackage{booktabs}' \
+    -V header-includes='\renewcommand{\arraystretch}{1.5}' \
     -V header-includes='\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\},fontsize=\small}' \
-    --highlight-style=tango
+    --syntax-highlighting=tango
 
 # Clean up
 rm "$TEMP_MD"
