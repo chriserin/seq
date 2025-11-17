@@ -101,6 +101,19 @@ func main() {
 		log.Fatal("Failed to register theme completion")
 	}
 
+	// Register completion function for midiout flag
+	err = rootCmd.RegisterFlagCompletionFunc("midiout", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		outports, _ := seqmidi.Outs()
+		outportNames := make([]string, len(outports))
+		for i, outport := range outports {
+			outportNames[i] = fmt.Sprintf("%s", outport)
+		}
+		return outportNames, cobra.ShellCompDirectiveNoFileComp
+	})
+	if err != nil {
+		log.Fatal("Failed to register midiout completion")
+	}
+
 	err = rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Program failed")
