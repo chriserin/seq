@@ -6,6 +6,7 @@ import (
 
 	"github.com/chriserin/sq/internal/mappings"
 	"github.com/chriserin/sq/internal/seqmidi"
+	"github.com/chriserin/sq/internal/themes"
 	"github.com/spf13/cobra"
 )
 
@@ -92,7 +93,15 @@ func main() {
 	rootCmd.Flags().StringVar(&cliOptions.theme, "theme", "miles", "Choose an theme for the sequencer visual representation")
 	rootCmd.Flags().StringVar(&cliOptions.midiout, "midiout", "", "Choose a midi out port")
 
-	err := rootCmd.Execute()
+	// Register completion function for theme flag
+	err := rootCmd.RegisterFlagCompletionFunc("theme", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return themes.Themes, cobra.ShellCompDirectiveNoFileComp
+	})
+	if err != nil {
+		log.Fatal("Failed to register theme completion")
+	}
+
+	err = rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Program failed")
 	}
