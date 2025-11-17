@@ -1,5 +1,62 @@
 # Key Mappings
 
+## Key Bindings Quickstart
+
+### Navigation
+
+- `hjkl`: Move cursor (left/down/up/right)
+- `<>`: Jump to line start/end
+- `bf`/`bl`: Jump to first/last line
+
+### Playback
+
+- `Space`: Play/stop arrangement once
+- `Alt+Space`: Loop arrangement
+- `'+Space`: Loop current overlay
+- `Ctrl+Space`: Loop current part
+
+### Pattern Creation
+
+- `f`: Add single note
+- `d`: Remove note
+- `1-9`: Add/remove notes every N beats
+- `shift+1-9`: Add note every N empty spaces
+- `c`: Clear line from cursor to end
+
+### Note Modification
+
+- `A`/`a`: Increase/decrease accent
+- `R`/`r`: Increase/decrease ratchet
+- `G`/`g`: Increase/decrease gate by eighth of beat
+- `E`/`e`: Increase/decrease gate by whole beat
+- `W`/`w`: Increase/decrease wait
+
+### Arrangement
+
+- `Ctrl+a`: Toggle arrangement view
+- `Ctrl+]`: New section after current
+- `Ctrl+p`: New section before current
+- `]s`/`[s`: Next/previous section
+
+### Advanced Features
+
+- `o`: Toggle chord mode
+- `v`: Visual selection mode
+- `y`/`p`: Yank/paste
+- `m`/`M`: Mute/solo line
+- `u`/`U`: Undo/redo
+
+### Input Modes
+
+- `Ctrl+t`: Tempo controls
+- `Ctrl+k`: Cycles input controls
+- `Ctrl+b`: Beat input controls
+- `Ctrl+e`: Accent input controls
+- `Ctrl+o`: Overlay key controls
+- `Ctrl+d`: MIDI setup controls
+
+Use +/- to increase/decrease values for each control, use numbers 0 -9 to directly input a particular number. In MIDI setup controls use K/J to change increase/decrease values of every line.
+
 This document lists all keyboard mappings for the sequencer application.
 
 | Mapping                | Key Binding  | Description                                                                                                                                                                                                                                                                            |
