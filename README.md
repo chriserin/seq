@@ -85,7 +85,7 @@ Created with just 6 keystrokes:
 - **Pattern Mode - Value**: `na` (accent), `nw` (wait), `ng` (gate), `nr` (ratchet)
 - **Shift+Numbers**: Increase values, Numbers alone decrease values
 
-> 📖 **Detailed Guide**: [Beat Creation Documentation](docs/beat-creation.md)
+> **Detailed Guide**: [Beat Creation Documentation](docs/beat-creation.md)
 
 ### Note Attributes
 
@@ -96,7 +96,7 @@ Each note has four modifiable properties:
 - **Ratchet** (`R`/`r`): Multiple hits per beat (8 levels)
 - **Wait** (`W`/`w`): Swing timing delay (8 levels)
 
-> 📖 **Detailed Guide**: [Note Alteration Documentation](docs/note-alteration.md)
+> **Detailed Guide**: [Note Alteration Documentation](docs/note-alteration.md)
 
 ### Key Cycles and Arrangements
 
@@ -112,7 +112,7 @@ Each note has four modifiable properties:
 - **Parts**: The actual musical content
 - **Groups**: Collections of sections that can repeat
 
-> 📖 **Detailed Guides**: [Key Cycles](docs/key-cycles.md) | [Arrangement System](docs/arrangement.md)
+> **Detailed Guides**: [Key Cycles](docs/key-cycles.md) | [Arrangement System](docs/arrangement.md)
 
 ### Overlay System
 
@@ -125,7 +125,7 @@ Each note has four modifiable properties:
 
 Complex overlay keys support width, start delays, and stacking behaviors.
 
-> 📖 **Detailed Guide**: [Overlay System Documentation](docs/overlay-key.md)
+> **Detailed Guide**: [Overlay System Documentation](docs/overlay-key.md)
 
 ### Actions
 
@@ -139,7 +139,7 @@ Complex overlay keys support width, start delays, and stacking behaviors.
 
 Some actions have "All" variants (`sS`, `sB`, `sK`) that affect all playback cursors.
 
-> 📖 **Detailed Guide**: [Actions Documentation](docs/actions.md)
+> **Detailed Guide**: [Actions Documentation](docs/actions.md)
 
 ## Key Bindings
 
@@ -198,7 +198,7 @@ Some actions have "All" variants (`sS`, `sB`, `sK`) that affect all playback cur
 
 Use +/- to increase/decrease values for each control. In MIDI setup controls use K/J to change increase/decrease values of every line.
 
-> 📖 **Complete Reference**: [Key Mappings Documentation](docs/key-mappings.md)
+> **Complete Reference**: [Key Mappings Documentation](docs/key-mappings.md)
 
 ## Advanced Features
 
