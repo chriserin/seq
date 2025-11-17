@@ -908,6 +908,8 @@ func ChooseTheme(colorscheme string) {
 		ApplyTheme(herbieTheme)
 	case "miles":
 		ApplyTheme(milesTheme)
+	default:
+		ApplyTheme(milesTheme)
 	}
 
 	EvaluateStyles()
