@@ -972,18 +972,54 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.ToggleClockPreRoll:
 			m.clockPreRoll = !m.clockPreRoll
 		case mappings.DecreaseAllChannels:
+			var minChannel uint8 = 255
+			for i := range m.definition.Lines {
+				if m.definition.Lines[i].Channel < minChannel {
+					minChannel = m.definition.Lines[i].Channel
+				}
+			}
+			if minChannel == 1 {
+				return m, nil
+			}
 			for i := range m.definition.Lines {
 				m.definition.Lines[i].DecrementChannel()
 			}
 		case mappings.IncreaseAllChannels:
+			var maxChannel uint8
+			for i := range m.definition.Lines {
+				if m.definition.Lines[i].Channel > maxChannel {
+					maxChannel = m.definition.Lines[i].Channel
+				}
+			}
+			if maxChannel >= 16 {
+				return m, nil
+			}
 			for i := range m.definition.Lines {
 				m.definition.Lines[i].IncrementChannel()
 			}
 		case mappings.DecreaseAllNote:
+			var minNote uint8 = 255
+			for i := range m.definition.Lines {
+				if m.definition.Lines[i].Note < minNote {
+					minNote = m.definition.Lines[i].Note
+				}
+			}
+			if minNote == 1 {
+				return m, nil
+			}
 			for i := range m.definition.Lines {
 				m.definition.Lines[i].DecrementNote()
 			}
 		case mappings.IncreaseAllNote:
+			var maxNote uint8
+			for i := range m.definition.Lines {
+				if m.definition.Lines[i].Note > maxNote {
+					maxNote = m.definition.Lines[i].Note
+				}
+			}
+			if maxNote >= 127 {
+				return m, nil
+			}
 			for i := range m.definition.Lines {
 				m.definition.Lines[i].IncrementNote()
 			}
