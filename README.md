@@ -36,17 +36,19 @@ mise install ubi:chriserin/sq
 
 ### Basic Beat Creation Example
 
+Create a basic beat with just 6 keystrokes:
+
+- Bass drum: cursor on BD line, press `8` (note every 8 beats)
+- Snare: `j` (down), `4` then `8` (note every 8 beats starting at beat 5)
+- Hi-hat: `j` (down), `1` (note every beat)
+
+The resulting sequence will look like this:
+
 ```
 BDK┤▧       ▧       ▧       ▧
 SN │    ▧       ▧       ▧       ▧
 H1 │▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧▧
 ```
-
-Created with just 6 keystrokes:
-
-- Bass drum: cursor on BD line, press `8` (note every 8 beats)
-- Snare: `j` (down), `4` then `8` (note every 8 beats starting at beat 5)
-- Hi-hat: `j` (down), `1` (note every beat)
 
 ## Documentation
 
@@ -58,8 +60,6 @@ Created with just 6 keystrokes:
 - **[Overlay System](docs/overlay-key.md)** — Mathematical variations and overlay keys
 - **[Actions](docs/actions.md)** — Playback cursor manipulation and sequencer actions
 - **[Key Mappings](docs/key-mappings.md)** — Complete keyboard shortcut reference
-
-> **Complete Reference**: [Key Mappings](docs/key-mappings.md)
 
 ## Configuration
 
