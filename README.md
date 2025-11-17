@@ -21,7 +21,7 @@ sq is a terminal-based MIDI sequencer that brings midi sequencer capabilities to
 
 Pre-built packages for macOS and Linux are found on the [Releases](https://github.com/chriserin/sq/releases) page.
 
-## Install with mise:
+## Install with mise
 
 ```
 mise install ubi:chriserin/sq
@@ -33,6 +33,17 @@ mise install ubi:chriserin/sq
 2. **Create a beat**: Move cursor with `hjkl`, press `1` for notes on every beat
 3. **Play**: Press `Space` to play/stop
 4. **Save**: `Ctrl+s` to save your sequence
+
+### Connecting to hardware or software
+
+Midi inports and outports can be confusing. One software's inport is another
+software's outport and vice versa. When passing the `--outport` flag to `sq`
+you create an outport for sq that will be an inport for the other software.
+Both Logic and GarageBand scan the inports and automatically listen to all
+inports. Likewise, Both Logic and GarageBand create an inport that sq will
+automatically connect to if it is the first outport listed by `sq list`. When
+the outport is not listed first, you can connect to that outport with the `--midiout
+<partial name>` flag. `--midiout Logic` will connect to Logic's outport.
 
 ### Basic Beat Creation Example
 
