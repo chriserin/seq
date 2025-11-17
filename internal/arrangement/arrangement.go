@@ -22,6 +22,7 @@ package arrangement
 import (
 	"fmt"
 	"slices"
+	"strconv"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -419,12 +420,13 @@ const (
 )
 
 type Model struct {
-	Focus       bool
-	Cursor      ArrCursor
-	oldCursor   cursor
-	Root        *Arrangement
-	parts       *[]Part
-	depthCursor int
+	firstDigitApplied bool
+	Focus             bool
+	Cursor            ArrCursor
+	oldCursor         cursor
+	Root              *Arrangement
+	parts             *[]Part
+	depthCursor       int
 }
 
 func (m *Model) Escape() {
@@ -899,6 +901,23 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case Is(msg, keys.RenamePart):
 			return m, func() tea.Msg { return RenamePart{} }
 		}
+
+		number, isNumber := MappingToNumber(msg)
+		if isNumber {
+			if m.depthCursor+1 == len(m.Cursor) {
+				currentNode := m.Cursor.GetCurrentNode()
+				switch m.oldCursor.attribute {
+				case SectionStartBeat:
+					m.SetSectionStartBeats(currentNode, number)
+				case SectionStartCycle:
+					m.SetSectionStartCycles(currentNode, number)
+				case SectionCycles:
+					m.SetSectionCycles(currentNode, number)
+				}
+			} else {
+				m.SetGroupIterations(m.Cursor[m.depthCursor], number)
+			}
+		}
 	}
 
 	cursorCopyRedo := make(ArrCursor, len(m.Cursor))
@@ -915,6 +934,55 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m Model) SetGroupIterations(arr *Arrangement, number int) {
+	arr.Iterations = m.clamp(m.UnshiftDigit(arr.Iterations, number), 1, 999)
+}
+
+func (m *Model) SetSectionCycles(arr *Arrangement, number int) {
+	arr.Section.Cycles = m.clamp(m.UnshiftDigit(arr.Section.Cycles, number), 1, 999)
+}
+
+func (m Model) SetSectionStartCycles(arr *Arrangement, number int) {
+	arr.Section.StartCycles = m.clamp(m.UnshiftDigit(arr.Section.StartCycles, number), 1, 999)
+}
+
+func (m *Model) SetSectionStartBeats(arr *Arrangement, number int) {
+	arr.Section.StartBeat = m.clamp(m.UnshiftDigit(arr.Section.StartBeat, number), 1, 999)
+}
+
+func (m *Model) UnshiftDigit(digits int, newDigit int) int {
+	if m.firstDigitApplied {
+		return (int(digits)%100)*10 + newDigit
+	} else {
+		m.firstDigitApplied = true
+		return newDigit
+	}
+
+}
+
+func (m *Model) clamp(value int, min int, max int) int {
+	if value < min {
+		m.firstDigitApplied = false
+		return min
+	}
+	if value > max {
+		m.firstDigitApplied = false
+		return max
+	}
+	return value
+}
+
+func MappingToNumber(msg tea.KeyMsg) (int, bool) {
+	if msg.String() >= "0" && msg.String() <= "9" {
+		beatInterval, err := strconv.ParseInt(msg.String(), 0, 8)
+		if err != nil {
+			return 0, false
+		}
+		return int(beatInterval), true
+	}
+	return 0, false
 }
 
 type GiveBackFocus struct{}
