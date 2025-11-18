@@ -13,7 +13,15 @@ replace_doc_links() {
         s/\[([^]]+)\]\(docs\/overlay-key\.md\)/[\1](#overlay-key)/g;
         s/\[([^]]+)\]\(docs\/actions\.md\)/[\1](#actions-reference)/g;
         s/\[([^]]+)\]\(docs\/key-mappings\.md\)/[\1](#key-mappings)/g;
-        s/\[([^]]+)\]\(docs\/core-concepts\.md\)/[\1](#core-concepts)/g'
+        s/\[([^]]+)\]\(docs\/core-concepts\.md\)/[\1](#core-concepts)/g;
+        s/\[([^]]+)\]\(beat-creation\.md\)/[\1](#beat-creation)/g;
+        s/\[([^]]+)\]\(note-alteration\.md#accent\)/[\1](#accent)/g;
+        s/\[([^]]+)\]\(note-alteration\.md\)/[\1](#note-alteration)/g;
+        s/\[([^]]+)\]\(key-cycles\.md\)/[\1](#key-cycles)/g;
+        s/\[([^]]+)\]\(arrangement\.md\)/[\1](#arrangement)/g;
+        s/\[([^]]+)\]\(overlay-key\.md\)/[\1](#overlay-key)/g;
+        s/\[([^]]+)\]\(actions\.md\)/[\1](#actions-reference)/g;
+        s/\[([^]]+)\]\(key-mappings\.md\)/[\1](#key-mappings)/g'
 }
 
 # Check if pandoc is installed

@@ -20,7 +20,7 @@ accent level for this note.
 There are different unicode characters for each accent level to help visually
 recognize patterns being created and to give visual feedback when changing the
 accent level of a note.  These unicode characters will be different for every
-theme (SEE THEMES).
+theme. See [Themes](key-mappings.md) (NextTheme/PrevTheme mappings).
 
 ## Gate
 
