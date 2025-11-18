@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [v0.1.0-beta.1](https://github.com/chriserin/sq/compare/v0.1.0-alpha.15...v0.1.0-beta.1) (2025-11-18)
+
+### Features
+
+* cli: Completion for instruments flag [d84d2ff](https://github.com/chriserin/sq/commit/d84d2ff) 
+* cli: Completion for templates [f74fd46](https://github.com/chriserin/sq/commit/f74fd46) 
+* cli: Completion for midiouts [3d44441](https://github.com/chriserin/sq/commit/3d44441) 
+* cli: Completion for themes [0448b4d](https://github.com/chriserin/sq/commit/0448b4d) 
+* arrangement: Allow number data entry [a51f02b](https://github.com/chriserin/sq/commit/a51f02b) 
+* theory: Add names to higher intervals [831f4fe](https://github.com/chriserin/sq/commit/831f4fe) 
+* Use numbers to set values [ab27a33](https://github.com/chriserin/sq/commit/ab27a33) 
+
+### Fixes
+
+* cli: Pass new filename into cli [0c2dec8](https://github.com/chriserin/sq/commit/0c2dec8) 
+* cli: Choose non-existent theme -> default [72f04e7](https://github.com/chriserin/sq/commit/72f04e7) 
+* manual: Improve manual table formatting [44ce4ea](https://github.com/chriserin/sq/commit/44ce4ea) 
+* midisetup: Stop +/- when reaching boundary [4f5b801](https://github.com/chriserin/sq/commit/4f5b801) 
+
+
 ## [v0.1.0-alpha.15](https://github.com/chriserin/sq/compare/v0.1.0-alpha.14...v0.1.0-alpha.15) (2025-11-13)
 
 ### Features
