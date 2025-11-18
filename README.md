@@ -2,6 +2,8 @@
 
 # sq
 
+![Beta](beta.png)
+
 A powerful MIDI sequencer designed for the command line
 
 ## Overview
