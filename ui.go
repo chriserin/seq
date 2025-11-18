@@ -731,7 +731,11 @@ func (m *model) ToggleRatchetMute() {
 func LoadFile(filename string, template string, instrument string) (sequence.Sequence, error) {
 	var definition sequence.Sequence
 	var fileErr error
-	if filename != "" {
+
+	fileInfo, fileInfoErr := os.Stat(filename)
+	fileExists := fileInfoErr == nil && !fileInfo.IsDir()
+
+	if filename != "" && fileExists {
 		definition, fileErr = sequence.Read(filename)
 		gridTemplate, exists := config.GetTemplate(definition.Template)
 		definition.TemplateSequencerType = gridTemplate.SequencerType
@@ -744,7 +748,7 @@ func LoadFile(filename string, template string, instrument string) (sequence.Seq
 		}
 	}
 
-	if filename == "" || fileErr != nil {
+	if !fileExists || fileErr != nil {
 		newDefinition := sequence.InitSequence(template, instrument)
 		definition = newDefinition
 	}
