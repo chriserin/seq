@@ -2,11 +2,16 @@
 
 set -e
 
+## USAGE
+# ./changelog.sh
+# or
+# ./changelog.sh WITHINSTALL
+
 startTag=$(git tag --list --sort=version:refname | tail -n 1)
 lastTag=$(git tag --list --sort=version:refname | tail -n 2 | head -n 1)
-#
+
 # startTag=HEAD
-# lastTag=cf40913
+# lastTag=72f04e7
 
 if [ -z "$startTag" ]; then
     echo "No tags found. Please create a tag first."
@@ -58,7 +63,17 @@ if [ -n "$features" ]; then
     echo ""
     while IFS= read -r line; do
         commit_hash=$(echo "$line" | awk '{print $1}')
+        commit_type=$(echo "$line" | awk '{print $2}')
         commit_message=$(echo "$line" | cut -d' ' -f3-)
+
+        # Extract scope if present (e.g., feat(system) -> system)
+        regex='feat\(([^)]+)\)'
+        commit_type=$(echo "$line" | awk '{print $2}')
+        if [[ $commit_type =~ $regex ]]; then
+            scope="${BASH_REMATCH[1]}"
+            commit_message="${scope}: ${commit_message}"
+        fi
+
         echo "* $commit_message [${commit_hash}](https://github.com/chriserin/sq/commit/${commit_hash}) "
     done <<<"$features"
 else
