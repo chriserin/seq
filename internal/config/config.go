@@ -243,6 +243,14 @@ func GetInstrument(name string) Instrument {
 	return Instrument{}
 }
 
+func GetInstrumentNames() []string {
+	names := make([]string, len(instruments))
+	for i, instrument := range instruments {
+		names[i] = instrument.Name
+	}
+	return names
+}
+
 func Init() {
 	configFilePath, exists := findConfigFile()
 

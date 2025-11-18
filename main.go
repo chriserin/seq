@@ -103,6 +103,15 @@ func main() {
 		log.Fatal("Failed to register template completion")
 	}
 
+	// Register completion function for template flag
+	err = rootCmd.RegisterFlagCompletionFunc("instrument", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		config.Init()
+		return config.GetInstrumentNames(), cobra.ShellCompDirectiveNoFileComp
+	})
+	if err != nil {
+		log.Fatal("Failed to register template completion")
+	}
+
 	// Register completion function for theme flag
 	err = rootCmd.RegisterFlagCompletionFunc("theme", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return themes.Themes, cobra.ShellCompDirectiveNoFileComp
