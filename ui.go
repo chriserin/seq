@@ -1556,25 +1556,21 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		case mappings.TogglePlayEdit:
 			m.playEditing = !m.playEditing
 		case mappings.NewLine:
-			if m.playState.Playing {
-				m.SetCurrentError(errors.New("cannot add line while playing"))
-			} else {
-				if len(m.definition.Lines) < 100 {
-					lastLine := m.definition.Lines[len(m.definition.Lines)-1]
-					secondLastLine := m.definition.Lines[len(m.definition.Lines)-2]
-					var difference int8
-					if int8(lastLine.Note)-int8(secondLastLine.Note) > 0 {
-						difference = 1
-					} else {
-						difference = -1
-					}
-
-					m.definition.Lines = append(m.definition.Lines, grid.LineDefinition{
-						Channel: lastLine.Channel,
-						Note:    uint8(int8(lastLine.Note) + difference),
-					})
-					m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, 0)
+			if len(m.definition.Lines) < 100 {
+				lastLine := m.definition.Lines[len(m.definition.Lines)-1]
+				secondLastLine := m.definition.Lines[len(m.definition.Lines)-2]
+				var difference int8
+				if int8(lastLine.Note)-int8(secondLastLine.Note) > 0 {
+					difference = 1
+				} else {
+					difference = -1
 				}
+
+				m.definition.Lines = append(m.definition.Lines, grid.LineDefinition{
+					Channel: lastLine.Channel,
+					Note:    uint8(int8(lastLine.Note) + difference),
+				})
+				m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, 0)
 			}
 			m.SyncBeatLoop()
 		case mappings.NewSectionAfter:
