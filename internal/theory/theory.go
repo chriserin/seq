@@ -372,13 +372,19 @@ func (c *Chord) PreviousInversion() {
 }
 
 func (c Chord) Inversions() int {
-	// Count the number of notes in the chord above 12 semitones
 	count := 0
+
+	// Count the number of notes in the chord above 12 semitones
 	for i := uint8(12); i < 32; i++ {
 		if c.Notes&(1<<i) != 0 {
 			count++
+			if i >= 24 {
+				// Notes above 24 semitones count as an additional inversion
+				count++
+			}
 		}
 	}
+
 	return count
 }
 
