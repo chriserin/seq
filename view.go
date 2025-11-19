@@ -334,16 +334,15 @@ func (m model) ChordView(gridChord *overlays.GridChord) string {
 		buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 		return buf.String()
 	}
-	buf.WriteString(" - ")
 	chord := gridChord.Chord
 	pattern := make(grid.Pattern)
 	gridChord.ChordNotes(&pattern)
 	baseNote := m.definition.Lines[0].Note
-	buf.WriteString(NoteName(baseNote - gridChord.Root.Line))
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
-
+	buf.WriteString(fmt.Sprintf("Foundation: %s", NoteName(baseNote-gridChord.Root.Line)))
+	buf.WriteString("\n")
 	buf.WriteString(fmt.Sprintf("Inversions: %d", chord.Inversions()))
 	buf.WriteString("\n")
 
@@ -351,7 +350,7 @@ func (m model) ChordView(gridChord *overlays.GridChord) string {
 	uninvertedNotes := chord.UninvertedNotes()
 	slices.Reverse(uninvertedNotes)
 	for i, n := range uninvertedNotes {
-		buf.WriteString(fmt.Sprintf("%s - %s", intervals[i], NoteName(baseNote-gridChord.Root.Line+n)))
+		buf.WriteString(fmt.Sprintf("%3s - %s", intervals[i], NoteName(baseNote-gridChord.Root.Line+n)))
 		buf.WriteString("\n")
 	}
 
