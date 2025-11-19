@@ -1573,6 +1573,7 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 						Channel: lastLine.Channel,
 						Note:    uint8(int8(lastLine.Note) + difference),
 					})
+					m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, 0)
 				}
 			}
 			m.SyncBeatLoop()
