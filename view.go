@@ -341,9 +341,12 @@ func (m model) ChordView(gridChord *overlays.GridChord) string {
 	buf.WriteString("\n")
 	buf.WriteString(themes.SeqBorderStyle.Render("──────────────"))
 	buf.WriteString("\n")
+	buf.WriteString(chord.Name())
+	buf.WriteString("\n")
 	buf.WriteString(fmt.Sprintf("Foundation: %s", NoteName(baseNote-gridChord.Root.Line)))
 	buf.WriteString("\n")
 	buf.WriteString(fmt.Sprintf("Inversions: %d", chord.Inversions()))
+	buf.WriteString("\n")
 	buf.WriteString("\n")
 
 	intervals := chord.NamedIntervals()

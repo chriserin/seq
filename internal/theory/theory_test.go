@@ -269,3 +269,258 @@ func TestAddNotesComplexScenarios(t *testing.T) {
 		})
 	}
 }
+
+func TestChordName(t *testing.T) {
+	tests := []struct {
+		name         string
+		chord        Chord
+		expectedName string
+		description  string
+	}{
+		// Basic triads
+		{
+			name:         "Major triad",
+			chord:        Chord{Notes: MajorTriad},
+			expectedName: "I",
+			description:  "Major triad should be named 'I'",
+		},
+		{
+			name:         "Minor triad",
+			chord:        Chord{Notes: MinorTriad},
+			expectedName: "i",
+			description:  "Minor triad should be named 'i'",
+		},
+		{
+			name:         "Diminished triad",
+			chord:        Chord{Notes: DiminishedTriad},
+			expectedName: "i°",
+			description:  "Diminished triad should be named 'i°'",
+		},
+		{
+			name:         "Augmented triad",
+			chord:        Chord{Notes: AugmentedTriad},
+			expectedName: "I+",
+			description:  "Augmented triad should be named 'I+'",
+		},
+		// Seventh chords
+		{
+			name:         "Major seventh",
+			chord:        Chord{Notes: MajorTriad | MajorSeventh},
+			expectedName: "Imaj7",
+			description:  "Major triad with major seventh should be 'Imaj7'",
+		},
+		{
+			name:         "Minor seventh",
+			chord:        Chord{Notes: MinorTriad | MinorSeventh},
+			expectedName: "i7",
+			description:  "Minor triad with minor seventh should be 'i7'",
+		},
+		{
+			name:         "Dominant seventh",
+			chord:        Chord{Notes: MajorTriad | MinorSeventh},
+			expectedName: "I7",
+			description:  "Major triad with minor seventh should be 'I7'",
+		},
+		{
+			name:         "Minor-major seventh",
+			chord:        Chord{Notes: MinorTriad | MajorSeventh},
+			expectedName: "imaj7",
+			description:  "Minor triad with major seventh should be 'imaj7'",
+		},
+		{
+			name:         "Half-diminished seventh",
+			chord:        Chord{Notes: DiminishedTriad | MinorSeventh},
+			expectedName: "i°7",
+			description:  "Diminished triad with minor seventh should be 'i°7'",
+		},
+		{
+			name:         "Augmented seventh",
+			chord:        Chord{Notes: AugmentedTriad | MinorSeventh},
+			expectedName: "I+7",
+			description:  "Augmented triad with minor seventh should be 'I+7'",
+		},
+		// Sixth chords
+		{
+			name:         "Major sixth",
+			chord:        Chord{Notes: MajorTriad | Major6},
+			expectedName: "I6",
+			description:  "Major triad with major sixth should be 'I6'",
+		},
+		{
+			name:         "Minor sixth",
+			chord:        Chord{Notes: MinorTriad | Major6},
+			expectedName: "i6",
+			description:  "Minor triad with major sixth should be 'i6'",
+		},
+		// Ninth chords
+		{
+			name:         "Major ninth",
+			chord:        Chord{Notes: MajorTriad | MinorSeventh | Major9},
+			expectedName: "I79",
+			description:  "Major triad with minor seventh and major ninth should be 'I79'",
+		},
+		{
+			name:         "Minor ninth",
+			chord:        Chord{Notes: MinorTriad | MinorSeventh | Major9},
+			expectedName: "i79",
+			description:  "Minor triad with minor seventh and major ninth should be 'i79'",
+		},
+		{
+			name:         "Major add9",
+			chord:        Chord{Notes: MajorTriad | Major9},
+			expectedName: "Iadd9",
+			description:  "Major triad with major ninth (no seventh) should be 'Iadd9'",
+		},
+		{
+			name:         "Minor add9",
+			chord:        Chord{Notes: MinorTriad | Major9},
+			expectedName: "iadd9",
+			description:  "Minor triad with major ninth (no seventh) should be 'iadd9'",
+		},
+		{
+			name:         "Flat nine chord",
+			chord:        Chord{Notes: MajorTriad | MinorSeventh | Minor9},
+			expectedName: "I7♭9",
+			description:  "Major triad with minor seventh and minor ninth should be 'I7♭9'",
+		},
+		// Eleventh chords
+		{
+			name:         "Major eleventh",
+			chord:        Chord{Notes: MajorTriad | MinorSeventh | Major9 | Perfect11},
+			expectedName: "I7911",
+			description:  "Major eleventh chord should be 'I7911'",
+		},
+		{
+			name:         "Major add11",
+			chord:        Chord{Notes: MajorTriad | Perfect11},
+			expectedName: "Iadd11",
+			description:  "Major triad with eleventh (no seventh) should be 'Iadd11'",
+		},
+		{
+			name:         "Sharp eleven chord",
+			chord:        Chord{Notes: MajorTriad | MinorSeventh | Major9 | Aug11},
+			expectedName: "I79#11",
+			description:  "Major triad with sharp eleven should be 'I79#11'",
+		},
+		// Thirteenth chords
+		{
+			name:         "Major thirteenth",
+			chord:        Chord{Notes: MajorTriad | MinorSeventh | Major9 | Major13},
+			expectedName: "I7913",
+			description:  "Major thirteenth chord should be 'I7913'",
+		},
+		{
+			name:         "Major add13",
+			chord:        Chord{Notes: MajorTriad | Major13},
+			expectedName: "Iadd13",
+			description:  "Major triad with thirteenth (no seventh) should be 'Iadd13'",
+		},
+		// Suspended chords
+		{
+			name:         "Sus4",
+			chord:        Chord{Notes: Root | Perfect4 | Perfect5},
+			expectedName: "5sus4",
+			description:  "Suspended fourth chord should be '5sus4'",
+		},
+		{
+			name:         "Sus2",
+			chord:        Chord{Notes: Root | Major2 | Perfect5},
+			expectedName: "5sus2",
+			description:  "Suspended second chord should be '5sus2'",
+		},
+		// Power chords and incomplete chords
+		{
+			name:         "Power chord",
+			chord:        Chord{Notes: Root | Perfect5},
+			expectedName: "5",
+			description:  "Power chord (root and fifth only) should be '5'",
+		},
+		{
+			name:         "Major no5",
+			chord:        Chord{Notes: Root | Major3},
+			expectedName: "I(no5)",
+			description:  "Major third without fifth should be 'I(no5)'",
+		},
+		{
+			name:         "Minor no5",
+			chord:        Chord{Notes: Root | Minor3},
+			expectedName: "i(no5)",
+			description:  "Minor third without fifth should be 'i(no5)'",
+		},
+		// Complex combinations
+		{
+			name:         "Major seventh with add9",
+			chord:        Chord{Notes: MajorTriad | MajorSeventh | Major9},
+			expectedName: "Imaj79",
+			description:  "Major seventh with major ninth should be 'Imaj79'",
+		},
+		{
+			name:         "Minor seventh with add9",
+			chord:        Chord{Notes: MinorTriad | MinorSeventh | Major9},
+			expectedName: "i79",
+			description:  "Minor seventh with major ninth should be 'i79'",
+		},
+		// Add2 and add4 variations
+		{
+			name:         "Major add2",
+			chord:        Chord{Notes: MajorTriad | Major2},
+			expectedName: "Iadd2",
+			description:  "Major triad with major second should be 'Iadd2'",
+		},
+		{
+			name:         "Minor add2",
+			chord:        Chord{Notes: MinorTriad | Major2},
+			expectedName: "iadd2",
+			description:  "Minor triad with major second should be 'iadd2'",
+		},
+		{
+			name:         "Major add♭2",
+			chord:        Chord{Notes: MajorTriad | Minor2},
+			expectedName: "Iadd♭2",
+			description:  "Major triad with minor second should be 'Iadd♭2'",
+		},
+		{
+			name:         "Minor add♭2",
+			chord:        Chord{Notes: MinorTriad | Minor2},
+			expectedName: "iadd♭2",
+			description:  "Minor triad with minor second should be 'iadd♭2'",
+		},
+		{
+			name:         "Major add4",
+			chord:        Chord{Notes: MajorTriad | Perfect4},
+			expectedName: "Iadd4",
+			description:  "Major triad with perfect fourth should be 'Iadd4'",
+		},
+		{
+			name:         "Minor add4",
+			chord:        Chord{Notes: MinorTriad | Perfect4},
+			expectedName: "iadd4",
+			description:  "Minor triad with perfect fourth should be 'iadd4'",
+		},
+		{
+			name:         "Major7 add2",
+			chord:        Chord{Notes: MajorTriad | MajorSeventh | Major2},
+			expectedName: "Imaj7add2",
+			description:  "Major seventh with major second should be 'Imaj7add2'",
+		},
+		{
+			name:         "Dominant7 add4",
+			chord:        Chord{Notes: MajorTriad | MinorSeventh | Perfect4},
+			expectedName: "I7add4",
+			description:  "Dominant seventh with perfect fourth should be 'I7add4'",
+		},
+		{
+			name:         "Major add2 add4",
+			chord:        Chord{Notes: MajorTriad | Major2 | Perfect4},
+			expectedName: "Iadd2add4",
+			description:  "Major triad with second and fourth should be 'Iadd2add4'",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			name := tt.chord.Name()
+			assert.Equal(t, tt.expectedName, name, tt.description)
+		})
+	}
+}

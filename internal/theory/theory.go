@@ -403,3 +403,132 @@ func (c *Chord) PreviousDouble() {
 		c.OmitInterval(lastInterval)
 	}
 }
+
+func (c Chord) Name() string {
+	triad := c.CurrentTriad()
+	seventh := c.CurrentSeventh()
+
+	// Determine base triad name
+	var baseName string
+	switch triad {
+	case MajorTriad:
+		baseName = "I"
+	case MinorTriad:
+		baseName = "i"
+	case DiminishedTriad:
+		baseName = "i°"
+	case AugmentedTriad:
+		baseName = "I+"
+	default:
+		// If no standard triad, check for basic intervals
+		hasRoot := ContainsBits(c.Notes, Root)
+		hasMajor3 := ContainsBits(c.Notes, Major3)
+		hasMinor3 := ContainsBits(c.Notes, Minor3)
+		hasPerfect5 := ContainsBits(c.Notes, Perfect5)
+		hasDim5 := ContainsBits(c.Notes, Dim5)
+		hasAug5 := ContainsBits(c.Notes, Aug5)
+
+		// Handle partial chords or power chords
+		if hasRoot && hasPerfect5 && !hasMajor3 && !hasMinor3 {
+			baseName = "5" // power chord
+		} else if hasRoot && hasMajor3 && !hasPerfect5 && !hasDim5 && !hasAug5 {
+			baseName = "I(no5)"
+		} else if hasRoot && hasMinor3 && !hasPerfect5 && !hasDim5 && !hasAug5 {
+			baseName = "i(no5)"
+		} else {
+			return "" // Unknown chord
+		}
+	}
+
+	// Add seventh extension if present
+	switch seventh {
+	case MajorSeventh:
+		switch triad {
+		case MajorTriad:
+			baseName += "maj7"
+		case MinorTriad:
+			baseName += "maj7" // minor-major seventh
+		default:
+			baseName += "maj7"
+		}
+	case MinorSeventh:
+		switch triad {
+		case MajorTriad:
+			baseName += "7" // dominant seventh
+		case MinorTriad:
+			baseName += "7"
+		case DiminishedTriad:
+			baseName += "7" // half-diminished
+		default:
+			baseName += "7"
+		}
+	}
+
+	// Add other extensions
+	if ContainsBits(c.Notes, Major6) && seventh == 0 {
+		baseName += "6"
+	}
+
+	if ContainsBits(c.Notes, Major9) {
+		if seventh != 0 {
+			baseName += "9"
+		} else {
+			baseName += "add9"
+		}
+	} else if ContainsBits(c.Notes, Minor9) {
+		if seventh != 0 {
+			baseName += "♭9"
+		} else {
+			baseName += "add♭9"
+		}
+	}
+
+	if ContainsBits(c.Notes, Perfect11) {
+		if seventh != 0 || ContainsBits(c.Notes, Major9) {
+			baseName += "11"
+		} else {
+			baseName += "add11"
+		}
+	} else if ContainsBits(c.Notes, Aug11) {
+		if seventh != 0 || ContainsBits(c.Notes, Major9) {
+			baseName += "#11"
+		} else {
+			baseName += "add#11"
+		}
+	}
+
+	if ContainsBits(c.Notes, Major13) {
+		if seventh != 0 || ContainsBits(c.Notes, Major9) {
+			baseName += "13"
+		} else {
+			baseName += "add13"
+		}
+	}
+
+	// Check if chord has a third (determines sus vs add)
+	hasThird := ContainsBits(c.Notes, Major3) || ContainsBits(c.Notes, Minor3)
+
+	// Add second notation (add2 if has third, sus2 if no third)
+	if ContainsBits(c.Notes, Major2) {
+		if hasThird {
+			baseName += "add2"
+		} else {
+			baseName += "sus2"
+		}
+	} else if ContainsBits(c.Notes, Minor2) {
+		if hasThird {
+			baseName += "add♭2"
+		}
+	}
+
+	// Add fourth notation (add4 if has third, sus4 if no third)
+	if ContainsBits(c.Notes, Perfect4) {
+		if hasThird {
+			baseName += "add4"
+		} else {
+			baseName += "sus4"
+		}
+	}
+
+	return baseName
+}
