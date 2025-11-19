@@ -351,7 +351,7 @@ func (m model) ChordView(gridChord *overlays.GridChord) string {
 	uninvertedNotes := chord.UninvertedNotes()
 	slices.Reverse(uninvertedNotes)
 	for i, n := range uninvertedNotes {
-		buf.WriteString(fmt.Sprintf("%d - %s - %s", n, intervals[i], NoteName(baseNote-gridChord.Root.Line+n)))
+		buf.WriteString(fmt.Sprintf("%s - %s", intervals[i], NoteName(baseNote-gridChord.Root.Line+n)))
 		buf.WriteString("\n")
 	}
 
