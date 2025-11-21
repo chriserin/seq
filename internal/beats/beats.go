@@ -218,7 +218,7 @@ func AdvancePlayState(playState *playstate.PlayState, definition sequence.Sequen
 	if playState.Playing {
 		// NOTE: Only advance if we've already played the first beat.
 		if playState.AllowAdvance {
-			advanceCurrentBeat(currentCycles, *playingOverlay, playState.LineStates, currentPart.Beats)
+			advanceCurrentBeat(currentCycles, *playingOverlay, playState.LineStates, currentPart.Beats, playState.BoundedLoop, playState.LoopMode)
 			advanceKeyCycle(definition.Keyline, playState.LineStates, playState.LoopMode, currentNode, playState.Iterations)
 			if IsDone(*playState, currentNode, currentSection, cursor) && playState.LoopMode != playstate.LoopOverlay {
 				if PlayMove(cursor, playState.Iterations, playState.LoopedArrangement) || playState.PlayMode == playstate.PlayReceiver {
@@ -246,11 +246,11 @@ func CurrentBeatGridKeys(gridKeys *[]grid.GridKey, lineStates []playstate.LineSt
 	}
 }
 
-func advanceCurrentBeat(keyCycles int, playingOverlay overlays.Overlay, lineStates []playstate.LineState, partBeats uint8) {
+func advanceCurrentBeat(keyCycles int, playingOverlay overlays.Overlay, lineStates []playstate.LineState, partBeats uint8, boundedLoop playstate.BoundedLoop, loopMode playstate.LoopMode) {
 	pattern := make(grid.Pattern)
 	playingOverlay.CombineActionPattern(&pattern, keyCycles)
 	for i := range lineStates {
-		doContinue := lineStates[i].AdvancePlayState(pattern, i, partBeats, lineStates)
+		doContinue := lineStates[i].AdvancePlayState(pattern, i, partBeats, lineStates, boundedLoop, loopMode)
 		if !doContinue {
 			break
 		}

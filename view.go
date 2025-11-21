@@ -78,7 +78,12 @@ func (m model) View() (output string) {
 	seqView := m.SeqView(showLines)
 	seqView = seqView[:len(seqView)-1] // remove last newline
 
-	seqAndSide := lipgloss.JoinHorizontal(0, "  ", seqView, "  ", sideView)
+	intraborder := "  "
+	if m.playState.BoundedLoop.Active && m.CurrentPart().Beats == m.playState.BoundedLoop.RightBound+1 {
+		intraborder = " "
+
+	}
+	seqAndSide := lipgloss.JoinHorizontal(0, "  ", seqView, intraborder, sideView)
 	buf.WriteString(lipgloss.JoinVertical(lipgloss.Left, seqAndSide, m.CurrentOverlayView()))
 
 	if m.currentError != nil && m.selectionIndicator == operation.SelectError {
@@ -483,7 +488,7 @@ func (m model) SeqView(showLines []uint8) string {
 	}
 
 	beats := m.CurrentPart().Beats
-	topLine := strings.Repeat("─", max(32, int(beats)))
+	topLine := m.TopLine(beats)
 	if m.midiLoopMode == timing.MlmTransmitter && m.transmitting {
 		buf.WriteString("  T")
 	} else if m.midiLoopMode == timing.MlmTransmitter && !m.transmitting {
@@ -495,7 +500,7 @@ func (m model) SeqView(showLines []uint8) string {
 	} else {
 		buf.WriteString("   ")
 	}
-	buf.WriteString(themes.SeqBorderStyle.Render(fmt.Sprintf(" ┌%s", topLine)))
+	buf.WriteString(topLine)
 	buf.WriteString("\n")
 
 	for i := uint8(0); i < uint8(len(m.definition.Lines)); i++ {
@@ -506,6 +511,25 @@ func (m model) SeqView(showLines []uint8) string {
 	}
 
 	return buf.String()
+}
+
+func (m model) TopLine(beats uint8) string {
+	buf := strings.Builder{}
+	if m.playState.BoundedLoop.Active {
+		if m.playState.BoundedLoop.LeftBound == 0 {
+			buf.WriteString(themes.NumberStyle.Render(" >"))
+		} else {
+			buf.WriteString(themes.SeqBorderStyle.Render(" ┌"))
+			buf.WriteString(themes.SeqBorderStyle.Render(strings.Repeat("─", int(m.playState.BoundedLoop.LeftBound-1))))
+			buf.WriteString(themes.NumberStyle.Render(">"))
+		}
+		buf.WriteString(themes.NumberStyle.Render(strings.Repeat("─", (int(m.playState.BoundedLoop.RightBound) - int(m.playState.BoundedLoop.LeftBound) + 1))))
+		buf.WriteString(themes.NumberStyle.Render("<"))
+		buf.WriteString(themes.SeqBorderStyle.Render(strings.Repeat("─", max(int(beats)-int(m.playState.BoundedLoop.RightBound+2), 0))))
+		return buf.String()
+	} else {
+		return fmt.Sprintf(" %s%s", themes.SeqBorderStyle.Render("┌"), themes.SeqBorderStyle.Render(strings.Repeat("─", max(32, int(beats)))))
+	}
 }
 
 func (m model) RenamePartView() string {

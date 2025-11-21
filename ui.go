@@ -969,6 +969,23 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
+		case mappings.ToggleBoundedLoop:
+			m.playState.BoundedLoop.Active = !m.playState.BoundedLoop.Active
+			m.playState.BoundedLoop.LeftBound = m.gridCursor.Beat
+			m.playState.BoundedLoop.RightBound = m.gridCursor.Beat
+			m.SyncBeatLoop()
+		case mappings.ExpandLeftLoopBound:
+			m.playState.BoundedLoop.ExpandLeft()
+			m.SyncBeatLoop()
+		case mappings.ExpandRightLoopBound:
+			m.playState.BoundedLoop.ExpandRight((*m.definition.Parts)[m.CurrentPartID()].Beats)
+			m.SyncBeatLoop()
+		case mappings.ContractLeftLoopBound:
+			m.playState.BoundedLoop.ContractLeft()
+			m.SyncBeatLoop()
+		case mappings.ContractRightLoopBound:
+			m.playState.BoundedLoop.ContractRight()
+			m.SyncBeatLoop()
 		case mappings.PurposePanic:
 			return m, func() tea.Msg { panic("Panic") }
 		case mappings.ToggleTransmitting:
@@ -1228,7 +1245,11 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 				if m.clockPreRoll {
 					m.playState.RecordPreRollBeats = 1
 				}
-				m.playState.LoopMode = playstate.OneTimeWholeSequence
+				if m.visualSelection.visualMode == operation.VisualNone {
+					m.playState.LoopMode = playstate.OneTimeWholeSequence
+				} else {
+					m.playState.LoopMode = playstate.LoopOverlay
+				}
 			} else {
 				err := m.midiConnection.SendStopMessage()
 				if err != nil {
@@ -1947,26 +1968,35 @@ func (m *model) Start(delay time.Duration) {
 	}
 
 	m.ResetIterations()
+	m.arrangement.ResetDepth()
 
 	switch m.playState.LoopMode {
 	case playstate.OneTimeWholeSequence:
 		m.playState.LoopedArrangement = nil
 		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.Arrangement}
 		m.arrangement.Cursor.MoveNext()
+		section := m.CurrentSongSection()
+		m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, uint8(section.StartBeat))
 	case playstate.LoopWholeSequence:
 		m.playState.LoopedArrangement = m.arrangement.Root
 		m.arrangement.Cursor = arrangement.ArrCursor{m.definition.Arrangement}
 		m.arrangement.Cursor.MoveNext()
+		section := m.CurrentSongSection()
+		m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, uint8(section.StartBeat))
 	case playstate.LoopPart:
 		m.playState.LoopedArrangement = m.arrangement.CurrentNode()
+		section := m.CurrentSongSection()
+		m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, uint8(section.StartBeat))
 	case playstate.LoopOverlay:
 		m.playState.LoopedArrangement = m.arrangement.CurrentNode()
 		(*m.playState.Iterations)[m.arrangement.CurrentNode()] = m.currentOverlay.Key.GetMinimumKeyCycle()
+		if m.playState.BoundedLoop.Active {
+			m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, uint8(m.playState.BoundedLoop.LeftBound))
+		} else {
+			section := m.CurrentSongSection()
+			m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, uint8(section.StartBeat))
+		}
 	}
-	m.arrangement.ResetDepth()
-
-	section := m.CurrentSongSection()
-	m.playState.LineStates = playstate.InitLineStates(len(m.definition.Lines), m.playState.LineStates, uint8(section.StartBeat))
 
 	if m.playState.Playing {
 		time.AfterFunc(delay, func() {

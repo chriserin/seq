@@ -186,6 +186,11 @@ const (
 	ToggleTransmitting
 	ToggleClockPreRoll
 	PurposePanic
+	ToggleBoundedLoop
+	ExpandLeftLoopBound
+	ExpandRightLoopBound
+	ContractLeftLoopBound
+	ContractRightLoopBound
 )
 
 // CommandDescriptions maps each command to its human-readable description
@@ -614,8 +619,8 @@ var mappings = registry{
 	OperationKey{selection: operation.SelectChangePart, key: k("+")}:        Increase,
 	OperationKey{selection: operation.SelectChangePart, key: k("=")}:        Increase,
 	OperationKey{selection: operation.SelectChangePart, key: k("-")}:        Decrease,
-	OperationKey{focus: operation.FocusGrid, key: k("<")}:                   CursorLineStart,
-	OperationKey{focus: operation.FocusGrid, key: k(">")}:                   CursorLineEnd,
+	OperationKey{focus: operation.FocusGrid, key: k("Z")}:                   CursorLineStart,
+	OperationKey{focus: operation.FocusGrid, key: k("z")}:                   CursorLineEnd,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "l")}:              CursorLastLine,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "f")}:              CursorFirstLine,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "h")}:              ToggleHideLines,
@@ -707,6 +712,11 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("{")}:                   NextOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("}")}:                   PrevOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("enter")}:               Enter,
+	OperationKey{focus: operation.FocusGrid, key: k("n", "l")}:              ToggleBoundedLoop,
+	OperationKey{focus: operation.FocusGrid, key: k("<")}:                   ExpandLeftLoopBound,
+	OperationKey{focus: operation.FocusGrid, key: k(">")}:                   ExpandRightLoopBound,
+	OperationKey{focus: operation.FocusGrid, key: k(",")}:                   ContractLeftLoopBound,
+	OperationKey{focus: operation.FocusGrid, key: k(".")}:                   ContractRightLoopBound,
 	OperationKey{focus: operation.FocusArrangementEditor, key: k("enter")}:  Enter,
 	OperationKey{focus: operation.FocusOverlayKey, key: k("enter")}:         ConfirmOverlayKey,
 	OperationKey{selection: operation.SelectRenamePart, key: k("enter")}:    ConfirmRenamePart,

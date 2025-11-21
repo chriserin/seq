@@ -21,6 +21,37 @@ type PlayState struct {
 	LineStates         []LineState
 	Iterations         *Iterations
 	LoopedArrangement  *arrangement.Arrangement
+	BoundedLoop        BoundedLoop
+}
+
+type BoundedLoop struct {
+	Active     bool
+	LeftBound  uint8
+	RightBound uint8
+}
+
+func (b *BoundedLoop) ContractRight() {
+	if b.RightBound > b.LeftBound {
+		b.RightBound--
+	}
+}
+
+func (b *BoundedLoop) ContractLeft() {
+	if b.LeftBound < b.RightBound {
+		b.LeftBound++
+	}
+}
+
+func (b *BoundedLoop) ExpandRight(beats uint8) {
+	if b.RightBound < beats {
+		b.RightBound++
+	}
+}
+
+func (b *BoundedLoop) ExpandLeft() {
+	if b.LeftBound > 0 {
+		b.LeftBound--
+	}
 }
 
 func (i *Iterations) IsFull(cursor *arrangement.ArrCursor) bool {
@@ -122,24 +153,32 @@ func InitLineState(previousGroupPlayState GroupPlayState, index uint8, startBeat
 		ResetDirection:      1,
 		ResetLocation:       0,
 		ResetActionLocation: 0,
-		ResetAction:         0,
+		ResetAction:         grid.ActionNothing,
 		GroupPlayState:      previousGroupPlayState,
 	}
 }
 
-func (ls *LineState) AdvancePlayState(combinedPattern grid.Pattern, lineIndex int, beats uint8, lineStates []LineState) bool {
+func (ls *LineState) AdvancePlayState(combinedPattern grid.Pattern, lineIndex int, beats uint8, lineStates []LineState, boundedLoop BoundedLoop, loopMode LoopMode) bool {
 
 	advancedBeat := int8(ls.CurrentBeat) + ls.Direction
 	currentState := *ls
 
-	if advancedBeat >= int8(beats) || advancedBeat < 0 {
+	startBound := uint8(0)
+	endBound := uint8(beats)
+
+	if boundedLoop.Active && loopMode == LoopOverlay {
+		startBound = uint8(boundedLoop.LeftBound)
+		endBound = uint8(boundedLoop.RightBound) + 1
+	}
+
+	if advancedBeat >= int8(endBound) || advancedBeat < int8(startBound) {
 		// reset locations should be 1 time use.  Reset back to 0.
 		if ls.ResetLocation != 0 && combinedPattern[grid.GK(uint8(lineIndex), currentState.ResetActionLocation)].Action == currentState.ResetAction {
-			ls.CurrentBeat = currentState.ResetLocation
+			ls.CurrentBeat = max(currentState.ResetLocation, startBound)
 			advancedBeat = int8(currentState.ResetLocation)
 		} else {
-			ls.CurrentBeat = 0
-			advancedBeat = int8(0)
+			ls.CurrentBeat = startBound
+			advancedBeat = int8(startBound)
 		}
 		ls.Direction = currentState.ResetDirection
 		ls.ResetLocation = 0
@@ -151,32 +190,32 @@ func (ls *LineState) AdvancePlayState(combinedPattern grid.Pattern, lineIndex in
 	case grid.ActionNothing:
 		return true
 	case grid.ActionLineReset:
-		ls.CurrentBeat = 0
+		ls.CurrentBeat = startBound
 	case grid.ActionLineReverse:
-		ls.CurrentBeat = uint8(max(advancedBeat-2, 0))
+		ls.CurrentBeat = uint8(max(advancedBeat-2, int8(startBound)))
 		ls.Direction = -1
-		ls.ResetLocation = uint8(max(advancedBeat-1, 0))
+		ls.ResetLocation = uint8(max(advancedBeat-1, int8(startBound)))
 		ls.ResetActionLocation = uint8(advancedBeat)
 		ls.ResetAction = grid.ActionLineReverse
 	case grid.ActionLineBounce:
-		ls.CurrentBeat = uint8(max(advancedBeat-1, 0))
+		ls.CurrentBeat = uint8(max(advancedBeat-1, int8(startBound)))
 		ls.Direction = -1
 	case grid.ActionLineSkipBeat:
-		ls.AdvancePlayState(combinedPattern, lineIndex, beats, lineStates)
+		ls.AdvancePlayState(combinedPattern, lineIndex, beats, lineStates, boundedLoop, loopMode)
 	case grid.ActionLineDelay:
-		ls.CurrentBeat = uint8(max(advancedBeat-1, 0))
+		ls.CurrentBeat = uint8(max(advancedBeat-1, int8(startBound)))
 	case grid.ActionLineResetAll:
 		for i := range lineStates {
-			lineStates[i].CurrentBeat = 0
+			lineStates[i].CurrentBeat = startBound
 			lineStates[i].Direction = 1
-			lineStates[i].ResetLocation = 0
+			lineStates[i].ResetLocation = startBound
 			lineStates[i].ResetDirection = 1
 		}
 		return false
 	case grid.ActionLineBounceAll:
 		for i := range lineStates {
 			if i <= lineIndex {
-				lineStates[i].CurrentBeat = uint8(max(lineStates[i].CurrentBeat-1, 0))
+				lineStates[i].CurrentBeat = uint8(max(lineStates[i].CurrentBeat-1, startBound))
 			}
 			lineStates[i].Direction = -1
 		}
