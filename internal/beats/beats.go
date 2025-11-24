@@ -291,6 +291,9 @@ func (bl BeatsLooper) PlayBeat(beatInterval time.Duration, pattern grid.Pattern,
 	lines := definition.Lines
 
 	for gridKey, note := range pattern {
+		if note.Action != grid.ActionNothing {
+			continue
+		}
 		line := lines[gridKey.Line]
 		if note.Ratchets.Length > 0 {
 			bl.ProcessRatchets(note, beatInterval, line, definition)

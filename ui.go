@@ -3087,16 +3087,6 @@ func (m model) CombinedNotePattern(overlay *overlays.Overlay) grid.Pattern {
 	return pattern
 }
 
-func (m model) CombinedBeatPattern(overlay *overlays.Overlay) grid.Pattern {
-	pattern := make(grid.Pattern)
-	gridKeys := make([]grid.GridKey, 0, len(m.playState.LineStates))
-	m.CurrentBeatGridKeys(&gridKeys)
-
-	currentCycles := (*m.playState.Iterations)[m.arrangement.CurrentNode()]
-	overlay.CurrentBeatOverlayPattern(&pattern, currentCycles, gridKeys)
-	return pattern
-}
-
 func (m model) CombinedOverlayPattern(overlay *overlays.Overlay) overlays.OverlayPattern {
 	pattern := make(overlays.OverlayPattern)
 	if m.playState.Playing && !m.playEditing {
