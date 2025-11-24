@@ -197,6 +197,23 @@ func (m model) SpecificValueEditView(note grid.Note) string {
 	return buf.String()
 }
 
+func (m model) EuclideanHitsEditView() string {
+	var buf strings.Builder
+	lineStart, lineEnd := m.PatternActionLineBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
+	steps := int(end - start + 1)
+	lines := int(lineEnd - lineStart + 1)
+
+	buf.WriteString(themes.AltArtStyle.Render(" Euclidean Hits "))
+	buf.WriteString(themes.SelectedStyle.Render(fmt.Sprintf("%d", m.euclideanHits)))
+	buf.WriteString(themes.AltArtStyle.Render(fmt.Sprintf(" / %d steps", steps)))
+	if lines > 1 {
+		buf.WriteString(themes.AltArtStyle.Render(fmt.Sprintf(" × %d lines", lines)))
+	}
+	buf.WriteString("\n")
+	return buf.String()
+}
+
 func (m model) WriteView() string {
 	if m.NeedsWrite() {
 		return " [+]"
@@ -475,6 +492,8 @@ func (m model) SeqView(showLines []uint8) string {
 		buf.WriteString(m.ConfirmReloadView())
 	} else if m.selectionIndicator == operation.SelectSpecificValue {
 		buf.WriteString(m.SpecificValueEditView(currentNote.Note))
+	} else if m.selectionIndicator == operation.SelectEuclideanHits {
+		buf.WriteString(m.EuclideanHitsEditView())
 	} else if m.playState.Playing {
 		buf.WriteString(playstate.View(m.playState, m.arrangement.Cursor))
 	} else if len(*m.definition.Parts) > 1 {

@@ -233,3 +233,61 @@ func (l *LineDefinition) DecrementMessageType() {
 		l.MsgType--
 	}
 }
+
+// GenerateEuclideanRhythm generates a Euclidean rhythm pattern using Bjorklund's algorithm.
+// It distributes 'hits' as evenly as possible over 'steps'.
+// Returns a slice of booleans where true indicates a hit.
+func GenerateEuclideanRhythm(hits, steps int) []bool {
+	if hits <= 0 || steps <= 0 || hits > steps {
+		result := make([]bool, steps)
+		return result
+	}
+
+	// Initialize pattern with hits and rests
+	pattern := make([][]bool, steps)
+	for i := 0; i < hits; i++ {
+		pattern[i] = []bool{true}
+	}
+	for i := hits; i < steps; i++ {
+		pattern[i] = []bool{false}
+	}
+
+	// Bjorklund's algorithm
+	counts := make([]int, steps)
+	for i := range counts {
+		counts[i] = 1
+	}
+
+	numGroups := steps
+	for {
+		// Count how many we can pair
+		minCount := hits
+		if steps-hits < hits {
+			minCount = steps - hits
+		}
+
+		if minCount <= 1 {
+			break
+		}
+
+		// Concatenate pairs
+		for i := 0; i < minCount; i++ {
+			pattern[i] = append(pattern[i], pattern[hits+i]...)
+			counts[i] += counts[hits+i]
+		}
+
+		// Update group counts
+		remainder := numGroups - minCount*2
+		numGroups = minCount + remainder
+		hits = minCount
+		steps = numGroups
+	}
+
+	// Flatten the pattern
+	result := make([]bool, 0)
+	for i := 0; i < numGroups; i++ {
+		result = append(result, pattern[i]...)
+	}
+
+	return result
+}

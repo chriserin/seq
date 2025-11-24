@@ -92,6 +92,7 @@ type model struct {
 	modifyKey             bool
 	transmitting          bool
 	clockPreRoll          bool
+	euclideanHits         uint8
 	ratchetCursor         uint8
 	temporaryNoteValue    uint8
 	focus                 operation.Focus
@@ -2110,12 +2111,17 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 				m.SetAccentStart(number)
 			case operation.SelectAccentEnd:
 				m.SetAccentEnd(number)
+			case operation.SelectEuclideanHits:
+				m.SetEuclideanHits(number)
 			}
 		}
 		return m
 	}
 
 	switch mapping.Command {
+	case mappings.ConfirmEuclidenHits:
+		m.ApplyEuclidean(m.euclideanHits)
+		m.SetSelectionIndicator(operation.SelectGrid)
 	case mappings.NoteAdd:
 		m.AddNote()
 	case mappings.NoteRemove:
@@ -2215,6 +2221,9 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		}
 	case mappings.Paste:
 		m.Paste()
+	case mappings.Euclidean:
+		m.euclideanHits = 1
+		m.SetSelectionIndicator(operation.SelectEuclideanHits)
 	case mappings.MajorTriad:
 		m.EnsureChord()
 		m.ChordChange(theory.MajorTriad)
@@ -2373,6 +2382,19 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 	}
 
 	return m
+}
+
+func (m *model) SetEuclideanHits(number int) {
+	var maxSteps uint8
+	if m.visualSelection.visualMode == operation.VisualNone {
+		maxSteps = m.CurrentPart().Beats
+	} else {
+		bounds := m.visualSelection.Bounds(m.CurrentPart().Beats)
+		maxSteps = bounds.Right - bounds.Left
+
+	}
+	m.euclideanHits =
+		uint8(m.clamp(m.UnshiftDigit(int(m.definition.Accents.End), number), 1, int(maxSteps)))
 }
 
 func (m *model) SetAccentEnd(number int) {
@@ -2798,6 +2820,30 @@ func (m *model) RotateLeft() {
 		for _, moveFn := range moves {
 			if moveFn != nil {
 				moveFn()
+			}
+		}
+	}
+}
+
+func (m *model) ApplyEuclidean(hits uint8) {
+	lineStart, lineEnd := m.PatternActionLineBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
+
+	steps := int(end - start + 1)
+	euclideanPattern := grid.GenerateEuclideanRhythm(int(hits), steps)
+
+	for l := lineStart; l <= lineEnd; l++ {
+		// Clear existing notes in the range
+		for i := start; i <= end; i++ {
+			key := GK(l, i)
+			m.currentOverlay.RemoveNote(key)
+		}
+
+		// Apply Euclidean pattern
+		for i, shouldHit := range euclideanPattern {
+			if shouldHit {
+				key := GK(l, start+uint8(i))
+				m.currentOverlay.SetNote(key, grid.InitNote())
 			}
 		}
 	}

@@ -178,6 +178,7 @@ const (
 	ConfirmConfirmNew
 	ConfirmConfirmReload
 	ConfirmConfirmQuit
+	ConfirmEuclidenHits
 	MidiPanic
 	IncreaseAllChannels
 	DecreaseAllChannels
@@ -191,6 +192,7 @@ const (
 	ExpandRightLoopBound
 	ContractLeftLoopBound
 	ContractRightLoopBound
+	Euclidean
 )
 
 // CommandDescriptions maps each command to its human-readable description
@@ -333,6 +335,7 @@ var CommandDescriptions = map[Command]string{
 	DecreaseAllNote:        "Decrease all note values",
 	ToggleTransmitting:     "Toggle transmitting MIDI messages",
 	ToggleClockPreRoll:     "Toggle clock pre-roll",
+	Euclidean:              "Apply Euclidean rhythm pattern to selection or pattern",
 }
 
 type mappingKey [3]string
@@ -566,6 +569,7 @@ func (c Command) String() string {
 		"ConfirmConfirmNew",
 		"ConfirmConfirmReload",
 		"ConfirmConfirmQuit",
+		"ConfirmEuclidenHits",
 		"MidiPanic",
 		"IncreaseAllChannels",
 		"DecreaseAllChannels",
@@ -626,6 +630,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("b", "h")}:              ToggleHideLines,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "t")}:              ToggleTransmitting,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "c")}:              ToggleClockPreRoll,
+	OperationKey{focus: operation.FocusGrid, key: k("b", "u")}:              Euclidean,
 	OperationKey{focus: operation.FocusGrid, key: k("A")}:                   AccentIncrease,
 	OperationKey{focus: operation.FocusGrid, key: k("C")}:                   ClearOverlay,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "C")}:              ClearAllOverlays,
@@ -726,6 +731,7 @@ var mappings = registry{
 	OperationKey{selection: operation.SelectConfirmNew, key: k("enter")}:    ConfirmConfirmNew,
 	OperationKey{selection: operation.SelectConfirmReload, key: k("enter")}: ConfirmConfirmReload,
 	OperationKey{selection: operation.SelectConfirmQuit, key: k("enter")}:   ConfirmConfirmQuit,
+	OperationKey{selection: operation.SelectEuclideanHits, key: k("enter")}: ConfirmEuclidenHits,
 	OperationKey{selection: operation.SelectFileName, key: k("esc")}:        Escape,
 	OperationKey{selection: operation.SelectSetupChannel, key: k("J")}:      DecreaseAllChannels,
 	OperationKey{selection: operation.SelectSetupChannel, key: k("K")}:      IncreaseAllChannels,

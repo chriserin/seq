@@ -64,6 +64,7 @@ const (
 	SelectRatchets
 	SelectRatchetSpan
 	SelectSpecificValue
+	SelectEuclideanHits
 
 	// Program Level Operation
 	SelectConfirmNew
@@ -107,6 +108,7 @@ var NumberSelections = []Selection{
 	SelectSetupValue,
 	SelectAccentStart,
 	SelectAccentEnd,
+	SelectEuclideanHits,
 }
 
 func IsNumberSelection(sel Selection) bool {
