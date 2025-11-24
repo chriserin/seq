@@ -970,9 +970,15 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 		// NOTE: Finally process the mapping
 		switch mapping.Command {
 		case mappings.ToggleBoundedLoop:
-			m.playState.BoundedLoop.Active = !m.playState.BoundedLoop.Active
-			m.playState.BoundedLoop.LeftBound = m.gridCursor.Beat
-			m.playState.BoundedLoop.RightBound = m.gridCursor.Beat
+			if m.visualSelection.visualMode != operation.VisualNone {
+				m.playState.BoundedLoop.Active = !m.playState.BoundedLoop.Active
+				m.playState.BoundedLoop.LeftBound = m.visualSelection.Bounds(m.CurrentPart().Beats).Left
+				m.playState.BoundedLoop.RightBound = m.visualSelection.Bounds(m.CurrentPart().Beats).Right
+			} else {
+				m.playState.BoundedLoop.Active = !m.playState.BoundedLoop.Active
+				m.playState.BoundedLoop.LeftBound = m.gridCursor.Beat
+				m.playState.BoundedLoop.RightBound = m.gridCursor.Beat
+			}
 			m.SyncBeatLoop()
 		case mappings.ExpandLeftLoopBound:
 			m.playState.BoundedLoop.ExpandLeft()
