@@ -3,9 +3,11 @@ package beats
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math/rand"
 	"os"
 	"runtime/debug"
+	"slices"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -290,7 +292,11 @@ func PlayMove(cursor *arrangement.ArrCursor, iterations *playstate.Iterations, l
 func (bl BeatsLooper) PlayBeat(beatInterval time.Duration, pattern grid.Pattern, definition sequence.Sequence) {
 	lines := definition.Lines
 
-	for gridKey, note := range pattern {
+	keys := maps.Keys(pattern)
+	sortedKeys := slices.SortedFunc(keys, grid.Compare)
+
+	for _, gridKey := range sortedKeys {
+		note := pattern[gridKey]
 		if note.Action != grid.ActionNothing {
 			continue
 		}
