@@ -2219,6 +2219,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		default:
 			m.RotateDown()
 		}
+	case mappings.Reverse:
+		m.Reverse()
 	case mappings.Paste:
 		m.Paste()
 	case mappings.Euclidean:
@@ -2821,6 +2823,47 @@ func (m *model) RotateLeft() {
 			if moveFn != nil {
 				moveFn()
 			}
+		}
+	}
+}
+
+func (m *model) Reverse() {
+	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
+
+	lineStart, lineEnd := m.PatternActionLineBoundaries()
+	start, end := m.PatternActionBeatBoundaries()
+
+	for l := lineStart; l <= lineEnd; l++ {
+		// Collect standalone notes with their positions (not part of chords)
+		type noteAtPosition struct {
+			beat uint8
+			note grid.Note
+		}
+		var standaloneNotes []noteAtPosition
+
+		for i := start; i <= end; i++ {
+			currentKey := GK(l, i)
+			currentNote := combinedPattern[currentKey]
+			_, chordExists := m.currentOverlay.Chords.FindChordWithNote(currentKey)
+
+			// Collect notes that are NOT part of a chord
+			if !chordExists && currentNote != zeronote {
+				standaloneNotes = append(standaloneNotes, noteAtPosition{i, currentNote})
+			}
+		}
+
+		// Clear only standalone notes
+		for _, notePos := range standaloneNotes {
+			currentKey := GK(l, notePos.beat)
+			m.currentOverlay.RemoveNote(currentKey)
+		}
+
+		// Place notes in mirrored positions (preserving gaps)
+		// If a note was at beat B, place it at end - (B - start)
+		for _, notePos := range standaloneNotes {
+			mirroredBeat := end - (notePos.beat - start)
+			targetKey := GK(l, mirroredBeat)
+			m.currentOverlay.MoveNoteTo(targetKey, notePos.note)
 		}
 	}
 }

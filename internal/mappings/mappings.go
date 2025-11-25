@@ -193,6 +193,7 @@ const (
 	ContractLeftLoopBound
 	ContractRightLoopBound
 	Euclidean
+	Reverse
 )
 
 // CommandDescriptions maps each command to its human-readable description
@@ -336,6 +337,7 @@ var CommandDescriptions = map[Command]string{
 	ToggleTransmitting:     "Toggle transmitting MIDI messages",
 	ToggleClockPreRoll:     "Toggle clock pre-roll",
 	Euclidean:              "Apply Euclidean rhythm pattern to selection or pattern",
+	Reverse:                "Reverse notes from cursor to end of line, or reverse notes within visual selection",
 }
 
 type mappingKey [3]string
@@ -577,6 +579,14 @@ func (c Command) String() string {
 		"DecreaseAllNote",
 		"ToggleTransmitting",
 		"ToggleClockPreRoll",
+		"PurposePanic",
+		"ToggleBoundedLoop",
+		"ExpandLeftLoopBound",
+		"ExpandRightLoopBound",
+		"ContractLeftLoopBound",
+		"ContractRightLoopBound",
+		"Euclidean",
+		"Reverse",
 	}
 
 	if c >= 0 && int(c) < len(names) {
@@ -698,6 +708,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("n", "r")}:              ToggleRatchetMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "R")}:              ToggleRatchetNoteMode,
 	OperationKey{focus: operation.FocusGrid, key: k("n", "P")}:              PurposePanic,
+	OperationKey{focus: operation.FocusGrid, key: k("n", "v")}:              Reverse,
 	OperationKey{focus: operation.FocusGrid, key: k("p")}:                   Paste,
 	OperationKey{focus: operation.FocusAny, key: k("q")}:                    Quit,
 	OperationKey{focus: operation.FocusGrid, key: k("r")}:                   RatchetDecrease,
