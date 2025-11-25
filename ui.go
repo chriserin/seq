@@ -2394,7 +2394,7 @@ func (m *model) SetEuclideanHits(number int) {
 
 	}
 	m.euclideanHits =
-		uint8(m.clamp(m.UnshiftDigit(int(m.definition.Accents.End), number), 1, int(maxSteps)))
+		uint8(m.clamp(m.UnshiftDigit(int(m.euclideanHits), number), 1, int(maxSteps)))
 }
 
 func (m *model) SetAccentEnd(number int) {
