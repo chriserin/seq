@@ -14,6 +14,7 @@ sq is a terminal-based MIDI sequencer that brings midi sequencer capabilities to
 
 - **MIDI Integration**: Control hardware or software instruments via MIDI
 - **Rapid Beat Creation**: Create drum patterns in just a few keystrokes using pattern mode
+- **Euclidean Rhythms**: Generate mathematically-distributed note patterns for complex polyrhythms
 - **Advanced Overlays**: Add mathematical variations to sequences with the overlay system
 - **Flexible Arrangements**: Structure songs with sections, parts and groups
 - **Real-time Manipulation**: Modify patterns, accents, gates and timing while playing

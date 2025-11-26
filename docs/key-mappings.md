@@ -25,6 +25,8 @@
 - `1-9`: Add/remove notes every N beats
 - `shift+1-9`: Add note every N empty spaces
 - `c`: Clear line from cursor to end
+- `bu`: Apply Euclidean rhythm pattern
+- `nv`: Reverse notes in selection or from cursor
 
 ### Note Modification
 
@@ -170,6 +172,8 @@ Use +/- to increase/decrease values for each control, use numbers 0 -9 to direct
 | ExpandRightLoopBound   | >            | Expand the right loop bound one beat to the right, increasing the loop region size                                                                                                                                                                                                     |
 | ContractLeftLoopBound  | ,            | Contract the left loop bound one beat to the right, decreasing the loop region size                                                                                                                                                                                                    |
 | ContractRightLoopBound | .            | Contract the right loop bound one beat to the left, decreasing the loop region size                                                                                                                                                                                                    |
+| Euclidean              | b + u        | Apply Euclidean rhythm pattern to selection or pattern. Enter number of hits when prompted, then press Enter to confirm                                                                                                                                                                |
+| Reverse                | n + v        | Reverse notes from cursor to end of line, or reverse notes within visual selection                                                                                                                                                                                                     |
 
 ## Pattern Mode Mappings
 
@@ -365,3 +369,31 @@ Once having focused the overlay key inputs with `ctrl+o` a new set of mappings a
 | Increase      | +           | Increase the selected value              |
 | Decrease      | -           | Decrease the selected value              |
 | Escape        | esc / enter | Return focus to the grid                 |
+
+## Euclidean Rhythm Generator
+
+The Euclidean rhythm generator creates evenly distributed note patterns based on the mathematical algorithm by Bjorklund. This is useful for creating polyrhythmic patterns, interesting drum patterns, and non-standard subdivisions.
+
+### Usage
+
+1. Position your cursor where you want the pattern to start, or create a visual selection
+2. Press `b + u` to activate the Euclidean rhythm generator
+3. Enter the number of hits you want distributed across the pattern (0-9 for single digits, or type multiple digits like "13")
+4. Press `Enter` to confirm and generate the pattern
+5. Press `Escape` to cancel without generating
+
+### Pattern Scope
+
+- **Without visual selection**: The pattern will be applied from the cursor position to the end of the current line
+- **With visual selection**: The pattern will be applied only within the selected region
+
+The algorithm distributes the specified number of hits as evenly as possible across the available beats, creating mathematically optimal rhythmic patterns.
+
+### Examples
+
+- **Euclidean(3, 8)**: Three hits over 8 beats creates a tresillo pattern: `X..X..X.`
+- **Euclidean(5, 8)**: Five hits over 8 beats creates a Cuban cinquillo: `X.X.X.XX`
+- **Euclidean(5, 12)**: Five hits over 12 beats: `X..X.X..X.X.`
+- **Euclidean(7, 16)**: Seven hits over 16 beats creates an asymmetric pattern
+
+The Euclidean rhythm generator respects the current overlay and will place notes on the active layer.
