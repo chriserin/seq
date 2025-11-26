@@ -1362,6 +1362,8 @@ func (m model) Update(msg tea.Msg) (rModel tea.Model, rCmd tea.Cmd) {
 			if m.selectionIndicator == states[len(states)-1] {
 				m.PushUndoableDefinitionState()
 			}
+
+			m.ClampAccentValues()
 			m.SetSelectionIndicator(AdvanceSelectionState(states, m.selectionIndicator))
 		case mappings.RatchetInputSwitch:
 			currentNote, _ := m.CurrentNote()
@@ -1877,6 +1879,7 @@ func (m *model) Escape() {
 	}
 
 	m.ClampAndSyncTempo()
+	m.ClampAccentValues()
 
 	if m.selectionIndicator == operation.SelectGrid {
 		m.focus = operation.FocusGrid
@@ -1887,6 +1890,13 @@ func (m *model) Escape() {
 	m.textInput.Reset()
 
 	m.overlayKeyEdit.Escape(m.currentOverlay.Key)
+}
+
+func (m *model) ClampAccentValues() {
+	if m.definition.Accents.Start < m.definition.Accents.End {
+		m.definition.Accents.Start = m.definition.Accents.End
+		m.definition.Accents.ReCalc()
+	}
 }
 
 func (m *model) ClampAndSyncTempo() {
@@ -2407,8 +2417,10 @@ func (m *model) SetAccentEnd(number int) {
 
 func (m *model) SetAccentStart(number int) {
 	m.definition.Accents.Start =
-		uint8(m.clamp(m.UnshiftDigit(int(m.definition.Accents.Start), number), int(m.definition.Accents.End), 127))
-	m.definition.Accents.ReCalc()
+		uint8(m.clamp(m.UnshiftDigit(int(m.definition.Accents.Start), number), 0, 127))
+	if m.definition.Accents.Start >= m.definition.Accents.End {
+		m.definition.Accents.ReCalc()
+	}
 }
 
 func (m *model) SetSetupValue(number int) {
