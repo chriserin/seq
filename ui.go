@@ -2867,7 +2867,7 @@ func (m *model) Reverse() {
 		// Clear only standalone notes
 		for _, notePos := range standaloneNotes {
 			currentKey := GK(l, notePos.beat)
-			m.currentOverlay.RemoveNote(currentKey)
+			m.currentOverlay.SetNote(currentKey, zeronote)
 		}
 
 		// Place notes in mirrored positions (preserving gaps)
