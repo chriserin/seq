@@ -338,6 +338,11 @@ var CommandDescriptions = map[Command]string{
 	ToggleClockPreRoll:     "Toggle clock pre-roll",
 	Euclidean:              "Apply Euclidean rhythm pattern to selection or pattern",
 	Reverse:                "Reverse notes from cursor to end of line, or reverse notes within visual selection",
+	ToggleBoundedLoop:      "Toggle bounded loop mode. When enabled, overlay playback loops between left and right bounds instead of the full sequence",
+	ExpandLeftLoopBound:    "Expand the left loop bound one beat to the left, increasing the loop region size",
+	ExpandRightLoopBound:   "Expand the right loop bound one beat to the right, increasing the loop region size",
+	ContractLeftLoopBound:  "Contract the left loop bound one beat to the right, decreasing the loop region size",
+	ContractRightLoopBound: "Contract the right loop bound one beat to the left, decreasing the loop region size",
 }
 
 type mappingKey [3]string

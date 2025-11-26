@@ -14,6 +14,9 @@
 - `Alt+Space`: Loop arrangement
 - `'+Space`: Loop current overlay
 - `Ctrl+Space`: Loop current part
+- `nl`: Toggle bounded loop (loop between bounds)
+- `<>`: Expand left/right loop bound
+- `,.`: Contract left/right loop bound
 
 ### Pattern Creation
 
@@ -162,6 +165,11 @@ Use +/- to increase/decrease values for each control, use numbers 0 -9 to direct
 | DecreaseAllNote        | J            | Decrease all note values (when note value is selected)                                                                                                                                                                                                                                 |
 | MidiPanic              | b + p        | Send MIDI panic (all notes off)                                                                                                                                                                                                                                                        |
 | ToggleHideLines        | b + h        | Toggle hiding lines with no notes                                                                                                                                                                                                                                                      |
+| ToggleBoundedLoop      | n + l        | Toggle bounded loop mode. When enabled, overlay playback loops between left and right bounds instead of the full sequence                                                                                                                                                              |
+| ExpandLeftLoopBound    | <            | Expand the left loop bound one beat to the left, increasing the loop region size                                                                                                                                                                                                       |
+| ExpandRightLoopBound   | >            | Expand the right loop bound one beat to the right, increasing the loop region size                                                                                                                                                                                                     |
+| ContractLeftLoopBound  | ,            | Contract the left loop bound one beat to the right, decreasing the loop region size                                                                                                                                                                                                    |
+| ContractRightLoopBound | .            | Contract the right loop bound one beat to the left, decreasing the loop region size                                                                                                                                                                                                    |
 
 ## Pattern Mode Mappings
 
