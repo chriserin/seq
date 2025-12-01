@@ -2233,6 +2233,8 @@ func (m model) UpdateDefinitionKeys(mapping mappings.Mapping) model {
 		m.Reverse()
 	case mappings.Paste:
 		m.Paste()
+	case mappings.Duplicate:
+		m.Duplicate()
 	case mappings.Euclidean:
 		m.euclideanHits = 1
 		m.SetSelectionIndicator(operation.SelectEuclideanHits)
@@ -3163,6 +3165,171 @@ func (m *model) Paste() {
 				m.currentOverlay.SetNote(newKey, note)
 			}
 		}
+	}
+}
+
+func (m *model) DuplicateVisualSelection() {
+	bounds := m.visualSelection.Bounds(m.CurrentPart().Beats)
+	originalVisualMode := m.visualSelection.visualMode
+	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
+
+	// Calculate the offset for the new area (starts immediately after current area)
+	beatOffset := bounds.Right + 1
+
+	// Check if there's room for the duplicate
+	if beatOffset <= m.CurrentPart().Beats-1 {
+		// Copy all notes from the visual selection to the new location
+		for key, note := range combinedPattern {
+			if bounds.InBounds(key) {
+				newKey := gridKey{
+					Line: key.Line,
+					Beat: key.Beat - bounds.Left + beatOffset,
+				}
+				// Only paste if the new location is within bounds
+				if newKey.Beat < m.CurrentPart().Beats {
+					m.currentOverlay.SetNote(newKey, note)
+				}
+			}
+		}
+
+		// Move cursor to the first beat of the new area
+		m.SetGridCursor(gridKey{
+			Line: bounds.Top,
+			Beat: beatOffset,
+		})
+
+		// Create new visual selection in the duplicated area
+		selectionWidth := bounds.Right - bounds.Left
+		m.visualSelection.visualMode = originalVisualMode
+		m.visualSelection.anchor = gridKey{
+			Line: bounds.Top,
+			Beat: beatOffset,
+		}
+		m.visualSelection.lead = gridKey{
+			Line: bounds.Bottom,
+			Beat: beatOffset + selectionWidth,
+		}
+	}
+}
+
+func (m *model) DuplicateLineToNextLine() {
+	bounds := m.visualSelection.Bounds(m.CurrentPart().Beats)
+	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
+
+	sourceLine := bounds.Top
+	targetLine := sourceLine + 1
+
+	// Check if there's room for the duplicate (not past the last line)
+	if int(targetLine) < len(m.definition.Lines) {
+		// Copy all notes from the source line to the target line
+		for beat := bounds.Left; beat <= bounds.Right; beat++ {
+			sourceKey := gridKey{Line: sourceLine, Beat: beat}
+			if note, exists := combinedPattern[sourceKey]; exists {
+				targetKey := gridKey{Line: targetLine, Beat: beat}
+				m.currentOverlay.SetNote(targetKey, note)
+			}
+		}
+
+		// Move cursor to the first beat of the new line
+		m.SetGridCursor(gridKey{
+			Line: targetLine,
+			Beat: bounds.Left,
+		})
+
+		// Create new visual selection on the duplicated line
+		m.visualSelection.visualMode = operation.VisualLine
+		m.visualSelection.anchor = gridKey{
+			Line: targetLine,
+			Beat: 0,
+		}
+		m.visualSelection.lead = gridKey{
+			Line: targetLine,
+			Beat: 0,
+		}
+	}
+}
+
+func (m *model) DuplicateLinesToNextLines() {
+	bounds := m.visualSelection.Bounds(m.CurrentPart().Beats)
+	combinedPattern := m.CombinedEditPattern(m.currentOverlay)
+
+	numLines := bounds.Bottom - bounds.Top + 1
+	targetStartLine := bounds.Bottom + 1
+
+	// Check if there's at least one line available below
+	if int(targetStartLine) < len(m.definition.Lines) {
+		// Calculate how many lines we can actually duplicate
+		availableLines := uint8(len(m.definition.Lines)) - targetStartLine
+		linesToDuplicate := numLines
+		if availableLines < numLines {
+			linesToDuplicate = availableLines
+		}
+
+		// Copy each line from the selection to the corresponding line below
+		for i := uint8(0); i < linesToDuplicate; i++ {
+			sourceLine := bounds.Top + i
+			targetLine := targetStartLine + i
+
+			// Copy all notes from the source line to the target line
+			for beat := bounds.Left; beat <= bounds.Right; beat++ {
+				sourceKey := gridKey{Line: sourceLine, Beat: beat}
+				if note, exists := combinedPattern[sourceKey]; exists {
+					targetKey := gridKey{Line: targetLine, Beat: beat}
+					m.currentOverlay.SetNote(targetKey, note)
+				}
+			}
+		}
+
+		// Move cursor to the first beat of the first duplicated line
+		m.SetGridCursor(gridKey{
+			Line: targetStartLine,
+			Beat: bounds.Left,
+		})
+
+		// Create new visual selection on the duplicated lines
+		m.visualSelection.visualMode = operation.VisualLine
+		m.visualSelection.anchor = gridKey{
+			Line: targetStartLine,
+			Beat: 0,
+		}
+		m.visualSelection.lead = gridKey{
+			Line: targetStartLine + linesToDuplicate - 1,
+			Beat: 0,
+		}
+	}
+}
+
+func (m *model) DuplicateSingleNote() {
+	if currentNote, exists := m.CurrentNote(); exists {
+		if m.gridCursor.Beat < m.CurrentPart().Beats-1 {
+			newKey := gridKey{
+				Line: m.gridCursor.Line,
+				Beat: m.gridCursor.Beat + 1,
+			}
+			m.currentOverlay.SetNote(newKey, currentNote)
+			m.CursorRight()
+		}
+	}
+}
+
+func (m *model) Duplicate() {
+	if m.visualSelection.visualMode != operation.VisualNone {
+		bounds := m.visualSelection.Bounds(m.CurrentPart().Beats)
+		// Check if it's visual line mode
+		if m.visualSelection.visualMode == operation.VisualLine {
+			if bounds.Top == bounds.Bottom {
+				// Single line selected
+				m.DuplicateLineToNextLine()
+			} else {
+				// Multiple lines selected
+				m.DuplicateLinesToNextLines()
+			}
+		} else {
+			// Visual block mode
+			m.DuplicateVisualSelection()
+		}
+	} else {
+		m.DuplicateSingleNote()
 	}
 }
 

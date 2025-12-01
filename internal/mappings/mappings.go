@@ -194,6 +194,7 @@ const (
 	ContractRightLoopBound
 	Euclidean
 	Reverse
+	Duplicate
 )
 
 // CommandDescriptions maps each command to its human-readable description
@@ -338,6 +339,7 @@ var CommandDescriptions = map[Command]string{
 	ToggleClockPreRoll:     "Toggle clock pre-roll",
 	Euclidean:              "Apply Euclidean rhythm pattern to selection or pattern",
 	Reverse:                "Reverse notes from cursor to end of line, or reverse notes within visual selection",
+	Duplicate:              "Duplicate what is under the cursor to the next beat in the current line",
 	ToggleBoundedLoop:      "Toggle bounded loop mode. When enabled, overlay playback loops between left and right bounds instead of the full sequence",
 	ExpandLeftLoopBound:    "Expand the left loop bound one beat to the left, increasing the loop region size",
 	ExpandRightLoopBound:   "Expand the right loop bound one beat to the right, increasing the loop region size",
@@ -592,6 +594,7 @@ func (c Command) String() string {
 		"ContractRightLoopBound",
 		"Euclidean",
 		"Reverse",
+		"Duplicate",
 	}
 
 	if c >= 0 && int(c) < len(names) {
@@ -642,6 +645,7 @@ var mappings = registry{
 	OperationKey{focus: operation.FocusGrid, key: k("z")}:                   CursorLineEnd,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "l")}:              CursorLastLine,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "f")}:              CursorFirstLine,
+	OperationKey{focus: operation.FocusGrid, key: k("b", "d")}:              Duplicate,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "h")}:              ToggleHideLines,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "t")}:              ToggleTransmitting,
 	OperationKey{focus: operation.FocusGrid, key: k("b", "c")}:              ToggleClockPreRoll,
