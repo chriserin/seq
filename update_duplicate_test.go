@@ -55,6 +55,77 @@ func TestDuplicateSingleNote(t *testing.T) {
 			cursorBeat:        3,
 			description:       "Should allow repeated duplication",
 		},
+		{
+			name: "Duplicate note with GateIndex 16 (2 beats)",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigIncrease, // +8
+				mappings.GateBigIncrease, // +8, total 16
+				mappings.Duplicate,
+			},
+			expectedNoteBeats: []uint8{0, 2},
+			cursorLine:        0,
+			cursorBeat:        2,
+			description:       "Should duplicate note 2 beats away when GateIndex is 16",
+		},
+		{
+			name: "Duplicate note with GateIndex 24 (3 beats)",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigIncrease, // +8
+				mappings.GateBigIncrease, // +8
+				mappings.GateBigIncrease, // +8, total 24
+				mappings.Duplicate,
+			},
+			expectedNoteBeats: []uint8{0, 3},
+			cursorLine:        0,
+			cursorBeat:        3,
+			description:       "Should duplicate note 3 beats away when GateIndex is 24",
+		},
+		{
+			name: "Duplicate note with GateIndex 12 (1.5 beats, rounds up to 2)",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigIncrease, // +8
+				mappings.GateIncrease,    // +1
+				mappings.GateIncrease,    // +1
+				mappings.GateIncrease,    // +1
+				mappings.GateIncrease,    // +1, total 12
+				mappings.Duplicate,
+			},
+			expectedNoteBeats: []uint8{0, 2},
+			cursorLine:        0,
+			cursorBeat:        2,
+			description:       "Should duplicate note 2 beats away when GateIndex is 12 (rounds up)",
+		},
+		{
+			name: "Duplicate note with GateIndex 9 (rounds up to 2 beats)",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigIncrease, // +7 for first note
+				mappings.GateIncrease,    // +1, total 8
+				mappings.GateIncrease,    // +1, total 9
+				mappings.Duplicate,
+			},
+			expectedNoteBeats: []uint8{0, 2},
+			cursorLine:        0,
+			cursorBeat:        2,
+			description:       "Should duplicate note 2 beats away when GateIndex is 9",
+		},
+		{
+			name: "Duplicate long note chain",
+			commands: []any{
+				mappings.NoteAdd,
+				mappings.GateBigIncrease, // +8
+				mappings.GateBigIncrease, // +8, total 16 (2 beats)
+				mappings.Duplicate,
+				mappings.Duplicate,
+			},
+			expectedNoteBeats: []uint8{0, 2, 4},
+			cursorLine:        0,
+			cursorBeat:        4,
+			description:       "Should allow repeated duplication of long notes",
+		},
 	}
 
 	for _, tt := range tests {

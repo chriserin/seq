@@ -3301,13 +3301,24 @@ func (m *model) DuplicateLinesToNextLines() {
 
 func (m *model) DuplicateSingleNote() {
 	if currentNote, exists := m.CurrentNote(); exists {
-		if m.gridCursor.Beat < m.CurrentPart().Beats-1 {
+		// Calculate how many beats to skip based on GateIndex
+		// GateIndex of 8 equals 1 beat
+		beatsToSkip := uint8(1)
+		if currentNote.GateIndex > 8 {
+			// Calculate beats needed: ceiling(GateIndex / 8)
+			beatsToSkip = uint8((currentNote.GateIndex + 7) / 8)
+		}
+
+		newBeat := m.gridCursor.Beat + beatsToSkip
+		if newBeat < m.CurrentPart().Beats {
 			newKey := gridKey{
 				Line: m.gridCursor.Line,
-				Beat: m.gridCursor.Beat + 1,
+				Beat: newBeat,
 			}
 			m.currentOverlay.SetNote(newKey, currentNote)
-			m.CursorRight()
+
+			// Move cursor to the duplicated note position
+			m.SetGridCursor(newKey)
 		}
 	}
 }

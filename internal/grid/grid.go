@@ -87,6 +87,9 @@ func (n Note) IncrementAccent(modifier int8, accentsLength uint8) Note {
 
 func (n Note) IncrementGate(modifier int8, gatesLength int) Note {
 	var newGate = int16(n.GateIndex) + int16(modifier)
+	if n.GateIndex == 0 && modifier == 8 {
+		newGate = 7
+	}
 	if newGate >= 0 && int(newGate) < gatesLength {
 		n.GateIndex = int16(newGate)
 	} else if int(newGate) >= gatesLength {
