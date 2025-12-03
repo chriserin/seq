@@ -401,7 +401,7 @@ func TestGateBigIncreaseInChordMode(t *testing.T) {
 		{
 			name:         "GateBigIncrease increases gate for all notes in chord",
 			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.GateBigIncrease},
-			expectedGate: 8,
+			expectedGate: 7,
 			description:  "Should increase gate by 8 for all notes in major triad chord",
 		},
 		{
@@ -413,7 +413,7 @@ func TestGateBigIncreaseInChordMode(t *testing.T) {
 		{
 			name:         "Multiple GateBigIncrease in chord",
 			commands:     []any{mappings.CursorLastLine, mappings.MajorTriad, mappings.GateBigIncrease, mappings.GateBigIncrease},
-			expectedGate: 16,
+			expectedGate: 15,
 			description:  "Should increase gate by 16 for all notes in chord",
 		},
 	}

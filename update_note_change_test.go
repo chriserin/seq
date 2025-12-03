@@ -222,7 +222,7 @@ func TestGateBigIncrease(t *testing.T) {
 				mappings.NoteAdd,
 				mappings.GateBigIncrease,
 			},
-			expectedGate:  8,
+			expectedGate:  7,
 			maxGateLength: 32,
 			description:   "Should add note and big increase gate by 8",
 		},

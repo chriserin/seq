@@ -7,6 +7,7 @@ import (
 	"github.com/chriserin/sq/internal/grid"
 	"github.com/chriserin/sq/internal/mappings"
 	"github.com/chriserin/sq/internal/operation"
+	"github.com/chriserin/sq/internal/theory"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -603,6 +604,129 @@ func TestDuplicateLinesWithLimitedSpace(t *testing.T) {
 							assert.False(t, exists, tt.description+" - note should not exist on line %d at beat %d", line.lineNum, beat)
 						}
 					}
+				}
+			}
+		})
+	}
+}
+func TestDuplicateChord(t *testing.T) {
+	tests := []struct {
+		name                   string
+		commands               []any
+		description            string
+		expectedChord          uint32
+		expectedIntervals      []uint8
+		expectedCursorPosition grid.GridKey
+		chordAtBeat0Exists     bool
+		chordAtBeat1Exists     bool
+	}{
+		{
+			name: "Duplicate MajorTriad chord to next beat",
+			commands: []any{
+				mappings.CursorLastLine,
+				mappings.MajorTriad,
+				mappings.Duplicate,
+			},
+			expectedChord:          theory.MajorTriad,
+			expectedIntervals:      []uint8{0, 4, 7},
+			expectedCursorPosition: grid.GridKey{Line: 23, Beat: 1},
+			chordAtBeat0Exists:     true,
+			chordAtBeat1Exists:     true,
+			description:            "Should duplicate major triad chord to next beat",
+		},
+		{
+			name: "Duplicate MinorTriad chord to next beat",
+			commands: []any{
+				mappings.CursorLastLine,
+				mappings.MinorTriad,
+				mappings.Duplicate,
+			},
+			expectedChord:          theory.MinorTriad,
+			expectedIntervals:      []uint8{0, 3, 7},
+			expectedCursorPosition: grid.GridKey{Line: 23, Beat: 1},
+			chordAtBeat0Exists:     true,
+			chordAtBeat1Exists:     true,
+			description:            "Should duplicate minor triad chord to next beat",
+		},
+		{
+			name: "Duplicate complex chord (Major7) to next beat",
+			commands: []any{
+				mappings.CursorLastLine,
+				mappings.MajorTriad,
+				mappings.MajorSeventh,
+				mappings.Duplicate,
+			},
+			expectedChord:          theory.MajorTriad | theory.MajorSeventh,
+			expectedIntervals:      []uint8{0, 4, 7, 11},
+			expectedCursorPosition: grid.GridKey{Line: 23, Beat: 1},
+			chordAtBeat0Exists:     true,
+			chordAtBeat1Exists:     true,
+			description:            "Should duplicate major seventh chord to next beat",
+		},
+		{
+			name: "Duplicate chord multiple times",
+			commands: []any{
+				mappings.CursorLastLine,
+				mappings.MajorTriad,
+				mappings.Duplicate,
+				mappings.Duplicate,
+				mappings.Duplicate,
+			},
+			expectedChord:          theory.MajorTriad,
+			expectedIntervals:      []uint8{0, 4, 7},
+			expectedCursorPosition: grid.GridKey{Line: 23, Beat: 3},
+			chordAtBeat0Exists:     true,
+			chordAtBeat1Exists:     true,
+			description:            "Should allow repeated chord duplication",
+		},
+		{
+			name: "Duplicate inverted chord preserves inversion",
+			commands: []any{
+				mappings.CursorLastLine,
+				mappings.MajorTriad,
+				mappings.IncreaseInversions,
+				mappings.Duplicate,
+			},
+			expectedChord:          theory.MajorTriad,
+			expectedIntervals:      []uint8{4, 7, 12},
+			expectedCursorPosition: grid.GridKey{Line: 19, Beat: 1},
+			chordAtBeat0Exists:     false,
+			chordAtBeat1Exists:     false,
+			description:            "Should duplicate inverted chord and preserve inversion",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := createTestModel(WithPolyphony())
+
+			m, _ = processCommands(tt.commands, m)
+
+			// Check cursor position
+			assert.Equal(t, tt.expectedCursorPosition, m.gridCursor, tt.description+" - cursor beat should match")
+
+			// Check chord at beat 0
+			key0 := grid.GridKey{Line: uint8(len(m.definition.Lines)) - 1, Beat: 0}
+			_, exists0 := m.currentOverlay.FindChord(key0, m.currentOverlay.Key.GetMinimumKeyCycle())
+			assert.Equal(t, tt.chordAtBeat0Exists, exists0, tt.description+" - chord at beat 0 existence should match")
+
+			// Check chord at beat 1
+			key1 := grid.GridKey{Line: uint8(len(m.definition.Lines)) - 1, Beat: 1}
+			_, exists1 := m.currentOverlay.FindChord(key1, m.currentOverlay.Key.GetMinimumKeyCycle())
+			assert.Equal(t, tt.chordAtBeat1Exists, exists1, tt.description+" - chord at beat 1 existence should match")
+
+			// Verify chord structure at cursor position
+			currentChord := m.CurrentChord()
+			assert.True(t, currentChord.HasValue(), tt.description+" - chord should exist at cursor position")
+
+			// Check all expected intervals exist
+			for currentInterval, line := uint8(0), uint8(len(m.definition.Lines))-1; line != 255; line, currentInterval = line-1, currentInterval+1 {
+				key := grid.GridKey{Line: line, Beat: tt.expectedCursorPosition.Beat}
+				_, exists := m.currentOverlay.FindChord(key, m.currentOverlay.Key.GetMinimumKeyCycle())
+				if slices.Contains(tt.expectedIntervals, currentInterval) {
+					assert.True(t, exists, tt.description+" - chord should exist at interval %d (line %d)", currentInterval, line)
+				} else {
+					assert.False(t, exists, tt.description+" - chord should not exist at interval %d (line %d)", currentInterval, line)
 				}
 			}
 		})

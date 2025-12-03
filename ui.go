@@ -3299,7 +3299,59 @@ func (m *model) DuplicateLinesToNextLines() {
 	}
 }
 
+func (m *model) DuplicateChord() {
+	currentChord := m.CurrentChord()
+	if currentChord.HasValue() {
+		// Calculate how many beats the chord spans
+		// Consider both beat offsets and GateIndex of each note
+		maxBeatsSpan := uint8(1)
+
+		for _, beatNote := range currentChord.GridChord.Notes {
+			// Calculate beats for this note's gate (ceiling division)
+			beatsForGate := uint8(1)
+			if beatNote.Note.GateIndex > 8 {
+				beatsForGate = uint8((beatNote.Note.GateIndex + 7) / 8)
+			}
+
+			// Total span for this note is its beat offset + its gate length
+			noteSpan := uint8(beatNote.Beat) + beatsForGate
+
+			if noteSpan > maxBeatsSpan {
+				maxBeatsSpan = noteSpan
+			}
+		}
+
+		// Use the chord's root position, not the cursor position
+		rootBeat := currentChord.GridChord.Root.Beat
+		newBeat := rootBeat + maxBeatsSpan
+		if newBeat < m.CurrentPart().Beats {
+			newKey := gridKey{
+				Line: currentChord.GridChord.Root.Line,
+				Beat: newBeat,
+			}
+			m.currentOverlay.PasteChord(newKey, currentChord.GridChord)
+
+			// Find the note on the highest line (maximum line number, lowest note)
+			positions := currentChord.GridChord.Positions()
+
+			// Move cursor to the highest line (lowest note) of the duplicated chord
+			m.SetGridCursor(gridKey{
+				Line: positions[0].Line,
+				Beat: newBeat,
+			})
+		}
+	}
+}
+
 func (m *model) DuplicateSingleNote() {
+	// Check if we're on a chord first
+	currentChord := m.CurrentChord()
+	if currentChord.HasValue() {
+		m.DuplicateChord()
+		return
+	}
+
+	// Otherwise duplicate a single note
 	if currentNote, exists := m.CurrentNote(); exists {
 		// Calculate how many beats to skip based on GateIndex
 		// GateIndex of 8 equals 1 beat
